@@ -15,7 +15,7 @@ struct DocumentView: View {
             case .ready, .needsAttention:
                 Text(tableSummary)
                     .foregroundStyle(.secondary)
-            case .readFailed:
+            case .readFailed, .unreadableFile:
                 Text("The file could not be read.")
                     .foregroundStyle(.secondary)
             }

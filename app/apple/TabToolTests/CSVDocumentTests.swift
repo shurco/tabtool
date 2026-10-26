@@ -91,6 +91,23 @@ import UniformTypeIdentifiers
         #expect(doc.table?.cell(row: 0, column: 0) == "a")
     }
 
+    @Test @MainActor func retryingAFailedLoadReportsAnUnreadableFile() async throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try Data("a,b\nc,d\n".utf8).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let doc = CSVDocument(data: Data([0xFF, 0xFE, 0xFD]), fileURL: url,
+                              configuration: CSVConfiguration(encoding: .utf8))
+        await doc.load()
+        #expect(doc.phase == .readFailed(.cannotDecodeData))
+
+        try FileManager.default.removeItem(at: url)
+        await doc.load()
+        #expect(doc.phase == .unreadableFile)
+        #expect(doc.table == nil)
+    }
+
     @Test @MainActor func bomIsPreservedOnSave() async throws {
         var input = Data([0xEF, 0xBB, 0xBF])
         input.append(Data("a,b".utf8))
