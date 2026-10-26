@@ -37,6 +37,17 @@ public enum CSVWriteValidation {
                             configuration: CSVConfiguration) -> Bool {
         guard configuration.quoteCharacter.isEmpty else { return false }
 
+        // A final empty single-column row contributes no characters after the
+        // preceding row separator, so the output ends with LF and reparsing
+        // drops that row. A lone empty cell is fine: empty output parses back
+        // to one empty row.
+        if table.columns.count == 1,
+           let lastCell = table.columns.first?.cells.last,
+           lastCell.isEmpty,
+           header != nil || table.rowCount > 1 {
+            return true
+        }
+
         if let header, header.contains(where: {
             isAmbiguous($0, configuration: configuration)
         }) {

@@ -62,6 +62,19 @@ import Testing
     #expect(String(data: data, encoding: .utf8) == "a,b")
 }
 
+@Test func exportRejectsTrailingLineFeed() throws {
+    let t = CSVTable(rows: [["a"], [""]], headers: nil)
+    let noQuote = CSVConfiguration(quoteCharacter: "")
+    #expect(throws: CSVError.ambiguousOutput) {
+        _ = try CSVExport.data(table: t, documentConfiguration: .init(),
+                               exportConfiguration: noQuote)
+    }
+    let data = try CSVExport.data(table: t, documentConfiguration: .init(),
+                                  exportConfiguration: noQuote,
+                                  allowAmbiguousOutput: true)
+    #expect(String(data: data, encoding: .utf8) == "a\n")
+}
+
 @Test func exportUsesExportConfigurationForQuoting() throws {
     let t = CSVTable(rows: [["1.5"]], headers: nil)
     let doc = CSVConfiguration()

@@ -70,6 +70,40 @@ import Testing
     }
 }
 
+@Test func noQuoteTrailingLineFeedThrows() {
+    let t = CSVTable(rows: [["a"], [""]], headers: nil)
+    let c = CSVConfiguration(quoteCharacter: "")
+    let writer = CSVWriter(table: t, header: nil, configuration: c)
+    #expect(throws: CSVError.ambiguousOutput) {
+        _ = try writer.string()
+    }
+    #expect(throws: CSVError.ambiguousOutput) {
+        _ = try writer.data()
+    }
+}
+
+@Test func noQuoteTrailingLineFeedAllowed() throws {
+    let t = CSVTable(rows: [["a"], [""]], headers: nil)
+    let c = CSVConfiguration(quoteCharacter: "")
+    let allowed = try CSVWriter(table: t, header: nil, configuration: c,
+                                allowAmbiguousOutput: true).string()
+    #expect(allowed == "a\n")
+}
+
+@Test func validationDetectsTrailingLineFeed() {
+    let t = CSVTable(rows: [["a"], [""]], headers: nil)
+    let c = CSVConfiguration(quoteCharacter: "")
+    #expect(CSVWriteValidation.issue(table: t, header: nil,
+                                     configuration: c) == .ambiguousOutput)
+}
+
+@Test func singleEmptyCellIsNotAmbiguous() throws {
+    let t = CSVTable(rows: [[""]], headers: nil)
+    let c = CSVConfiguration(quoteCharacter: "")
+    #expect(try CSVWriter(table: t, header: nil, configuration: c).string() == "")
+    #expect(CSVWriteValidation.issue(table: t, header: nil, configuration: c) == nil)
+}
+
 @Test func unencodableTextThrows() throws {
     let t = CSVTable(rows: [["Привет"]], headers: nil)
     let c = CSVConfiguration(encoding: .windowsCP1252)
