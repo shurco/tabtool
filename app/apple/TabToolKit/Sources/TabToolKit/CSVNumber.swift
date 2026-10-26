@@ -1,0 +1,31 @@
+import Foundation
+
+/// Classifies and localizes numeric CSV cell text.
+public enum CSVNumber {
+    /// Returns `true` when `text` is a number using `decimalMark`.
+    ///
+    /// The pattern accepts an optional
+    /// whitespace and sign, digits around the configured decimal mark, an
+    /// optional exponent, and optional trailing whitespace.
+    public static func isNumeric(_ text: String, decimalMark: String) -> Bool {
+        let mark = NSRegularExpression.escapedPattern(for: decimalMark)
+        let pattern = #"^\s*[+-]?(\d+\#(mark)?\d*|\d*\#(mark)?\d+)([eE][+-]?\d+)?\s*$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return false
+        }
+
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.firstMatch(in: text, range: range) != nil
+    }
+
+    /// Returns `text` with the decimal mark replaced by the locale's decimal
+    /// separator when `text` is numeric; otherwise returns `text` unchanged.
+    public static func localized(_ text: String, decimalMark: String,
+                                 locale: Locale = .current) -> String {
+        guard isNumeric(text, decimalMark: decimalMark),
+              let separator = locale.decimalSeparator else {
+            return text
+        }
+        return text.replacingOccurrences(of: decimalMark, with: separator)
+    }
+}
