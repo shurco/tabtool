@@ -17,7 +17,7 @@ func readsUnquotedRows(name: String, config: CSVConfiguration,
     let rows = try parseAll(fixture(name), config)
     #expect(rows.count == rowCount)
     #expect(rows.allSatisfy { $0.count == fieldCount })
-    for cell in rows.last! {
+    for cell in try #require(rows.last) {
         #expect(CSVNumber.isNumeric(cell, decimalMark: config.decimalMark))
     }
 }
@@ -78,6 +78,60 @@ func readsUnquotedRows(name: String, config: CSVConfiguration,
     parser.reset()
     #expect(!parser.isAtEnd)
     #expect(try parser.readAll() == [["a", "b"], ["c", "d"]])
+}
+
+@Test(arguments: [
+    ("missing-quote-atEnd", CSVConfiguration()),
+    ("missing-backslash-beforeValue", CSVConfiguration(escapeCharacter: "\\")),
+    ("missing-backslash-afterValue", CSVConfiguration(escapeCharacter: "\\")),
+    ("missing-value-for-backslash-inquote", CSVConfiguration(escapeCharacter: "\\")),
+    ("missing-value-for-backslash", CSVConfiguration(escapeCharacter: "\\"))
+])
+func malformedQuotedFixturesThrow(name: String, config: CSVConfiguration) throws {
+    let data = try fixture(name)
+    #expect(throws: CSVError.malformedQuotedField) {
+        _ = try parseAll(data, config)
+    }
+}
+
+@Test func quoteInUnquotedValueThrows() throws {
+    let data = try fixture("quote-in-unquoted-value")
+    #expect(throws: CSVError.quoteInUnquotedField) {
+        _ = try parseAll(data, .init())
+    }
+}
+
+@Test func contentAfterClosingQuoteThrows() {
+    #expect(throws: CSVError.malformedQuotedField) {
+        _ = try parseAll(Data("\"a\"b,c".utf8), .init())
+    }
+}
+
+@Test func invalidUTF8ThrowsCannotDecode() {
+    #expect(throws: CSVError.cannotDecodeData) {
+        _ = try CSVParser(data: Data([0xFF, 0xFE, 0xFD]), configuration: .init())
+    }
+}
+
+@Test func doubledQuoteEscapeDecodesExactCells() throws {
+    let data = try fixture("quote-quote-escape")
+    let rows = try parseAll(data, .init())
+    #expect(rows == [["test\" test", "test"], ["1.2", "1,3"]])
+    try #require(rows.count == 2)
+    try #require(rows[1].count == 2)
+    #expect(CSVNumber.isNumeric(rows[1][0], decimalMark: "."))
+    #expect(!CSVNumber.isNumeric(rows[1][1], decimalMark: "."))
+}
+
+@Test func backslashEscapeDecodesExactCells() throws {
+    let data = try fixture("quote-backslash-escape")
+    let rows = try parseAll(data, CSVConfiguration(escapeCharacter: "\\"))
+    #expect(rows == [["test\" test", "test"], ["1.2", "1,3"]])
+}
+
+@Test func noQuoteModeTreatsQuotesAsText() throws {
+    let rows = try parseAll(Data("a\"b,c".utf8), CSVConfiguration(quoteCharacter: ""))
+    #expect(rows == [["a\"b", "c"]])
 }
 
 @Test func utf8BOMIsStrippedAndFlagged() throws {

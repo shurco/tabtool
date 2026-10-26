@@ -25,7 +25,8 @@ public struct CSVParser {
     /// Decodes `data` with the configuration's encoding and prepares a parser.
     ///
     /// A leading UTF-8 BOM is removed before decoding and reported through
-    /// `hadUTF8BOM`.
+    /// `hadUTF8BOM`. Throws `CSVError.cannotDecodeData` when the bytes are not
+    /// valid in the configured encoding.
     public init(data: Data, configuration: CSVConfiguration) throws {
         var data = data
         let strippedBOM = configuration.encoding == .utf8
@@ -59,6 +60,11 @@ public struct CSVParser {
     }
 
     /// Returns the next row, or `nil` when the input is exhausted.
+    ///
+    /// Throws `CSVError.malformedQuotedField` for an unterminated quoted field,
+    /// a trailing escape, or content after a closing quote, and
+    /// `CSVError.quoteInUnquotedField` when a quote appears in unquoted content
+    /// while quotes are enabled.
     public mutating func nextRow() throws -> [String]? {
         guard !isAtEnd else { return nil }
         guard index < scalars.count else {
@@ -101,7 +107,7 @@ public struct CSVParser {
         if let quoteCharacter, index < scalars.count, scalars[index] == quoteCharacter {
             return try readQuotedField(quote: quoteCharacter)
         }
-        return readUnquotedField()
+        return try readUnquotedField()
     }
 
     private mutating func readQuotedField(quote: Unicode.Scalar) throws -> String {
@@ -110,12 +116,24 @@ public struct CSVParser {
 
         while index < scalars.count {
             let scalar = scalars[index]
+
+            // A dedicated escape character consumes the next scalar literally.
+            if let escapeCharacter, escapeCharacter != quote, scalar == escapeCharacter {
+                guard index + 1 < scalars.count else {
+                    throw CSVError.malformedQuotedField
+                }
+                field.append(scalars[index + 1])
+                index += 2
+                continue
+            }
+
             guard scalar == quote else {
                 field.append(scalar)
                 index += 1
                 continue
             }
 
+            // With the quote as its own escape, a doubled quote is one quote.
             if escapeCharacter == quote,
                index + 1 < scalars.count,
                scalars[index + 1] == quote {
@@ -134,9 +152,12 @@ public struct CSVParser {
         throw CSVError.malformedQuotedField
     }
 
-    private mutating func readUnquotedField() -> String {
+    private mutating func readUnquotedField() throws -> String {
         var field = String.UnicodeScalarView()
         while index < scalars.count, !isFieldTerminator(scalars[index]) {
+            if let quoteCharacter, scalars[index] == quoteCharacter {
+                throw CSVError.quoteInUnquotedField
+            }
             field.append(scalars[index])
             index += 1
         }
