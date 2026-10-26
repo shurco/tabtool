@@ -6,14 +6,17 @@ import Testing
 
 @Suite @MainActor struct GridCoordinatorTests {
     /// Attaches a coordinator to a standalone table view built from `document`.
-    private func makeGrid(_ document: CSVDocument) -> (CSVGridCoordinator, CSVTableView) {
+    private func makeGrid(
+        _ document: CSVDocument
+    ) -> (CSVGridCoordinator, CSVTableView, CSVTableHeaderView) {
         let coordinator = CSVGridCoordinator(document: document)
         let tableView = CSVTableView()
+        let headerView = CSVTableHeaderView()
+        tableView.headerView = headerView
         tableView.allowsMultipleSelection = true
-        tableView.allowsColumnSelection = true
         coordinator.attach(to: tableView)
         update(coordinator, from: document)
-        return (coordinator, tableView)
+        return (coordinator, tableView, headerView)
     }
 
     private func update(_ coordinator: CSVGridCoordinator, from document: CSVDocument) {
@@ -26,45 +29,135 @@ import Testing
 
     @Test func rowSelectionUpdatesDocument() {
         let document = CSVDocument()
-        let (coordinator, tableView) = makeGrid(document)
+        let (coordinator, tableView, _) = makeGrid(document)
         withExtendedLifetime(coordinator) {
             tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
         }
         #expect(document.selection == GridSelection(rows: IndexSet(integer: 0)))
     }
 
-    @Test func columnSelectionUpdatesDocument() {
+    @Test func headerClickSelectsColumnAndHighlightsIt() throws {
         let document = CSVDocument()
-        let (coordinator, tableView) = makeGrid(document)
+        let (coordinator, tableView, headerView) = makeGrid(document)
         withExtendedLifetime(coordinator) {
-            tableView.selectColumnIndexes(IndexSet(integer: 1), byExtendingSelection: false)
+            headerView.clickColumn(at: 1, modifiers: [])
         }
+
+        #expect(!tableView.allowsColumnSelection)
         #expect(document.selection == GridSelection(columns: IndexSet(integer: 1)))
+        #expect(headerView.selectedColumns == IndexSet(integer: 1))
+
+        let selectedCell = try #require(
+            tableView.view(atColumn: 1, row: 0, makeIfNecessary: true)
+                as? CSVGridCellView
+        )
+        let plainCell = try #require(
+            tableView.view(atColumn: 0, row: 0, makeIfNecessary: true)
+                as? CSVGridCellView
+        )
+        #expect(selectedCell.isColumnSelected)
+        #expect(!plainCell.isColumnSelected)
+    }
+
+    @Test func headerClickClearsRowSelection() throws {
+        let document = CSVDocument()
+        let (coordinator, tableView, headerView) = makeGrid(document)
+        withExtendedLifetime(coordinator) {
+            tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+            headerView.clickColumn(at: 1, modifiers: [])
+        }
+
+        #expect(document.selection == GridSelection(columns: IndexSet(integer: 1)))
+        #expect(tableView.selectedRowIndexes.isEmpty)
+        #expect(headerView.selectedColumns == IndexSet(integer: 1))
+    }
+
+    @Test func rowSelectionClearsColumnHighlight() throws {
+        let document = CSVDocument()
+        let (coordinator, tableView, headerView) = makeGrid(document)
+        withExtendedLifetime(coordinator) {
+            headerView.clickColumn(at: 1, modifiers: [])
+            tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        }
+
+        #expect(document.selection == GridSelection(rows: IndexSet(integer: 0)))
+        #expect(headerView.selectedColumns.isEmpty)
+
+        let cell = try #require(
+            tableView.view(atColumn: 1, row: 0, makeIfNecessary: true)
+                as? CSVGridCellView
+        )
+        #expect(!cell.isColumnSelected)
+    }
+
+    @Test func commandClickTogglesColumns() {
+        let document = CSVDocument()
+        let (coordinator, _, headerView) = makeGrid(document)
+        withExtendedLifetime(coordinator) {
+            headerView.clickColumn(at: 0, modifiers: [])
+            headerView.clickColumn(at: 2, modifiers: .command)
+        }
+        #expect(document.selection == GridSelection(columns: IndexSet([0, 2])))
+        #expect(headerView.selectedColumns == IndexSet([0, 2]))
+
+        withExtendedLifetime(coordinator) {
+            headerView.clickColumn(at: 0, modifiers: .command)
+        }
+        #expect(document.selection == GridSelection(columns: IndexSet(integer: 2)))
+    }
+
+    @Test func shiftClickExtendsColumnRange() {
+        let document = CSVDocument()
+        let (coordinator, _, headerView) = makeGrid(document)
+        withExtendedLifetime(coordinator) {
+            headerView.clickColumn(at: 0, modifiers: [])
+            headerView.clickColumn(at: 2, modifiers: .shift)
+        }
+        #expect(document.selection == GridSelection(columns: IndexSet([0, 1, 2])))
+        #expect(headerView.selectedColumns == IndexSet([0, 1, 2]))
     }
 
     @Test func externalSelectionIsAppliedToTheTable() {
         let document = CSVDocument()
-        let (coordinator, tableView) = makeGrid(document)
+        let (coordinator, tableView, headerView) = makeGrid(document)
         document.selection = GridSelection(rows: IndexSet(integer: 0))
         update(coordinator, from: document)
         #expect(tableView.selectedRowIndexes == IndexSet(integer: 0))
+        #expect(headerView.selectedColumns.isEmpty)
+    }
+
+    @Test func externalColumnSelectionHighlightsHeaderAndCell() throws {
+        let document = CSVDocument()
+        let (coordinator, tableView, headerView) = makeGrid(document)
+        document.selection = GridSelection(columns: IndexSet(integer: 1))
+        update(coordinator, from: document)
+
+        #expect(tableView.selectedRowIndexes.isEmpty)
+        #expect(headerView.selectedColumns == IndexSet(integer: 1))
+
+        let cell = try #require(
+            tableView.view(atColumn: 1, row: 0, makeIfNecessary: true)
+                as? CSVGridCellView
+        )
+        #expect(cell.isColumnSelected)
     }
 
     @Test func switchingSelectionToColumnsClearsRows() {
         let document = CSVDocument()
-        let (coordinator, tableView) = makeGrid(document)
+        let (coordinator, tableView, headerView) = makeGrid(document)
         tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
 
         document.selection = GridSelection(columns: IndexSet(integer: 1))
         update(coordinator, from: document)
 
         #expect(tableView.selectedRowIndexes.isEmpty)
-        #expect(tableView.selectedColumnIndexes == IndexSet(integer: 1))
+        #expect(headerView.selectedColumns == IndexSet(integer: 1))
+        #expect(document.selection == GridSelection(columns: IndexSet(integer: 1)))
     }
 
     @Test func selectionSurvivesARowCountReload() {
         let document = CSVDocument()
-        let (coordinator, tableView) = makeGrid(document)
+        let (coordinator, tableView, _) = makeGrid(document)
         document.selection = GridSelection(rows: IndexSet(integer: 0))
         update(coordinator, from: document)
 
@@ -77,7 +170,7 @@ import Testing
 
     @Test func fieldEditorRunsWithoutLocalUndo() {
         let document = CSVDocument()
-        let (coordinator, _) = makeGrid(document)
+        let (coordinator, _, _) = makeGrid(document)
         let fieldEditor = NSTextView()
         fieldEditor.allowsUndo = true
         coordinator.controlTextDidBeginEditing(
@@ -89,7 +182,7 @@ import Testing
 
     @Test func endEditingFromDetachedCellIsIgnored() throws {
         let document = CSVDocument()
-        let (coordinator, _) = makeGrid(document)
+        let (coordinator, _, _) = makeGrid(document)
         let cell = CSVGridCellView()
         let field = try #require(cell.textField)
         field.stringValue = "stale"
@@ -105,7 +198,7 @@ import Testing
                                    configuration: CSVConfiguration(),
                                    undoManager: undoManager)
         await document.load()
-        let (coordinator, tableView) = makeGrid(document)
+        let (coordinator, tableView, _) = makeGrid(document)
 
         let cell = try #require(tableView.view(atColumn: 0, row: 0,
                                                makeIfNecessary: true) as? CSVGridCellView)

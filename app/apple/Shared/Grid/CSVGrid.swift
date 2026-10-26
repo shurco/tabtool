@@ -16,10 +16,9 @@ struct CSVGrid: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
         let tableView = CSVTableView()
         tableView.setAccessibilityIdentifier("grid")
-        tableView.headerView = NSTableHeaderView()
+        tableView.headerView = CSVTableHeaderView()
         tableView.columnAutoresizingStyle = .noColumnAutoresizing
         tableView.allowsMultipleSelection = true
-        tableView.allowsColumnSelection = true
         tableView.allowsColumnResizing = true
         tableView.usesAlternatingRowBackgroundColors = true
         tableView.rowHeight = 24
