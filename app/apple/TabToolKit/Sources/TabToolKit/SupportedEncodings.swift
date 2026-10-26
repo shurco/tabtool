@@ -12,7 +12,7 @@ public struct SupportedEncoding: Identifiable, Sendable, Hashable {
 public enum SupportedEncodings {
     /// GBK is not exposed as a `String.Encoding` convenience value, so the
     /// Core Foundation encoding constant is converted to its Foundation value.
-    private static let gbk = String.Encoding(
+    static let gbk = String.Encoding(
         rawValue: CFStringConvertEncodingToNSStringEncoding(
             CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)
         )
