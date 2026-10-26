@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Shared shell helpers for the repository scripts.
+
+# Colors are used only when stderr is a terminal that supports them, so log
+# output captured by CI stays readable.
+if [ -t 2 ] && command -v tput >/dev/null 2>&1 && [ "${TERM:-dumb}" != "dumb" ]; then
+  COLOR_GREY=$(tput setaf 0)
+  COLOR_RED=$(tput setaf 1)
+  COLOR_GREEN=$(tput setaf 2)
+  COLOR_YELLOW=$(tput setaf 3)
+  COLOR_RESET=$(tput sgr0)
+else
+  COLOR_GREY=""
+  COLOR_RED=""
+  COLOR_GREEN=""
+  COLOR_YELLOW=""
+  COLOR_RESET=""
+fi
+
+# print_answer <text> [grey|green|yellow|red]
+# Prints a one-line answer to stderr; the last color flag wins.
+print_answer() {
+  local color="$COLOR_RESET"
+  local flag
+  for flag in "$@"; do
+    case "$flag" in
+      grey) color="$COLOR_GREY" ;;
+      green) color="$COLOR_GREEN" ;;
+      yellow) color="$COLOR_YELLOW" ;;
+      red) color="$COLOR_RED" ;;
+    esac
+  done
+  echo "${color}$1${COLOR_RESET}" >&2
+}
+
+command_exists() {
+  command -v "$@" >/dev/null 2>&1
+}

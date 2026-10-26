@@ -1,0 +1,279 @@
+#!/usr/bin/env bash
+# Store versions for macOS. The source is app/apple/version.json:
+# {"macos": {"name": "1.0.0", "build": "1"}}.
+#
+# Sourced by scripts/app; sets APP_VERSION_NAME and APP_VERSION_BUILD.
+# Run directly to execute the self-test: bash scripts/lib/version
+
+# shellcheck disable=SC2034
+APP_VERSION_NAME=""
+APP_VERSION_BUILD=""
+
+valid_bump_kind() {
+  case "$1" in
+    build | patch | minor | major) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# The project is macOS-only for now, but the platform stays in the API so
+# scripts/app can call version functions uniformly.
+valid_platform() {
+  [ "$1" = "macos" ]
+}
+
+_version_app_dir() {
+  if [ -n "${APP_DIR:-}" ]; then
+    printf '%s\n' "$APP_DIR"
+    return
+  fi
+  cd "$(dirname "${BASH_SOURCE[0]}")/../../app/apple" && pwd
+}
+
+# Rewrites one platform entry atomically and keeps every other key intact.
+_version_json_upsert() {
+  local file="$1"
+  local platform="$2"
+  local name="$3"
+  local build="$4"
+  python3 - "$file" "$platform" "$name" "$build" <<'PY'
+import json, sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+platform, name, build = sys.argv[2:5]
+data = {}
+if path.is_file():
+    data = json.loads(path.read_text())
+entry = data.get(platform)
+if not isinstance(entry, dict):
+    entry = {}
+entry["name"] = name
+entry["build"] = build
+data[platform] = entry
+# Write through a temporary file so an interrupted bump cannot corrupt the
+# version file.
+tmp = path.with_name(path.name + ".tmp")
+tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+tmp.replace(path)
+PY
+}
+
+# version_configure <macos>
+# Reads name/build into APP_VERSION_*. Returns 1 if the entry is malformed.
+# A missing file or python3 is a warning: the build then uses project.yml.
+version_configure() {
+  local platform="${1:-macos}"
+  local app_dir config
+
+  if ! valid_platform "$platform"; then
+    print_answer "Unsupported platform: ${platform} (only macos)" red
+    return 1
+  fi
+
+  app_dir="$(_version_app_dir)"
+  config="${app_dir}/version.json"
+
+  APP_VERSION_NAME=""
+  APP_VERSION_BUILD=""
+
+  if [ ! -f "$config" ]; then
+    print_answer "No ${config} — using versions from project.yml" yellow
+    return 0
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    print_answer "No python3 — version.json skipped" yellow
+    return 0
+  fi
+
+  local name build py_out py_rc=0
+  py_out=$(python3 - "$config" "$platform" <<'PY'
+import json, sys
+from pathlib import Path
+
+config_path, platform = sys.argv[1:3]
+data = json.loads(Path(config_path).read_text())
+entry = data.get(platform)
+if not isinstance(entry, dict):
+    sys.stderr.write(f"version.json has no platform {platform!r}\n")
+    sys.exit(1)
+name = str(entry.get("name", "")).strip()
+build = str(entry.get("build", "")).strip()
+parts = name.split(".")
+if not name or any(not part.isdigit() for part in parts):
+    sys.stderr.write(f"Invalid version name for {platform}: {name!r}\n")
+    sys.exit(1)
+if not build.isdigit() or int(build) < 1:
+    sys.stderr.write(f"Invalid build for {platform}: {build!r}\n")
+    sys.exit(1)
+print(name, build)
+PY
+) || py_rc=$?
+
+  if [ "$py_rc" -ne 0 ]; then
+    print_answer "Malformed app/apple/version.json for ${platform}" red
+    return 1
+  fi
+
+  read -r name build <<<"$py_out"
+  APP_VERSION_NAME="$name"
+  APP_VERSION_BUILD="$build"
+  print_answer "Version (${platform}): ${APP_VERSION_NAME} (${APP_VERSION_BUILD})" grey
+}
+
+# version_bump <macos> [build|patch|minor|major]
+# The build number always increases; patch/minor/major also move semver.
+version_bump() {
+  local platform="${1:-macos}"
+  local kind="${2:-build}"
+  local app_dir config
+
+  if ! valid_platform "$platform"; then
+    print_answer "Unsupported platform: ${platform} (only macos)" red
+    return 1
+  fi
+  if ! valid_bump_kind "$kind"; then
+    print_answer "Bump kind must be build, patch, minor, or major" red
+    return 1
+  fi
+
+  app_dir="$(_version_app_dir)"
+  config="${app_dir}/version.json"
+
+  if [ ! -f "$config" ]; then
+    print_answer "No ${config} — cannot bump the version" red
+    return 1
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    print_answer "python3 is required for version.json" red
+    return 1
+  fi
+
+  local new_version new_name new_build
+  new_version=$(python3 - "$config" "$platform" "$kind" <<'PY'
+import json, re, sys
+from pathlib import Path
+
+config_path, platform, kind = sys.argv[1:4]
+data = json.loads(Path(config_path).read_text())
+entry = data.get(platform)
+if not isinstance(entry, dict):
+    sys.exit(f"version.json has no platform {platform!r}")
+name = str(entry.get("name", "")).strip()
+build_text = str(entry.get("build", "")).strip()
+match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", name)
+if not match or not build_text.isdigit():
+    sys.exit(f"Invalid version for {platform}: name={name!r} build={build_text!r}")
+major, minor, patch = map(int, match.groups())
+build = int(build_text)
+if kind == "build":
+    build += 1
+elif kind == "patch":
+    patch += 1
+    build += 1
+elif kind == "minor":
+    minor += 1
+    patch = 0
+    build += 1
+elif kind == "major":
+    major += 1
+    minor = 0
+    patch = 0
+    build += 1
+else:
+    sys.exit(f"Unknown bump kind: {kind}")
+print(f"{major}.{minor}.{patch} {build}")
+PY
+) || {
+    print_answer "Could not bump the ${platform} version in ${config}" red
+    return 1
+  }
+
+  read -r new_name new_build <<<"$new_version"
+  if ! _version_json_upsert "$config" "$platform" "$new_name" "$new_build"; then
+    print_answer "Could not write the ${platform} version to ${config}" red
+    return 1
+  fi
+  print_answer "Version (${platform}, ${kind}): ${new_name} (${new_build})" green
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  if ! declare -F print_answer >/dev/null; then
+    print_answer() { printf '%s\n' "$1" >&2; }
+  fi
+
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  APP_DIR="$tmp"
+  cat >"$tmp/version.json" <<'EOF'
+{
+  "_comment": "Store version",
+  "ios": {"name": "9.9.9", "build": "42"},
+  "macos": {"name": "1.0.0", "build": "1"}
+}
+EOF
+
+  inode=$(stat -f %i "$tmp/version.json")
+  version_bump macos build || exit 1
+  [ "$(stat -f %i "$tmp/version.json")" != "$inode" ] || {
+    echo "version.json must be replaced atomically, not written in place" >&2
+    exit 1
+  }
+  [ "$(ls -A "$tmp")" = "version.json" ] || {
+    echo "no temporary files may remain: $(ls -A "$tmp")" >&2
+    exit 1
+  }
+  python3 - "$tmp/version.json" <<'PY' || exit 1
+import json, sys
+data = json.loads(open(sys.argv[1]).read())
+assert data["macos"] == {"name": "1.0.0", "build": "2"}, data["macos"]
+assert data["ios"] == {"name": "9.9.9", "build": "42"}, data["ios"]
+assert data["_comment"] == "Store version", data["_comment"]
+PY
+
+  version_bump macos patch || exit 1
+  version_bump macos minor || exit 1
+  version_bump macos major || exit 1
+  python3 - "$tmp/version.json" <<'PY'
+import json, sys
+data = json.loads(open(sys.argv[1]).read())
+assert data["macos"] == {"name": "2.0.0", "build": "5"}, data["macos"]
+PY
+
+  version_configure macos || exit 1
+  [ "$APP_VERSION_NAME" = "2.0.0" ] && [ "$APP_VERSION_BUILD" = "5" ] || exit 1
+
+  if version_bump ios build >/dev/null 2>&1; then
+    echo "non-macOS platforms must be rejected" >&2
+    exit 1
+  fi
+  if version_bump macos nope >/dev/null 2>&1; then
+    echo "an invalid bump kind must be rejected" >&2
+    exit 1
+  fi
+  if version_configure ios >/dev/null 2>&1; then
+    echo "an unsupported platform must be rejected" >&2
+    exit 1
+  fi
+
+  python3 - "$tmp/version.json" <<'PY'
+import json, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+data = json.loads(path.read_text())
+data["macos"]["name"] = "1.0"
+path.write_text(json.dumps(data, indent=2) + "\n")
+PY
+  if version_bump macos build >/dev/null 2>&1; then
+    echo "a non-semver name must be rejected" >&2
+    exit 1
+  fi
+
+  rm -f "$tmp/version.json"
+  if version_bump macos build >/dev/null 2>&1; then
+    echo "a missing version.json must stop a bump" >&2
+    exit 1
+  fi
+
+  echo "version ok"
+fi

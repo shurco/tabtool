@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Runs the core tests. App tests are added once the Xcode project exists.
+# Usage: ./scripts/test
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "${here}/.." && pwd)"
+
+# shellcheck source=scripts/_helper
+source "${here}/_helper"
+if ! command_exists swift; then
+  print_answer "swift not found — install Xcode" red
+  exit 1
+fi
+
+if ! version_out="$(bash "${here}/lib/version" 2>&1)"; then
+  printf '%s\n' "${version_out}" >&2
+  exit 1
+fi
+
+swift test --package-path "${root}/app/apple/TabToolKit"
