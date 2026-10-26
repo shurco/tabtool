@@ -89,6 +89,32 @@ final class TabToolUITests: XCTestCase {
     }
 
     @MainActor
+    func testDeleteIsDisabledForTheOnlyColumn() {
+        let app = XCUIApplication()
+        app.launch()
+        app.menuBars.menuItems["New"].click()
+        let grid = app.tables["grid"]
+        XCTAssertTrue(grid.waitForExistence(timeout: 5))
+        let delete = app.buttons["delete-selection"]
+
+        // Remove two of the three new-document columns.
+        for header in ["C", "B"] {
+            let button = grid.buttons[header]
+            XCTAssertTrue(button.waitForExistence(timeout: 5))
+            button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+            XCTAssertTrue(delete.isEnabled)
+            delete.click()
+        }
+        XCTAssertEqual(grid.descendants(matching: .tableColumn).count, 1)
+
+        // The only column stays selected but cannot be deleted.
+        let onlyHeader = grid.buttons["A"]
+        XCTAssertTrue(onlyHeader.waitForExistence(timeout: 5))
+        onlyHeader.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        XCTAssertFalse(delete.isEnabled)
+    }
+
+    @MainActor
     func testHeaderClickSelectsAColumn() {
         let app = XCUIApplication()
         app.launch()

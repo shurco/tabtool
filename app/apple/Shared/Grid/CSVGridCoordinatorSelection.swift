@@ -102,8 +102,13 @@ extension CSVGridCoordinator {
         displayedColumns = columns
         headerView?.select(columns)
 
-        guard let tableView, !changed.isEmpty, presenter.numberOfRows > 0 else { return }
-        tableView.reloadData(forRowIndexes: IndexSet(0..<presenter.numberOfRows),
-                             columnIndexes: changed)
+        guard let tableView else { return }
+        // A structural change can remove a highlighted column before this
+        // runs; reloading an index past the new column count raises in AppKit.
+        let reloadColumns = changed.intersection(IndexSet(0..<tableView.numberOfColumns))
+        let reloadRows = IndexSet(0..<tableView.numberOfRows)
+        guard !reloadColumns.isEmpty, !reloadRows.isEmpty else { return }
+        tableView.reloadData(forRowIndexes: reloadRows,
+                             columnIndexes: reloadColumns)
     }
 }

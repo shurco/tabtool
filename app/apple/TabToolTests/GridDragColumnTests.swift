@@ -136,6 +136,22 @@ import Testing
                                                     [ "a", "1" ]])
     }
 
+    @Test func deletingASelectedColumnClearsTheHighlight() async throws {
+        let doc = CSVDocument(data: Data("a,b\nc,d\n".utf8), configuration: .init())
+        await doc.load()
+        doc.selection = GridSelection(columns: IndexSet([1]))
+        let (coordinator, tableView, headerView) = GridTestSupport.makeGrid(doc)
+        #expect(headerView.selectedColumns == IndexSet([1]))
+
+        doc.deleteSelection()
+        GridTestSupport.update(coordinator, from: doc)
+
+        #expect(doc.table?.columns.count == 1)
+        #expect(doc.selection == GridSelection())
+        #expect(headerView.selectedColumns.isEmpty)
+        #expect(tableView.numberOfColumns == 1)
+    }
+
     @Test func columnResizeSurvivesReorder() async throws {
         let doc = CSVDocument(data: Data("a,b,c\n1,2,3\n".utf8), configuration: .init())
         await doc.load()

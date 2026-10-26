@@ -3,6 +3,27 @@ import TabToolKit
 
 /// Table mutations exposed to the grid, menus, and format controls.
 extension CSVDocument {
+    /// Whether the current selection can be deleted.
+    ///
+    /// A column-only selection is disabled when the table has a single column:
+    /// the document keeps that column, so the command would do nothing. The
+    /// toolbar and the Edit menu both use this predicate.
+    var canDeleteSelection: Bool {
+        guard let table else { return false }
+        switch phase {
+        case .ready, .needsAttention:
+            break
+        case .loading, .readFailed, .unreadableFile:
+            return false
+        }
+
+        let rows = selection.rows.intersection(IndexSet(0..<table.rowCount))
+        if !rows.isEmpty { return true }
+
+        let columns = selection.columns.intersection(IndexSet(0..<table.columns.count))
+        return !columns.isEmpty && table.columns.count > 1
+    }
+
     /// Replaces one cell with a targeted undo record.
     ///
     /// Invalid indexes and unchanged values are ignored, so a no-op edit does

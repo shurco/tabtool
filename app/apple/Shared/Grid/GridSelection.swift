@@ -13,9 +13,4 @@ struct GridSelection: Equatable, Sendable {
         self.rows = rows
         self.columns = columns
     }
-
-    /// Whether either axis contains a selected index.
-    var hasSelection: Bool {
-        !rows.isEmpty || !columns.isEmpty
-    }
 }

@@ -90,7 +90,7 @@ private struct GridToolbar: View {
             .help("Delete Selected Rows or Columns")
             .accessibilityLabel("Delete Selection")
             .accessibilityIdentifier("delete-selection")
-            .disabled(!document.selection.hasSelection)
+            .disabled(!document.canDeleteSelection)
 
             Spacer()
         }
@@ -138,6 +138,7 @@ private struct GridToolbar: View {
     }
 
     private func deleteSelection() {
+        guard document.canDeleteSelection else { return }
         document.deleteSelection()
     }
 }

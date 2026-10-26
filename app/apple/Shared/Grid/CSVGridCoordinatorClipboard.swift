@@ -22,7 +22,7 @@ extension CSVGridCoordinator {
 
     /// Whether the current selection can be deleted.
     var canDeleteSelection: Bool {
-        isEditable && canCopySelection
+        isEditable && document.canDeleteSelection
     }
 
     /// Whether the table has rows to select.

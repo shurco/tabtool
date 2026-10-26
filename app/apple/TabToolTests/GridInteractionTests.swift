@@ -158,6 +158,38 @@ import Testing
         }
     }
 
+    @Test func deleteEnablementRejectsOnlyColumnSelection() async throws {
+        let doc = CSVDocument(data: Data("a\nb\n".utf8), configuration: .init())
+        await doc.load()
+        #expect(!doc.canDeleteSelection)
+
+        doc.selection = GridSelection(rows: IndexSet([0]))
+        #expect(doc.canDeleteSelection)
+
+        doc.selection = GridSelection(columns: IndexSet([0]))
+        #expect(!doc.canDeleteSelection)
+
+        let twoColumns = CSVDocument(data: Data("a,b\n".utf8), configuration: .init())
+        await twoColumns.load()
+        twoColumns.selection = GridSelection(columns: IndexSet([0]))
+        #expect(twoColumns.canDeleteSelection)
+    }
+
+    @Test func deleteMenuIsDisabledForOnlyColumnSelection() async throws {
+        let doc = CSVDocument(data: Data("a\nb\n".utf8), configuration: .init())
+        await doc.load()
+        doc.selection = GridSelection(columns: IndexSet([0]))
+        let (coordinator, tableView, _) = GridTestSupport.makeGrid(doc)
+        let deleteItem = NSMenuItem()
+        deleteItem.action = #selector(CSVTableView.delete(_:))
+
+        withExtendedLifetime(coordinator) {
+            #expect(!tableView.validateUserInterfaceItem(deleteItem))
+            #expect(!coordinator.deleteSelection())
+        }
+        #expect(doc.table?.columns.count == 1)
+    }
+
     @Test func deleteKeyRemovesTheSelectedRows() async throws {
         let doc = CSVDocument(data: Data("a\nb\n".utf8), configuration: .init())
         await doc.load()
