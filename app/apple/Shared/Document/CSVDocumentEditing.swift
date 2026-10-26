@@ -9,19 +9,90 @@ extension CSVDocument {
     /// the document keeps that column, so the command would do nothing. The
     /// toolbar and the Edit menu both use this predicate.
     var canDeleteSelection: Bool {
-        guard let table else { return false }
-        switch phase {
-        case .ready, .needsAttention:
-            break
-        case .loading, .readFailed, .unreadableFile:
-            return false
-        }
+        guard let table, isEditableContent else { return false }
 
         let rows = selection.rows.intersection(IndexSet(0..<table.rowCount))
         if !rows.isEmpty { return true }
 
         let columns = selection.columns.intersection(IndexSet(0..<table.columns.count))
         return !columns.isEmpty && table.columns.count > 1
+    }
+
+    /// Whether the table is loaded and structural commands may run.
+    var isEditableContent: Bool {
+        guard table != nil else { return false }
+        switch phase {
+        case .ready, .needsAttention:
+            return true
+        case .loading, .readFailed, .unreadableFile:
+            return false
+        }
+    }
+
+    /// Whether a valid row selection can be deleted.
+    var canDeleteSelectedRows: Bool {
+        guard let table, isEditableContent else { return false }
+        return !selection.rows.intersection(IndexSet(0..<table.rowCount)).isEmpty
+    }
+
+    /// Whether a valid column selection can be deleted.
+    var canDeleteSelectedColumns: Bool {
+        guard let table, isEditableContent else { return false }
+        let columns = selection.columns.intersection(IndexSet(0..<table.columns.count))
+        return !columns.isEmpty && table.columns.count > 1
+    }
+
+    /// Inserts a blank row above the first selected row, or at the top.
+    func addRowAboveSelection() {
+        guard let table else { return }
+        insertRowSelecting(at: selection.rows.first ?? 0, rowCount: table.rowCount)
+    }
+
+    /// Inserts a blank row below the last selected row, or at the end.
+    func addRowBelowSelection() {
+        guard let table else { return }
+        let index = selection.rows.last.map { $0 + 1 } ?? table.rowCount
+        insertRowSelecting(at: index, rowCount: table.rowCount)
+    }
+
+    /// Inserts a blank column left of the first selected column, or at the left.
+    func addColumnLeftOfSelection() {
+        guard let table else { return }
+        insertColumnSelecting(at: selection.columns.first ?? 0,
+                              columnCount: table.columns.count)
+    }
+
+    /// Inserts a blank column right of the last selected column, or at the right.
+    func addColumnRightOfSelection() {
+        guard let table else { return }
+        let index = selection.columns.last.map { $0 + 1 } ?? table.columns.count
+        insertColumnSelecting(at: index, columnCount: table.columns.count)
+    }
+
+    /// Deletes the selected rows and clears the selection.
+    func deleteSelectedRows() {
+        guard canDeleteSelectedRows else { return }
+        deleteRows(at: selection.rows)
+        selection = GridSelection()
+    }
+
+    /// Deletes the selected columns and clears the selection.
+    func deleteSelectedColumns() {
+        guard canDeleteSelectedColumns else { return }
+        deleteColumns(at: selection.columns)
+        selection = GridSelection()
+    }
+
+    private func insertRowSelecting(at index: Int, rowCount: Int) {
+        let insertion = min(max(index, 0), rowCount)
+        addRow(at: insertion)
+        selection = GridSelection(rows: IndexSet(integer: insertion))
+    }
+
+    private func insertColumnSelecting(at index: Int, columnCount: Int) {
+        let insertion = min(max(index, 0), columnCount)
+        addColumn(at: insertion)
+        selection = GridSelection(columns: IndexSet(integer: insertion))
     }
 
     /// Replaces one cell with a targeted undo record.

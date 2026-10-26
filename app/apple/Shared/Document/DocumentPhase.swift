@@ -18,7 +18,12 @@ enum DocumentPhase: Equatable {
 enum DocumentError: Error, Equatable {
     /// The table is not loaded yet or the file could not be read.
     case notReady
-    /// The operation would discard unsaved edits.
+    /// The operation was rejected because it would discard unsaved edits, or
+    /// because it raced with another change.
+    ///
+    /// The format UI checks `hasUnsavedChangesAsync()` before forcing a
+    /// re-read: a dirty document gets a discard prompt, while a rejected
+    /// re-read gets a retry message.
     case requiresConfirmation
     /// The file bytes are unavailable to the document.
     case cannotReadFile
