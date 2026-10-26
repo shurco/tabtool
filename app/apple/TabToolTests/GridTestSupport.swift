@@ -6,6 +6,13 @@ import TabToolKit
 /// Shared setup for grid interaction tests.
 @MainActor
 enum GridTestSupport {
+    /// A new document with the main-actor load applied.
+    static func makeLoadedNewDocument() async -> CSVDocument {
+        let document = CSVDocument()
+        await document.load()
+        return document
+    }
+
     /// Attaches a coordinator to a standalone table view built from `document`.
     static func makeGrid(
         _ document: CSVDocument

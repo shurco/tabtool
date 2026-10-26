@@ -5,8 +5,70 @@ import UniformTypeIdentifiers
 @testable import TabTool
 
 /// Autosave calls the save protocol from a background queue, so snapshotting
-/// and serialization must never read main-actor state.
+/// and serialization must never read main-actor state. Document creation can
+/// also run off the main actor while opening a file, so initializers store
+/// plain values and the main-actor `load()` publishes the visible state.
 @Suite struct CSVDocumentConcurrencyTests {
+    @Test @MainActor func newDocumentIsConstructedOffMainActor() async {
+        let document = await Task.detached { CSVDocument() }.value
+
+        #expect(document.phase == .loading)
+        #expect(document.table == nil)
+
+        await document.load()
+        #expect(document.phase == .ready)
+        #expect(document.table?.rowCount == 1)
+        #expect(document.table?.columns.count == 3)
+        #expect(document.table?.headers == nil)
+    }
+
+    @Test @MainActor func openedDocumentIsConstructedOffMainActor() async {
+        let configuration = CSVConfiguration(decimalMark: ",")
+        let data = Data("a,b\n1,2\n".utf8)
+
+        let document = await Task.detached {
+            CSVDocument(data: data, fileURL: nil, configuration: configuration)
+        }.value
+
+        #expect(document.phase == .loading)
+        #expect(document.table == nil)
+
+        await document.load()
+        #expect(document.phase == .ready)
+        #expect(document.configuration == configuration)
+        #expect(document.table?.columns.count == 2)
+        #expect(document.table?.cell(row: 1, column: 1) == "2")
+    }
+
+    @Test @MainActor func referenceFileDocumentInitializerPathRunsOffMainActor() async {
+        // `FileDocumentReadConfiguration` has no public initializer, so this
+        // exercises the nonisolated designated init that the document's
+        // `init(configuration:)` delegates to.
+        let document = await Task.detached {
+            CSVDocument(data: Data("a\n1\n".utf8), fileURL: nil,
+                        configuration: nil, prefersChineseEncoding: true)
+        }.value
+
+        #expect(document.prefersChineseEncoding)
+        #expect(document.phase == .loading)
+        #expect(document.table == nil)
+
+        await document.load()
+        #expect(document.phase == .ready)
+        #expect(document.table?.columns.count == 1)
+    }
+
+    @Test @MainActor func loadingANewDocumentIsIdempotent() async {
+        let document = CSVDocument()
+        await document.load()
+        document.setCell("edited", row: 0, column: 0)
+
+        await document.load()
+
+        #expect(document.table?.columns.count == 3)
+        #expect(document.table?.cell(row: 0, column: 0) == "edited")
+    }
+
     @Test @MainActor func snapshotOffMainActorReturnsLoadedContent() async throws {
         var input = Data([0xEF, 0xBB, 0xBF])
         input.append(Data("a,b\n1,2\n".utf8))

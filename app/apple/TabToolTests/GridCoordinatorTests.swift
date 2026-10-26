@@ -27,8 +27,8 @@ import Testing
         )
     }
 
-    @Test func rowSelectionUpdatesDocument() {
-        let document = CSVDocument()
+    @Test func rowSelectionUpdatesDocument() async {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, tableView, _) = makeGrid(document)
         withExtendedLifetime(coordinator) {
             tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
@@ -36,8 +36,8 @@ import Testing
         #expect(document.selection == GridSelection(rows: IndexSet(integer: 0)))
     }
 
-    @Test func headerClickSelectsColumnAndHighlightsIt() throws {
-        let document = CSVDocument()
+    @Test func headerClickSelectsColumnAndHighlightsIt() async throws {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, tableView, headerView) = makeGrid(document)
         withExtendedLifetime(coordinator) {
             headerView.clickColumn(at: 1, modifiers: [])
@@ -59,8 +59,8 @@ import Testing
         #expect(!plainCell.isColumnSelected)
     }
 
-    @Test func headerClickClearsRowSelection() throws {
-        let document = CSVDocument()
+    @Test func headerClickClearsRowSelection() async throws {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, tableView, headerView) = makeGrid(document)
         withExtendedLifetime(coordinator) {
             tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
@@ -72,8 +72,8 @@ import Testing
         #expect(headerView.selectedColumns == IndexSet(integer: 1))
     }
 
-    @Test func rowSelectionClearsColumnHighlight() throws {
-        let document = CSVDocument()
+    @Test func rowSelectionClearsColumnHighlight() async throws {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, tableView, headerView) = makeGrid(document)
         withExtendedLifetime(coordinator) {
             headerView.clickColumn(at: 1, modifiers: [])
@@ -90,8 +90,8 @@ import Testing
         #expect(!cell.isColumnSelected)
     }
 
-    @Test func commandClickTogglesColumns() {
-        let document = CSVDocument()
+    @Test func commandClickTogglesColumns() async {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, _, headerView) = makeGrid(document)
         withExtendedLifetime(coordinator) {
             headerView.clickColumn(at: 0, modifiers: [])
@@ -106,8 +106,8 @@ import Testing
         #expect(document.selection == GridSelection(columns: IndexSet(integer: 2)))
     }
 
-    @Test func shiftClickExtendsColumnRange() {
-        let document = CSVDocument()
+    @Test func shiftClickExtendsColumnRange() async {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, _, headerView) = makeGrid(document)
         withExtendedLifetime(coordinator) {
             headerView.clickColumn(at: 0, modifiers: [])
@@ -117,8 +117,8 @@ import Testing
         #expect(headerView.selectedColumns == IndexSet([0, 1, 2]))
     }
 
-    @Test func externalSelectionIsAppliedToTheTable() {
-        let document = CSVDocument()
+    @Test func externalSelectionIsAppliedToTheTable() async {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, tableView, headerView) = makeGrid(document)
         document.selection = GridSelection(rows: IndexSet(integer: 0))
         update(coordinator, from: document)
@@ -126,8 +126,8 @@ import Testing
         #expect(headerView.selectedColumns.isEmpty)
     }
 
-    @Test func externalColumnSelectionHighlightsHeaderAndCell() throws {
-        let document = CSVDocument()
+    @Test func externalColumnSelectionHighlightsHeaderAndCell() async throws {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, tableView, headerView) = makeGrid(document)
         document.selection = GridSelection(columns: IndexSet(integer: 1))
         update(coordinator, from: document)
@@ -142,8 +142,8 @@ import Testing
         #expect(cell.isColumnSelected)
     }
 
-    @Test func switchingSelectionToColumnsClearsRows() {
-        let document = CSVDocument()
+    @Test func switchingSelectionToColumnsClearsRows() async {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, tableView, headerView) = makeGrid(document)
         tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
 
@@ -155,8 +155,8 @@ import Testing
         #expect(document.selection == GridSelection(columns: IndexSet(integer: 1)))
     }
 
-    @Test func selectionSurvivesARowCountReload() {
-        let document = CSVDocument()
+    @Test func selectionSurvivesARowCountReload() async {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, tableView, _) = makeGrid(document)
         document.selection = GridSelection(rows: IndexSet(integer: 0))
         update(coordinator, from: document)
@@ -168,8 +168,8 @@ import Testing
         #expect(tableView.selectedRowIndexes == IndexSet(integer: 0))
     }
 
-    @Test func fieldEditorRunsWithoutLocalUndo() {
-        let document = CSVDocument()
+    @Test func fieldEditorRunsWithoutLocalUndo() async {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, _, _) = makeGrid(document)
         let fieldEditor = NSTextView()
         fieldEditor.allowsUndo = true
@@ -180,8 +180,8 @@ import Testing
         #expect(fieldEditor.allowsUndo == false)
     }
 
-    @Test func endEditingFromDetachedCellIsIgnored() throws {
-        let document = CSVDocument()
+    @Test func endEditingFromDetachedCellIsIgnored() async throws {
+        let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, _, _) = makeGrid(document)
         let cell = CSVGridCellView()
         let field = try #require(cell.textField)

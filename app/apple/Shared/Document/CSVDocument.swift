@@ -11,9 +11,11 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         [.commaSeparatedText, .tabSeparatedText, .plainText]
     }
 
+    // A document may be created off the main actor, so the published state
+    // starts at safe defaults and is filled in by the main-actor `load()`.
     @Published private(set) var table: CSVTable?
-    @Published private(set) var configuration: CSVConfiguration
-    @Published private(set) var phase: DocumentPhase
+    @Published private(set) var configuration = CSVConfiguration()
+    @Published private(set) var phase: DocumentPhase = .loading
     @Published var selection = GridSelection()
     private(set) var fileURL: URL?
 
@@ -31,10 +33,15 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// changed, so edits made while the re-read was parsing are not lost.
     private(set) var mutationRevision: UInt64 = 0
 
-    /// Bytes supplied by the document initializer, used for the first load
-    /// only. Later loads read the current file through `fileURL`.
-    private var initialData: Data?
-    private var shouldDetectFormat = false
+    /// What the initializer supplied, consumed by the first `load()`.
+    ///
+    /// Construction can run off the main actor, so an initializer stores plain
+    /// values only and the main actor builds the visible document state.
+    private enum InitialContent {
+        case newDocument
+        case data(Data, configuration: CSVConfiguration?)
+    }
+    private var initialContent: InitialContent?
     let prefersChineseEncoding: Bool
     private var undoManager: UndoManager?
 
@@ -44,36 +51,34 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// Whether a file re-read is currently awaiting bytes or a parse.
     private var isRereading = false
 
-    init(data: Data, fileURL: URL? = nil, configuration: CSVConfiguration? = nil,
-         prefersChineseEncoding: Bool = false, undoManager: UndoManager? = nil) {
-        self.table = nil
-        self.configuration = configuration ?? CSVConfiguration()
-        self.phase = .loading
+    /// Creates a document around bytes supplied by the file reader.
+    ///
+    /// Runs off the main actor: it stores the bytes for the first main-actor
+    /// `load()` instead of publishing document state.
+    nonisolated init(data: Data, fileURL: URL? = nil, configuration: CSVConfiguration? = nil,
+                     prefersChineseEncoding: Bool = false, undoManager: UndoManager? = nil) {
         self.fileURL = fileURL
-        self.initialData = data
-        self.shouldDetectFormat = configuration == nil
+        self.initialContent = .data(data, configuration: configuration)
         self.prefersChineseEncoding = prefersChineseEncoding
         self.undoManager = undoManager
-        undoManager?.groupsByEvent = false
     }
 
-    init() {
-        table = .newDocument()
-        configuration = CSVConfiguration()
-        phase = .ready
-        fileURL = nil
-        prefersChineseEncoding = false
-        refreshSnapshotCache()
+    /// Creates a new document; `load()` materializes the table.
+    nonisolated init() {
+        self.fileURL = nil
+        self.initialContent = .newDocument
+        self.prefersChineseEncoding = false
+        self.undoManager = nil
     }
 
-    convenience init(configuration: ReferenceFileDocument.ReadConfiguration) throws {
+    nonisolated convenience init(configuration: ReferenceFileDocument.ReadConfiguration) throws {
         guard let data = configuration.file.regularFileContents else {
             throw CSVError.cannotDecodeData
         }
         self.init(data: data, prefersChineseEncoding: Self.systemPrefersChineseEncoding)
     }
 
-    private static var systemPrefersChineseEncoding: Bool {
+    private nonisolated static var systemPrefersChineseEncoding: Bool {
         Locale.preferredLanguages.first?.lowercased().hasPrefix("zh") == true
     }
 
@@ -117,10 +122,11 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
 
     /// Detects the format and parses the bytes off the main actor.
     ///
-    /// A supplied configuration skips detection. The initial bytes are used
-    /// once; retrying after a read failure reads the current file through
-    /// `fileURL`. A loaded document is a no-op. Overlapping calls await the
-    /// same in-flight load instead of racing over `initialData`.
+    /// A new document becomes a 3×1 ready table. A supplied configuration
+    /// skips detection. The initial bytes are used once; retrying after a read
+    /// failure reads the current file through `fileURL`. A loaded document is
+    /// a no-op. Overlapping calls await the same in-flight load instead of
+    /// racing over the initial content.
     func load() async {
         if let loadTask {
             await loadTask.value
@@ -133,17 +139,38 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
             break
         }
 
-        let task = Task { await self.performLoad() }
+        // The undo manager may arrive with the initializer or from the view;
+        // either way it is configured once the document is on the main actor.
+        undoManager?.groupsByEvent = false
+
+        switch initialContent {
+        case .newDocument:
+            initialContent = nil
+            materializeNewDocument()
+        case .data(let data, let configuration):
+            initialContent = nil
+            await performSharedLoad(data: data, configuration: configuration)
+        case nil:
+            await performSharedLoad(data: nil, configuration: self.configuration)
+        }
+    }
+
+    /// Builds the table for a new document; `load()` is idempotent.
+    private func materializeNewDocument() {
+        table = .newDocument()
+        configuration = CSVConfiguration()
+        phase = .ready
+        refreshPhase()
+    }
+
+    private func performSharedLoad(data: Data?, configuration: CSVConfiguration?) async {
+        let task = Task { await self.performLoad(data: data, configuration: configuration) }
         loadTask = task
         await task.value
         loadTask = nil
     }
 
-    private func performLoad() async {
-        let data = initialData
-        initialData = nil
-        let configuration = shouldDetectFormat ? nil : self.configuration
-        shouldDetectFormat = false
+    private func performLoad(data: Data?, configuration: CSVConfiguration?) async {
         let fileURL = self.fileURL
         let prefersChinese = prefersChineseEncoding
 

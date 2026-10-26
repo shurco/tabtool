@@ -16,8 +16,10 @@ import UniformTypeIdentifiers
         #expect(doc.table?.columns.count == 3)
     }
 
-    @Test @MainActor func newDocumentIsThreeByOneAndReady() {
+    @Test @MainActor func newDocumentIsThreeByOneAndReady() async {
         let doc = CSVDocument()
+        #expect(doc.phase == .loading)
+        await doc.load()
         #expect(doc.phase == .ready)
         #expect(doc.table?.rowCount == 1)
         #expect(doc.table?.columns.count == 3)
