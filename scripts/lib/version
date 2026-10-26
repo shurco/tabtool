@@ -59,6 +59,35 @@ tmp.replace(path)
 PY
 }
 
+# _version_read <config> <macos>
+# Prints "name build" for a valid platform entry. This is the single place
+# where the x.y.z name and the positive build number are validated; both
+# version_configure and version_bump rely on it, so they cannot disagree.
+_version_read() {
+  local config="$1"
+  local platform="$2"
+  python3 - "$config" "$platform" <<'PY'
+import json, re, sys
+from pathlib import Path
+
+config_path, platform = sys.argv[1:3]
+data = json.loads(Path(config_path).read_text())
+entry = data.get(platform)
+if not isinstance(entry, dict):
+    sys.stderr.write(f"version.json has no platform {platform!r}\n")
+    sys.exit(1)
+name = str(entry.get("name", "")).strip()
+build = str(entry.get("build", "")).strip()
+if not re.fullmatch(r"\d+\.\d+\.\d+", name):
+    sys.stderr.write(f"Invalid version name for {platform}: {name!r}\n")
+    sys.exit(1)
+if not build.isdigit() or int(build) < 1:
+    sys.stderr.write(f"Invalid build for {platform}: {build!r}\n")
+    sys.exit(1)
+print(name, build)
+PY
+}
+
 # version_configure <macos>
 # Reads name/build into APP_VERSION_*. Returns 1 if the entry is malformed.
 # A missing file or python3 is a warning: the build then uses project.yml.
@@ -87,28 +116,7 @@ version_configure() {
   fi
 
   local name build py_out py_rc=0
-  py_out=$(python3 - "$config" "$platform" <<'PY'
-import json, sys
-from pathlib import Path
-
-config_path, platform = sys.argv[1:3]
-data = json.loads(Path(config_path).read_text())
-entry = data.get(platform)
-if not isinstance(entry, dict):
-    sys.stderr.write(f"version.json has no platform {platform!r}\n")
-    sys.exit(1)
-name = str(entry.get("name", "")).strip()
-build = str(entry.get("build", "")).strip()
-parts = name.split(".")
-if not name or any(not part.isdigit() for part in parts):
-    sys.stderr.write(f"Invalid version name for {platform}: {name!r}\n")
-    sys.exit(1)
-if not build.isdigit() or int(build) < 1:
-    sys.stderr.write(f"Invalid build for {platform}: {build!r}\n")
-    sys.exit(1)
-print(name, build)
-PY
-) || py_rc=$?
+  py_out=$(_version_read "$config" "$platform") || py_rc=$?
 
   if [ "$py_rc" -ne 0 ]; then
     print_answer "Malformed app/apple/version.json for ${platform}" red
@@ -149,47 +157,44 @@ version_bump() {
     return 1
   fi
 
-  local new_version new_name new_build
-  new_version=$(python3 - "$config" "$platform" "$kind" <<'PY'
-import json, re, sys
-from pathlib import Path
-
-config_path, platform, kind = sys.argv[1:4]
-data = json.loads(Path(config_path).read_text())
-entry = data.get(platform)
-if not isinstance(entry, dict):
-    sys.exit(f"version.json has no platform {platform!r}")
-name = str(entry.get("name", "")).strip()
-build_text = str(entry.get("build", "")).strip()
-match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", name)
-if not match or not build_text.isdigit():
-    sys.exit(f"Invalid version for {platform}: name={name!r} build={build_text!r}")
-major, minor, patch = map(int, match.groups())
-build = int(build_text)
-if kind == "build":
-    build += 1
-elif kind == "patch":
-    patch += 1
-    build += 1
-elif kind == "minor":
-    minor += 1
-    patch = 0
-    build += 1
-elif kind == "major":
-    major += 1
-    minor = 0
-    patch = 0
-    build += 1
-else:
-    sys.exit(f"Unknown bump kind: {kind}")
-print(f"{major}.{minor}.{patch} {build}")
-PY
-) || {
+  local current new_name new_build
+  current=$(_version_read "$config" "$platform") || {
     print_answer "Could not bump the ${platform} version in ${config}" red
     return 1
   }
 
-  read -r new_name new_build <<<"$new_version"
+  local major minor patch build
+  local name build_text
+  read -r name build_text <<<"$current"
+  IFS=. read -r major minor patch <<<"$name"
+  major=$((10#$major))
+  minor=$((10#$minor))
+  patch=$((10#$patch))
+  build=$((10#$build_text))
+
+  case "$kind" in
+    build)
+      build=$((build + 1))
+      ;;
+    patch)
+      patch=$((patch + 1))
+      build=$((build + 1))
+      ;;
+    minor)
+      minor=$((minor + 1))
+      patch=0
+      build=$((build + 1))
+      ;;
+    major)
+      major=$((major + 1))
+      minor=0
+      patch=0
+      build=$((build + 1))
+      ;;
+  esac
+
+  new_name="${major}.${minor}.${patch}"
+  new_build="$build"
   if ! _version_json_upsert "$config" "$platform" "$new_name" "$new_build"; then
     print_answer "Could not write the ${platform} version to ${config}" red
     return 1
@@ -266,6 +271,34 @@ path.write_text(json.dumps(data, indent=2) + "\n")
 PY
   if version_bump macos build >/dev/null 2>&1; then
     echo "a non-semver name must be rejected" >&2
+    exit 1
+  fi
+
+  # Both entry points must apply the same x.y.z rule: extra components and
+  # empty components are invalid even though "1.2.3" passes.
+  python3 - "$tmp/version.json" <<'PY'
+import json, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+data = json.loads(path.read_text())
+data["macos"]["name"] = "1.2.3.4"
+path.write_text(json.dumps(data, indent=2) + "\n")
+PY
+  if version_configure macos >/dev/null 2>&1 || version_bump macos build >/dev/null 2>&1; then
+    echo "both readers must reject a four-component version" >&2
+    exit 1
+  fi
+
+  python3 - "$tmp/version.json" <<'PY'
+import json, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+data = json.loads(path.read_text())
+data["macos"]["name"] = "1..3"
+path.write_text(json.dumps(data, indent=2) + "\n")
+PY
+  if version_configure macos >/dev/null 2>&1 || version_bump macos build >/dev/null 2>&1; then
+    echo "both readers must reject an empty version component" >&2
     exit 1
   fi
 

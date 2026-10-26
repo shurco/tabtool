@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+# Builds and runs the macOS app through XcodeGen and xcodebuild.
+# Usage: ./scripts/app <run|build|archive|clean|version> ...
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "${here}/.." && pwd)"
+app_dir="${root}/app/apple"
+project="${app_dir}/TabTool.xcodeproj"
+build_dir="${app_dir}/build"
+derived_data="${build_dir}/DerivedData"
+
+# shellcheck source=scripts/_helper
+source "${here}/_helper"
+# shellcheck source=scripts/lib/version
+source "${here}/lib/version"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  scripts/app run [macos] [--bump-version[=KIND]]
+  scripts/app build [macos] [--bump-version[=KIND]]
+  scripts/app archive [macos] [--bump-version[=KIND]]
+  scripts/app clean
+  scripts/app version [macos]
+  scripts/app version bump [macos] [KIND]
+
+KIND is build (default), patch, minor, or major. A bare --bump-version
+bumps the build number. run, build, and archive regenerate the Xcode
+project from app/apple/project.yml first.
+EOF
+}
+
+require_tools() {
+  if ! command_exists xcodegen; then
+    print_answer "xcodegen not found — brew install xcodegen" red
+    exit 1
+  fi
+  if ! command_exists xcodebuild; then
+    print_answer "xcodebuild not found — install Xcode" red
+    exit 1
+  fi
+}
+
+generate_project() {
+  (cd "${app_dir}" && xcodegen generate)
+}
+
+# Sets APP_VERSION_NAME and APP_VERSION_BUILD and builds the xcodebuild
+# overrides used by every build command.
+version_settings=()
+load_version() {
+  if ! APP_DIR="${app_dir}" version_configure macos; then
+    exit 1
+  fi
+  version_settings=()
+  if [ -n "${APP_VERSION_NAME}" ]; then
+    version_settings+=("MARKETING_VERSION=${APP_VERSION_NAME}")
+  fi
+  if [ -n "${APP_VERSION_BUILD}" ]; then
+    version_settings+=("CURRENT_PROJECT_VERSION=${APP_VERSION_BUILD}")
+  fi
+}
+
+bump_version() {
+  local kind="$1"
+  if ! valid_bump_kind "${kind}"; then
+    print_answer "Bump kind must be build, patch, minor, or major" red
+    exit 1
+  fi
+  if ! APP_DIR="${app_dir}" version_bump macos "${kind}"; then
+    exit 1
+  fi
+}
+
+build_app() {
+  local configuration="$1"
+  shift
+  xcodebuild \
+    -project "${project}" \
+    -scheme TabTool \
+    -configuration "${configuration}" \
+    -destination "platform=macOS" \
+    -derivedDataPath "${derived_data}" \
+    "$@" \
+    ${version_settings[@]+"${version_settings[@]}"} \
+    build
+}
+
+run_app() {
+  load_version
+  generate_project
+  build_app Debug
+  local app_path="${derived_data}/Build/Products/Debug/TabTool.app"
+  if [ ! -d "${app_path}" ]; then
+    print_answer "Built app not found at ${app_path}" red
+    exit 1
+  fi
+  open "${app_path}"
+}
+
+archive_app() {
+  load_version
+  generate_project
+  xcodebuild \
+    -project "${project}" \
+    -scheme TabTool \
+    -configuration Release \
+    -destination "platform=macOS" \
+    -derivedDataPath "${derived_data}" \
+    -archivePath "${build_dir}/TabTool.xcarchive" \
+    CODE_SIGNING_ALLOWED=NO \
+    ${version_settings[@]+"${version_settings[@]}"} \
+    archive
+  print_answer "Archive: ${build_dir}/TabTool.xcarchive" green
+}
+
+clean_build() {
+  rm -rf "${build_dir}"
+  print_answer "Removed ${build_dir}" grey
+}
+
+bump_kind=""
+positional=()
+for argument in "$@"; do
+  case "${argument}" in
+    --bump-version)
+      bump_kind="build"
+      ;;
+    --bump-version=*)
+      bump_kind="${argument#--bump-version=}"
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      positional+=("${argument}")
+      ;;
+  esac
+done
+
+command="${positional[0]:-}"
+if [ -z "${command}" ]; then
+  usage
+  exit 1
+fi
+
+case "${command}" in
+  clean)
+    if [ "${#positional[@]}" -ne 1 ] || [ -n "${bump_kind}" ]; then
+      print_answer "clean takes no platform or version flags" red
+      exit 1
+    fi
+    clean_build
+    ;;
+
+  version)
+    if [ "${positional[1]:-}" = "bump" ]; then
+      platform="${positional[2]:-macos}"
+      kind="${positional[3]:-build}"
+      if [ "${#positional[@]}" -gt 4 ]; then
+        usage
+        exit 1
+      fi
+      if ! valid_platform "${platform}"; then
+        print_answer "Unsupported platform: ${platform} (only macos)" red
+        exit 1
+      fi
+      bump_version "${kind}"
+    else
+      platform="${positional[1]:-macos}"
+      if [ "${#positional[@]}" -gt 2 ]; then
+        usage
+        exit 1
+      fi
+      if ! valid_platform "${platform}"; then
+        print_answer "Unsupported platform: ${platform} (only macos)" red
+        exit 1
+      fi
+      if [ -n "${bump_kind}" ]; then
+        bump_version "${bump_kind}"
+      fi
+    fi
+    load_version
+    ;;
+
+  run | build | archive)
+    platform="${positional[1]:-macos}"
+    if [ "${#positional[@]}" -gt 2 ]; then
+      usage
+      exit 1
+    fi
+    if ! valid_platform "${platform}"; then
+      print_answer "Unsupported platform: ${platform} (only macos)" red
+      exit 1
+    fi
+    require_tools
+    if [ -n "${bump_kind}" ]; then
+      bump_version "${bump_kind}"
+    fi
+    case "${command}" in
+      run)
+        run_app
+        ;;
+      build)
+        load_version
+        generate_project
+        build_app Debug CODE_SIGNING_ALLOWED=NO
+        ;;
+      archive)
+        archive_app
+        ;;
+    esac
+    ;;
+
+  *)
+    print_answer "Unknown command: ${command}" red
+    usage
+    exit 1
+    ;;
+esac
