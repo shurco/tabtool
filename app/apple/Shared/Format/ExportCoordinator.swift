@@ -50,18 +50,6 @@ enum ExportPlan {
         return url.deletingPathExtension().appendingPathExtension(expected)
     }
 
-    /// The explicit header row an export writes.
-    ///
-    /// Mirrors `CSVExport`: an enabled header uses the document headers or
-    /// generated column names. Validation runs against this row so it checks
-    /// the same fields the writer will produce.
-    static func header(table: CSVTable, configuration: CSVConfiguration) -> [String]? {
-        guard configuration.firstRowAsHeader else { return nil }
-        return table.headers ?? table.columns.indices.map {
-            ColumnNameGenerator.name(for: $0)
-        }
-    }
-
     /// Writes the exported bytes to `url` atomically.
     ///
     /// Validation happens before any file access, so an unencodable or
@@ -78,6 +66,21 @@ enum ExportPlan {
             allowAmbiguousOutput: allowAmbiguousOutput
         )
         try data.write(to: url, options: .atomic)
+    }
+
+    /// What the UI does for the output `table` will produce.
+    ///
+    /// The decision comes from the same converted table and header the writer
+    /// uses, because decimal conversion can create or remove separators inside
+    /// numeric cells.
+    static func decision(table: CSVTable,
+                         documentConfiguration: CSVConfiguration,
+                         exportConfiguration: CSVConfiguration) -> ExportDecision {
+        decision(for: CSVExport.preflightIssue(
+            table: table,
+            documentConfiguration: documentConfiguration,
+            exportConfiguration: exportConfiguration
+        ))
     }
 
     /// What the UI does for a validation result.
@@ -187,7 +190,11 @@ final class ExportCoordinator {
         let url = ExportPlan.outputURL(selectedURL, configuration: configuration)
         teardown()
 
-        switch ExportPlan.decision(for: issue(for: configuration)) {
+        switch ExportPlan.decision(
+            table: table,
+            documentConfiguration: documentConfiguration,
+            exportConfiguration: configuration
+        ) {
         case .proceed:
             write(to: url, configuration: configuration)
         case .confirmAmbiguous:
@@ -195,12 +202,6 @@ final class ExportCoordinator {
         case .blockedUnencodable:
             presentError(FormatErrorText.alertMessage(for: CSVError.unencodableText))
         }
-    }
-
-    private func issue(for configuration: CSVConfiguration) -> CSVWriteIssue? {
-        let header = ExportPlan.header(table: table, configuration: configuration)
-        return CSVWriteValidation.issue(table: table, header: header,
-                                        configuration: configuration)
     }
 
     private func confirmAmbiguousExport(to url: URL,
@@ -227,6 +228,11 @@ final class ExportCoordinator {
                 to: url,
                 allowAmbiguousOutput: allowAmbiguousOutput
             )
+        } catch let error as CSVError where error == .ambiguousOutput
+            && !allowAmbiguousOutput {
+            // Preflight and writer share the same input, so this only happens
+            // if they drift. Ask rather than fail with a generic error.
+            confirmAmbiguousExport(to: url, configuration: configuration)
         } catch {
             presentError(FormatErrorText.alertMessage(for: error))
         }

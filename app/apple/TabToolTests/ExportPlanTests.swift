@@ -61,40 +61,50 @@ import UniformTypeIdentifiers
                                      configuration: comma).path == "/tmp/out.csv")
     }
 
-    @Test func headerFollowsDocumentHeaders() {
-        let table = CSVTable(rows: [["x"]], headers: ["Name"])
-        var configuration = CSVConfiguration()
-        configuration.firstRowAsHeader = true
-        #expect(ExportPlan.header(table: table, configuration: configuration)
-            == ["Name"])
+    @Test func convertedDecimalAmbiguityAsksForConfirmation() {
+        let table = CSVTable(rows: [["1.5"]], headers: nil)
+        let document = CSVConfiguration(columnSeparator: ",", decimalMark: ".")
+        let export = CSVConfiguration(columnSeparator: ",", quoteCharacter: "",
+                                      escapeCharacter: "", decimalMark: ",")
+        #expect(ExportPlan.decision(table: table,
+                                    documentConfiguration: document,
+                                    exportConfiguration: export)
+            == .confirmAmbiguous)
     }
 
-    @Test func headerFallsBackToGeneratedNames() {
-        let table = CSVTable(rows: [["x", "y"]], headers: nil)
-        var configuration = CSVConfiguration()
-        configuration.firstRowAsHeader = true
-        #expect(ExportPlan.header(table: table, configuration: configuration)
-            == ["A", "B"])
+    @Test func convertedDecimalOutputIsNotBlockedByOriginalAmbiguity() {
+        let table = CSVTable(rows: [["1,5"]], headers: nil)
+        let document = CSVConfiguration(columnSeparator: ",", quoteCharacter: "",
+                                        escapeCharacter: "", decimalMark: ",")
+        let export = CSVConfiguration(columnSeparator: ",", quoteCharacter: "",
+                                      escapeCharacter: "", decimalMark: ".")
+        #expect(ExportPlan.decision(table: table,
+                                    documentConfiguration: document,
+                                    exportConfiguration: export) == .proceed)
     }
 
-    @Test func headerIsOmittedWhenDisabled() {
-        let table = CSVTable(rows: [["x"]], headers: ["Name"])
-        #expect(ExportPlan.header(table: table, configuration: .init()) == nil)
-    }
+    @Test func convertedAmbiguityRequiresConfirmationBeforeWriting() throws {
+        let table = CSVTable(rows: [["1.5"]], headers: nil)
+        let document = CSVConfiguration(columnSeparator: ",", decimalMark: ".")
+        let export = CSVConfiguration(columnSeparator: ",", quoteCharacter: "",
+                                      escapeCharacter: "", decimalMark: ",")
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
 
-    @Test func generatedHeaderMatchesExportOutput() throws {
-        let table = CSVTable(rows: [["1,5", "text"]], headers: nil)
-        var configuration = CSVConfiguration(decimalMark: ".")
-        configuration.firstRowAsHeader = true
-        let data = try CSVExport.data(
-            table: table,
-            documentConfiguration: CSVConfiguration(decimalMark: ","),
-            exportConfiguration: configuration
-        )
-        let text = try #require(String(data: data, encoding: .utf8))
-        #expect(ExportPlan.header(table: table, configuration: configuration)
-            == ["A", "B"])
-        #expect(text.hasPrefix("\"A\",\"B\"\n"))
+        #expect(ExportPlan.decision(table: table,
+                                    documentConfiguration: document,
+                                    exportConfiguration: export)
+            == .confirmAmbiguous)
+        #expect(throws: CSVError.ambiguousOutput) {
+            try ExportPlan.write(table: table, documentConfiguration: document,
+                                 configuration: export, to: url)
+        }
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+
+        try ExportPlan.write(table: table, documentConfiguration: document,
+                             configuration: export, to: url,
+                             allowAmbiguousOutput: true)
+        #expect(String(data: try Data(contentsOf: url), encoding: .utf8) == "1,5")
     }
 
     @Test func cleanOutputExportsWithoutConfirmation() {

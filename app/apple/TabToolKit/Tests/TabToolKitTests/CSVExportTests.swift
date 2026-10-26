@@ -90,3 +90,72 @@ import Testing
                                   exportConfiguration: semicolonOut)
     #expect(String(data: data, encoding: .utf8) == "1,5")
 }
+
+@Test func exportPreflightUsesConvertedDecimalMark() {
+    let table = CSVTable(rows: [["1.5"]], headers: nil)
+    let document = CSVConfiguration(decimalMark: ".")
+    let export = CSVConfiguration(quoteCharacter: "", escapeCharacter: "",
+                                  decimalMark: ",")
+    #expect(CSVExport.preflightIssue(table: table,
+                                     documentConfiguration: document,
+                                     exportConfiguration: export)
+        == .ambiguousOutput)
+}
+
+@Test func exportPreflightIgnoresAmbiguityRemovedByConversion() throws {
+    let table = CSVTable(rows: [["1,5"]], headers: nil)
+    let document = CSVConfiguration(quoteCharacter: "", escapeCharacter: "",
+                                    decimalMark: ",")
+    let export = CSVConfiguration(quoteCharacter: "", escapeCharacter: "",
+                                  decimalMark: ".")
+    #expect(CSVExport.preflightIssue(table: table,
+                                     documentConfiguration: document,
+                                     exportConfiguration: export) == nil)
+
+    let data = try CSVExport.data(table: table, documentConfiguration: document,
+                                  exportConfiguration: export)
+    #expect(String(data: data, encoding: .utf8) == "1.5")
+}
+
+@Test func exportPreflightAllowsForcedAmbiguousConvertedOutput() throws {
+    let table = CSVTable(rows: [["1.5"]], headers: nil)
+    let document = CSVConfiguration(decimalMark: ".")
+    let export = CSVConfiguration(quoteCharacter: "", escapeCharacter: "",
+                                  decimalMark: ",")
+    #expect(CSVExport.preflightIssue(table: table,
+                                     documentConfiguration: document,
+                                     exportConfiguration: export)
+        == .ambiguousOutput)
+
+    let data = try CSVExport.data(table: table, documentConfiguration: document,
+                                  exportConfiguration: export,
+                                  allowAmbiguousOutput: true)
+    #expect(String(data: data, encoding: .utf8) == "1,5")
+}
+
+@Test func exportPreflightReportsUnencodableText() {
+    let table = CSVTable(rows: [["ж"]], headers: nil)
+    let export = CSVConfiguration(encoding: .ascii)
+    #expect(CSVExport.preflightIssue(table: table,
+                                     documentConfiguration: .init(),
+                                     exportConfiguration: export)
+        == .unencodableText)
+}
+
+@Test func exportPreflightChecksTheWrittenHeader() {
+    let table = CSVTable(rows: [["x"]], headers: ["a,b"])
+    var export = CSVConfiguration(quoteCharacter: "", escapeCharacter: "")
+    export.firstRowAsHeader = true
+    #expect(CSVExport.preflightIssue(table: table,
+                                     documentConfiguration: .init(),
+                                     exportConfiguration: export)
+        == .ambiguousOutput)
+}
+
+@Test func exportPreflightIgnoresAnUnwrittenHeader() {
+    let table = CSVTable(rows: [["x"]], headers: ["a,b"])
+    let export = CSVConfiguration(quoteCharacter: "", escapeCharacter: "")
+    #expect(CSVExport.preflightIssue(table: table,
+                                     documentConfiguration: .init(),
+                                     exportConfiguration: export) == nil)
+}
