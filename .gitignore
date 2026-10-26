@@ -1,1 +1,17 @@
+.DS_Store
+.build/
+.swiftpm/
+*.xcodeproj
+xcuserdata/
+DerivedData/
+app/apple/build/
+.superpowers/
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+*.dmg
+*.ipa
+*.xcarchive
+.env*
 CLAUDE.md

@@ -1,0 +1,7 @@
+{
+  "_comment": "Версия магазина для macOS. name — MARKETING_VERSION, build — CURRENT_PROJECT_VERSION. После загрузки в App Store Connect номер фиксируется в version.lock.json и должен расти.",
+  "macos": {
+    "name": "1.0.0",
+    "build": "1"
+  }
+}
