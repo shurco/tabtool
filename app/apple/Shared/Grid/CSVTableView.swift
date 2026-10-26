@@ -9,6 +9,10 @@ final class CSVTableView: NSTableView {
     /// active cell column, so Return editing falls back to this value.
     private(set) var lastClickedColumn = -1
 
+    /// Clipboard, deletion, select-all, and edit validation live in the
+    /// coordinator; the table view only routes responder actions to it.
+    weak var coordinator: CSVGridCoordinator?
+
     override var acceptsFirstResponder: Bool {
         true
     }
@@ -42,11 +46,67 @@ final class CSVTableView: NSTableView {
     }
 
     override func keyDown(with event: NSEvent) {
+        if isDeleteKey(event), coordinator?.deleteSelection() == true {
+            return
+        }
         if event.charactersIgnoringModifiers == "\r" || event.charactersIgnoringModifiers == "\u{3}",
            beginEditingSelectedCell() {
             return
         }
         super.keyDown(with: event)
+    }
+
+    // MARK: - Responder actions
+
+    @objc func copy(_ sender: Any?) {
+        coordinator?.copySelection()
+    }
+
+    @objc func paste(_ sender: Any?) {
+        coordinator?.paste()
+    }
+
+    @objc func delete(_ sender: Any?) {
+        coordinator?.deleteSelection()
+    }
+
+    override func selectAll(_ sender: Any?) {
+        guard let coordinator else {
+            super.selectAll(sender)
+            return
+        }
+        coordinator.selectAllRows()
+    }
+
+    override func validateUserInterfaceItem(_ item: NSValidatedUserInterfaceItem) -> Bool {
+        guard let coordinator else {
+            return super.validateUserInterfaceItem(item)
+        }
+        switch item.action {
+        case #selector(copy(_:)):
+            return coordinator.canCopySelection
+        case #selector(paste(_:)):
+            return coordinator.canPaste
+        case #selector(delete(_:)):
+            return coordinator.canDeleteSelection
+        case #selector(selectAll(_:)):
+            return coordinator.canSelectAll
+        default:
+            return super.validateUserInterfaceItem(item)
+        }
+    }
+
+    /// Delete, Backspace, and forward delete remove the selection.
+    private func isDeleteKey(_ event: NSEvent) -> Bool {
+        guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty else {
+            return false
+        }
+        switch event.charactersIgnoringModifiers {
+        case "\u{7F}", "\u{08}", "\u{F728}":
+            return true
+        default:
+            return false
+        }
     }
 
     /// Starts editing the selected cell, returning `false` when editing is not

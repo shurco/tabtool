@@ -188,6 +188,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         table = newTable
         configuration = newConfiguration
         hadUTF8BOM = newIncludesUTF8BOM
+        validateSelection()
         phase = .ready
         refreshPhase()
         mutationRevision &+= 1
@@ -244,12 +245,28 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         table = snapshot.table
         configuration = snapshot.configuration
         hadUTF8BOM = snapshot.includesUTF8BOM
+        validateSelection()
         phase = .ready
         refreshPhase()
         mutationRevision &+= 1
         registerAction(actionName) { document in
             document.restore(snapshot: previous, actionName: actionName)
         }
+    }
+
+    /// Drops row or column indexes that no longer exist.
+    ///
+    /// Structural edits and undo keep the selection where practical; indexes
+    /// trimmed by a delete or an undo cannot stay selected.
+    private func validateSelection() {
+        guard let table else {
+            selection = GridSelection()
+            return
+        }
+        let rows = selection.rows.intersection(IndexSet(0..<table.rowCount))
+        let columns = selection.columns.intersection(IndexSet(0..<table.columns.count))
+        guard rows != selection.rows || columns != selection.columns else { return }
+        selection = GridSelection(rows: rows, columns: columns)
     }
 
     /// Recomputes `.ready`/`.needsAttention` after content or format changes.

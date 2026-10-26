@@ -20,9 +20,14 @@ struct CSVGrid: NSViewRepresentable {
         tableView.columnAutoresizingStyle = .noColumnAutoresizing
         tableView.allowsMultipleSelection = true
         tableView.allowsColumnResizing = true
+        tableView.allowsColumnReordering = true
         tableView.usesAlternatingRowBackgroundColors = true
         tableView.rowHeight = 24
         tableView.intercellSpacing = NSSize(width: 8, height: 2)
+        tableView.setDraggingSourceOperationMask(.move, forLocal: true)
+        tableView.setDraggingSourceOperationMask(.copy, forLocal: false)
+        tableView.registerForDraggedTypes([GridPasteboard.rowIndexes])
+        tableView.draggingDestinationFeedbackStyle = .gap
 
         let scrollView = NSScrollView()
         scrollView.documentView = tableView

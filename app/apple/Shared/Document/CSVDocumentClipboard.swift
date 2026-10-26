@@ -11,24 +11,34 @@ extension CSVDocument {
     func copySelection(locale: Locale = .current) -> String? {
         guard let table else { return nil }
 
-        let rows: [[String]]
         if !selection.rows.isEmpty {
             let selected = selection.rows.intersection(IndexSet(0..<table.rowCount))
-            guard !selected.isEmpty else { return nil }
-            rows = selected.map { row in
-                table.columns.map { $0.cells[row] }
-            }
-        } else if !selection.columns.isEmpty {
-            let selected = selection.columns.intersection(IndexSet(0..<table.columns.count))
-            guard !selected.isEmpty else { return nil }
-            rows = (0..<table.rowCount).map { row in
-                selected.map { table.columns[$0].cells[row] }
-            }
-        } else {
-            return nil
+            return copyRows(selected, locale: locale)
         }
+        guard !selection.columns.isEmpty else { return nil }
 
+        let selected = selection.columns.intersection(IndexSet(0..<table.columns.count))
+        guard !selected.isEmpty else { return nil }
+        let rows = (0..<table.rowCount).map { row in
+            selected.map { table.columns[$0].cells[row] }
+        }
         return CSVClipboard.makeTSV(rows: rows,
+                                    numericDecimalMark: configuration.decimalMark,
+                                    locale: locale)
+    }
+
+    /// The given rows as TSV in visual column order.
+    ///
+    /// Row drag uses this to provide one TSV block for the whole dragged
+    /// selection. Returns `nil` when no requested row exists.
+    func copyRows(_ rows: IndexSet, locale: Locale = .current) -> String? {
+        guard let table else { return nil }
+        let selected = rows.intersection(IndexSet(0..<table.rowCount))
+        guard !selected.isEmpty else { return nil }
+        let values = selected.map { row in
+            table.columns.map { $0.cells[row] }
+        }
+        return CSVClipboard.makeTSV(rows: values,
                                     numericDecimalMark: configuration.decimalMark,
                                     locale: locale)
     }

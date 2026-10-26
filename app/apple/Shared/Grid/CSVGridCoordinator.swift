@@ -11,19 +11,28 @@ import AppKit
 /// View-based tables do not support AppKit's column-selection mode. The
 /// coordinator therefore treats header clicks as explicit column selection and
 /// draws that selection through `CSVTableHeaderView` and the cell views.
+/// Clipboard actions and drag/column reorder live in focused extensions.
 @MainActor
 final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate,
                                 NSTextFieldDelegate {
-    private let document: CSVDocument
-    private weak var tableView: CSVTableView?
-    private var presenter: GridPresenter
-    private var isEditable = false
+    let document: CSVDocument
+    private(set) weak var tableView: CSVTableView?
+    private(set) var presenter: GridPresenter
+    private(set) var isEditable = false
     private var signature = TableSignature.empty
-    private var isSyncingSelection = false
-    private var displayedColumns = IndexSet()
-    private var columnSelectionAnchor: Int?
+    /// True while mirroring document selection into AppKit.
+    var isSyncingSelection = false
+    /// Columns currently highlighted in the header and cells.
+    var displayedColumns = IndexSet()
+    /// Anchor for Shift-click column ranges.
+    var columnSelectionAnchor: Int?
+    /// True while applying a column order, to ignore echoed notifications.
+    var isSyncingColumns = false
+    private var columnWidths: [UUID: CGFloat] = [:]
 
-    private var headerView: CSVTableHeaderView? {
+    private static let columnIdentifierPrefix = "column-"
+
+    var headerView: CSVTableHeaderView? {
         tableView?.headerView as? CSVTableHeaderView
     }
 
@@ -34,14 +43,23 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
         super.init()
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     /// Connects the coordinator to the table view built by the representable.
     func attach(to tableView: CSVTableView) {
         self.tableView = tableView
+        tableView.coordinator = self
         tableView.dataSource = self
         tableView.delegate = self
         headerView?.onColumnClick = { [weak self] column, modifiers in
             self?.selectColumn(at: column, modifiers: modifiers)
         }
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(columnDidMove(_:)),
+            name: NSTableView.columnDidMoveNotification, object: tableView
+        )
     }
 
     /// Applies the latest document snapshot to the table view.
@@ -56,11 +74,14 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
 
         let previous = signature
         let current = TableSignature(presenter: presenter)
+        captureColumnWidths(for: previous.columnIDs)
         signature = current
 
         isSyncingSelection = true
         if previous.columnCount != current.columnCount || previous.columnIDs != current.columnIDs {
             rebuildColumns()
+            let validIDs = Set(current.columnIDs)
+            columnWidths = columnWidths.filter { validIDs.contains($0.key) }
             tableView.reloadData()
         } else {
             if previous.headers != current.headers {
@@ -112,25 +133,6 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
         isEditable
     }
 
-    func tableViewSelectionDidChange(_ notification: Notification) {
-        guard !isSyncingSelection, let tableView else { return }
-        let rows = tableView.selectedRowIndexes
-
-        if rows.isEmpty {
-            // Keep an explicit header selection when the user clicks outside
-            // the rows; only clear when a row selection was actually removed.
-            guard !document.selection.rows.isEmpty else { return }
-            columnSelectionAnchor = nil
-            document.selection = GridSelection()
-        } else {
-            columnSelectionAnchor = nil
-            let selection = GridSelection(rows: rows)
-            guard document.selection != selection else { return }
-            document.selection = selection
-        }
-        syncSelectionDisplay()
-    }
-
     func controlTextDidBeginEditing(_ notification: Notification) {
         // The document disables automatic undo grouping and registers explicit
         // groups per action. The native field editor would register its own
@@ -156,17 +158,47 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
 
     private func rebuildColumns() {
         guard let tableView else { return }
+        isSyncingColumns = true
+        defer { isSyncingColumns = false }
+
         for column in tableView.tableColumns {
             tableView.removeTableColumn(column)
         }
         for index in 0..<presenter.numberOfColumns {
-            let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("column-\(index)"))
+            let column = NSTableColumn(identifier: columnIdentifier(at: index))
             column.title = presenter.header(at: index)
-            column.width = 100
+            column.width = columnWidths[presenter.table.columns[index].id] ?? 100
             column.minWidth = 40
             column.resizingMask = .userResizingMask
             tableView.addTableColumn(column)
         }
+    }
+
+    /// Remembers the width of every current table column by model column ID.
+    ///
+    /// Identifiers encode the index the column had at the last rebuild, which
+    /// is also its index in `columnIDs`; this survives a user column move and
+    /// lets a rebuild restore the width of each model column.
+    private func captureColumnWidths(for columnIDs: [UUID]) {
+        guard let tableView else { return }
+        for tableColumn in tableView.tableColumns {
+            guard let index = columnIndex(of: tableColumn.identifier),
+                  columnIDs.indices.contains(index) else {
+                continue
+            }
+            columnWidths[columnIDs[index]] = tableColumn.width
+        }
+    }
+
+    private func columnIdentifier(at index: Int) -> NSUserInterfaceItemIdentifier {
+        NSUserInterfaceItemIdentifier("\(Self.columnIdentifierPrefix)\(index)")
+    }
+
+    private func columnIndex(of identifier: NSUserInterfaceItemIdentifier) -> Int? {
+        guard identifier.rawValue.hasPrefix(Self.columnIdentifierPrefix) else {
+            return nil
+        }
+        return Int(identifier.rawValue.dropFirst(Self.columnIdentifierPrefix.count))
     }
 
     private func updateHeaderTitles() {
@@ -205,88 +237,5 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
         textField.isEditable = isEditable
         textField.isSelectable = isEditable
         textField.delegate = self
-    }
-
-    // MARK: - Selection
-
-    /// Handles an explicit header click.
-    ///
-    /// A plain click selects one column, Command-click toggles a column, and
-    /// Shift-click extends the range from the last anchor. Selecting a column
-    /// clears row selection; the document selection is either rows or columns.
-    func selectColumn(at index: Int, modifiers: NSEvent.ModifierFlags) {
-        guard let tableView, index >= 0, index < presenter.numberOfColumns else { return }
-
-        var columns = document.selection.rows.isEmpty ? columnSelection : IndexSet()
-
-        if modifiers.contains(.command) {
-            if columns.contains(index) {
-                columns.remove(index)
-            } else {
-                columns.insert(index)
-            }
-            if columns.isEmpty {
-                columnSelectionAnchor = nil
-            } else if columnSelectionAnchor == nil {
-                columnSelectionAnchor = index
-            }
-        } else if modifiers.contains(.shift),
-                  let anchor = columnSelectionAnchor ?? columns.min() {
-            columns.formUnion(IndexSet(min(anchor, index)...max(anchor, index)))
-        } else {
-            columns = IndexSet(integer: index)
-            columnSelectionAnchor = index
-        }
-
-        isSyncingSelection = true
-        tableView.deselectAll(nil)
-        isSyncingSelection = false
-
-        document.selection = columns.isEmpty ? GridSelection() : GridSelection(columns: columns)
-        syncSelectionDisplay()
-    }
-
-    /// The valid column selection the document currently describes.
-    private var columnSelection: IndexSet {
-        guard document.selection.rows.isEmpty else { return IndexSet() }
-        return document.selection.columns.intersection(IndexSet(0..<presenter.numberOfColumns))
-    }
-
-    private var selectionMatchesDocument: Bool {
-        guard let tableView else { return true }
-        let rows = document.selection.rows.intersection(IndexSet(0..<presenter.numberOfRows))
-        if !rows.isEmpty {
-            return tableView.selectedRowIndexes == rows
-        }
-        return tableView.selectedRowIndexes.isEmpty
-            && (headerView?.selectedColumns ?? IndexSet()) == columnSelection
-    }
-
-    private func applySelectionFromDocument() {
-        guard let tableView else { return }
-        let rows = document.selection.rows.intersection(IndexSet(0..<presenter.numberOfRows))
-
-        isSyncingSelection = true
-        if rows.isEmpty {
-            tableView.deselectAll(nil)
-        } else {
-            tableView.selectRowIndexes(rows, byExtendingSelection: false)
-        }
-        isSyncingSelection = false
-
-        columnSelectionAnchor = columnSelection.min()
-        syncSelectionDisplay()
-    }
-
-    /// Shows the document's column selection in the header and cell views.
-    private func syncSelectionDisplay() {
-        let columns = columnSelection
-        let changed = displayedColumns.symmetricDifference(columns)
-        displayedColumns = columns
-        headerView?.select(columns)
-
-        guard let tableView, !changed.isEmpty, presenter.numberOfRows > 0 else { return }
-        tableView.reloadData(forRowIndexes: IndexSet(0..<presenter.numberOfRows),
-                             columnIndexes: changed)
     }
 }

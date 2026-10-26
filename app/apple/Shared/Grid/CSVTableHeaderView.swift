@@ -31,13 +31,15 @@ final class CSVTableHeaderView: NSTableHeaderView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        // Select before passing the event on: if this mouse-down starts a
+        // column drag, the selection must be in place when the column-move
+        // notification arrives, and the original index must not be reused
+        // after AppKit has reordered the columns.
         let point = convert(event.locationInWindow, from: nil)
-        let column = event.clickCount == 1 && isSelectionClick(at: point)
-            ? self.column(at: point) : -1
-        super.mouseDown(with: event)
-        if column >= 0 {
-            clickColumn(at: column, modifiers: event.modifierFlags)
+        if event.clickCount == 1, isSelectionClick(at: point) {
+            clickColumn(at: self.column(at: point), modifiers: event.modifierFlags)
         }
+        super.mouseDown(with: event)
     }
 
     override func draw(_ dirtyRect: NSRect) {
