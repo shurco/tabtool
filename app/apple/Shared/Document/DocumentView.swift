@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Placeholder editor surface: shows loading progress until the grid lands.
+/// The editor surface: the editable grid, with loading and read errors as
+/// overlays owned by later shell tasks.
 struct DocumentView: View {
     @ObservedObject var document: CSVDocument
     let fileURL: URL?
@@ -12,16 +13,18 @@ struct DocumentView: View {
             switch document.phase {
             case .loading:
                 ProgressView("Loading…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .ready, .needsAttention:
-                Text(tableSummary)
-                    .foregroundStyle(.secondary)
+                if document.table != nil {
+                    CSVGrid(document: document, isEditable: true)
+                }
             case .readFailed, .unreadableFile:
                 Text("The file could not be read.")
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .frame(minWidth: 640, minHeight: 400)
-        .padding()
         .onAppear {
             document.setUndoManager(undoManager)
         }
@@ -33,10 +36,5 @@ struct DocumentView: View {
             // Save As changes the URL without recreating this view.
             document.setFileURL(newValue)
         }
-    }
-
-    private var tableSummary: String {
-        guard let table = document.table else { return "" }
-        return "\(table.rowCount) rows × \(table.columns.count) columns"
     }
 }
