@@ -157,8 +157,8 @@ struct DocumentStatusBar: View {
     }
 }
 
-/// The quote styles offered by the format bar.
-private enum QuoteStyle: String, CaseIterable, Identifiable {
+/// The quote styles offered by the format bar and the export panel.
+enum QuoteStyle: String, CaseIterable, Identifiable {
     case doubled
     case backslash
     case none
@@ -196,8 +196,8 @@ private enum QuoteStyle: String, CaseIterable, Identifiable {
     }
 }
 
-/// The separators offered by the format bar.
-private enum SeparatorOption: String, CaseIterable, Identifiable {
+/// The separators offered by the format bar and the export panel.
+enum SeparatorOption: String, CaseIterable, Identifiable {
     case comma = ","
     case semicolon = ";"
     case tab = "\t"
@@ -220,8 +220,8 @@ private enum SeparatorOption: String, CaseIterable, Identifiable {
     }
 }
 
-/// The decimal marks offered by the format bar.
-private enum DecimalOption: String, CaseIterable, Identifiable {
+/// The decimal marks offered by the format bar and the export panel.
+enum DecimalOption: String, CaseIterable, Identifiable {
     case dot = "."
     case comma = ","
 

@@ -14,9 +14,12 @@ struct AppCommands: Commands {
         }
 
         CommandGroup(after: .saveItem) {
-            // Task 14 replaces this placeholder with the export panel.
-            Button("Export…") {}
-                .disabled(true)
+            Button("Export…") {
+                guard let document else { return }
+                ExportCoordinator.present(for: document)
+            }
+            .keyboardShortcut("e", modifiers: [.command, .shift])
+            .disabled(!isEditable)
         }
 
         CommandMenu("Table") {

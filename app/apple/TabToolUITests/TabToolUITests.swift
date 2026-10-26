@@ -209,7 +209,7 @@ final class TabToolUITests: XCTestCase {
         app.menuBars.menuBarItems["File"].click()
         let export = app.menuItems["Export…"]
         XCTAssertTrue(export.waitForExistence(timeout: 5))
-        XCTAssertFalse(export.isEnabled)
+        XCTAssertTrue(export.isEnabled)
     }
 
     @MainActor
