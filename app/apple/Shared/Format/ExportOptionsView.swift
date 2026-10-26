@@ -30,7 +30,7 @@ struct ExportOptionsView: View {
                 row("Encoding") {
                     Picker("Encoding", selection: binding(\.encoding)) {
                         ForEach(SupportedEncodings.all) { supported in
-                            Text(supported.name).tag(supported.encoding)
+                            Text(LocalizedStringKey(supported.name)).tag(supported.encoding)
                         }
                     }
                     .labelsHidden()
@@ -41,7 +41,7 @@ struct ExportOptionsView: View {
                 row("Separator") {
                     Picker("Separator", selection: binding(\.columnSeparator)) {
                         ForEach(SeparatorOption.allCases) { option in
-                            Text(option.title).tag(option.rawValue)
+                            Text(LocalizedStringKey(option.title)).tag(option.rawValue)
                         }
                     }
                     .labelsHidden()
@@ -52,7 +52,7 @@ struct ExportOptionsView: View {
                 row("Quote") {
                     Picker("Quote", selection: quoteStyleBinding) {
                         ForEach(QuoteStyle.allCases) { style in
-                            Text(style.title).tag(style)
+                            Text(LocalizedStringKey(style.title)).tag(style)
                         }
                     }
                     .labelsHidden()
@@ -63,7 +63,7 @@ struct ExportOptionsView: View {
                 row("Decimal") {
                     Picker("Decimal Mark", selection: binding(\.decimalMark)) {
                         ForEach(DecimalOption.allCases) { option in
-                            Text(option.title).tag(option.rawValue)
+                            Text(LocalizedStringKey(option.title)).tag(option.rawValue)
                         }
                     }
                     .labelsHidden()
@@ -94,7 +94,7 @@ struct ExportOptionsView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         GridRow {
-            Text(title)
+            Text(LocalizedStringKey(title))
             content()
         }
     }

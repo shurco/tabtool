@@ -1,11 +1,31 @@
 #!/usr/bin/env bash
-# Runs the core package tests and the macOS app tests.
-# Usage: ./scripts/test
+# Runs the core package tests and the macOS app unit tests.
+# Usage: ./scripts/test [--ui]
+#   --ui  also runs the XCUITest smoke suite. This needs the macOS automation
+#         permission for the test runner (System Settings > Privacy & Security
+#         > Automation) or a run started from Xcode.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "${here}/.." && pwd)"
 app_dir="${root}/app/apple"
+
+run_ui=false
+case "${1:-}" in
+  --ui)
+    run_ui=true
+    ;;
+  "")
+    ;;
+  *)
+    printf 'Usage: %s [--ui]\n' "$0" >&2
+    exit 1
+    ;;
+esac
+if [ "$#" -gt 1 ]; then
+  printf 'Usage: %s [--ui]\n' "$0" >&2
+  exit 1
+fi
 
 # shellcheck source=scripts/_helper
 source "${here}/_helper"
@@ -30,13 +50,24 @@ fi
 swift test --package-path "${root}/app/apple/TabToolKit"
 
 (cd "${app_dir}" && xcodegen generate)
-# The scheme also contains the XCUITest smoke test. It needs the macOS
-# automation permission for the test runner, which a bare terminal session
-# does not have; run it explicitly from Xcode or with
-# `xcodebuild test -only-testing:TabToolUITests`.
-xcodebuild \
-  -project "${app_dir}/TabTool.xcodeproj" \
-  -scheme TabTool \
-  -destination "platform=macOS" \
-  -only-testing:TabToolTests \
-  test
+
+if [ "${run_ui}" = true ]; then
+  print_answer "Running the UI smoke suite; macOS may ask for automation permission." grey
+  xcodebuild \
+    -project "${app_dir}/TabTool.xcodeproj" \
+    -scheme TabTool \
+    -destination "platform=macOS" \
+    -only-testing:TabToolTests \
+    -only-testing:TabToolUITests \
+    test
+else
+  # The UI suite needs the macOS automation permission for the test runner,
+  # which a bare terminal session does not always have. It is opt-in with
+  # `./scripts/test --ui` and is also available from Xcode.
+  xcodebuild \
+    -project "${app_dir}/TabTool.xcodeproj" \
+    -scheme TabTool \
+    -destination "platform=macOS" \
+    -only-testing:TabToolTests \
+    test
+fi

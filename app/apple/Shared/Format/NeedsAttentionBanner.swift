@@ -1,3 +1,4 @@
+import Accessibility
 import SwiftUI
 import TabToolKit
 
@@ -19,9 +20,9 @@ struct NeedsAttentionBanner: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.callout.weight(.semibold))
-                Text(detail)
+                Text(LocalizedStringKey(detail))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -41,6 +42,9 @@ struct NeedsAttentionBanner: View {
         .background(Color.yellow.opacity(0.14))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("needs-attention-banner")
+        .onAppear {
+            AccessibilityNotification.Announcement("\(title) \(detail)").post()
+        }
     }
 
     private var title: String {

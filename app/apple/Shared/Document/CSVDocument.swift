@@ -48,6 +48,17 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// The load currently in flight, so overlapping `load()` calls share it.
     private var loadTask: Task<Void, Never>?
 
+    /// Cancels the initial load when its document window goes away.
+    ///
+    /// An unstarted file document keeps its supplied bytes: cancelling that
+    /// case would discard the only copy when the view had no URL yet. A load
+    /// that already started can be safely restarted from `fileURL` or the
+    /// file's current bytes when the window reopens.
+    func cancelLoading() {
+        guard table == nil, fileURL != nil || initialContent == nil else { return }
+        loadTask?.cancel()
+    }
+
     /// Whether a file re-read is currently awaiting bytes or a parse.
     private var isRereading = false
 
@@ -180,6 +191,9 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
                                prefersChineseEncoding: prefersChinese)
         }.value
 
+        // The window may have closed while the bytes were parsed. Do not
+        // publish a result into a document that is no longer visible.
+        guard !Task.isCancelled else { return }
         self.configuration = outcome.configuration
         switch outcome.result {
         case .success(let parsed):

@@ -24,6 +24,8 @@ targets:
     platform: macOS
     sources:
       - path: Shared
+      - path: macOS/App/PrivacyInfo.xcprivacy
+        buildPhase: resources
     dependencies:
       - package: TabToolKit
     settings:
@@ -34,8 +36,11 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: macOS/App/TabTool.entitlements
         ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_IDENTITY: "-"
-        ENABLE_TESTABILITY: YES
+      configs:
+        Debug:
+          ENABLE_TESTABILITY: YES
 
   TabToolTests:
     type: bundle.unit-test

@@ -1,0 +1,1046 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%lld columns": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld columns"
+          }
+        }
+      }
+    },
+    "%lld rows": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld rows"
+          }
+        }
+      }
+    },
+    "1 column": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 column"
+          }
+        }
+      }
+    },
+    "1 row": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 row"
+          }
+        }
+      }
+    },
+    "A cell contains the separator or a line break, but quotes are off.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A cell contains the separator or a line break, but quotes are off."
+          }
+        }
+      }
+    },
+    "A cell contains the separator or a line break. Turn quotes on, or undo the edit that added it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A cell contains the separator or a line break. Turn quotes on, or undo the edit that added it."
+          }
+        }
+      }
+    },
+    "A quote character appears inside an unquoted field.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A quote character appears inside an unquoted field."
+          }
+        }
+      }
+    },
+    "A quoted field is not closed or ends with an incomplete escape.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A quoted field is not closed or ends with an incomplete escape."
+          }
+        }
+      }
+    },
+    "A simple CSV editor for macOS. This is a free, MIT-licensed independent CSV editor.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A simple CSV editor for macOS. This is a free, MIT-licensed independent CSV editor."
+          }
+        }
+      }
+    },
+    "About TabTool": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About TabTool"
+          }
+        }
+      }
+    },
+    "Add Column Left": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Column Left"
+          }
+        }
+      }
+    },
+    "Add Column Right": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Column Right"
+          }
+        }
+      }
+    },
+    "Add Row Above": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Row Above"
+          }
+        }
+      }
+    },
+    "Add Row Below": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Row Below"
+          }
+        }
+      }
+    },
+    "Backslash": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backslash"
+          }
+        }
+      }
+    },
+    "CSV Table": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV Table"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "Central European (ISO Latin 2)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Central European (ISO Latin 2)"
+          }
+        }
+      }
+    },
+    "Central European (Windows Latin 2)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Central European (Windows Latin 2)"
+          }
+        }
+      }
+    },
+    "Check that the file still exists and that you have permission to open it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check that the file still exists and that you have permission to open it."
+          }
+        }
+      }
+    },
+    "Check the quote style and escape character, or detect the format automatically.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the quote style and escape character, or detect the format automatically."
+          }
+        }
+      }
+    },
+    "Chinese (GBK)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chinese (GBK)"
+          }
+        }
+      }
+    },
+    "Choose an encoding that can represent the text.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an encoding that can represent the text."
+          }
+        }
+      }
+    },
+    "Choose another encoding, or detect the format automatically.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose another encoding, or detect the format automatically."
+          }
+        }
+      }
+    },
+    "Comma": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comma"
+          }
+        }
+      }
+    },
+    "Comma (,)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comma (,)"
+          }
+        }
+      }
+    },
+    "Cyrillic (Windows)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cyrillic (Windows)"
+          }
+        }
+      }
+    },
+    "Decimal Mark": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decimal Mark"
+          }
+        }
+      }
+    },
+    "Delete Column(s)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Column(s)"
+          }
+        }
+      }
+    },
+    "Delete Row(s)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Row(s)"
+          }
+        }
+      }
+    },
+    "Delete Selected Rows or Columns": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Selected Rows or Columns"
+          }
+        }
+      }
+    },
+    "Delete Selection": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Selection"
+          }
+        }
+      }
+    },
+    "Detect Automatically": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detect Automatically"
+          }
+        }
+      }
+    },
+    "Detect Format Automatically": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detect Format Automatically"
+          }
+        }
+      }
+    },
+    "Dot (.)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dot (.)"
+          }
+        }
+      }
+    },
+    "Doubled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doubled"
+          }
+        }
+      }
+    },
+    "Encoding": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encoding"
+          }
+        }
+      }
+    },
+    "Export": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export"
+          }
+        }
+      }
+    },
+    "Export Anyway": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Anyway"
+          }
+        }
+      }
+    },
+    "Export Anyway?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Anyway?"
+          }
+        }
+      }
+    },
+    "Export Not Completed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Not Completed"
+          }
+        }
+      }
+    },
+    "Format Not Applied": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Format Not Applied"
+          }
+        }
+      }
+    },
+    "Format Not Detected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Format Not Detected"
+          }
+        }
+      }
+    },
+    "Greek (Windows)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Greek (Windows)"
+          }
+        }
+      }
+    },
+    "Header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Header"
+          }
+        }
+      }
+    },
+    "Japanese (EUC)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Japanese (EUC)"
+          }
+        }
+      }
+    },
+    "Japanese (ISO 2022-JP)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Japanese (ISO 2022-JP)"
+          }
+        }
+      }
+    },
+    "Japanese (Shift_JIS)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Japanese (Shift_JIS)"
+          }
+        }
+      }
+    },
+    "Loading…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading…"
+          }
+        }
+      }
+    },
+    "MIT License": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        }
+      }
+    },
+    "Copyright © 2026 Dmitry Shurco.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copyright © 2026 Dmitry Shurco."
+          }
+        }
+      }
+    },
+    "None": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "About This App": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About This App"
+          }
+        }
+      }
+    },
+    "Pipe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pipe"
+          }
+        }
+      }
+    },
+    "Pipe (|)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pipe (|)"
+          }
+        }
+      }
+    },
+    "Quote": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quote"
+          }
+        }
+      }
+    },
+    "Quotes are off and a header or cell contains the separator or a line break. The exported file may not read back as the same table.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quotes are off and a header or cell contains the separator or a line break. The exported file may not read back as the same table."
+          }
+        }
+      }
+    },
+    "Re-read": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-read"
+          }
+        }
+      }
+    },
+    "Re-read Interrupted": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-read Interrupted"
+          }
+        }
+      }
+    },
+    "Re-read the file and discard unsaved edits?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-read the file and discard unsaved edits?"
+          }
+        }
+      }
+    },
+    "Dmitry Shurco": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dmitry Shurco"
+          }
+        }
+      }
+    },
+    "Semicolon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semicolon"
+          }
+        }
+      }
+    },
+    "Semicolon (;)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Semicolon (;)"
+          }
+        }
+      }
+    },
+    "Separator": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Separator"
+          }
+        }
+      }
+    },
+    "Show Format Bar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Format Bar"
+          }
+        }
+      }
+    },
+    "Show Format Controls": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Format Controls"
+          }
+        }
+      }
+    },
+    "Some text does not exist in the selected encoding. Choose another encoding, or undo the edit that added it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some text does not exist in the selected encoding. Choose another encoding, or undo the edit that added it."
+          }
+        }
+      }
+    },
+    "Project Repository": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Project Repository"
+          }
+        }
+      }
+    },
+    "Tab": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tab"
+          }
+        }
+      }
+    },
+    "Tab (⇥)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tab (⇥)"
+          }
+        }
+      }
+    },
+    "Table": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Table"
+          }
+        }
+      }
+    },
+    "TabTool": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TabTool"
+          }
+        }
+      }
+    },
+    "TabTool Notice": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TabTool Notice"
+          }
+        }
+      }
+    },
+    "Help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help"
+          }
+        }
+      }
+    },
+    "The document changed while it was being re-read, so the new format was not applied. Try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The document changed while it was being re-read, so the new format was not applied. Try again."
+          }
+        }
+      }
+    },
+    "The document changed while the operation was running. Try again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The document changed while the operation was running. Try again."
+          }
+        }
+      }
+    },
+    "The document is not available": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The document is not available"
+          }
+        }
+      }
+    },
+    "The document is not available.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The document is not available."
+          }
+        }
+      }
+    },
+    "The document is still loading or could not be read.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The document is still loading or could not be read."
+          }
+        }
+      }
+    },
+    "The file could not be opened": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be opened"
+          }
+        }
+      }
+    },
+    "The file could not be read": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be read"
+          }
+        }
+      }
+    },
+    "The file could not be read from disk.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be read from disk."
+          }
+        }
+      }
+    },
+    "The file is not valid text in the selected encoding.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file is not valid text in the selected encoding."
+          }
+        }
+      }
+    },
+    "The header is written only to the exported file.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The header is written only to the exported file."
+          }
+        }
+      }
+    },
+    "The table will be replaced with the last saved version from disk. The file itself is not changed.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The table will be replaced with the last saved version from disk. The file itself is not changed."
+          }
+        }
+      }
+    },
+    "The text cannot be represented in the selected encoding.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The text cannot be represented in the selected encoding."
+          }
+        }
+      }
+    },
+    "This document can’t be saved in its current encoding.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This document can’t be saved in its current encoding."
+          }
+        }
+      }
+    },
+    "This document can’t be saved with quotes off.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This document can’t be saved with quotes off."
+          }
+        }
+      }
+    },
+    "Turkish (Windows)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turkish (Windows)"
+          }
+        }
+      }
+    },
+    "Turn quotes on, or remove separators and line breaks from cells.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn quotes on, or remove separators and line breaks from cells."
+          }
+        }
+      }
+    },
+    "Undo Last Edit": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo Last Edit"
+          }
+        }
+      }
+    },
+    "Unicode (UTF-16)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unicode (UTF-16)"
+          }
+        }
+      }
+    },
+    "Unicode (UTF-16, Big Endian)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unicode (UTF-16, Big Endian)"
+          }
+        }
+      }
+    },
+    "Unicode (UTF-16, Little Endian)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unicode (UTF-16, Little Endian)"
+          }
+        }
+      }
+    },
+    "Unicode (UTF-32)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unicode (UTF-32)"
+          }
+        }
+      }
+    },
+    "Unicode (UTF-32, Big Endian)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unicode (UTF-32, Big Endian)"
+          }
+        }
+      }
+    },
+    "Unicode (UTF-32, Little Endian)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unicode (UTF-32, Little Endian)"
+          }
+        }
+      }
+    },
+    "Unicode (UTF-8)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unicode (UTF-8)"
+          }
+        }
+      }
+    },
+    "Use the arrow keys to move between cells. Press Return to edit the selected cell.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the arrow keys to move between cells. Press Return to edit the selected cell."
+          }
+        }
+      }
+    },
+    "Version %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %@"
+          }
+        }
+      }
+    },
+    "Western (Mac OS Roman)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Western (Mac OS Roman)"
+          }
+        }
+      }
+    },
+    "Western (Windows Latin 1)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Western (Windows Latin 1)"
+          }
+        }
+      }
+    },
+    "Write Header Row": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write Header Row"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

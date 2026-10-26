@@ -21,8 +21,7 @@ struct AboutView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text("A simple CSV editor for macOS. This is a free, MIT-licensed "
-                + "independent CSV editor.")
+            Text("A simple CSV editor for macOS. This is a free, MIT-licensed independent CSV editor.")
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 360)
 
@@ -39,8 +38,7 @@ struct AboutView: View {
                     .font(.callout)
             }
 
-            Text("MIT License. Copyright © 2016 Dmitry Shurco, "
-                + "© 2015–2016 Dmitry Shurco, © 2015 Dmitry Shurco.")
+            Text("Copyright © 2026 Dmitry Shurco.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

@@ -16,6 +16,12 @@ struct CSVGrid: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
         let tableView = CSVTableView()
         tableView.setAccessibilityIdentifier("grid")
+        tableView.setAccessibilityLabel("CSV Table")
+        tableView.setAccessibilityRole(.table)
+        tableView.setAccessibilityHelp(
+            "Use the arrow keys to move between cells. Press Return to edit the selected cell."
+        )
+        tableView.refusesFirstResponder = false
         tableView.headerView = CSVTableHeaderView()
         tableView.columnAutoresizingStyle = .noColumnAutoresizing
         tableView.allowsMultipleSelection = true

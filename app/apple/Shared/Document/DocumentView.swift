@@ -54,6 +54,9 @@ struct DocumentView: View {
             document.setFileURL(fileURL)
             await document.load()
         }
+        .onDisappear {
+            document.cancelLoading()
+        }
         .onChange(of: fileURL) { _, newValue in
             // Save As changes the URL without recreating this view.
             document.setFileURL(newValue)
@@ -76,11 +79,10 @@ struct DocumentView: View {
                 pendingReparse = nil
             }
         } message: { _ in
-            Text("The table will be replaced with the last saved version from disk. "
-                + "The file itself is not changed.")
+            Text("The table will be replaced with the last saved version from disk. The file itself is not changed.")
         }
         .alert(
-            formatAlert?.title ?? "",
+            LocalizedStringKey(formatAlert?.title ?? ""),
             isPresented: Binding(
                 get: { formatAlert != nil },
                 set: { isPresented in

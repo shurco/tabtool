@@ -33,6 +33,37 @@ func detectsExpectedFormats(name: String, expected: ExpectedFormat) throws {
     #expect(config.firstRowAsHeader == expected.header)
 }
 
+@Test(arguments: [
+    ("heuristic-comma-separated-people-1", true),
+    ("heuristic-comma-separated-people-2", true),
+    ("heuristic-comma-separated-places", true)
+])
+func peopleAndPlacesFixturesDetectCommaHeader(name: String,
+                                                      header: Bool) throws {
+    let config = CSVFormatDetector(data: try fixture(name)).detect()
+    #expect(config.encoding == .utf8)
+    #expect(config.columnSeparator == ",")
+    #expect(config.decimalMark == ".")
+    #expect(config.quoteCharacter == "\"")
+    #expect(config.escapeCharacter == "\"")
+    #expect(config.firstRowAsHeader == header)
+}
+
+@Test func emptyFirstRowCellMeansNoHeader() {
+    let config = CSVFormatDetector(data: Data(",name\n1,2".utf8)).detect()
+    #expect(config.columnSeparator == ",")
+    #expect(config.firstRowAsHeader == false)
+}
+
+@Test func malformedQuotedDataFallsBackToUnquotedDetection() throws {
+    let data = try fixture("tooMany-quotes-atEnd")
+    let config = CSVFormatDetector(data: data).detect()
+    #expect(config.encoding == .utf8)
+    #expect(config.columnSeparator == ",")
+    #expect(config.quoteCharacter.isEmpty)
+    #expect(config.firstRowAsHeader)
+}
+
 @Test func firstRowNumberMeansNoHeader() throws {
     let config = CSVFormatDetector(data: try fixture("heuristic-first-row-with-number")).detect()
     #expect(config.firstRowAsHeader == false)

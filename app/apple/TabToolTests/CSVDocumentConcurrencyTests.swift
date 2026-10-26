@@ -58,6 +58,18 @@ import UniformTypeIdentifiers
         #expect(document.table?.columns.count == 1)
     }
 
+    @Test @MainActor func cancellingBeforeLoadKeepsSuppliedBytes() async {
+        let document = CSVDocument(data: Data("a,b\n1,2\n".utf8))
+
+        // The view may disappear before `load()` starts. The supplied bytes
+        // are the only copy at that point, so cancelling must be a no-op.
+        document.cancelLoading()
+        await document.load()
+
+        #expect(document.phase == .ready)
+        #expect(document.table?.cell(row: 0, column: 1) == "2")
+    }
+
     @Test @MainActor func loadingANewDocumentIsIdempotent() async {
         let document = CSVDocument()
         await document.load()

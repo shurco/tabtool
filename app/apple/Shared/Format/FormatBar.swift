@@ -23,7 +23,7 @@ struct FormatBar: View {
             control("Encoding") {
                 Picker("Encoding", selection: binding(\.encoding)) {
                     ForEach(SupportedEncodings.all) { supported in
-                        Text(supported.name).tag(supported.encoding)
+                        Text(LocalizedStringKey(supported.name)).tag(supported.encoding)
                     }
                 }
                 .labelsHidden()
@@ -34,7 +34,7 @@ struct FormatBar: View {
             control("Separator") {
                 Picker("Separator", selection: binding(\.columnSeparator)) {
                     ForEach(SeparatorOption.allCases) { option in
-                        Text(option.title).tag(option.rawValue)
+                        Text(LocalizedStringKey(option.title)).tag(option.rawValue)
                     }
                 }
                 .labelsHidden()
@@ -45,7 +45,7 @@ struct FormatBar: View {
             control("Quote") {
                 Picker("Quote", selection: quoteStyleBinding) {
                     ForEach(QuoteStyle.allCases) { style in
-                        Text(style.title).tag(style)
+                        Text(LocalizedStringKey(style.title)).tag(style)
                     }
                 }
                 .labelsHidden()
@@ -56,7 +56,7 @@ struct FormatBar: View {
             control("Decimal") {
                 Picker("Decimal Mark", selection: binding(\.decimalMark)) {
                     ForEach(DecimalOption.allCases) { option in
-                        Text(option.title).tag(option.rawValue)
+                        Text(LocalizedStringKey(option.title)).tag(option.rawValue)
                     }
                 }
                 .labelsHidden()
@@ -68,6 +68,7 @@ struct FormatBar: View {
                 Toggle("Header", isOn: binding(\.firstRowAsHeader))
                     .toggleStyle(.checkbox)
                     .labelsHidden()
+                    .accessibilityLabel("Header")
                     .accessibilityIdentifier("format-header")
             }
 
@@ -96,7 +97,7 @@ struct FormatBar: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
@@ -150,8 +151,13 @@ struct DocumentStatusBar: View {
     private var summary: String {
         let rows = table.rowCount
         let columns = table.columns.count
-        return "\(rows) \(rows == 1 ? "row" : "rows") × "
-            + "\(columns) \(columns == 1 ? "column" : "columns") · "
+        let rowsText = rows == 1
+            ? String(localized: "1 row")
+            : String(localized: "\(rows) rows")
+        let columnsText = columns == 1
+            ? String(localized: "1 column")
+            : String(localized: "\(columns) columns")
+        return "\(rowsText) × \(columnsText) · "
             + "\(FormatDisplay.encodingName(for: configuration.encoding)) · "
             + FormatDisplay.separatorName(for: configuration.columnSeparator)
     }

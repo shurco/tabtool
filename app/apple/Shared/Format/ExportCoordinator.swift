@@ -138,8 +138,8 @@ final class ExportCoordinator {
 
     private func run() {
         let panel = NSSavePanel()
-        panel.title = "Export"
-        panel.prompt = "Export"
+        panel.title = String(localized: "Export")
+        panel.prompt = String(localized: "Export")
         panel.canCreateDirectories = true
         panel.isExtensionHidden = false
         panel.allowedContentTypes = [ExportPlan.contentType(for: options.configuration)]
@@ -208,12 +208,10 @@ final class ExportCoordinator {
                                         configuration: CSVConfiguration) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Export Anyway?"
-        alert.informativeText = "Quotes are off and a header or cell contains "
-            + "the separator or a line break. The exported file may not read "
-            + "back as the same table."
-        alert.addButton(withTitle: "Export Anyway")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = String(localized: "Export Anyway?")
+        alert.informativeText = String(localized: "Quotes are off and a header or cell contains the separator or a line break. The exported file may not read back as the same table.")
+        alert.addButton(withTitle: String(localized: "Export Anyway"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         write(to: url, configuration: configuration, allowAmbiguousOutput: true)
     }
@@ -241,9 +239,9 @@ final class ExportCoordinator {
     private func presentError(_ message: String) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Export Not Completed"
+        alert.messageText = String(localized: "Export Not Completed")
         alert.informativeText = message
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: String(localized: "OK"))
         alert.runModal()
     }
 

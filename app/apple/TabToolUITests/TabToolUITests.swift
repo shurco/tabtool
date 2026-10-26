@@ -2,27 +2,97 @@ import AppKit
 import XCTest
 
 final class TabToolUITests: XCTestCase {
+    /// Launches a clean app instance.
+    ///
+    /// The document app restores windows on relaunch. Without ignoring the
+    /// saved state, windows left by earlier tests make identifiers ambiguous.
+    @MainActor
+    private func launchApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-ApplePersistenceIgnoreState", "YES",
+            "-NSQuitAlwaysKeepsWindows", "NO"
+        ]
+        app.launch()
+        return app
+    }
+
     @MainActor
     func testLaunchStartsTheApp() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
         XCTAssertEqual(app.state, .runningForeground)
     }
 
     @MainActor
     func testNewDocumentShowsGrid() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
         // A windowless document app may not receive Cmd-N, so use the menu
         // command to create the untitled document.
         app.menuBars.menuItems["New"].click()
         XCTAssertTrue(app.tables["grid"].waitForExistence(timeout: 5))
     }
 
+    /// Opens a document through Launch Services, exercising the real file-open
+    /// path without automating the system open panel.
+    @MainActor
+    private func openDocument(at url: URL) throws {
+        guard let appURL = NSWorkspace.shared.urlForApplication(
+            withBundleIdentifier: "app.shurco.tabtool"
+        ) else {
+            throw XCTSkip("TabTool.app is not registered with Launch Services")
+        }
+        let opened = expectation(description: "Open \(url.lastPathComponent)")
+        NSWorkspace.shared.open(
+            [url],
+            withApplicationAt: appURL,
+            configuration: NSWorkspace.OpenConfiguration()
+        ) { _, error in
+            XCTAssertNil(error)
+            opened.fulfill()
+        }
+        wait(for: [opened], timeout: 10)
+    }
+
+    private func makeFixture(_ text: String, name: String) throws -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("TabToolUITests", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory,
+                                                withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent(name)
+        try text.write(to: url, atomically: true, encoding: .utf8)
+        return url
+    }
+
+    /// The format-bar visibility is a shared user default. A previous run or
+    /// a failed test can leave it hidden, so reveal it before querying controls.
+    @MainActor
+    private func showFormatBar(in app: XCUIApplication) {
+        if app.popUpButtons["format-encoding"].waitForExistence(timeout: 2) {
+            return
+        }
+        app.menuBars.menuBarItems["View"].click()
+        app.menuItems["Show Format Bar"].click()
+        XCTAssertTrue(app.popUpButtons["format-encoding"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testOpenFixtureShowsData() throws {
+        let fixture = try makeFixture("name,age\nRex,5\nCaesar,3\n",
+                                      name: "open-fixture.csv")
+        let app = launchApp()
+        try openDocument(at: fixture)
+
+        let grid = app.tables["grid"]
+        XCTAssertTrue(grid.waitForExistence(timeout: 10))
+        let status = app.staticTexts["status-text"]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        XCTAssertTrue((status.value as? String ?? "").contains("2 rows"))
+        XCTAssertGreaterThan(grid.descendants(matching: .tableRow).count, 0)
+    }
+
     @MainActor
     func testAddRowAndColumnButtonsChangeGrid() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
         app.menuBars.menuItems["New"].click()
         let grid = app.tables["grid"]
         XCTAssertTrue(grid.waitForExistence(timeout: 5))
@@ -49,8 +119,7 @@ final class TabToolUITests: XCTestCase {
 
     @MainActor
     func testToolbarContextMenusAddAboveAndLeft() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
         app.menuBars.menuItems["New"].click()
         let grid = app.tables["grid"]
         XCTAssertTrue(grid.waitForExistence(timeout: 5))
@@ -77,8 +146,7 @@ final class TabToolUITests: XCTestCase {
 
     @MainActor
     func testCopyPasteThroughEditMenu() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
         app.menuBars.menuItems["New"].click()
         let grid = app.tables["grid"]
         XCTAssertTrue(grid.waitForExistence(timeout: 5))
@@ -94,8 +162,7 @@ final class TabToolUITests: XCTestCase {
 
     @MainActor
     func testDeleteIsDisabledForTheOnlyColumn() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
         app.menuBars.menuItems["New"].click()
         let grid = app.tables["grid"]
         XCTAssertTrue(grid.waitForExistence(timeout: 5))
@@ -120,12 +187,12 @@ final class TabToolUITests: XCTestCase {
 
     @MainActor
     func testFormatBarShowsControlsAndStatus() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
         app.menuBars.menuItems["New"].click()
 
         let grid = app.tables["grid"]
         XCTAssertTrue(grid.waitForExistence(timeout: 5))
+        showFormatBar(in: app)
 
         for identifier in ["format-encoding", "format-separator", "format-quote",
                            "format-decimal", "format-header"] {
@@ -171,8 +238,7 @@ final class TabToolUITests: XCTestCase {
 
     @MainActor
     func testTableMenuAddsAndDeletesRows() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
         app.menuBars.menuItems["New"].click()
 
         let grid = app.tables["grid"]
@@ -214,8 +280,7 @@ final class TabToolUITests: XCTestCase {
 
     @MainActor
     func testNeedsAttentionBannerOffersUndo() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
         defer {
             NSPasteboard.general.clearContents()
             // Leave the shared format-bar preference visible for later tests.
@@ -230,6 +295,7 @@ final class TabToolUITests: XCTestCase {
 
         let grid = app.tables["grid"]
         XCTAssertTrue(grid.waitForExistence(timeout: 5))
+        showFormatBar(in: app)
 
         app.popUpButtons["format-encoding"].click()
         let latin1 = app.menuItems["Western (Windows Latin 1)"]
@@ -266,8 +332,7 @@ final class TabToolUITests: XCTestCase {
 
     @MainActor
     func testAboutShowsNoticeAndHelpLink() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
 
         app.menuBars.menuBarItems["TabTool"].click()
         let about = app.menuBars.menuItems["About TabTool"].firstMatch
@@ -289,8 +354,7 @@ final class TabToolUITests: XCTestCase {
 
     @MainActor
     func testHeaderClickSelectsAColumn() {
-        let app = XCUIApplication()
-        app.launch()
+        let app = launchApp()
         app.menuBars.menuItems["New"].click()
         let grid = app.tables["grid"]
         XCTAssertTrue(grid.waitForExistence(timeout: 5))

@@ -1,3 +1,4 @@
+import Accessibility
 import SwiftUI
 import TabToolKit
 
@@ -17,16 +18,16 @@ struct ErrorOverlay: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
 
-            Text(FormatErrorText.title(for: phase))
+            Text(LocalizedStringKey(FormatErrorText.title(for: phase)))
                 .font(.title2.weight(.semibold))
                 .multilineTextAlignment(.center)
 
-            Text(FormatErrorText.message(for: phase))
+            Text(LocalizedStringKey(FormatErrorText.message(for: phase)))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 460)
 
             if let hint = FormatErrorText.hint(for: phase) {
-                Text(hint)
+                Text(LocalizedStringKey(hint))
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -44,6 +45,11 @@ struct ErrorOverlay: View {
         .background(.background)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("error-overlay")
+        .onAppear {
+            AccessibilityNotification.Announcement(
+                FormatErrorText.title(for: phase)
+            ).post()
+        }
     }
 }
 

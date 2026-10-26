@@ -82,6 +82,7 @@ func readsUnquotedRows(name: String, config: CSVConfiguration,
 
 @Test(arguments: [
     ("missing-quote-atEnd", CSVConfiguration()),
+    ("tooMany-quotes-atEnd", CSVConfiguration()),
     ("missing-backslash-beforeValue", CSVConfiguration(escapeCharacter: "\\")),
     ("missing-backslash-afterValue", CSVConfiguration(escapeCharacter: "\\")),
     ("missing-value-for-backslash-inquote", CSVConfiguration(escapeCharacter: "\\")),
