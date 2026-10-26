@@ -105,6 +105,24 @@ enum CSVDocumentIO {
         }
     }
 
+    /// The typed error that blocks saving `snapshot`, or `nil` when writable.
+    static func saveError(for snapshot: CSVDocumentSnapshot) -> CSVError? {
+        let header = header(for: snapshot.table, configuration: snapshot.configuration)
+        guard let issue = CSVWriteValidation.issue(table: snapshot.table, header: header,
+                                                   configuration: snapshot.configuration) else {
+            return nil
+        }
+        return error(for: issue)
+    }
+
+    /// Validates and serializes a snapshot without document or UI state.
+    static func serializedData(for snapshot: CSVDocumentSnapshot) throws -> Data {
+        if let error = saveError(for: snapshot) {
+            throw error
+        }
+        return try encodedData(for: snapshot)
+    }
+
     /// Serializes a snapshot with the BOM captured in that snapshot.
     static func encodedData(for snapshot: CSVDocumentSnapshot) throws -> Data {
         let header = header(for: snapshot.table, configuration: snapshot.configuration)

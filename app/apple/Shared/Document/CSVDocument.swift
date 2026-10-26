@@ -21,6 +21,10 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// snapshot so a save writes the BOM state the table was loaded with.
     private(set) var hadUTF8BOM = false
 
+    /// The save-time value. Autosave reads it off the main actor, so it is
+    /// rebuilt after every change that can affect saving.
+    let snapshotCache = CSVDocumentSnapshotCache()
+
     /// Increments after every content or file-binding change.
     ///
     /// A re-read captures this before its awaits and refuses to apply when it
@@ -59,6 +63,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         phase = .ready
         fileURL = nil
         prefersChineseEncoding = false
+        refreshSnapshotCache()
     }
 
     convenience init(configuration: ReferenceFileDocument.ReadConfiguration) throws {
@@ -158,9 +163,11 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         case .failure(.csv(let error)):
             table = nil
             phase = .readFailed(error)
+            refreshSnapshotCache()
         case .failure(.cannotReadFile):
             table = nil
             phase = .unreadableFile
+            refreshSnapshotCache()
         }
         mutationRevision &+= 1
     }
@@ -277,21 +284,22 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     private func refreshPhase() {
         switch phase {
         case .loading, .readFailed, .unreadableFile:
-            return
-        case .ready, .needsAttention:
+            // Sticky: there is no table to validate until bytes load.
             break
+        case .ready, .needsAttention:
+            if let table {
+                let header = CSVDocumentIO.header(for: table, configuration: configuration)
+                if let issue = CSVWriteValidation.issue(table: table, header: header,
+                                                        configuration: configuration) {
+                    phase = .needsAttention(issue)
+                } else {
+                    phase = .ready
+                }
+            } else {
+                phase = .loading
+            }
         }
-        guard let table else {
-            phase = .loading
-            return
-        }
-        let header = CSVDocumentIO.header(for: table, configuration: configuration)
-        if let issue = CSVWriteValidation.issue(table: table, header: header,
-                                                configuration: configuration) {
-            phase = .needsAttention(issue)
-        } else {
-            phase = .ready
-        }
+        refreshSnapshotCache()
     }
 
 }
