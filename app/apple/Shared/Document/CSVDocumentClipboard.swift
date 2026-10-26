@@ -83,10 +83,7 @@ extension CSVDocument {
         if !selection.rows.isEmpty {
             let selected = selection.rows.intersection(IndexSet(0..<table.rowCount))
             guard !selected.isEmpty else { return }
-            var updated = table
-            updated.deleteRows(at: selected)
-            applyChange(table: updated, configuration: configuration,
-                        includesUTF8BOM: hadUTF8BOM, actionName: "Delete Rows")
+            deleteRows(at: selected)
             selection = GridSelection()
             return
         }
@@ -94,10 +91,9 @@ extension CSVDocument {
         guard !selection.columns.isEmpty else { return }
         let selected = selection.columns.intersection(IndexSet(0..<table.columns.count))
         guard !selected.isEmpty else { return }
-        var updated = table
-        updated.deleteColumns(at: selected)
-        applyChange(table: updated, configuration: configuration,
-                    includesUTF8BOM: hadUTF8BOM, actionName: "Delete Columns")
+        // `deleteColumns` keeps at least one column when every column is
+        // selected, so the grid never drops to zero columns.
+        deleteColumns(at: selected)
         selection = GridSelection()
     }
 }

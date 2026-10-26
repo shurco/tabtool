@@ -21,6 +21,12 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// snapshot so a save writes the BOM state the table was loaded with.
     private(set) var hadUTF8BOM = false
 
+    /// Increments after every content or file-binding change.
+    ///
+    /// A re-read captures this before its awaits and refuses to apply when it
+    /// changed, so edits made while the re-read was parsing are not lost.
+    private(set) var mutationRevision: UInt64 = 0
+
     /// Bytes supplied by the document initializer, used for the first load
     /// only. Later loads read the current file through `fileURL`.
     private var initialData: Data?
@@ -30,6 +36,9 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
 
     /// The load currently in flight, so overlapping `load()` calls share it.
     private var loadTask: Task<Void, Never>?
+
+    /// Whether a file re-read is currently awaiting bytes or a parse.
+    private var isRereading = false
 
     init(data: Data, fileURL: URL? = nil, configuration: CSVConfiguration? = nil,
          prefersChineseEncoding: Bool = false, undoManager: UndoManager? = nil) {
@@ -72,7 +81,22 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     }
 
     func setFileURL(_ url: URL?) {
+        guard url != fileURL else { return }
         fileURL = url
+        mutationRevision &+= 1
+    }
+
+    /// Marks a re-read in flight and returns `false` when one is already
+    /// running. Only one re-read may replace the document at a time.
+    func beginReread() -> Bool {
+        guard !isRereading else { return false }
+        isRereading = true
+        return true
+    }
+
+    /// Clears the in-flight re-read marker.
+    func endReread() {
+        isRereading = false
     }
 
     /// Uses `undoManager` for document actions.
@@ -138,35 +162,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
             table = nil
             phase = .unreadableFile
         }
-    }
-
-    func snapshot(contentType: UTType) throws -> CSVDocumentSnapshot {
-        guard let table else { throw DocumentError.notReady }
-
-        let header = CSVDocumentIO.header(for: table, configuration: configuration)
-        if let issue = CSVWriteValidation.issue(table: table, header: header,
-                                                configuration: configuration) {
-            throw CSVDocumentIO.error(for: issue)
-        }
-        return CSVDocumentSnapshot(table: table, configuration: configuration,
-                                   includesUTF8BOM: hadUTF8BOM)
-    }
-
-    /// Serializes the current content for saving and tests.
-    func encodedData() throws -> Data {
-        try CSVDocumentIO.encodedData(for: snapshot(contentType: .commaSeparatedText))
-    }
-
-    func fileWrapper(snapshot: CSVDocumentSnapshot,
-                     configuration: ReferenceFileDocument.WriteConfiguration) throws -> FileWrapper {
-        let header = CSVDocumentIO.header(for: snapshot.table,
-                                          configuration: snapshot.configuration)
-        if let issue = CSVWriteValidation.issue(table: snapshot.table, header: header,
-                                                configuration: snapshot.configuration) {
-            throw CSVDocumentIO.error(for: issue)
-        }
-        let data = try CSVDocumentIO.encodedData(for: snapshot)
-        return FileWrapper(regularFileWithContents: data)
+        mutationRevision &+= 1
     }
 
     /// Replaces table, configuration, and BOM as one undoable user change.
@@ -194,6 +190,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         hadUTF8BOM = newIncludesUTF8BOM
         phase = .ready
         refreshPhase()
+        mutationRevision &+= 1
 
         if let previous {
             registerAction(actionName) { document in
@@ -219,6 +216,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         self.table = updated
         phase = .ready
         refreshPhase()
+        mutationRevision &+= 1
 
         registerAction(actionName) { document in
             document.applyCellChange(previous, row: row, column: column,
@@ -248,6 +246,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         hadUTF8BOM = snapshot.includesUTF8BOM
         phase = .ready
         refreshPhase()
+        mutationRevision &+= 1
         registerAction(actionName) { document in
             document.restore(snapshot: previous, actionName: actionName)
         }

@@ -52,12 +52,21 @@ extension CSVDocument {
 
     /// Removes the columns at `indexes`; invalid indexes are ignored.
     ///
-    /// The model allows removing every column; the UI guards the last-column
-    /// deletion, and the document does not add a second guard.
+    /// Deleting every column keeps the leftmost selected column, so the
+    /// document and the grid always have at least one column.
     func deleteColumns(at indexes: IndexSet) {
         guard let table else { return }
+        let selected = indexes.intersection(IndexSet(0..<table.columns.count))
+        guard !selected.isEmpty else { return }
+
         var updated = table
-        updated.deleteColumns(at: indexes)
+        if selected.count == table.columns.count {
+            var toDelete = selected
+            toDelete.remove(selected.first ?? 0)
+            updated.deleteColumns(at: toDelete)
+        } else {
+            updated.deleteColumns(at: selected)
+        }
         applyChange(table: updated, configuration: configuration,
                     includesUTF8BOM: hadUTF8BOM, actionName: "Delete Columns")
     }

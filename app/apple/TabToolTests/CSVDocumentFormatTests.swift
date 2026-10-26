@@ -279,4 +279,98 @@ private func tempFile(_ data: Data) throws -> URL {
         doc.deleteSelection()
         #expect(um.undoActionName == "Delete Columns")
     }
+
+    @Test @MainActor func reparseRejectsEditsMadeWhileParsing() async throws {
+        let url = try tempFile("a,b\n")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let doc = CSVDocument(data: try Data(contentsOf: url), fileURL: url,
+                              configuration: .init())
+        await doc.load()
+        let revision = doc.mutationRevision
+        doc.setCell("x", row: 0, column: 0)
+        #expect(doc.mutationRevision == revision + 1)
+
+        let candidate = try CSVDocumentIO.parse(data: Data("a,b\n".utf8),
+                                                configuration: .init())
+        #expect(throws: DocumentError.requiresConfirmation) {
+            try doc.applyReparsedCandidate(candidate, configuration: .init(),
+                                           expectedRevision: revision)
+        }
+        #expect(doc.table?.cell(row: 0, column: 0) == "x")
+        #expect(doc.configuration.columnSeparator == ",")
+        #expect(doc.mutationRevision == revision + 1)
+    }
+
+    @Test @MainActor func overlappingRereadIsRejected() async throws {
+        let url = try tempFile("a\n")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let doc = CSVDocument(data: try Data(contentsOf: url), fileURL: url,
+                              configuration: .init())
+        await doc.load()
+        #expect(doc.beginReread())
+        defer { doc.endReread() }
+
+        await #expect(throws: DocumentError.requiresConfirmation) {
+            try await doc.applyParsingConfiguration(
+                CSVConfiguration(columnSeparator: ";"), force: true)
+        }
+        #expect(doc.table?.cell(row: 0, column: 0) == "a")
+        #expect(doc.configuration.columnSeparator == ",")
+    }
+
+    @Test @MainActor func asyncDirtyCheckMatchesDisk() async throws {
+        let url = try tempFile("a,b\n")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let doc = CSVDocument(data: try Data(contentsOf: url), fileURL: url,
+                              configuration: .init())
+        await doc.load()
+
+        var dirty = await doc.hasUnsavedChangesAsync()
+        #expect(!dirty)
+        doc.setCell("x", row: 0, column: 0)
+        dirty = await doc.hasUnsavedChangesAsync()
+        #expect(dirty)
+        try doc.encodedData().write(to: url, options: .atomic)
+        dirty = await doc.hasUnsavedChangesAsync()
+        #expect(!dirty)
+        try Data("a,c\n".utf8).write(to: url, options: .atomic)
+        dirty = await doc.hasUnsavedChangesAsync()
+        #expect(dirty)
+    }
+
+    @Test @MainActor func deletingEveryColumnKeepsOneColumn() async throws {
+        let um = UndoManager()
+        let doc = CSVDocument(data: Data("h1,h2\na,b\n".utf8),
+                              configuration: CSVConfiguration(firstRowAsHeader: true),
+                              undoManager: um)
+        await doc.load()
+        doc.deleteColumns(at: IndexSet([0, 1]))
+        #expect(doc.table?.columns.count == 1)
+        #expect(doc.table?.rowCount == 1)
+        #expect(doc.table?.headers == ["h1"])
+        #expect(doc.table?.cell(row: 0, column: 0) == "a")
+        um.undo()
+        #expect(doc.table?.columns.count == 2)
+        #expect(doc.table?.headers == ["h1", "h2"])
+    }
+
+    @Test @MainActor func deleteSelectionKeepsOneColumn() async throws {
+        let doc = CSVDocument(data: Data("a,b\nc,d\n".utf8), configuration: .init())
+        await doc.load()
+        doc.selection = GridSelection(columns: IndexSet([0, 1]))
+        doc.deleteSelection()
+        #expect(doc.table?.columns.count == 1)
+        #expect(doc.table?.rowCount == 2)
+        #expect(doc.table?.cell(row: 0, column: 0) == "a")
+        #expect(doc.selection == GridSelection())
+    }
+
+    @Test @MainActor func deletingTheOnlyColumnKeepsIt() async throws {
+        let doc = CSVDocument(data: Data("a\nb\n".utf8), configuration: .init())
+        await doc.load()
+        doc.deleteColumns(at: IndexSet([0]))
+        #expect(doc.table?.columns.count == 1)
+        #expect(doc.table?.rowCount == 2)
+        #expect(doc.table?.cell(row: 0, column: 0) == "a")
+    }
 }
