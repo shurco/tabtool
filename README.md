@@ -67,7 +67,24 @@ cd app/apple/TabToolKit && swift test
 ./scripts/test --ui
 ```
 
-`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 125 core Swift Testing tests plus 5 performance tests, 147 app unit tests, and 16 UI tests. Details are in [docs/building.md](docs/building.md).
+`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 133 core Swift Testing tests plus 10 performance tests, 147 app unit tests, and 16 UI tests. Details are in [docs/building.md](docs/building.md).
+
+## Performance
+
+Core operations were measured in release mode on synthetic CSVs (numeric and text columns, quoted multiline fields): 100k rows x 20 columns (20 MB), 500k x 10 (44 MB), and 5k x 200 (10 MB). The generator is `makeBenchmarkCSV` in the core test support; the performance tests in `CSVPerformanceTests` use smaller sizes so the debug run stays fast. Times in ms, before -> after:
+
+| Operation | 100k x 20 | 500k x 10 | 5k x 200 |
+| --- | --- | --- | --- |
+| Format detection | 388 -> 39 | 836 -> 89 | 204 -> 19 |
+| Write / non-UTF-8 save validation | 543 -> 152 | 1279 -> 268 | 282 -> 78 |
+| Unquoted save validation (per edit) | 15* -> 1 | 793 -> 49 | 1 -> 0 |
+| Convert decimal mark | 837 -> 354 | 2046 -> 868 | 432 -> 189 |
+| Sort, numeric column | 94 -> 59 | 489 -> 309 | 4.5 -> 2.7 |
+| Sort, text column | 384 -> 293 | 2239 -> 1793 | 15 -> 12 |
+
+\* Stopped early at the first ambiguous cell; the full scan is the 500k figure.
+
+Measured and left alone (already cheap or inherent): parsing (186 ms / 435 ms / 84 ms), building the table (20 / 83 / 4 ms), row reorder, move and delete (10-60 ms, linear), table equality (identical buffers return at once, 1.4 ms for distinct equal buffers), undo snapshots (copy-on-write; a cell edit copies one column, about 1 ms at 500k rows), and the grid (a cell edit refreshes only visible cells and never reloads the table; header sort arrows repaint only on change). Text sorting is bound by `localizedStandardCompare`.
 
 ## Documentation
 
