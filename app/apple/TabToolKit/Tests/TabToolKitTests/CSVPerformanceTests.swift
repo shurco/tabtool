@@ -36,6 +36,25 @@ final class CSVPerformanceTests: XCTestCase {
         }
     }
 
+    /// Sorting 100K rows by a numeric column. No latency assertion; the
+    /// duration is printed for manual tracking.
+    func testSortOn100KRows() {
+        let rowCount = 100_000
+        let table = CSVTable(columns: [
+            CSVColumn(header: nil,
+                      cells: (0..<rowCount).map { "\(($0 * 7919) % 100_000)" })
+        ])
+
+        let start = Date()
+        let order = table.rowOrder(sortedByColumn: 0, direction: .ascending,
+                                   decimalMark: ".")
+        let duration = Date().timeIntervalSince(start)
+        print("sort 100K rows: \(duration)s")
+
+        XCTAssertEqual(table.cell(row: order[0], column: 0), "0")
+        XCTAssertEqual(table.cell(row: order[rowCount - 1], column: 0), "99999")
+    }
+
     /// Correctness and rough timing for delete/move/save on 100k rows.
     ///
     /// There is no hard latency assertion: CI machines vary. The test records
