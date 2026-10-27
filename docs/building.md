@@ -35,6 +35,8 @@ From the repository root:
 - `clean` — removes `app/apple/build`.
 - `version` — shows the version from `app/apple/version.json`.
 
+`./scripts/bench-large [GiB]` (default 5) benchmarks large file mode in a release build: it generates a CSV of that size in the temporary directory, measures opening, indexing, cell reads, and streaming saves, prints a Markdown table, and deletes the file. It refuses to start without three times the size free on disk. The harness is `LargeFileBenchmarkTests` in the core tests, skipped unless `TABTOOL_BENCH_BYTES` is set.
+
 `./scripts/test` runs the core and app unit tests. `./scripts/test --ui` additionally runs the XCUITest smoke suite; a terminal process needs the macOS automation permission, otherwise run the UI scheme from Xcode. The UI tests open and close the app, so do not run them while manually testing the same build.
 
 ## Versions
@@ -92,7 +94,7 @@ xcodebuild -project TabTool.xcodeproj -scheme TabTool \
   -destination 'platform=macOS' -only-testing:TabToolUITests test
 ```
 
-Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 133 core Swift Testing tests plus 10 XCTest performance tests, 147 app unit tests, and 16 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.
+Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 229 core Swift Testing tests plus the opt-in large file benchmark and 10 XCTest performance tests, 217 app unit tests, and 16 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.
 
 ## Signing and App Store
 
@@ -104,7 +106,7 @@ For the App Store:
 2. Update `project.yml`, `Info.plist`, `TabTool.entitlements`, `docs/app-store-compliance.md`.
 3. Archive with the team signature in Xcode Organizer (Product > Archive) or with an explicit `xcodebuild archive` command that does not set `CODE_SIGNING_ALLOWED=NO`. `./scripts/app archive macos` is an unsigned verification build only.
 4. Upload the archive via Xcode Organizer or Transporter.
-5. Fill in App Privacy: no data is collected. The privacy manifest is `app/apple/macOS/App/PrivacyInfo.xcprivacy`; it declares the User defaults required-reason API (`CA92.1`).
+5. Fill in App Privacy: no data is collected. The privacy manifest is `app/apple/macOS/App/PrivacyInfo.xcprivacy`; it declares the User defaults (`CA92.1`), File timestamp (`3B52.1`), and Disk space (`E174.1`) required-reason APIs.
 6. Check `version.json` and `version.lock.json` before every upload.
 
 The icon and store metadata are a separate release step; a placeholder is used in development. Choose a unique name and icon.
@@ -124,6 +126,7 @@ The automated suites cover parsing, writing, encoding, detection, document save/
 | Editing | undo/redo of cell, edit, add/delete/move/paste/format; multi-row drag; column reorder; sort (header and Table menu), remove sort, ⌥⌘ arrow row/column moves | App tests; drag and focus manual |
 | Files | open fixture, save, Save As, reopen, export/re-import | App tests for snapshots; panels manual |
 | Scale | 100k-row file loads, scrolls, edits, saves | Performance tests; GUI smoke manual |
+| Large files | a multi-GB file opens with rows at once, indexes, jumps with ⌘↑/⌘↓, edits and undoes a cell, saves with progress, Save As, close/quit prompts, Reload after an outside change | Core + app tests, `scripts/bench-large`; GUI manual |
 | Accessibility | VoiceOver reads the grid, toolbar, format bar, banner, and errors; full keyboard access reaches grid and format bar | Labels/identifiers committed; VoiceOver manual |
 | Appearance | light/dark mode, minimum window size | Manual |
 

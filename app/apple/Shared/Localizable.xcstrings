@@ -1270,6 +1270,106 @@
           }
         }
       }
+    },
+    "Saving… %lld%%": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving… %lld%%"
+          }
+        }
+      }
+    },
+    "Do you want to save the changes made to “%@”?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do you want to save the changes made to “%@”?"
+          }
+        }
+      }
+    },
+    "Your changes will be lost if you don’t save them.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your changes will be lost if you don’t save them."
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "Don’t Save": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don’t Save"
+          }
+        }
+      }
+    },
+    "The file could not be saved": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file could not be saved"
+          }
+        }
+      }
+    },
+    "Indexing is not finished. Save again when it completes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indexing is not finished. Save again when it completes."
+          }
+        }
+      }
+    },
+    "The file changed on disk since it was opened. Reload it before saving.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file changed on disk since it was opened. Reload it before saving."
+          }
+        }
+      }
+    },
+    "There is not enough free disk space to save this file.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There is not enough free disk space to save this file."
+          }
+        }
+      }
+    },
+    "Saving a large file needs free space of about twice its size.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving a large file needs free space of about twice its size."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

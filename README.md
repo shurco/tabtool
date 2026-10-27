@@ -10,7 +10,7 @@ The project is in development. The public name, bundle ID, signing team, and App
 - Opening files by dropping them on the Dock icon, the app icon in Finder, or an open window (`.csv`, `.tsv`, `.txt`, `.tab`, `.dat`).
 - Editing cells, adding and removing rows and columns (also from the right-click menus on a row or a column header), reordering rows with drag & drop and columns by dragging the header, sorting rows by a column (click the arrow in the column header, the header menu, or the Table menu), renaming a column (double-click its title, the header menu, or the Table menu; without a header it turns Header on and keeps all rows), and moving the selected rows or columns one step with `⌥⌘` arrows.
 - Copying and pasting rows/columns as TSV, undo/redo for cells, structure, paste, and format changes.
-- Large file mode (files of 100 MB and more): the file is memory-mapped and indexed in the background, so rows appear at once and a 1.6 GB file with 20.8 million rows indexes in about 2 seconds. You can browse and edit cells; structural commands, sorting, export, Duplicate and the decimal mark are unavailable. Save and Save As stream the file (only edited rows are rewritten; a 1.5 GB file saves in about 3 seconds with the status bar showing progress and a Cancel button); the file is never autosaved, and closing the window or quitting with unsaved edits asks Save / Don't Save / Cancel. Saving needs free disk space of about twice the file size.
+- Large file mode (files of 100 MiB and more): the file is memory-mapped and indexed in the background, so rows appear at once and a 5 GB file with 77.7 million rows is fully indexed about 2.7 seconds after launch, using under 100 MB of memory. You can browse, jump with `⌘↑`/`⌘↓`, and edit cells with undo; structural commands, sorting, export, Duplicate and the decimal mark are unavailable. Save and Save As stream the file (only edited rows are rewritten; the 5 GB file saves in about 6 seconds with the status bar showing progress and a Cancel button); the file is never autosaved, and closing the window or quitting with unsaved edits asks Save / Don't Save / Cancel. Saving needs free disk space of about twice the file size. Supported encodings, the row-break and quoting rules, and what is unavailable are listed in [docs/csv-format.md](docs/csv-format.md#large-file-mode).
 - Saving and exporting with a different delimiter, encoding, quotes, decimal mark, and header.
 - CSV, TSV, and plain text formats; UTF-8/16/32, MacRoman, Windows Latin 1/2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, Japanese encodings.
 - No formulas, styles, or charts — this is a simple CSV editor.
@@ -34,7 +34,7 @@ The repository follows these conventions:
 - `app/apple/Shared/Assets.xcassets` — placeholder `AppIcon`; final branding is a release task.
 - `app/apple/Shared/Localizable.xcstrings` — String Catalog for all UI text; English only in v1.
 - `app/apple/TabToolTests` and `app/apple/TabToolUITests` — app unit and UI tests.
-- `scripts` — `app` (XcodeGen + xcodebuild), `test`, `lib/version`.
+- `scripts` — `app` (XcodeGen + xcodebuild), `test`, `bench-large` (large file benchmark), `lib/version`.
 - `docs` — architecture, build, App Store, CSV format.
 - `.superpowers/sdd` — working spec/plan artifacts, not tracked by git.
 - `TabTool.xcodeproj` is generated and not committed.
@@ -68,7 +68,7 @@ cd app/apple/TabToolKit && swift test
 ./scripts/test --ui
 ```
 
-`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 133 core Swift Testing tests plus 10 performance tests, 147 app unit tests, and 16 UI tests. Details are in [docs/building.md](docs/building.md).
+`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 229 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 217 app unit tests, and 16 UI tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
 
 ## Performance
 
@@ -86,6 +86,23 @@ Core operations were measured in release mode on synthetic CSVs (numeric and tex
 \* Stopped early at the first ambiguous cell; the full scan is the 500k figure.
 
 Measured and left alone (already cheap or inherent): parsing (186 ms / 435 ms / 84 ms), building the table (20 / 83 / 4 ms), row reorder, move and delete (10-60 ms, linear), table equality (identical buffers return at once, 1.4 ms for distinct equal buffers), undo snapshots (copy-on-write; a cell edit copies one column, about 1 ms at 500k rows), and the grid (a cell edit refreshes only visible cells and never reloads the table; header sort arrows repaint only on change). Text sorting is bound by `localizedStandardCompare`.
+
+### Large files
+
+`./scripts/bench-large 5` (release build, Apple M4 Pro, 24 GB, APFS SSD, file in the page cache) on a generated 5.00 GiB CSV with 68.2 million rows x 8 columns (quoted text, a multiline field every 1000 rows). Footprint is the process's physical footprint, the number Activity Monitor shows; the benchmark process starts at 15 MiB.
+
+| Metric | Value |
+| --- | --- |
+| Open to the first 64 rows (map, detect format, index the first 8 MiB, decode) | 45 ms |
+| Full index | 1.97 s (2.7 GB/s) |
+| Footprint after indexing | 43 MiB |
+| Jump to a random row (1000 reads) | p50 0.06 ms, p99 1.2 ms |
+| Scroll 100k rows x 8 cells | 179 ms, block cache hit rate 99.8% |
+| Save, no edits / 1 edit / 1000 edits | 3.8 s / 4.8 s / 6.2 s; peak footprint 46 / 46 / 36 MiB |
+
+In the Release app (sandboxed) with a 5.0 GiB file of 77.7 million rows: rows on screen and indexing under way 0.9 s after launch, fully indexed at 2.7 s, footprint 91 MB after indexing with no accessibility client; Save with one edit takes 6.3 s including indexing the written file, footprint up to 114 MB. Saves are disk-bound; cold-cache times were not measured.
+
+Known limits: an accessibility client (VoiceOver, automation tools) reading the rows on screen near the end of a huge file makes AppKit allocate 8 bytes per row up to that row (about 620 MB at row 77.7 million). Rows near the top cost nothing.
 
 ## Documentation
 

@@ -220,6 +220,7 @@ TabTool/
 │   ├── _helper
 │   ├── app                              # run/build/archive/clean/version
 │   ├── test                             # swift test + xcodebuild test
+│   ├── bench-large                      # large file mode benchmark (release)
 │   └── lib/version
 ├── docs/
 │   ├── architecture.md
@@ -252,6 +253,8 @@ Pure Swift 6, macOS 14+, no AppKit/SwiftUI, no dependencies.
 - `SupportedEncodings` — the list of 18 encodings and stable identifiers for the UI.
 - `CSVClipboardParser` — TSV parsing for paste (no quotes, with CRLF/CR/LF, empty rows).
 - `DecimalMarkConverter` — safe textual replacement of the decimal mark in numeric cells.
+- `RowSource` — the read-only seam the grid reads (`rowCount`, `columnCount`, `columnIDs`, `headers`, `cell(row:column:)`); `CSVTable` conforms, and so does `LargeCSVSource` (6.9).
+- Large file mode types (`LargeFile`, `MappedFile`, `RowScanner`, `RowIndex`, `LargeFileIndexer`, `LargeFileSniffer`, `LargeCSVSource`, `CellOverlay`, `LargeBlock`, `LargeFileSaver`) — see 6.9.
 
 The public API is minimal; internal details (regex, heuristic counters) are not exposed. All types are `Sendable`; the parser/detector can run off the main actor.
 
@@ -332,7 +335,7 @@ The parser builds the table from rows: `max(fields)` columns, short rows are pad
 
 - Entitlements: App Sandbox, user-selected read-write. No network, no iCloud, no Apple Events. File — `app/apple/macOS/App/TabTool.entitlements`.
 - Hardened runtime; Archive; no private APIs. The project is built from `app/apple/project.yml`; `.xcodeproj` is not committed.
-- `PrivacyInfo.xcprivacy` — `app/apple/macOS/App/PrivacyInfo.xcprivacy`: we collect no data and there is no tracking. The one required-reason API is User defaults (`NSPrivacyAccessedAPICategoryUserDefaults`) with reason `CA92.1`, because the app stores its own window and format-bar preferences with `@AppStorage`.
+- `PrivacyInfo.xcprivacy` — `app/apple/macOS/App/PrivacyInfo.xcprivacy`: we collect no data and there is no tracking. Required-reason APIs: User defaults (`CA92.1`, the app's own window and format-bar preferences in `@AppStorage`), File timestamp (`3B52.1`, size and modification time of the user's large file to notice changes on disk), and Disk space (`E174.1`, the free-space check before a large-file save).
 - `Info.plist` — `app/apple/macOS/App/Info.plist`: CSV/TSV/plain-text document types, `LSHandlerRank`, `LSApplicationCategoryType=public.app-category.utilities`, `ITSAppUsesNonExemptEncryption=false`, deployment target 14.0. The required MIT notice is bundled from the repository `LICENSE` file.
 - `PrivacyInfo.xcprivacy` is copied into the app resources by the `TabTool` target in `project.yml`; `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon` points at `Shared/Assets.xcassets`.
 - `Shared/Localizable.xcstrings` holds the English UI strings; user-facing controls use localizable SwiftUI initializers. Accessibility identifiers from earlier tasks are preserved, and the banner/error overlay announce through `AccessibilityNotification`.
@@ -341,6 +344,29 @@ The parser builds the table from rows: `max(fields)` columns, short rows are pad
 - New public name, bundle ID, team ID, icon — before release; placeholders are used during development. Choose a unique name and icon.
 - The MIT notice is kept in `LICENSE` and bundled with the app; `docs/app-store-compliance.md` records the release requirement.
 - Build/test evidence after the final fix wave: 115 core Swift Testing tests plus 4 XCTest performance tests, 126 app unit tests, and 14 UI tests; `scripts/app build macos` and `scripts/app archive macos` succeed; the archive contains the three document types, the privacy manifest with the User defaults entry, and the placeholder `AppIcon.icns`.
+
+### 6.9 Large file mode
+
+Files of `LargeFile.thresholdBytes` (100 MiB) and more never become a `CSVTable`. `CSVDocument.init(configuration:)` routes on `fileAttributes[.size]` without reading the bytes; the document keeps `table == nil` (which already disables every structural command) and publishes `largeSource`. The grid, the status bar and copy read `document.rowSource` (`table ?? largeSource`) through `RowSource`. Smaller files take the in-memory path unchanged.
+
+Core (`TabToolKit`):
+
+- `MappedFile` — `open` + `mmap(PROT_READ, MAP_PRIVATE)` of the whole file, the `(size, mtime, inode)` identity at open, `withBytes` for random access, `read(_:into:_:)` for sequential scans (`pread` into a reused buffer: 4-9 GB/s against about 0.7 GB/s for faulting a mapping in page by page, and a short read instead of a crash on a truncated file), `isStale()` (path and descriptor against the identity: unchanged, appended, replaced or truncated) and `isReadable` (only the open file counts; a file replaced at the path stays readable through the descriptor).
+- `RowScanner` — finds row boundaries in raw bytes: LF, CR or CRLF outside quotes, resumable across chunks. A scalar state machine handles every quote/escape setting; a SIMD path (16-byte compare masks packed to 64-bit masks, prefix-xor for quote parity) handles quote-doubling and quote-less files. Quote handling follows parity and never throws.
+- `RowIndex` — one byte offset per 64 rows (`LargeFile.blockRows`), plus the row count, the widest row, the scanned bytes and whether the scan ended inside a quote. 0.125 bytes per row: 10 MB for 77.7 million rows.
+- `LargeFileIndexer` — scans the file on a background queue in 8 MiB steps and publishes the growing index after each step (each step's checkpoints move into the published index, so the array is never copied whole). Readers see the first rows after the first step; rows whose end is not yet known stay hidden.
+- `LargeFileSniffer` — detects the format from the first 1 MiB cut back to a row boundary outside quotes, refuses encodings and delimiters the byte scanner cannot handle, and parses that sample strictly with `CSVParser`.
+- `LargeCSVSource` — `RowSource` over the mapping. A cell read decodes its 64-row block with `CSVParser` and keeps it in a 64-block LRU cache; a block that does not parse shows each row as one raw cell, and a block with invalid bytes is shown with replacement characters; neither can be edited. Edits live in `CellOverlay` (a lock-guarded dictionary keyed by file row and column) and win over the file's bytes. `setCell` validates the text by trial serialization and refuses edits while indexing, in unreadable rows, and after the file changed on disk.
+- `LargeFileSaver` — streams the saved file: unedited bytes are copied in 4 MiB `pread` chunks, each edited row is parsed from its block, patched, written again by `CSVWriter` and given back its own line terminator (and the UTF-8 BOM on row 0). `save(_:replacing:)` checks for twice the file size of free space, writes into the item-replacement directory next to the file and swaps it in with `FileManager.replaceItemAt`. A source that shrinks during the copy fails with `sourceChanged`; a cancelled or failed write leaves no file behind.
+
+App:
+
+- `CSVDocumentLarge` opens (map, sniff and index off the main actor; `largeStatus` `.indexing(fraction)` polled at 4 Hz, then `.ready`), applies cell edits, the header toggle (a view mapping, undoable) and Revert, and re-reads with a new format (dropping edits and undo after the usual confirmation). `largeStatus` `.stale` drives the Reload banner.
+- Undo is owned by the document: large-mode edits register on the document's own `UndoManager`, never on SwiftUI's, so the system never sees the document dirty and never autosaves a multi-gigabyte file. `CSVTableView` returns that manager from `undoManager`, so the Edit menu answers from it.
+- `LargeDocumentWindow` (one per large window, created by `CSVTableView` when it joins a window) stands in as the window's delegate and forwards every other message to the delegate it replaced. It shows the dirty dot through `NSWindow.isDocumentEdited`, asks Save / Don't Save / Cancel in `windowShouldClose(_:)` and, through the app delegate's `applicationShouldTerminate(_:)`, before quitting, and runs Save and Save As (`NSSavePanel`, then streaming to the chosen URL and updating the system document's `fileURL`).
+- Save routing: the window's `NSDocument` would answer File > Save itself, and neither the window delegate nor a responder after the window is asked first. A view in the first-responder chain is, so `CSVTableView` answers `saveDocument:`, `saveDocumentAs:` and `duplicateDocument:` (always disabled) only in large mode (`responds(to:)`). `LargeDocumentWindow` keeps the grid in that chain: it focuses the grid when the menu bar opens (`NSMenu.didBeginTrackingNotification`, so the items validate against the grid) and right before a menu sends one of those actions (`NSMenu.willSendActionNotification`). The menu has already matched the key equivalent at that point, so Command-S works with any keyboard layout and any focused control.
+- Adoption after a save (`CSVDocumentLargeSaving`): the background task writes the file, maps the written file and indexes it completely; the window keeps showing the old mapping meanwhile (the replaced file stays readable through its descriptor). Then a new `LargeCSVSource` with the same overlay object and column identities replaces the old one, so columns, scroll position and selection stay; the saved edits leave the overlay, edits made during the save stay, and the undo history is kept (undo restores the text a cell showed).
+- Grid: `reloadData()` on every row count change, also while indexing. `noteNumberOfRowsChanged()` would make AppKit keep one update item per added row (tens of megabytes per tick on a multi-gigabyte file). Column reordering is off in large mode. Accessibility exposes only the visible rows of a large table, through both the modern overrides and the legacy `accessibilityAttributeValue(_:)` that System Events and VoiceOver use; otherwise AppKit builds one element per row.
 
 ## 7. Behavior and deliberate differences
 
@@ -409,7 +435,7 @@ The parser builds the table from rows: `max(fields)` columns, short rows are pad
 
 - **SwiftUI ↔ NSTableView bridge**: focus, undo, selection, and updates can conflict. Mitigation: the model is the single source of truth; the coordinator does not store business state; targeted updates; early smoke.
 - **Parser behavior**: undocumented edges. Mitigation: cover the fixtures first, then improve; pin every deviation with a test.
-- **Large files**: synchronous snapshot on save. Mitigation: async load, performance tests, documented limitation; async save is future work.
+- **Large files**: below 100 MiB, a synchronous snapshot on save. Mitigation: async load, performance tests, documented limitation; async save is future work. From 100 MiB, large file mode (6.9) maps, indexes and streams instead; an accessibility client reading rows near the end of a huge file still makes AppKit allocate 8 bytes per row up to that row (`NSTableRowAndCellTracker`), which only own accessibility row elements would avoid.
 - **App Store name/bundle/icon**: conflict with an existing listing. Mitigation: decide before signing/archiving; do not publish placeholders.
 - **External file changes**: v1 does not resolve conflicts, the last writer wins; when re-reading the format, the current content is read from disk. Mitigation: document the limitation, atomic writes, in the future — `NSFilePresenter`/conflict UI.
 - **`ReferenceFileDocument` limitations**: no post-save callback and no convenient custom save flow; therefore parsing settings read the file from disk, and a blocked write is expressed as a typed error + banner. The new `Document` protocol requires macOS 27 and is not used in v1. If this becomes a blocker, revisit the document layer (not the UI).

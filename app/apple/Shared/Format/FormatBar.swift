@@ -63,7 +63,7 @@ struct FormatBar: View {
                 .accessibilityIdentifier("format-decimal")
                 .frame(width: 84)
                 .disabled(document.isLargeMode)
-                .help(document.isLargeMode ? Text("Not available in large file mode.") : Text(""))
+                .help(document.isLargeMode ? Text("Not available in large file mode.") : Text(verbatim: ""))
             }
 
             control("Header") {

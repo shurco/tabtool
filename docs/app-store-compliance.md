@@ -15,6 +15,13 @@ TabTool is a simple CSV editor for macOS. It opens CSV/TSV/text files, detects t
 
 There is no network, iCloud, Apple Events, camera, microphone, contacts, or other permissions. The app does not download or execute code. `ENABLE_HARDENED_RUNTIME=YES` is set in `app/apple/project.yml`; the development archive is unsigned only because no team is configured yet.
 
+Large file mode (files of 100 MiB and more) needs no further entitlement:
+
+- Reading: the user-selected file is opened read-only and memory-mapped (`mmap`, `MAP_PRIVATE`) and read with `pread`, inside the document's security-scoped access. `stat`/`fstat` compare its size, modification time, and inode with the values at open to notice changes on disk.
+- Save: the file is streamed into the item-replacement directory on the same volume (`FileManager.url(for: .itemReplacementDirectory, ...)`, allowed by the sandbox) and swapped in with `FileManager.replaceItemAt`. Before writing, the free space of the volume is checked (`volumeAvailableCapacityForImportantUsageKey`).
+- Save As: `NSSavePanel` grants access to the chosen URL; the file is streamed there and the system document is moved to it.
+- The system never autosaves a large document; nothing is written without Save, Save As, or the Save choice of the close/quit prompt.
+
 ## Build configuration
 
 `app/apple/project.yml` is the source of truth:
@@ -33,7 +40,10 @@ There is no network, iCloud, Apple Events, camera, microphone, contacts, or othe
 - Data is not collected, transmitted, or used for tracking.
 - No analytics, Crashlytics, Firebase, ads, or third-party SDKs.
 - App Privacy in App Store Connect: **Data Not Collected**.
-- `app/apple/macOS/App/PrivacyInfo.xcprivacy`: `NSPrivacyTracking=false`, empty `NSPrivacyCollectedDataTypes`, empty `NSPrivacyTrackingDomains`, and one accessed-API entry: `NSPrivacyAccessedAPICategoryUserDefaults` with reason `CA92.1`. The app stores only its own window and format-bar preferences with `@AppStorage`; this does not change the Data Not Collected answer. The file is copied into `Contents/Resources`.
+- `app/apple/macOS/App/PrivacyInfo.xcprivacy`: `NSPrivacyTracking=false`, empty `NSPrivacyCollectedDataTypes`, empty `NSPrivacyTrackingDomains`, and three accessed-API entries. None of them changes the Data Not Collected answer. The file is copied into `Contents/Resources`.
+  - `NSPrivacyAccessedAPICategoryUserDefaults`, reason `CA92.1`: the app stores only its own window and format-bar preferences with `@AppStorage`.
+  - `NSPrivacyAccessedAPICategoryFileTimestamp`, reason `3B52.1`: large file mode reads the size and modification time (`stat`, `fstat`, `contentModificationDateKey`) of the file the user opened or saved, to notice changes on disk.
+  - `NSPrivacyAccessedAPICategoryDiskSpace`, reason `E174.1`: before saving a large file, the app checks that the volume has room for the rewritten copy and shows an error instead of starting the write.
 - Local settings and unsaved data stay on the device; the app makes no network requests.
 - `Shared/Localizable.xcstrings` contains the English UI strings; there are no hidden network or analytics strings.
 
@@ -92,4 +102,5 @@ The app does not implement its own cryptography and does not transmit data over 
 - [ ] Screenshots and description without promises of formulas/databases.
 - [ ] The required MIT notice is bundled with the app and kept in `LICENSE`.
 - [ ] Sandbox, open/save, export, errors, dark mode, VoiceOver, and a 100k-row file verified on a clean system.
+- [ ] Large file mode verified in the sandboxed build: open a file of several GB, edit a cell, Save, Save As to a new location, close with unsaved edits.
 - [ ] `version.lock.json` updated after upload.

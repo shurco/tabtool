@@ -92,9 +92,24 @@ Typed errors: `cannotDecodeData`, `malformedQuotedField`, `quoteInUnquotedField`
 - Column moves (header drag, Move Column Left/Right) keep the sort. Every other structural or format change clears it (cell edits keep it): moving, adding, deleting, or pasting rows; adding, deleting, or pasting columns; format changes (such as the decimal mark); toggling the header; and re-reading the file.
 - Move Row Up/Down and Move Column Left/Right (`⌥⌘` + arrow) move the selection one step, keeping gaps between selected items, and are disabled when the selection touches the edge.
 
+## Large file mode
+
+Files of 100 MiB (104,857,600 bytes) and more open in large file mode: the file is memory-mapped and indexed in the background instead of being parsed into memory. The rules above apply with these differences.
+
+- Encodings: UTF-8, Windows Latin 1/2 (CP1252/CP1250), MacRoman, ISO Latin 2, Cyrillic (CP1251), Greek (CP1253), Turkish (CP1254), and GBK. UTF-16/32, Shift_JIS, EUC-JP, and ISO-2022-JP are refused with "This encoding cannot be opened in large file mode"; convert the file to UTF-8. The same applies when one of them is chosen in the format bar.
+- The separator, quote, and escape must each be one ASCII character (or empty for quote and escape).
+- Rows break at LF, CR, and CRLF only. U+0085, U+2028, and U+2029 are ordinary characters in large file mode (the in-memory reader treats them as line breaks).
+- Format detection reads the first 1 MiB, cut back to the last row break outside quotes, and that sample must parse strictly or the file does not open. Later rows are indexed by quote parity and never stop the scan: a group of 64 rows that does not parse is shown with each row as one raw-text cell, and rows with bytes that are invalid in the encoding are shown with replacement characters. Neither can be edited.
+- At most 2,048 columns are shown; wider rows keep their extra fields in the file untouched.
+- Cells can be edited once indexing is complete, not while saving or after the file changed on disk. Header cells cannot be edited. The Header toggle only changes which row is the header. Undo and redo work as usual.
+- Saving rewrites only the edited rows. Every other byte is copied unchanged: original quoting, line endings, ragged rows, and the BOM stay. An edited row is written again by the writer (every field quoted when quotes are on, short rows padded to the edited column) and keeps its own line terminator. Saving needs free disk space of about twice the file size. The file is never autosaved; closing or quitting with unsaved edits asks Save / Don't Save / Cancel.
+- Not available: Cut, Paste, Delete; adding, deleting, moving, sorting, and renaming rows or columns; changing the decimal mark; Export; Duplicate. Copy is limited to 1,000,000 cells.
+- Changing the encoding, separator, quote, or escape indexes the file again and drops unsaved edits and the undo history after confirmation.
+- When the file changes on disk, a banner offers Reload. Rows already read stay visible; edits are off until the reload.
+
 ## Limitations
 
 - No formulas, styles, charts, XLSX/ODS, or cloud sync.
-- No model virtualization: all cells are in memory.
+- Files below 100 MiB are held in memory completely; larger files use large file mode.
 - External file changes are last-writer-wins; there is no separate conflict UI.
 - CSV/TSV/TXT are opened, not arbitrary extensions.
