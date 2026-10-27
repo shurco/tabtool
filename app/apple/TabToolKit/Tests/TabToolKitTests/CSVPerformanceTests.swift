@@ -157,4 +157,20 @@ final class CSVPerformanceTests: XCTestCase {
             XCTAssertTrue(equalRuns.allSatisfy { $0 < $1 })
         }
     }
+
+    /// Classifying and converting numeric cells must not run a regex per cell.
+    func testConvertsDecimalMarkOfLargeTable() throws {
+        let data = makeBenchmarkCSV(rows: 5_000, cols: 20, quoted: true)
+        var parser = try CSVParser(data: data, configuration: .init())
+        let rows = try parser.readAll()
+        let table = CSVTable(rows: Array(rows.dropFirst()), headers: rows.first)
+        var converted = table
+        measure {
+            converted = table
+            converted.convertDecimalMark(from: ".", to: ",")
+        }
+        XCTAssertEqual(converted.cell(row: 1, column: 0),
+                       table.cell(row: 1, column: 0).replacingOccurrences(of: ".", with: ","))
+        XCTAssertEqual(converted.cell(row: 1, column: 1), table.cell(row: 1, column: 1))
+    }
 }
