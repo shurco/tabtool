@@ -240,8 +240,7 @@ private struct GridToolbar: View {
             Button {
                 document.addRowBelowSelection()
             } label: {
-                Label("Add Row Below", systemImage: "plus.rectangle")
-                    .labelStyle(.iconOnly)
+                GridInsertIcon(axis: .row)
             }
             .help("Add Row Below")
             .accessibilityLabel("Add Row Below")
@@ -255,8 +254,7 @@ private struct GridToolbar: View {
             Button {
                 document.addColumnRightOfSelection()
             } label: {
-                Label("Add Column Right", systemImage: "plus.rectangle.portrait")
-                    .labelStyle(.iconOnly)
+                GridInsertIcon(axis: .column)
             }
             .help("Add Column Right")
             .accessibilityLabel("Add Column Right")
