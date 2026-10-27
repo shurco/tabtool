@@ -15,7 +15,7 @@ final class CSVGridCellView: NSTableCellView {
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        let textField = NSTextField()
+        let textField = CSVGridTextField()
         textField.translatesAutoresizingMaskIntoConstraints = false
         textField.isBordered = false
         textField.drawsBackground = false
@@ -40,5 +40,20 @@ final class CSVGridCellView: NSTableCellView {
         guard isColumnSelected else { return }
         NSColor.selectedContentBackgroundColor.withAlphaComponent(0.16).setFill()
         dirtyRect.fill()
+    }
+}
+
+/// The cell's text field.
+///
+/// A text field answers a right click with its own text menu; the grid's row
+/// menu comes from the table view, so the click is routed there instead.
+private final class CSVGridTextField: NSTextField {
+    override func menu(for event: NSEvent) -> NSMenu? {
+        var ancestor = superview
+        while let view = ancestor {
+            if let table = view as? NSTableView { return table.menu(for: event) }
+            ancestor = view.superview
+        }
+        return super.menu(for: event)
     }
 }

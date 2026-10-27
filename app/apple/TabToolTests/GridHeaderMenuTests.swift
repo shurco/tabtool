@@ -66,6 +66,34 @@ import TabToolKit
         #expect(doc.table?.headers == ["a", "x"])
     }
 
+    @Test func unchangedRenameWithHeaderOffKeepsHeaderOffAndAppliesOnce() async {
+        let um = UndoManager()
+        let doc = CSVDocument(data: Data("a,b\n1,2\n".utf8), configuration: .init(),
+                              undoManager: um)
+        await doc.load()
+        let (coordinator, tableView, header) = GridTestSupport.makeGrid(doc)
+        defer { withExtendedLifetime(coordinator) {} }
+        tableView.frame = NSRect(x: 0, y: 0, width: 400, height: 100)
+        let ended = Notification(name: NSControl.textDidEndEditingNotification)
+
+        coordinator.beginRenamingColumn(at: 0)
+        #expect(header.subviews.compactMap { $0 as? NSTextField }.first?.stringValue == "A")
+        header.controlTextDidEndEditing(ended)
+        #expect(!doc.configuration.firstRowAsHeader)
+        #expect(doc.table?.headers == nil)
+        #expect(!um.canUndo)
+
+        coordinator.beginRenamingColumn(at: 0)
+        header.subviews.compactMap { $0 as? NSTextField }.first?.stringValue = "x"
+        header.controlTextDidEndEditing(ended)
+        header.controlTextDidEndEditing(ended)
+        #expect(doc.configuration.firstRowAsHeader)
+        um.undo()
+        #expect(!doc.configuration.firstRowAsHeader)
+        #expect(doc.table?.headers == nil)
+        #expect(!um.canUndo)
+    }
+
     @Test func doubleClickOnTitleRequestsRename() async {
         let doc = await loaded("a,b\n1,2\n")
         let (coordinator, tableView, header) = GridTestSupport.makeGrid(doc)
@@ -129,6 +157,48 @@ import TabToolKit
         GridTestSupport.update(coordinator, from: doc)
         perform(tableView.contextMenu(forRow: 0)!.items[0])
         #expect(doc.table?.columns[0].cells == ["", "a", "b", "", "c"])
+    }
+
+    @Test func rowMenuOnARowSwitchesAwayFromAColumnSelection() async {
+        let doc = CSVDocument(data: Data("h1,h2\na,b\nc,d\ne,f\n".utf8),
+                              configuration: CSVConfiguration(firstRowAsHeader: true),
+                              undoManager: UndoManager())
+        await doc.load()
+        let (coordinator, tableView, header) = GridTestSupport.makeGrid(doc)
+        defer { withExtendedLifetime(coordinator) {} }
+        doc.selection = GridSelection(columns: [0])
+        GridTestSupport.update(coordinator, from: doc)
+
+        let menu = tableView.contextMenu(forRow: 1)!
+        #expect(menu.items.map(\.title) == ["Add Row Above", "Add Row Below"])
+        #expect(doc.selection.rows == [1])
+        #expect(doc.selection.columns.isEmpty)
+        #expect(header.selectedColumns.isEmpty)
+
+        perform(menu.items[0])
+        #expect(doc.table?.columns.count == 2)
+        #expect(doc.table?.columns[0].cells == ["a", "", "c", "e"])
+    }
+
+    @Test func rightClickOnACellTextFieldYieldsTheRowMenu() async {
+        let doc = await loaded("a,b\n1,2\n3,4\n")
+        let (coordinator, tableView, _) = GridTestSupport.makeGrid(doc)
+        defer { withExtendedLifetime(coordinator) {} }
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        scroll.documentView = tableView
+        window.contentView = scroll
+        tableView.layoutSubtreeIfNeeded()
+
+        let center = NSPoint(x: tableView.rect(ofColumn: 0).midX, y: tableView.rect(ofRow: 1).midY)
+        let event = NSEvent.mouseEvent(
+            with: .rightMouseDown, location: tableView.convert(center, to: nil),
+            modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil,
+            eventNumber: 0, clickCount: 1, pressure: 1)!
+        let hit = tableView.hitTest(tableView.convert(center, to: tableView.superview))
+        #expect(hit is NSTextField)
+        #expect(hit?.menu(for: event)?.items.map(\.title) == ["Add Row Above", "Add Row Below"])
     }
 
     @Test func rowContextMenuKeepsAnExistingSelection() async {

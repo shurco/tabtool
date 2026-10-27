@@ -105,6 +105,41 @@ import TabToolKit
         #expect(doc.table?.headers == nil)
     }
 
+    @Test func undoAndRedoRestoreHeaderModeRowsAndGeneratedNames() async {
+        let (doc, um) = await loaded("a,b\n1,2\n", header: false)
+        let original = doc.table
+        doc.renameColumn(at: 1, to: "x")
+        let renamed = doc.table
+
+        um.undo()
+        #expect(doc.table == original)
+        #expect(doc.table?.headers == nil)
+        #expect(!doc.configuration.firstRowAsHeader)
+        um.redo()
+        #expect(doc.table == renamed)
+        #expect(doc.table?.headers == ["A", "x"])
+        #expect(doc.configuration.firstRowAsHeader)
+    }
+
+    @Test func undoRestoresSortAndInsertedRowsAndColumns() async {
+        let (doc, um) = await loaded("b,1\na,2\n", header: false)
+        let original = doc.table
+        doc.sortRows(column: 0, direction: .ascending)
+        um.undo()
+        #expect(doc.table == original)
+        #expect(doc.activeSort == nil)
+        um.redo()
+        #expect(doc.activeSort != nil)
+
+        doc.addRowBelowSelection()
+        doc.addColumnRightOfSelection()
+        #expect(doc.table?.columns.count == 3)
+        um.undo()
+        #expect(doc.table?.columns.count == 2)
+        um.undo()
+        #expect(doc.table?.rowCount == 2)
+    }
+
     @Test func selectedColumnRenameNeedsExactlyOneColumn() async {
         let (doc, _) = await loaded("a,b\n1,2\n")
         #expect(!doc.canRenameSelectedColumn)
