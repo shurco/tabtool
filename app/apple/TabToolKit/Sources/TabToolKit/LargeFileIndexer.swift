@@ -69,6 +69,9 @@ public final class LargeFileIndexer: @unchecked Sendable {
 
     private func run(_ onProgress: @Sendable (IndexProgress) -> Void) {
         var scanner = RowScanner(configuration: configuration)
+        // `index` holds only the checkpoints of the current step; they move
+        // into `published`. Sharing the whole growing array with `published`
+        // made every step copy it, and the freed copies stayed with malloc.
         var index = RowIndex()
         var offset = 0
         var lastReport: Date?
@@ -81,9 +84,10 @@ public final class LargeFileIndexer: @unchecked Sendable {
             }
             offset = end
             locked {
-                published = index
+                published.extend(with: index)
                 finishedScan = isLast
             }
+            index.checkpoints.removeAll(keepingCapacity: true)
             let now = Date()
             if isLast || lastReport.map({ now.timeIntervalSince($0) >= progressInterval }) ?? true {
                 lastReport = now

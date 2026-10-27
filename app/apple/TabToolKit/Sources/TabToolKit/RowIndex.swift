@@ -22,6 +22,16 @@ public struct RowIndex: Sendable, Equatable {
 
     public init() {}
 
+    /// Appends the checkpoints of `next`, a scan that continued this one, and
+    /// takes over its counters.
+    mutating func extend(with next: RowIndex) {
+        checkpoints.append(contentsOf: next.checkpoints)
+        rowCount = next.rowCount
+        maxFieldCount = next.maxFieldCount
+        scannedBytes = next.scannedBytes
+        endsInsideQuote = next.endsInsideQuote
+    }
+
     /// The byte range of `block`, or `nil` when the block is not indexed.
     ///
     /// The last block ends at `fileSize`.
