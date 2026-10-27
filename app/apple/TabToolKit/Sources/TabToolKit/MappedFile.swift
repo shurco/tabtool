@@ -26,7 +26,7 @@ public enum Staleness: Equatable, Sendable {
 /// The descriptor, base pointer and identity never change after `init`, so the
 /// type is safe to share between threads. Reads past the mapped size are
 /// clamped; a file truncated by another process can still fault on access, so
-/// callers check `isStale()` first.
+/// callers check `isReadable` first.
 public final class MappedFile: @unchecked Sendable {
     public let size: Int
     public let identity: FileIdentity
@@ -96,18 +96,25 @@ public final class MappedFile: @unchecked Sendable {
         return try body(UnsafeRawBufferPointer(start: window + (lower - aligned), count: upper - lower))
     }
 
-    /// Compares the open descriptor and the path with the identity recorded at open.
+    /// Whether the mapped bytes can still be read: the open file was neither
+    /// truncated nor rewritten (it may have grown). Another file now at the
+    /// path does not matter; the descriptor keeps the mapped one alive.
+    public var isReadable: Bool { openFileStaleness() != .replacedOrTruncated }
+
+    /// Compares the path and the open descriptor with the identity recorded at open.
     public func isStale() -> Staleness {
         var onPath = stat()
-        guard stat(url.path, &onPath) == 0 else { return .replacedOrTruncated }
+        guard stat(url.path, &onPath) == 0, FileIdentity(onPath).inode == identity.inode else {
+            return .replacedOrTruncated
+        }
+        return openFileStaleness()
+    }
+
+    private func openFileStaleness() -> Staleness {
         var onDescriptor = stat()
         guard fstat(descriptor, &onDescriptor) == 0 else { return .replacedOrTruncated }
-        let pathIdentity = FileIdentity(onPath)
         let openIdentity = FileIdentity(onDescriptor)
-        guard pathIdentity.inode == identity.inode,
-              openIdentity.size >= identity.size else { return .replacedOrTruncated }
-        if pathIdentity == identity && openIdentity == identity { return .unchanged }
-        if pathIdentity.size > identity.size && openIdentity.size > identity.size { return .appended }
-        return .replacedOrTruncated
+        if openIdentity == identity { return .unchanged }
+        return openIdentity.size > identity.size ? .appended : .replacedOrTruncated
     }
 }

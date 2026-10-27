@@ -88,6 +88,7 @@ private func bytes(_ file: MappedFile, _ range: Range<Int>) -> [UInt8] {
         let file = try MappedFile(url: url)
         try FileHandle(forWritingTo: url).truncate(atOffset: 2)
         #expect(file.isStale() == .replacedOrTruncated)
+        #expect(!file.isReadable)
     }
 
     @Test func detectsReplace() throws {
@@ -97,6 +98,8 @@ private func bytes(_ file: MappedFile, _ range: Range<Int>) -> [UInt8] {
         let other = try dir.file("b.csv", [1, 2, 3])
         _ = try FileManager.default.replaceItemAt(url, withItemAt: other)
         #expect(file.isStale() == .replacedOrTruncated)
+        // The open descriptor still holds the old file.
+        #expect(file.isReadable)
     }
 
     @Test func missingFileThrows() {

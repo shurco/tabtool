@@ -185,6 +185,23 @@ private func textSource(_ text: String, _ dir: TempDirectory,
         #expect(!source.isEditable(row: 0))
     }
 
+    /// A save replaces the file at its path while the old one stays on screen
+    /// until the new index is ready; rows not decoded yet must still read.
+    @Test func replacedFileStaysReadableThroughTheMapping() throws {
+        let dir = TempDirectory()
+        let url = dir.url.appendingPathComponent("big.csv")
+        try generateLargeCSV(at: url, targetBytes: 300_000, columns: 3, quoted: false,
+                             multilineEvery: nil, crlf: false, bom: false, seed: 1)
+        var parser = try CSVParser(data: Data(contentsOf: url), configuration: CSVConfiguration())
+        let rows = try parser.readAll()
+        let source = makeSource(try MappedFile(url: url))
+        _ = try FileManager.default.replaceItemAt(url, withItemAt: dir.file("new.csv", Array("x\n".utf8)))
+
+        #expect(source.staleness == .replacedOrTruncated)
+        #expect(source.cell(row: 3000, column: 0) == rows[3000][0])
+        #expect(!source.isEditable(row: 0))
+    }
+
     @Test func blockCacheHitRateOnSequentialRead() throws {
         let dir = TempDirectory()
         let url = dir.url.appendingPathComponent("big.csv")

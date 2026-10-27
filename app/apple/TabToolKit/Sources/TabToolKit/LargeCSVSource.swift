@@ -172,12 +172,13 @@ public final class LargeCSVSource: RowSource, @unchecked Sendable {
     }
 
     /// The decoded block, from the cache or the file; `nil` when it is not
-    /// indexed or the file no longer matches the mapping.
+    /// indexed or the mapped file was truncated or rewritten. A file replaced
+    /// at the path (a save) still reads from the mapping.
     private func block(_ number: Int) -> CachedBlock? {
         let index = indexer.snapshot
         guard let range = index.blockRange(number, fileSize: min(index.scannedBytes, file.size)) else { return nil }
         if let hit = lookup(number, end: range.upperBound) { return hit }
-        guard file.isStale() != .replacedOrTruncated else { return nil }
+        guard file.isReadable else { return nil }
         let bytes = file.withBytes(range) { Data($0) }
         let decoded = LargeBlock.decode(bytes, configuration: configuration)
         return store(number, decoded, end: range.upperBound)
