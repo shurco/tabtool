@@ -171,6 +171,13 @@ import TabToolKit
             #expect(tableView.numberOfRows == 100_000)
             #expect((tableView.accessibilityRows() ?? []).count < 100)
             #expect((tableView.accessibilityChildren() ?? []).count < 120)
+            // Accessibility clients reach NSTableView through the legacy
+            // attribute API, which builds every row unless it is answered too.
+            for attribute in [NSAccessibility.Attribute.children, .rows] {
+                let value = tableView.perform(NSSelectorFromString("accessibilityAttributeValue:"),
+                                              with: attribute.rawValue)?.takeUnretainedValue()
+                #expect(((value as? NSArray)?.count ?? .max) < 120)
+            }
         }
     }
 }

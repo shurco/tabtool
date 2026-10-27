@@ -120,6 +120,24 @@ final class CSVTableView: NSTableView {
         return visibleRowElements + (accessibilityColumns() ?? []) + [headerView].compactMap { $0 }
     }
 
+    // Clients such as System Events and VoiceOver reach NSTableView through
+    // the legacy attribute API, which bypasses the two overrides above. The
+    // override is marked deprecated like the API it answers; AppKit calls it
+    // on the main thread.
+    @available(macOS, deprecated: 10.10)
+    override func accessibilityAttributeValue(_ attribute: NSAccessibility.Attribute) -> Any? {
+        nonisolated(unsafe) var elements: [Any]?
+        MainActor.assumeIsolated {
+            guard exposesOnlyVisibleRows else { return }
+            switch attribute {
+            case .children: elements = accessibilityChildren()
+            case .rows: elements = visibleRowElements
+            default: break
+            }
+        }
+        return elements ?? super.accessibilityAttributeValue(attribute)
+    }
+
     /// The on-screen row elements, read untyped: AppKit's elements do not all
     /// conform to the protocol the typed accessor promises.
     private var visibleRowElements: [Any] {
