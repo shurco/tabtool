@@ -209,6 +209,31 @@ import Testing
         #expect(doc.selection == GridSelection())
     }
 
+    @Test func commandArrowsSelectTheFirstAndLastRow() async throws {
+        let doc = CSVDocument(data: Data((0..<50).map { "r\($0)" }.joined(separator: "\n").utf8),
+                              configuration: .init())
+        await doc.load()
+        doc.selection = GridSelection(rows: IndexSet([3]))
+        let (coordinator, tableView, _) = GridTestSupport.makeGrid(doc)
+        func commandArrow(_ key: Int, keyCode: UInt16) throws -> NSEvent {
+            let characters = String(UnicodeScalar(key)!)
+            return try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0,
+                windowNumber: 0, context: nil, characters: characters,
+                charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode
+            ))
+        }
+
+        try withExtendedLifetime(coordinator) {
+            tableView.keyDown(with: try commandArrow(NSDownArrowFunctionKey, keyCode: 125))
+            #expect(tableView.selectedRowIndexes == IndexSet([49]))
+            #expect(doc.selection.rows == IndexSet([49]))
+            tableView.keyDown(with: try commandArrow(NSUpArrowFunctionKey, keyCode: 126))
+            #expect(tableView.selectedRowIndexes == IndexSet([0]))
+            #expect(doc.selection.rows == IndexSet([0]))
+        }
+    }
+
     @Test func structuralChangeClearsOutOfRangeSelection() async throws {
         let doc = CSVDocument(data: Data("a\nb\nc\n".utf8), configuration: .init())
         await doc.load()

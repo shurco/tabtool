@@ -69,7 +69,26 @@ final class CSVTableView: NSTableView {
            beginEditingSelectedCell() {
             return
         }
+        if let row = edgeRow(for: event) {
+            selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+            scrollRowToVisible(row)
+            return
+        }
         super.keyDown(with: event)
+    }
+
+    /// The first row for Command-Up and the last for Command-Down; NSTableView
+    /// itself treats them as plain arrows.
+    private func edgeRow(for event: NSEvent) -> Int? {
+        guard numberOfRows > 0,
+              event.modifierFlags.intersection([.command, .shift, .option, .control]) == .command else {
+            return nil
+        }
+        switch event.specialKey {
+        case .upArrow: return 0
+        case .downArrow: return numberOfRows - 1
+        default: return nil
+        }
     }
 
     // MARK: - Accessibility
