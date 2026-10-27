@@ -92,9 +92,8 @@ public enum LargeFileSaver {
             while cursor < end {
                 try Task.checkCancellation()
                 let range = cursor..<min(cursor + bufferBytes, end)
-                try file.withBytes(range) { try writeAll($0, to: descriptor) }
+                try file.withWindow(range) { try writeAll($0, to: descriptor) }
                 written += range.count
-                file.advise(.dontNeed, range: range)
                 cursor = range.upperBound
                 progress(Double(cursor) / Double(max(file.size, 1)))
             }

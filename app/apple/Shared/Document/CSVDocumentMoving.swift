@@ -48,7 +48,7 @@ extension CSVDocument {
     private func moveOrder(count: Int, selected: IndexSet, by offset: Int) -> [Int]? {
         guard isEditableContent else { return nil }
         return CSVReorder.shifted(count: count,
-                                  moving: selected.intersection(IndexSet(0..<count)),
+                                  moving: selected.intersection(IndexSet(integersIn: 0..<count)),
                                   by: offset)
     }
 

@@ -7,27 +7,27 @@ import AppKit
 extension CSVGridCoordinator {
     /// Whether the current selection has rows or columns to copy.
     var canCopySelection: Bool {
-        guard let table = document.table else { return false }
-        let rows = document.selection.rows.intersection(IndexSet(0..<table.rowCount))
+        guard let source = document.rowSource else { return false }
+        let rows = document.selection.rows.intersection(IndexSet(integersIn: 0..<source.rowCount))
         let columns = document.selection.columns
-            .intersection(IndexSet(0..<table.columns.count))
+            .intersection(IndexSet(integersIn: 0..<source.columnCount))
         return !rows.isEmpty || !columns.isEmpty
     }
 
     /// Whether the pasteboard currently provides text for a paste.
     var canPaste: Bool {
-        isEditable
+        allowsStructuralEdits
             && NSPasteboard.general.availableType(from: [.string, .tabularText]) != nil
     }
 
     /// Whether the current selection can be deleted.
     var canDeleteSelection: Bool {
-        isEditable && document.canDeleteSelection
+        allowsStructuralEdits && document.canDeleteSelection
     }
 
     /// Whether the table has rows to select.
     var canSelectAll: Bool {
-        (document.table?.rowCount ?? 0) > 0
+        (document.rowSource?.rowCount ?? 0) > 0
     }
 
     /// Copies the selected rows or columns as TSV.
@@ -51,7 +51,7 @@ extension CSVGridCoordinator {
     /// without text must not insert an empty cell.
     @discardableResult
     func paste(from pasteboard: NSPasteboard = .general) -> Bool {
-        guard isEditable,
+        guard allowsStructuralEdits,
               let type = pasteboard.availableType(from: [.string, .tabularText]),
               let text = pasteboard.string(forType: type) else {
             return false
@@ -70,8 +70,8 @@ extension CSVGridCoordinator {
 
     /// Selects every row in the table.
     func selectAllRows() {
-        guard let table = document.table, table.rowCount > 0 else { return }
-        let rows = IndexSet(0..<table.rowCount)
+        guard let source = document.rowSource, source.rowCount > 0 else { return }
+        let rows = IndexSet(integersIn: 0..<source.rowCount)
         document.selection = GridSelection(rows: rows)
 
         guard let tableView else { return }

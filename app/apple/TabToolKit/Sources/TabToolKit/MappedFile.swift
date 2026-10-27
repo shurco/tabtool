@@ -28,10 +28,6 @@ public enum Staleness: Equatable, Sendable {
 /// clamped; a file truncated by another process can still fault on access, so
 /// callers check `isStale()` first.
 public final class MappedFile: @unchecked Sendable {
-    public enum Advice: Sendable {
-        case sequential, random, dontNeed
-    }
-
     public let size: Int
     public let identity: FileIdentity
     private let url: URL
@@ -79,19 +75,25 @@ public final class MappedFile: @unchecked Sendable {
         return try body(UnsafeRawBufferPointer(start: base + lower, count: upper - lower))
     }
 
-    /// Hints the kernel about the access pattern for `range`.
-    public func advise(_ advice: Advice, range: Range<Int>) {
-        let page = Int(getpagesize())
-        let lower = min(max(range.lowerBound, 0), size) / page * page
-        let upper = min(max(range.upperBound, 0), size)
-        guard let base, upper > lower else { return }
-        let flag: Int32
-        switch advice {
-        case .sequential: flag = MADV_SEQUENTIAL
-        case .random: flag = MADV_RANDOM
-        case .dontNeed: flag = MADV_DONTNEED
+    /// Calls `body` with the bytes of `range`, clamped to the file, through a
+    /// temporary mapping of just that range.
+    ///
+    /// Pages read through the long-lived mapping stay resident, and `madvise`
+    /// does not release them on macOS. Unmapping the window does, so a scan of
+    /// a multi-gigabyte file keeps a small resident size.
+    public func withWindow<R>(_ range: Range<Int>,
+                              _ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+        let lower = min(max(range.lowerBound, 0), size)
+        let upper = min(max(range.upperBound, lower), size)
+        let aligned = lower / Int(getpagesize()) * Int(getpagesize())
+        guard upper > lower,
+              let window = mmap(nil, upper - aligned, PROT_READ, MAP_PRIVATE, descriptor, off_t(aligned)),
+              window != MAP_FAILED else {
+            return try withBytes(range, body)
         }
-        madvise(base + lower, upper - lower, flag)
+        defer { munmap(window, upper - aligned) }
+        madvise(window, upper - aligned, MADV_SEQUENTIAL)
+        return try body(UnsafeRawBufferPointer(start: window + (lower - aligned), count: upper - lower))
     }
 
     /// Compares the open descriptor and the path with the identity recorded at open.

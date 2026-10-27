@@ -21,10 +21,10 @@ extension CSVDocument {
     var canDeleteSelection: Bool {
         guard let table, isEditableContent else { return false }
 
-        let rows = selection.rows.intersection(IndexSet(0..<table.rowCount))
+        let rows = selection.rows.intersection(IndexSet(integersIn: 0..<table.rowCount))
         if !rows.isEmpty { return true }
 
-        let columns = selection.columns.intersection(IndexSet(0..<table.columns.count))
+        let columns = selection.columns.intersection(IndexSet(integersIn: 0..<table.columns.count))
         return !columns.isEmpty && table.columns.count > 1
     }
 
@@ -42,13 +42,13 @@ extension CSVDocument {
     /// Whether a valid row selection can be deleted.
     var canDeleteSelectedRows: Bool {
         guard let table, isEditableContent else { return false }
-        return !selection.rows.intersection(IndexSet(0..<table.rowCount)).isEmpty
+        return !selection.rows.intersection(IndexSet(integersIn: 0..<table.rowCount)).isEmpty
     }
 
     /// Whether a valid column selection can be deleted.
     var canDeleteSelectedColumns: Bool {
         guard let table, isEditableContent else { return false }
-        let columns = selection.columns.intersection(IndexSet(0..<table.columns.count))
+        let columns = selection.columns.intersection(IndexSet(integersIn: 0..<table.columns.count))
         return !columns.isEmpty && table.columns.count > 1
     }
 
@@ -158,7 +158,7 @@ extension CSVDocument {
     /// document and the grid always have at least one column.
     func deleteColumns(at indexes: IndexSet) {
         guard let table = tableAfterEndingEditing() else { return }
-        let selected = indexes.intersection(IndexSet(0..<table.columns.count))
+        let selected = indexes.intersection(IndexSet(integersIn: 0..<table.columns.count))
         guard !selected.isEmpty else { return }
 
         var updated = table
@@ -202,6 +202,10 @@ extension CSVDocument {
     /// Turns header mode on or off by moving the first row across the header
     /// boundary, updating both the table and the configuration.
     func setHeaderEnabled(_ enabled: Bool) {
+        if isLargeMode {
+            setLargeHeaderEnabled(enabled)
+            return
+        }
         guard let table = tableAfterEndingEditing() else { return }
         let hasHeaders = table.headers != nil
 

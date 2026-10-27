@@ -49,11 +49,25 @@ private func bytes(_ file: MappedFile, _ range: Range<Int>) -> [UInt8] {
         #expect(bytes(file, 50..<60).isEmpty)
     }
 
+    @Test func windowReadsTheSameBytesAsTheMapping() throws {
+        let dir = TempDirectory()
+        let content = (0..<20_000).map { UInt8($0 % 251) }
+        let file = try MappedFile(url: dir.file("a.csv", content))
+        for range in [0..<20_000, 5_000..<13_001, 4_096..<8_192, 19_990..<20_500, 30_000..<31_000, 7..<7] {
+            let expected = file.withBytes(range) { Array($0) }
+            #expect(file.withWindow(range) { Array($0) } == expected)
+        }
+    }
+
+    @Test func windowOfAnEmptyFileIsEmpty() throws {
+        let dir = TempDirectory()
+        let file = try MappedFile(url: dir.file("e.csv", []))
+        #expect(file.withWindow(0..<10) { Array($0) }.isEmpty)
+    }
+
     @Test func detectsUnchanged() throws {
         let dir = TempDirectory()
         let file = try MappedFile(url: dir.file("a.csv", [1, 2, 3]))
-        file.advise(.sequential, range: 0..<3)
-        file.advise(.dontNeed, range: 0..<3)
         #expect(file.isStale() == .unchanged)
     }
 

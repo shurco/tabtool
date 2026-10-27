@@ -8,6 +8,7 @@ import SwiftUI
 struct CSVGrid: NSViewRepresentable {
     @ObservedObject var document: CSVDocument
     let isEditable: Bool
+    let allowsStructuralEdits: Bool
 
     func makeCoordinator() -> CSVGridCoordinator {
         CSVGridCoordinator(document: document)
@@ -52,7 +53,8 @@ struct CSVGrid: NSViewRepresentable {
         }
         context.coordinator.update(
             presenter: GridPresenter(table: table, configuration: document.configuration),
-            isEditable: isEditable
+            isEditable: isEditable,
+            allowsStructuralEdits: allowsStructuralEdits
         )
     }
 }

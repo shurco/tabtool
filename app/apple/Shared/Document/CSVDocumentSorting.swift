@@ -71,7 +71,7 @@ extension CSVDocument {
     /// Whether exactly one existing column is selected.
     var canSortSelection: Bool {
         guard let table, isEditableContent else { return false }
-        let columns = selection.columns.intersection(IndexSet(0..<table.columns.count))
+        let columns = selection.columns.intersection(IndexSet(integersIn: 0..<table.columns.count))
         return columns.count == 1
     }
 

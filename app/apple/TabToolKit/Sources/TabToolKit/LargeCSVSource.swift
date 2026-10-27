@@ -10,12 +10,14 @@ public final class LargeCSVSource: RowSource, @unchecked Sendable {
     private static let cacheCapacity = 64
     private static let utf8BOM: [UInt8] = [0xEF, 0xBB, 0xBF]
 
+    /// The format the file was opened with. `firstRowAsHeader` is its value at
+    /// creation; `setHeaderEnabled` changes the live setting.
     public let configuration: CSVConfiguration
     public let overlay: CellOverlay
     public let hadUTF8BOM: Bool
     private let file: MappedFile
     private let indexer: LargeFileIndexer
-    private let headerOffset: Int
+    private var headerRows: Int
 
     private struct CachedBlock {
         let block: LargeBlock
@@ -23,8 +25,8 @@ public final class LargeCSVSource: RowSource, @unchecked Sendable {
         var lastUse: Int
     }
 
-    // The lock guards the cache, its counters and the column ids; blocks are
-    // decoded outside it.
+    // The lock guards the cache, its counters, the column ids and the header
+    // row count; blocks are decoded outside it.
     private let lock = NSLock()
     private var cache: [Int: CachedBlock] = [:]
     private var useCounter = 0
@@ -38,7 +40,7 @@ public final class LargeCSVSource: RowSource, @unchecked Sendable {
         self.configuration = configuration
         self.indexer = indexer
         self.overlay = overlay
-        headerOffset = configuration.firstRowAsHeader ? 1 : 0
+        headerRows = configuration.firstRowAsHeader ? 1 : 0
         hadUTF8BOM = configuration.encoding == .utf8
             && file.withBytes(0..<3) { Array($0) } == Self.utf8BOM
     }
@@ -58,6 +60,14 @@ public final class LargeCSVSource: RowSource, @unchecked Sendable {
     }
 
     // MARK: RowSource
+
+    private var headerOffset: Int { locked { headerRows } }
+
+    /// Treats the first row as the header, or as data again. The file's bytes
+    /// and the edits are untouched; only the mapping from rows to file rows moves.
+    public func setHeaderEnabled(_ enabled: Bool) {
+        locked { headerRows = enabled ? 1 : 0 }
+    }
 
     public var rowCount: Int {
         let index = indexer.snapshot

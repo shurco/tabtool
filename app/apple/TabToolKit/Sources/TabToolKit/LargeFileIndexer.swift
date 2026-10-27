@@ -12,8 +12,8 @@ public struct IndexProgress: Sendable {
 ///
 /// The file is read in steps of `stepBytes`. After every step the index so far
 /// is available through `snapshot`, so a reader can show the first rows while
-/// the scan continues. The pages behind the cursor are released to keep the
-/// resident size bounded.
+/// the scan continues. Each step is read through a temporary window mapping,
+/// which keeps the resident size bounded.
 public final class LargeFileIndexer: @unchecked Sendable {
     private let file: MappedFile
     private let configuration: CSVConfiguration
@@ -72,15 +72,13 @@ public final class LargeFileIndexer: @unchecked Sendable {
         var index = RowIndex()
         var offset = 0
         var lastReport: Date?
-        file.advise(.sequential, range: 0..<file.size)
         repeat {
             if locked({ cancelled }) { return }
             let end = min(offset + stepBytes, file.size)
             let isLast = end == file.size
-            file.withBytes(offset..<end) {
+            file.withWindow(offset..<end) {
                 scanner.scan($0, base: offset, into: &index, final: isLast)
             }
-            file.advise(.dontNeed, range: offset..<end)
             offset = end
             locked {
                 published = index

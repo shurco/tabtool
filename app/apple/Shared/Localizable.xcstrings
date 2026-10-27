@@ -1250,6 +1250,26 @@
           }
         }
       }
+    },
+    "Edit Not Applied": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Not Applied"
+          }
+        }
+      }
+    },
+    "Too many cells selected to copy (limit 1,000,000).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many cells selected to copy (limit 1,000,000)."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

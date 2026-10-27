@@ -25,6 +25,11 @@ extension CSVDocument {
         // cannot race with text that is still in the field editor.
         endEditing()
 
+        if isLargeMode {
+            try await reopenLargeFile(with: new, force: force)
+            return
+        }
+
         guard let fileURL else {
             guard let table else { throw DocumentError.notReady }
             applyChange(table: table, configuration: new,
@@ -77,7 +82,7 @@ extension CSVDocument {
 
     /// Whether File > Revert to Saved can run.
     var canRevertToSaved: Bool {
-        fileURL != nil && table != nil && phase != .loading
+        fileURL != nil && hasContent && phase != .loading
     }
 
     /// Replaces the table with the file at `fileURL` parsed with the current
@@ -87,6 +92,10 @@ extension CSVDocument {
     /// undoable action, so a mistaken revert can be undone like any other
     /// structural change.
     func revertToSaved() async throws {
+        if largeSource != nil {
+            revertLargeEdits()
+            return
+        }
         guard let fileURL, table != nil else {
             throw DocumentError.notReady
         }
@@ -115,6 +124,11 @@ extension CSVDocument {
     func detectFormatFromDisk() async throws -> CSVConfiguration {
         guard let fileURL else { return configuration }
         let prefersChinese = prefersChineseEncoding
+        if isLargeMode {
+            return try await Task.detached(priority: .userInitiated) {
+                try Self.mapLargeFile(at: fileURL, configuration: nil, prefersChineseEncoding: prefersChinese).1
+            }.value
+        }
         return try await Task.detached(priority: .userInitiated) {
             let data = try CSVDocumentIO.readData(at: fileURL)
             return CSVFormatDetector(data: data,
@@ -133,6 +147,7 @@ extension CSVDocument {
     /// main actor and for tests. Format re-reading uses
     /// `hasUnsavedChangesAsync()` so large files are parsed off the main actor.
     func hasUnsavedChanges() -> Bool {
+        if isLargeMode { return hasUnsavedLargeEdits }
         guard let table, let fileURL else { return true }
         guard let data = try? CSVDocumentIO.readData(at: fileURL),
               let parsed = try? CSVDocumentIO.parse(data: data,
@@ -148,6 +163,7 @@ extension CSVDocument {
     /// A mutation that lands while the file is being read returns `true`
     /// conservatively. A missing or unparseable file also counts as dirty.
     func hasUnsavedChangesAsync() async -> Bool {
+        if isLargeMode { return hasUnsavedLargeEdits }
         guard table != nil, let fileURL else { return true }
         let configuration = configuration
         let revision = mutationRevision

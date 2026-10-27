@@ -194,4 +194,17 @@ private func textSource(_ text: String, _ dir: TempDirectory,
         #expect(source.cell(row: 2, column: 0) == "c,d")
         #expect(!source.isEditable(row: 1))
     }
+
+    @Test func headerCanBeToggledAfterwards() throws {
+        let dir = TempDirectory()
+        let source = try textSource("a,b\n1,2\n3,4\n", dir)
+        #expect(source.rowCount == 3 && source.headers == nil)
+        source.setHeaderEnabled(true)
+        #expect(source.rowCount == 2)
+        #expect(source.headers == ["a", "b"])
+        #expect(source.cell(row: 0, column: 0) == "1")
+        source.setHeaderEnabled(false)
+        #expect(source.rowCount == 3)
+        #expect(source.cell(row: 0, column: 0) == "a")
+    }
 }

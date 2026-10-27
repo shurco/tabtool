@@ -18,6 +18,7 @@ final class LargeTestDirectory {
         return target
     }
 
+    /// Rows like `r5,v5,"q 5"`; the second field repeats every seven rows.
     func csv(rows: Int) throws -> URL {
         try file(Data((0..<rows).map { "r\($0),v\($0 % 7),\"q \($0)\"" }.joined(separator: "\n").utf8))
     }
@@ -28,12 +29,17 @@ func openedLargeDocument(_ url: URL) async throws -> CSVDocument {
     let document = CSVDocument(largeFileURL: url)
     document.setFileURL(url)
     await document.load()
+    try await waitForIndexing(of: document)
+    return document
+}
+
+@MainActor
+func waitForIndexing(of document: CSVDocument) async throws {
     var attempts = 0
     while document.phase == .ready, document.largeStatus != .ready, attempts < 200 {
         try await Task.sleep(for: .milliseconds(25))
         attempts += 1
     }
-    return document
 }
 
 @Suite @MainActor struct CSVDocumentLargeTests {
@@ -73,7 +79,6 @@ func openedLargeDocument(_ url: URL) async throws -> CSVDocument {
         #expect(!document.canSortSelection)
         #expect(!document.canMoveSelectedRows(by: 1))
         #expect(!document.canRenameSelectedColumn)
-        #expect(!document.canRevertToSaved)
     }
 
     @Test func utf16FileGivesReadFailed() async throws {

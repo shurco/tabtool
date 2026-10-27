@@ -9,9 +9,9 @@ extension CSVGridCoordinator {
         menu.autoenablesItems = false
 
         let ascending = menuItem(String(localized: "Sort Ascending"),
-                                 #selector(sortAscending(_:)), enabled: isEditable)
+                                 #selector(sortAscending(_:)), enabled: allowsStructuralEdits)
         let descending = menuItem(String(localized: "Sort Descending"),
-                                  #selector(sortDescending(_:)), enabled: isEditable)
+                                  #selector(sortDescending(_:)), enabled: allowsStructuralEdits)
         ascending.representedObject = column
         descending.representedObject = column
         menu.addItem(ascending)
@@ -20,9 +20,9 @@ extension CSVGridCoordinator {
                               #selector(removeSort(_:)), enabled: document.canRemoveSort))
         menu.addItem(.separator())
         menu.addItem(menuItem(String(localized: "Add Column Left"),
-                              #selector(addColumnLeft(_:)), enabled: isEditable))
+                              #selector(addColumnLeft(_:)), enabled: allowsStructuralEdits))
         menu.addItem(menuItem(String(localized: "Add Column Right"),
-                              #selector(addColumnRight(_:)), enabled: isEditable))
+                              #selector(addColumnRight(_:)), enabled: allowsStructuralEdits))
         menu.addItem(.separator())
         menu.addItem(menuItem(String(localized: "Move Column Left"),
                               #selector(moveColumnLeft(_:)),
@@ -44,7 +44,7 @@ extension CSVGridCoordinator {
     /// The column is tracked by identity, so a structural change before the
     /// edit ends renames the same column or nothing.
     func beginRenamingColumn(at column: Int) {
-        guard isEditable, document.canRenameColumn(at: column) else { return }
+        guard allowsStructuralEdits, document.canRenameColumn(at: column) else { return }
         let columnID = presenter.table.columnIDs[column]
         headerView?.beginRename(column: column, text: presenter.header(at: column)) {
             [weak self] name in

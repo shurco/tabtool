@@ -44,8 +44,8 @@ struct DocumentView: View {
                 Divider()
                 FormatBar(
                     document: document,
-                    isBusy: isReparsing || document.phase == .loading || document.isLargeMode,
-                    isDetectAvailable: document.fileURL != nil && !document.isLargeMode,
+                    isBusy: isReparsing || document.phase == .loading || document.isIndexing,
+                    isDetectAvailable: document.fileURL != nil,
                     onConfigurationChange: applyConfiguration,
                     onDetectAutomatically: detectAutomatically
                 )
@@ -76,6 +76,11 @@ struct DocumentView: View {
         .onChange(of: fileURL) { _, newValue in
             // Save As changes the URL without recreating this view.
             document.setFileURL(newValue)
+        }
+        .onChange(of: document.notice) { _, notice in
+            guard let notice else { return }
+            formatAlert = FormatAlert(title: "Edit Not Applied", message: Self.message(for: notice))
+            document.notice = nil
         }
         .onChange(of: isConfirmingReparse) { _, isPresented in
             if !isPresented {
@@ -115,6 +120,15 @@ struct DocumentView: View {
         }
     }
 
+    private static func message(for notice: DocumentNotice) -> String {
+        switch notice {
+        case .editRejected(let error):
+            return FormatErrorText.alertMessage(for: error)
+        case .copyLimitExceeded:
+            return String(localized: "Too many cells selected to copy (limit 1,000,000).")
+        }
+    }
+
     @ViewBuilder
     private var content: some View {
         switch document.phase {
@@ -126,7 +140,8 @@ struct DocumentView: View {
                 VStack(spacing: 0) {
                     GridToolbar(document: document)
                     Divider()
-                    CSVGrid(document: document, isEditable: !document.isLargeMode)
+                    CSVGrid(document: document, isEditable: document.canEditCells,
+                            allowsStructuralEdits: !document.isLargeMode)
                 }
             } else {
                 ProgressView("Loading…")
@@ -135,7 +150,7 @@ struct DocumentView: View {
         case .readFailed, .unreadableFile:
             ErrorOverlay(
                 phase: document.phase,
-                canDetect: document.fileURL != nil && !isReparsing && !document.isLargeMode,
+                canDetect: document.fileURL != nil && !isReparsing,
                 onDetectAutomatically: detectAutomatically
             )
         }
@@ -149,13 +164,13 @@ struct DocumentView: View {
         case .none:
             break
         case .decimalMark(let mark):
-            if document.table == nil {
+            if !document.hasContent {
                 startReparse(configuration: configuration)
             } else {
                 document.setDecimalMark(mark)
             }
         case .header(let enabled):
-            if document.table == nil {
+            if !document.hasContent {
                 startReparse(configuration: configuration)
             } else {
                 document.setHeaderEnabled(enabled)
@@ -180,7 +195,7 @@ struct DocumentView: View {
     }
 
     private func continueReparse(to configuration: CSVConfiguration) async {
-        guard document.fileURL != nil, document.table != nil else {
+        guard document.fileURL != nil, document.hasContent else {
             await applyReparse(to: configuration)
             return
         }
@@ -223,7 +238,7 @@ struct DocumentView: View {
         Task {
             do {
                 let detected = try await document.detectFormatFromDisk()
-                if document.table == nil || detected != document.configuration {
+                if !document.hasContent || detected != document.configuration {
                     await continueReparse(to: detected)
                 }
             } catch {

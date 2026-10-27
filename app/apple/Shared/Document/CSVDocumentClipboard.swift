@@ -9,18 +9,18 @@ extension CSVDocument {
     /// Numeric cells are localized to `locale`; text is copied as is, with
     /// tabs and line breaks inside cells flattened by `CSVClipboard`.
     func copySelection(locale: Locale = .current) -> String? {
-        guard let table else { return nil }
+        guard let source = rowSource else { return nil }
 
         if !selection.rows.isEmpty {
-            let selected = selection.rows.intersection(IndexSet(0..<table.rowCount))
+            let selected = selection.rows.intersection(IndexSet(integersIn: 0..<source.rowCount))
             return copyRows(selected, locale: locale)
         }
         guard !selection.columns.isEmpty else { return nil }
 
-        let selected = selection.columns.intersection(IndexSet(0..<table.columns.count))
-        guard !selected.isEmpty else { return nil }
-        let rows = (0..<table.rowCount).map { row in
-            selected.map { table.columns[$0].cells[row] }
+        let selected = selection.columns.intersection(IndexSet(integersIn: 0..<source.columnCount))
+        guard !selected.isEmpty, fitsCopyLimit(cells: source.rowCount * selected.count) else { return nil }
+        let rows = (0..<source.rowCount).map { row in
+            selected.map { source.cell(row: row, column: $0) }
         }
         return CSVClipboard.makeTSV(rows: rows,
                                     numericDecimalMark: configuration.decimalMark,
@@ -32,15 +32,23 @@ extension CSVDocument {
     /// Row drag uses this to provide one TSV block for the whole dragged
     /// selection. Returns `nil` when no requested row exists.
     func copyRows(_ rows: IndexSet, locale: Locale = .current) -> String? {
-        guard let table else { return nil }
-        let selected = rows.intersection(IndexSet(0..<table.rowCount))
-        guard !selected.isEmpty else { return nil }
+        guard let source = rowSource else { return nil }
+        let selected = rows.intersection(IndexSet(integersIn: 0..<source.rowCount))
+        guard !selected.isEmpty, fitsCopyLimit(cells: selected.count * source.columnCount) else { return nil }
         let values = selected.map { row in
-            table.columns.map { $0.cells[row] }
+            (0..<source.columnCount).map { source.cell(row: row, column: $0) }
         }
         return CSVClipboard.makeTSV(rows: values,
                                     numericDecimalMark: configuration.decimalMark,
                                     locale: locale)
+    }
+
+    /// Whether a copy of `cells` cells is allowed. Only large files are capped;
+    /// a refused copy raises a notice.
+    private func fitsCopyLimit(cells: Int) -> Bool {
+        guard largeSource != nil, cells > LargeFile.maxCopyCells else { return true }
+        notice = .copyLimitExceeded
+        return false
     }
 
     /// Inserts a TSV block after the last selected row (or at the end).
@@ -91,7 +99,7 @@ extension CSVDocument {
         guard let table else { return }
 
         if !selection.rows.isEmpty {
-            let selected = selection.rows.intersection(IndexSet(0..<table.rowCount))
+            let selected = selection.rows.intersection(IndexSet(integersIn: 0..<table.rowCount))
             guard !selected.isEmpty else { return }
             deleteRows(at: selected)
             selection = GridSelection()
@@ -99,7 +107,7 @@ extension CSVDocument {
         }
 
         guard !selection.columns.isEmpty else { return }
-        let selected = selection.columns.intersection(IndexSet(0..<table.columns.count))
+        let selected = selection.columns.intersection(IndexSet(integersIn: 0..<table.columns.count))
         guard !selected.isEmpty else { return }
         // `deleteColumns` keeps at least one column when every column is
         // selected, so the grid never drops to zero columns.

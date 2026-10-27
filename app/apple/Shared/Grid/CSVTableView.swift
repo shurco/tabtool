@@ -1,4 +1,5 @@
 import AppKit
+import TabToolKit
 
 /// The table view behind the grid.
 ///
@@ -71,6 +72,32 @@ final class CSVTableView: NSTableView {
         super.keyDown(with: event)
     }
 
+    // MARK: - Accessibility
+
+    // An accessibility client that asks for every row makes AppKit create one
+    // element per row: gigabytes for a large file. Large files expose only the
+    // rows on screen.
+    private var exposesOnlyVisibleRows: Bool {
+        coordinator?.presenter.table is LargeCSVSource
+    }
+
+    @objc func accessibilityRows() -> [Any]? {
+        if exposesOnlyVisibleRows { return visibleRowElements }
+        return super.accessibilityRows()
+    }
+
+    override func accessibilityChildren() -> [Any]? {
+        guard exposesOnlyVisibleRows else { return super.accessibilityChildren() }
+        return visibleRowElements + (accessibilityColumns() ?? []) + [headerView].compactMap { $0 }
+    }
+
+    /// The on-screen row elements, read untyped: AppKit's elements do not all
+    /// conform to the protocol the typed accessor promises.
+    private var visibleRowElements: [Any] {
+        let rows = perform(NSSelectorFromString("accessibilityVisibleRows"))?.takeUnretainedValue()
+        return (rows as? NSArray).map { $0 as [AnyObject] } ?? []
+    }
+
     // MARK: - Responder actions
 
     @objc func copy(_ sender: Any?) {
@@ -83,6 +110,20 @@ final class CSVTableView: NSTableView {
 
     @objc func delete(_ sender: Any?) {
         coordinator?.deleteSelection()
+    }
+
+    // Undo and redo go through the responder chain so a large file's own undo
+    // stack (which is not the window's) is the one that answers the Edit menu.
+    override var undoManager: UndoManager? {
+        coordinator?.document.undoManager ?? super.undoManager
+    }
+
+    @objc func undo(_ sender: Any?) {
+        undoManager?.undo()
+    }
+
+    @objc func redo(_ sender: Any?) {
+        undoManager?.redo()
     }
 
     override func selectAll(_ sender: Any?) {
@@ -106,9 +147,18 @@ final class CSVTableView: NSTableView {
             return coordinator.canDeleteSelection
         case #selector(selectAll(_:)):
             return coordinator.canSelectAll
+        case #selector(undo(_:)):
+            return validate(item, canPerform: undoManager?.canUndo, title: undoManager?.undoMenuItemTitle)
+        case #selector(redo(_:)):
+            return validate(item, canPerform: undoManager?.canRedo, title: undoManager?.redoMenuItemTitle)
         default:
             return super.validateUserInterfaceItem(item)
         }
+    }
+
+    private func validate(_ item: NSValidatedUserInterfaceItem, canPerform: Bool?, title: String?) -> Bool {
+        if let title, let menuItem = item as? NSMenuItem { menuItem.title = title }
+        return canPerform == true
     }
 
     /// Delete, Backspace, and forward delete remove the selection.

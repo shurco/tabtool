@@ -111,4 +111,29 @@ private func sniff(_ text: String) throws -> CSVConfiguration {
                                           .japaneseEUC, .iso2022JP]
         for encoding in refused { #expect(!LargeFileSniffer.isByteScannable(encoding)) }
     }
+
+    @Test func checkAcceptsAnExplicitConfiguration() throws {
+        let dir = TempDirectory()
+        let file = try MappedFile(url: dir.file("s.csv", Array("a;b\n1;2\n".utf8)))
+        try LargeFileSniffer.check(file, configuration: CSVConfiguration(columnSeparator: ";"))
+    }
+
+    @Test func checkRefusesUnsupportedEncodingAndMalformedSample() throws {
+        let dir = TempDirectory()
+        let file = try MappedFile(url: dir.file("s.csv", Array("a,\"b\nc".utf8)))
+        #expect(throws: CSVError.unsupportedLargeFileEncoding) {
+            try LargeFileSniffer.check(file, configuration: CSVConfiguration(encoding: .utf16))
+        }
+        #expect(throws: CSVError.malformedQuotedField) {
+            try LargeFileSniffer.check(file, configuration: CSVConfiguration())
+        }
+    }
+
+    @Test func checkRefusesAFileThatLooksLikeUTF16() throws {
+        let dir = TempDirectory()
+        let file = try MappedFile(url: dir.file("s.csv", [0xFF, 0xFE, 0x61, 0x00, 0x2C, 0x00]))
+        #expect(throws: CSVError.unsupportedLargeFileEncoding) {
+            try LargeFileSniffer.check(file, configuration: CSVConfiguration())
+        }
+    }
 }

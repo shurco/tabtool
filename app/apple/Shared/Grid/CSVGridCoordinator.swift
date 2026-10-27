@@ -19,7 +19,10 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
     let document: CSVDocument
     private(set) weak var tableView: CSVTableView?
     private(set) var presenter: GridPresenter
+    /// Whether cells can be edited.
     private(set) var isEditable = false
+    /// Whether rows and columns can be added, removed, moved, sorted or renamed.
+    private(set) var allowsStructuralEdits = false
     private var signature = TableSignature.empty
     /// True while mirroring document selection into AppKit.
     var isSyncingSelection = false
@@ -69,7 +72,7 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
             self?.selectColumn(at: column, modifiers: modifiers)
         }
         headerView?.onSortClick = { [weak self] column in
-            guard let self, isEditable else { return }
+            guard let self, allowsStructuralEdits else { return }
             document.cycleSort(column: column)
         }
         headerView?.onRenameRequest = { [weak self] column in
@@ -169,11 +172,12 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
     /// visible cell views without a reload, which preserves the field editor.
     /// A model column move changes `columnIDs`, so the rebuild also realigns
     /// the view-index identifiers before another user drag.
-    func update(presenter: GridPresenter, isEditable: Bool) {
+    func update(presenter: GridPresenter, isEditable: Bool, allowsStructuralEdits: Bool? = nil) {
         guard let tableView else { return }
         self.presenter = presenter
         self.isEditable = isEditable
-        tableView.allowsColumnReordering = isEditable
+        self.allowsStructuralEdits = allowsStructuralEdits ?? isEditable
+        tableView.allowsColumnReordering = self.allowsStructuralEdits
 
         let previous = signature
         let current = TableSignature(presenter: presenter)
@@ -240,7 +244,8 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
 
     func tableView(_ tableView: NSTableView,
                    shouldEdit tableColumn: NSTableColumn?, row: Int) -> Bool {
-        isEditable
+        guard isEditable else { return false }
+        return (presenter.table as? LargeCSVSource)?.isEditable(row: row) ?? true
     }
 
     func controlTextDidBeginEditing(_ notification: Notification) {

@@ -65,13 +65,13 @@ extension CSVGridCoordinator {
     /// The valid column selection the document currently describes.
     private var columnSelection: IndexSet {
         guard document.selection.rows.isEmpty else { return IndexSet() }
-        return document.selection.columns.intersection(IndexSet(0..<presenter.numberOfColumns))
+        return document.selection.columns.intersection(IndexSet(integersIn: 0..<presenter.numberOfColumns))
     }
 
     /// Whether AppKit already shows the document selection.
     var selectionMatchesDocument: Bool {
         guard let tableView else { return true }
-        let rows = document.selection.rows.intersection(IndexSet(0..<presenter.numberOfRows))
+        let rows = document.selection.rows.intersection(IndexSet(integersIn: 0..<presenter.numberOfRows))
         if !rows.isEmpty {
             return tableView.selectedRowIndexes == rows
         }
@@ -81,7 +81,7 @@ extension CSVGridCoordinator {
 
     func applySelectionFromDocument() {
         guard let tableView else { return }
-        let rows = document.selection.rows.intersection(IndexSet(0..<presenter.numberOfRows))
+        let rows = document.selection.rows.intersection(IndexSet(integersIn: 0..<presenter.numberOfRows))
 
         isSyncingSelection = true
         if rows.isEmpty {
@@ -105,8 +105,8 @@ extension CSVGridCoordinator {
         guard let tableView else { return }
         // A structural change can remove a highlighted column before this
         // runs; reloading an index past the new column count raises in AppKit.
-        let reloadColumns = changed.intersection(IndexSet(0..<tableView.numberOfColumns))
-        let reloadRows = IndexSet(0..<tableView.numberOfRows)
+        let reloadColumns = changed.intersection(IndexSet(integersIn: 0..<tableView.numberOfColumns))
+        let reloadRows = IndexSet(integersIn: 0..<tableView.numberOfRows)
         guard !reloadColumns.isEmpty, !reloadRows.isEmpty else { return }
         tableView.reloadData(forRowIndexes: reloadRows,
                              columnIndexes: reloadColumns)

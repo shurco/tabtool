@@ -16,7 +16,7 @@ extension CSVGridCoordinator {
     /// items without separators.
     func tableView(_ tableView: NSTableView,
                    pasteboardWriterForRow row: Int) -> NSPasteboardWriting? {
-        guard isEditable, let table = document.table,
+        guard allowsStructuralEdits, let table = document.table,
               (0..<table.rowCount).contains(row) else {
             return nil
         }
@@ -52,7 +52,7 @@ extension CSVGridCoordinator {
     /// Validates a row drop: only this table's own drags, only between rows.
     func dropOperation(proposed: NSTableView.DropOperation, source: Any?,
                        pasteboard: NSPasteboard) -> NSDragOperation {
-        guard isEditable,
+        guard allowsStructuralEdits,
               proposed == .above,
               let tableView,
               let source = source as? CSVTableView,
@@ -82,8 +82,8 @@ extension CSVGridCoordinator {
     /// Moves the dragged rows and selects them at their new position.
     @discardableResult
     func moveRowsForDrop(_ indexes: IndexSet, to destination: Int) -> Bool {
-        guard isEditable, let table = document.table else { return false }
-        let selected = indexes.intersection(IndexSet(0..<table.rowCount))
+        guard allowsStructuralEdits, let table = document.table else { return false }
+        let selected = indexes.intersection(IndexSet(integersIn: 0..<table.rowCount))
         guard !selected.isEmpty else { return false }
 
         let insertion = min(max(destination, 0), table.rowCount)

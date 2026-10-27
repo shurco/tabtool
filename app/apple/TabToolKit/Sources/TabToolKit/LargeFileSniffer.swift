@@ -38,16 +38,29 @@ public enum LargeFileSniffer {
     /// file is reported as malformed; widen the sample if that ever matters).
     public static func sniff(_ file: MappedFile, prefersChineseEncoding: Bool = false) throws
         -> CSVConfiguration {
+        let sample = try sample(of: file)
+        let detected = CSVFormatDetector(data: sample,
+                                         prefersChineseEncoding: prefersChineseEncoding).detect()
+        try verify(sample, as: detected)
+        return detected
+    }
+
+    /// Checks that `configuration` suits the file: scannable, and the head of
+    /// the file parses strictly with it.
+    public static func check(_ file: MappedFile, configuration: CSVConfiguration) throws {
+        try verify(try sample(of: file), as: configuration)
+    }
+
+    private static func sample(of file: MappedFile) throws -> Data {
         let head = file.withBytes(0..<min(file.size, LargeFile.sampleBytes)) { Data($0) }
         guard !looksLikeRefusedEncoding(head) else { throw CSVError.unsupportedLargeFileEncoding }
+        return file.size > head.count ? Data(head.prefix(safeCut(head))) : head
+    }
 
-        let sample = file.size > head.count ? head.prefix(safeCut(head)) : head
-        let detected = CSVFormatDetector(data: Data(sample),
-                                         prefersChineseEncoding: prefersChineseEncoding).detect()
-        try validate(detected)
-        var parser = try CSVParser(data: Data(sample), configuration: detected)
+    private static func verify(_ sample: Data, as configuration: CSVConfiguration) throws {
+        try validate(configuration)
+        var parser = try CSVParser(data: sample, configuration: configuration)
         _ = try parser.readAll()
-        return detected
     }
 
     /// UTF-16/32 (byte order mark or NUL bytes) and ISO-2022-JP (escape sequences).

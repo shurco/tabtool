@@ -31,7 +31,10 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     private(set) var isLargeMode = false
 
     /// Keeps the sandbox grant for the mapped file alive.
-    private var largeAccess: SecurityScope?
+    private(set) var largeAccess: SecurityScope?
+
+    /// A message the window shows once, set by the large file extension.
+    @Published var notice: DocumentNotice?
 
     /// The active row sort, if any. Set by `applyChange(sort:)` and the
     /// sorting extension only; any other structural change clears it.
@@ -67,7 +70,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     }
     private var initialContent: InitialContent?
     let prefersChineseEncoding: Bool
-    private var undoManager: UndoManager?
+    private(set) var undoManager: UndoManager?
     private let loader: Loader
 
     /// The grid that owns the active field editor, if any.
@@ -130,7 +133,10 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         self.initialContent = .largeFile
         self.isLargeMode = true
         self.prefersChineseEncoding = prefersChineseEncoding
-        self.undoManager = nil
+        // The document owns its undo stack: registering on the window's manager
+        // would mark the document edited and make the system autosave (rewrite)
+        // the whole file.
+        self.undoManager = UndoManager()
         self.loader = CSVDocumentIO.load
     }
 
@@ -184,6 +190,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// land in the same run-loop event. Event grouping is disabled for that
     /// reason; the document owns every registration on its manager.
     func setUndoManager(_ undoManager: UndoManager?) {
+        guard !isLargeMode else { return }
         self.undoManager = undoManager
         undoManager?.groupsByEvent = false
     }
@@ -247,7 +254,13 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         largeAccess = access
         self.configuration = configuration
         phase = newPhase
-        largeStatus = source.map { .indexing($0.indexingFraction) } ?? .none
+        largeStatus = source.map { $0.isIndexed ? .ready : .indexing($0.indexingFraction) } ?? .none
+        mutationRevision &+= 1
+    }
+
+    /// Marks a content change made by the large file extension, so a re-read
+    /// that started earlier does not overwrite it.
+    func noteContentChanged() {
         mutationRevision &+= 1
     }
 
@@ -398,6 +411,10 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// Cell edits are the hot path, so they do not snapshot the whole table;
     /// the inverse edit captures the previous string instead.
     func applyCellChange(_ text: String, row: Int, column: Int, actionName: String) {
+        if let source = largeSource {
+            applyLargeCellChange(text, in: source, row: row, column: column, actionName: actionName)
+            return
+        }
         guard let table,
               table.columns.indices.contains(column),
               table.columns[column].cells.indices.contains(row),
@@ -418,7 +435,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         }
     }
 
-    private func registerAction(
+    func registerAction(
         _ actionName: String,
         _ handler: @escaping @MainActor (CSVDocument) -> Void
     ) {
@@ -461,8 +478,8 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
             selection = GridSelection()
             return
         }
-        let rows = selection.rows.intersection(IndexSet(0..<table.rowCount))
-        let columns = selection.columns.intersection(IndexSet(0..<table.columns.count))
+        let rows = selection.rows.intersection(IndexSet(integersIn: 0..<table.rowCount))
+        let columns = selection.columns.intersection(IndexSet(integersIn: 0..<table.columns.count))
         guard rows != selection.rows || columns != selection.columns else { return }
         selection = GridSelection(rows: rows, columns: columns)
     }
