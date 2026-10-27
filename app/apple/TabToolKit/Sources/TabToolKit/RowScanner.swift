@@ -12,19 +12,26 @@ import Foundation
 /// dedicated escape) and never throws, so malformed input yields a best-effort
 /// index instead of an error.
 public struct RowScanner {
-    private static let lineFeed = UInt8(ascii: "\n")
-    private static let carriageReturn = UInt8(ascii: "\r")
+    /// Which scanning path `scan` uses; tests force one to compare them.
+    enum Mode {
+        case automatic, scalar, simd
+    }
 
-    private let separator: UInt8?
-    private let quote: UInt8?
-    private let escape: UInt8?
+    var mode = Mode.automatic
+    static let blockBytes = 64
+    static let lineFeed = UInt8(ascii: "\n")
+    static let carriageReturn = UInt8(ascii: "\r")
 
-    private var inQuote = false
-    private var escaped = false
-    private var afterCarriageReturn = false
-    private var atRowStart = true
-    private var rowStart = 0
-    private var separators = 0
+    let separator: UInt8?
+    let quote: UInt8?
+    let escape: UInt8?
+
+    var inQuote = false
+    var escaped = false
+    var afterCarriageReturn = false
+    var atRowStart = true
+    var rowStart = 0
+    var separators = 0
 
     public init(configuration: CSVConfiguration) {
         separator = Self.singleByte(configuration.columnSeparator)
@@ -42,7 +49,15 @@ public struct RowScanner {
     /// Chunks must be contiguous. Pass `final: true` with the last chunk.
     public mutating func scan(_ bytes: UnsafeRawBufferPointer, base: Int,
                               into index: inout RowIndex, final: Bool) {
-        scanBytes(bytes, base: base, into: &index)
+        var offset = 0
+        if mode != .scalar && escape == nil {
+            while offset + Self.blockBytes <= bytes.count, let start = bytes.baseAddress {
+                scanBlock(start + offset, base: base + offset, into: &index)
+                offset += Self.blockBytes
+            }
+        }
+        scanBytes(UnsafeRawBufferPointer(rebasing: bytes[offset...]), base: base + offset,
+                  into: &index)
         finishChunk(end: base + bytes.count, into: &index, final: final)
     }
 
