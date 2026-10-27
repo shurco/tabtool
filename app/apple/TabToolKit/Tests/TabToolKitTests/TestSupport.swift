@@ -46,3 +46,24 @@ struct SeededGenerator: RandomNumberGenerator {
         return value ^ (value >> 31)
     }
 }
+
+/// A deterministic CSV with a header row: even columns hold numbers, odd
+/// columns hold text, and every tenth row of a quoted file holds a multiline
+/// quoted field with an embedded separator and quotes.
+func makeBenchmarkCSV(rows: Int, cols: Int, quoted: Bool) -> Data {
+    var generator = SeededGenerator(seed: 42)
+    var text = (0..<cols).map { "col\($0)" }.joined(separator: ",") + "\n"
+    for row in 0..<rows {
+        let fields = (0..<cols).map { column -> String in
+            if column % 2 == 0 {
+                return "\(Int(generator.next() % 1_000_000)).\(column)"
+            }
+            if quoted && row % 10 == 0 {
+                return "\"line one\nline, \"\"two\"\" \(row)\""
+            }
+            return "text\(generator.next() % 5000)"
+        }
+        text += fields.joined(separator: ",") + "\n"
+    }
+    return Data(text.utf8)
+}

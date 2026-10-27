@@ -42,16 +42,16 @@ public struct CSVFormatDetector: Sendable {
         var detectedEncoding = encodings.last ?? .utf8
 
         for encoding in encodings {
-            var decoded = true
+            // Every candidate shares the bytes, so decode once per encoding; a
+            // decoding error ends the attempt and the next encoding is tried.
+            guard let decoded = try? CSVParser.decode(data, encoding: encoding) else {
+                continue
+            }
             for (index, template) in configurations.enumerated() {
                 var configuration = template
                 configuration.encoding = encoding
-                guard var parser = try? CSVParser(data: data, configuration: configuration) else {
-                    // Every candidate decodes the same bytes, so one decoding
-                    // error ends the attempt and the next encoding is tried.
-                    decoded = false
-                    break
-                }
+                var parser = CSVParser(scalars: decoded.scalars, configuration: configuration,
+                                       hadUTF8BOM: decoded.hadUTF8BOM)
                 guard let rows = Self.readRows(from: &parser) else {
                     continue
                 }
@@ -60,10 +60,8 @@ public struct CSVFormatDetector: Sendable {
                 Self.scoreNumbers(rows, decimalMark: configuration.decimalMark,
                                   score: &scores[index], headerFlag: &headerFlags[index])
             }
-            if decoded {
-                detectedEncoding = encoding
-                break
-            }
+            detectedEncoding = encoding
+            break
         }
 
         // A strict comparison keeps the earlier candidate on a tie.

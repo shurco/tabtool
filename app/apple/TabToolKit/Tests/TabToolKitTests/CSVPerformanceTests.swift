@@ -98,4 +98,16 @@ final class CSVPerformanceTests: XCTestCase {
         print(String(format: "100k delete %.3fs, move %.3fs, save %.3fs",
                      deleteDuration, moveDuration, saveDuration))
     }
+
+    /// Detection must decode a large file once per encoding, not once per
+    /// candidate configuration.
+    func testDetectsFormatOfLargeQuotedFile() {
+        let data = makeBenchmarkCSV(rows: 20_000, cols: 20, quoted: true)
+        measure {
+            let config = CSVFormatDetector(data: data).detect()
+            XCTAssertEqual(config.columnSeparator, ",")
+            XCTAssertEqual(config.decimalMark, ".")
+            XCTAssertTrue(config.firstRowAsHeader)
+        }
+    }
 }

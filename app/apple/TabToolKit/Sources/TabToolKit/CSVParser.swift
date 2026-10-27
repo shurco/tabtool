@@ -28,29 +28,42 @@ public struct CSVParser {
     /// `hadUTF8BOM`. Throws `CSVError.cannotDecodeData` when the bytes are not
     /// valid in the configured encoding.
     public init(data: Data, configuration: CSVConfiguration) throws {
-        var data = data
-        let strippedBOM = configuration.encoding == .utf8
-            && data.starts(with: Data([0xEF, 0xBB, 0xBF]))
-        if strippedBOM {
-            data.removeFirst(3)
-        }
-        guard let text = String(data: data, encoding: configuration.encoding) else {
-            throw CSVError.cannotDecodeData
-        }
-        self.init(text: text, configuration: configuration, hadUTF8BOM: strippedBOM)
+        let decoded = try Self.decode(data, encoding: configuration.encoding)
+        self.init(scalars: decoded.scalars, configuration: configuration,
+                  hadUTF8BOM: decoded.hadUTF8BOM)
     }
 
     /// Prepares a parser over an already decoded string.
     public init(string: String, configuration: CSVConfiguration) {
-        self.init(text: string, configuration: configuration, hadUTF8BOM: false)
+        self.init(scalars: Array(string.unicodeScalars), configuration: configuration,
+                  hadUTF8BOM: false)
     }
 
-    private init(text: String, configuration: CSVConfiguration, hadUTF8BOM: Bool) {
-        scalars = Array(text.unicodeScalars)
+    /// Prepares a parser over scalars from `decode(_:encoding:)`, so several
+    /// parsers can share one decoded buffer.
+    init(scalars: [Unicode.Scalar], configuration: CSVConfiguration, hadUTF8BOM: Bool) {
+        self.scalars = scalars
         columnSeparator = configuration.columnSeparator.unicodeScalars.first
         quoteCharacter = configuration.quoteCharacter.unicodeScalars.first
         escapeCharacter = configuration.escapeCharacter.unicodeScalars.first
         self.hadUTF8BOM = hadUTF8BOM
+    }
+
+    /// Decodes `data` with `encoding`, removing a leading UTF-8 BOM.
+    ///
+    /// Throws `CSVError.cannotDecodeData` when the bytes are not valid in the
+    /// encoding.
+    static func decode(_ data: Data, encoding: String.Encoding) throws
+        -> (scalars: [Unicode.Scalar], hadUTF8BOM: Bool) {
+        var data = data
+        let strippedBOM = encoding == .utf8 && data.starts(with: Data([0xEF, 0xBB, 0xBF]))
+        if strippedBOM {
+            data.removeFirst(3)
+        }
+        guard let text = String(data: data, encoding: encoding) else {
+            throw CSVError.cannotDecodeData
+        }
+        return (Array(text.unicodeScalars), strippedBOM)
     }
 
     /// Restarts reading from the beginning of the input.
