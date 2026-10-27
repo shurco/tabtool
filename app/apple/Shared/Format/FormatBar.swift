@@ -138,6 +138,7 @@ struct DocumentStatusBar: View {
     let table: any RowSource
     let configuration: CSVConfiguration
     var status = LargeStatus.none
+    var onCancelSave: () -> Void = {}
 
     var body: some View {
         HStack {
@@ -145,6 +146,11 @@ struct DocumentStatusBar: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .accessibilityIdentifier("status-text")
+            if case .saving = status {
+                Button("Cancel", action: onCancelSave)
+                    .controlSize(.small)
+                    .accessibilityIdentifier("cancel-save")
+            }
             Spacer()
         }
         .padding(.horizontal, 12)
@@ -152,8 +158,13 @@ struct DocumentStatusBar: View {
     }
 
     private var summary: String {
-        if case .indexing(let fraction) = status {
+        switch status {
+        case .indexing(let fraction):
             return LargeStatusText.indexing(fraction: fraction, rows: table.rowCount)
+        case .saving(let fraction):
+            return LargeStatusText.saving(fraction: fraction)
+        case .none, .ready, .stale:
+            break
         }
         let rows = table.rowCount
         let columns = table.columnCount

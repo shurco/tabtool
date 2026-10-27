@@ -33,6 +33,9 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// Keeps the sandbox grant for the mapped file alive.
     private(set) var largeAccess: SecurityScope?
 
+    /// The streaming save of a large file in flight, if any.
+    var largeSave: Task<Void, Error>?
+
     /// A message the window shows once, set by the large file extension.
     @Published var notice: DocumentNotice?
 

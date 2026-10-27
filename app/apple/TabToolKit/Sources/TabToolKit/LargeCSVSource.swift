@@ -34,12 +34,15 @@ public final class LargeCSVSource: RowSource, @unchecked Sendable {
     private(set) var cacheHits = 0
     private(set) var cacheMisses = 0
 
+    /// `columnIDs` carries the column identities of a source this one replaces
+    /// (the same file after a save), so the grid keeps its columns.
     public init(file: MappedFile, configuration: CSVConfiguration, indexer: LargeFileIndexer,
-                overlay: CellOverlay = CellOverlay()) {
+                overlay: CellOverlay = CellOverlay(), columnIDs: [UUID] = []) {
         self.file = file
         self.configuration = configuration
         self.indexer = indexer
         self.overlay = overlay
+        ids = columnIDs
         headerRows = configuration.firstRowAsHeader ? 1 : 0
         hadUTF8BOM = configuration.encoding == .utf8
             && file.withBytes(0..<3) { Array($0) } == Self.utf8BOM

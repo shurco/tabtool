@@ -76,6 +76,19 @@ private func textSource(_ text: String, _ dir: TempDirectory,
         #expect(Set(source.columnIDs).count == 2)
     }
 
+    @Test func columnIDsCarryOverToAReplacingSource() throws {
+        let dir = TempDirectory()
+        let first = try textSource("a,b\n", dir)
+        let file = try MappedFile(url: dir.file("u.csv", Array("a,b,c\n".utf8)))
+        let indexer = LargeFileIndexer(file: file, configuration: CSVConfiguration())
+        indexer.start { _ in }
+        indexer.wait()
+        let second = LargeCSVSource(file: file, configuration: CSVConfiguration(), indexer: indexer,
+                                    columnIDs: first.columnIDs)
+        #expect(Array(second.columnIDs.prefix(2)) == first.columnIDs)
+        #expect(second.columnIDs.count == 3)
+    }
+
     @Test func bomFileRow0() throws {
         let dir = TempDirectory()
         let file = try MappedFile(url: dir.file("b.csv", [0xEF, 0xBB, 0xBF] + Array("a,b\n".utf8)))

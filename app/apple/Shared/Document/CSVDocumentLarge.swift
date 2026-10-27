@@ -10,6 +10,8 @@ enum LargeStatus: Equatable {
     case ready
     /// The file changed on disk. `appended` is true when it only grew.
     case stale(appended: Bool)
+    /// The edits are being written; the value is the share of the file written.
+    case saving(Double)
 }
 
 /// Something the window tells the user once, then forgets.
@@ -30,6 +32,12 @@ extension CSVDocument {
     /// Whether the index of a large file is still being built.
     var isIndexing: Bool {
         if case .indexing = largeStatus { return true }
+        return false
+    }
+
+    /// Whether a large file is being saved.
+    var isSaving: Bool {
+        if case .saving = largeStatus { return true }
         return false
     }
 
@@ -143,34 +151,29 @@ extension CSVDocument {
 
     /// Sets one cell in the overlay and records how to undo it.
     ///
-    /// A refused edit (indexing, a changed file, unreadable bytes, text the
-    /// format cannot hold) leaves everything as it was and raises a notice.
+    /// A refused edit (indexing or saving, a changed file, unreadable bytes,
+    /// text the format cannot hold) leaves everything as it was and raises a
+    /// notice. Undo restores the text the cell showed, not the overlay entry,
+    /// so it stays right after a save has moved that text into the file.
     func applyLargeCellChange(_ text: String, in source: LargeCSVSource, row: Int, column: Int,
                               actionName: String) {
-        let key = CellKey(row: source.physicalRow(forDisplay: row), column: column)
-        let previous: String?
+        let previous = source.cell(row: row, column: column)
+        guard previous != text else { return }
         do {
-            previous = try source.setCell(text, row: row, column: column)
+            guard canEditCells else { throw CSVError.rowNotEditable }
+            try source.setCell(text, row: row, column: column)
         } catch {
             notice = .editRejected(error as? CSVError ?? .rowNotEditable)
             objectWillChange.send()
             return
         }
-        if previous == source.overlay[key] { return }
         didChangeLargeContent()
+        let physicalRow = source.physicalRow(forDisplay: row)
         registerAction(actionName) { document in
-            document.restoreLargeCell(previous, at: key, actionName: actionName)
-        }
-    }
-
-    /// Puts an overlay entry back (`nil` removes it) and registers the inverse.
-    private func restoreLargeCell(_ text: String?, at key: CellKey, actionName: String) {
-        guard let source = largeSource else { return }
-        let current = source.overlay[key]
-        if let text { source.overlay.set(text, for: key) } else { source.overlay.remove(key) }
-        didChangeLargeContent()
-        registerAction(actionName) { document in
-            document.restoreLargeCell(current, at: key, actionName: actionName)
+            guard let source = document.largeSource else { return }
+            document.applyLargeCellChange(previous, in: source,
+                                          row: physicalRow - source.physicalRow(forDisplay: 0),
+                                          column: column, actionName: actionName)
         }
     }
 

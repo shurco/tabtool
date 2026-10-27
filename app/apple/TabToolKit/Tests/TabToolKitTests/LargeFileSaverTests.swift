@@ -159,6 +159,20 @@ private func bytes(_ text: String) -> [UInt8] { Array(text.utf8) }
         #expect(try Data(contentsOf: target) == Data(bytes("a,b\n\"1\",\"9\"\n")))
     }
 
+    @Test func savingToANewFileGivesItTheDefaultPermissions() throws {
+        let dir = TempDirectory()
+        let source = try makeSource(bytes("a,b\n"), dir)
+        let target = dir.url.appendingPathComponent("copy.csv")
+        try LargeFileSaver.save(source.saveSnapshot(), replacing: target,
+                                availableCapacity: { _ in 1 << 40 }, progress: { _ in })
+        let plain = dir.url.appendingPathComponent("plain.csv")
+        FileManager.default.createFile(atPath: plain.path, contents: Data())
+        func permissions(_ url: URL) throws -> Int? {
+            try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int
+        }
+        #expect(try permissions(target) == permissions(plain))
+    }
+
     @Test func saveFailsWithoutTwiceTheFreeSpace() throws {
         let dir = TempDirectory()
         let text = bytes("a,b\n1,2\n")

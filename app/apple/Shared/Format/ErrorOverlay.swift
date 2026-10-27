@@ -101,12 +101,18 @@ enum FormatErrorText {
         if let documentError = error as? DocumentError {
             return message(for: documentError)
         }
+        if let saveError = error as? LargeFileSaveError {
+            return message(for: saveError)
+        }
         return error.localizedDescription
     }
 
     private static func hint(for error: Error) -> String? {
         if let csvError = error as? CSVError {
             return hint(for: csvError)
+        }
+        if error as? LargeFileSaveError == .insufficientDiskSpace {
+            return String(localized: "Saving a large file needs free space of about twice its size.")
         }
         if error as? DocumentError == .cannotReadFile {
             return String(localized: "Check that the file still exists and that you have permission to open it.")
@@ -143,6 +149,17 @@ enum FormatErrorText {
             return String(localized: "The document changed while the operation was running. Try again.")
         case .cannotReadFile:
             return String(localized: "The file could not be read from disk.")
+        }
+    }
+
+    private static func message(for error: LargeFileSaveError) -> String {
+        switch error {
+        case .indexingNotFinished:
+            return String(localized: "Indexing is not finished. Save again when it completes.")
+        case .sourceChanged:
+            return String(localized: "The file changed on disk since it was opened. Reload it before saving.")
+        case .insufficientDiskSpace:
+            return String(localized: "There is not enough free disk space to save this file.")
         }
     }
 

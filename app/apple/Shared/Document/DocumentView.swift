@@ -44,7 +44,8 @@ struct DocumentView: View {
                 Divider()
                 FormatBar(
                     document: document,
-                    isBusy: isReparsing || document.phase == .loading || document.isIndexing,
+                    isBusy: isReparsing || document.phase == .loading || document.isIndexing
+                        || document.isSaving,
                     isDetectAvailable: document.fileURL != nil,
                     onConfigurationChange: applyConfiguration,
                     onDetectAutomatically: detectAutomatically
@@ -54,7 +55,7 @@ struct DocumentView: View {
             if let source = document.rowSource {
                 Divider()
                 DocumentStatusBar(table: source, configuration: document.configuration,
-                                  status: document.largeStatus)
+                                  status: document.largeStatus, onCancelSave: document.cancelLargeSave)
             }
         }
         .frame(minWidth: 640, minHeight: 400)

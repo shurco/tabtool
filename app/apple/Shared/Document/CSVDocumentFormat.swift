@@ -82,7 +82,7 @@ extension CSVDocument {
 
     /// Whether File > Revert to Saved can run.
     var canRevertToSaved: Bool {
-        fileURL != nil && hasContent && phase != .loading
+        fileURL != nil && hasContent && phase != .loading && !isSaving
     }
 
     /// Replaces the table with the file at `fileURL` parsed with the current

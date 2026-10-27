@@ -18,10 +18,20 @@ final class CSVTableView: NSTableView {
         true
     }
 
+    /// Save, close and quit handling of a large file's window; nil in memory.
+    /// `nonisolated(unsafe)` so `responds(to:)` can read it; it is only set
+    /// on the main actor.
+    nonisolated(unsafe) private(set) var largeWindow: LargeDocumentWindow?
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         coordinator?.tableDidMoveToWindow(self)
+        largeWindow?.detach()
+        largeWindow = nil
         guard let window else { return }
+        if let document = coordinator?.document, document.isLargeMode {
+            largeWindow = LargeDocumentWindow(window: window, document: document, grid: self)
+        }
         if window.firstResponder === window || window.firstResponder == nil {
             window.makeFirstResponder(self)
         }
@@ -137,6 +147,29 @@ final class CSVTableView: NSTableView {
         coordinator?.document.undoManager ?? super.undoManager
     }
 
+    // A large file saves by streaming, never through the system document, so
+    // its grid answers Save, Save As and Duplicate. In memory these actions
+    // still reach the system document.
+    nonisolated private static let largeFileActions: Set<Selector> = [
+        #selector(NSDocument.save(_:)), #selector(NSDocument.saveAs(_:)), #selector(NSDocument.duplicate(_:)),
+    ]
+
+    override func responds(to selector: Selector!) -> Bool {
+        if let selector, Self.largeFileActions.contains(selector) { return largeWindow != nil }
+        return super.responds(to: selector)
+    }
+
+    @objc func saveDocument(_ sender: Any?) {
+        largeWindow?.save()
+    }
+
+    @objc func saveDocumentAs(_ sender: Any?) {
+        largeWindow?.saveAs()
+    }
+
+    /// Not available for large files; validation keeps the item disabled.
+    @objc func duplicateDocument(_ sender: Any?) {}
+
     @objc func undo(_ sender: Any?) {
         undoManager?.undo()
     }
@@ -168,8 +201,14 @@ final class CSVTableView: NSTableView {
             return coordinator.canSelectAll
         case #selector(undo(_:)):
             return validate(item, canPerform: undoManager?.canUndo, title: undoManager?.undoMenuItemTitle)
+                && coordinator.document.canEditCells
         case #selector(redo(_:)):
             return validate(item, canPerform: undoManager?.canRedo, title: undoManager?.redoMenuItemTitle)
+                && coordinator.document.canEditCells
+        case #selector(saveDocument(_:)), #selector(saveDocumentAs(_:)):
+            return largeWindow?.canSave == true
+        case #selector(duplicateDocument(_:)):
+            return false
         default:
             return super.validateUserInterfaceItem(item)
         }

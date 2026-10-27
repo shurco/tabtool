@@ -38,7 +38,8 @@ public enum LargeFileSaver {
         let file = snapshot.file
         guard snapshot.index.scannedBytes >= file.size else { throw LargeFileSaveError.indexingNotFinished }
         guard file.isStale() == .unchanged else { throw LargeFileSaveError.sourceChanged }
-        let descriptor = open(url.path, O_WRONLY | O_CREAT | O_TRUNC, 0o600)
+        // 0666 less the umask, like any new document; Save As keeps this file.
+        let descriptor = open(url.path, O_WRONLY | O_CREAT | O_TRUNC, 0o666)
         guard descriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
         defer { close(descriptor) }
         do {
