@@ -67,6 +67,9 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
         headerView?.onColumnClick = { [weak self] column, modifiers in
             self?.selectColumn(at: column, modifiers: modifiers)
         }
+        headerView?.menuProvider = { [weak self] column in
+            self?.headerMenu(forColumn: column)
+        }
         NotificationCenter.default.addObserver(
             self, selector: #selector(columnDidMove(_:)),
             name: NSTableView.columnDidMoveNotification, object: tableView
@@ -190,6 +193,7 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
             applySelectionFromDocument()
         }
         syncSelectionDisplay()
+        syncSortIndicator()
     }
 
     // MARK: - Data source

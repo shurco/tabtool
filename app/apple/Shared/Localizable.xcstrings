@@ -491,6 +491,26 @@
         }
       }
     },
+    "Move Column Left": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move Column Left"
+          }
+        }
+      }
+    },
+    "Move Column Right": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move Column Right"
+          }
+        }
+      }
+    },
     "None": {
       "localizations": {
         "en": {
@@ -581,6 +601,16 @@
         }
       }
     },
+    "Remove Sort": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Sort"
+          }
+        }
+      }
+    },
     "Semicolon": {
       "localizations": {
         "en": {
@@ -627,6 +657,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show Format Controls"
+          }
+        }
+      }
+    },
+    "Sort Ascending": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort Ascending"
+          }
+        }
+      }
+    },
+    "Sort Descending": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort Descending"
           }
         }
       }

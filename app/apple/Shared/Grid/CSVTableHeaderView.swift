@@ -11,6 +11,9 @@ final class CSVTableHeaderView: NSTableHeaderView {
 
     var onColumnClick: ((Int, NSEvent.ModifierFlags) -> Void)?
 
+    /// Builds the context menu for a column index.
+    var menuProvider: ((Int) -> NSMenu?)?
+
     private(set) var selectedColumns = IndexSet() {
         didSet {
             if selectedColumns != oldValue {
@@ -28,6 +31,20 @@ final class CSVTableHeaderView: NSTableHeaderView {
     func clickColumn(at index: Int, modifiers: NSEvent.ModifierFlags) {
         guard index >= 0 else { return }
         onColumnClick?(index, modifiers)
+    }
+
+    /// The context menu for `index`, selecting the column first unless it is
+    /// already part of the selection. A negative index has no menu.
+    func contextMenu(forColumn index: Int) -> NSMenu? {
+        guard index >= 0 else { return nil }
+        if !selectedColumns.contains(index) {
+            clickColumn(at: index, modifiers: [])
+        }
+        return menuProvider?(index)
+    }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        contextMenu(forColumn: column(at: convert(event.locationInWindow, from: nil)))
     }
 
     override func mouseDown(with event: NSEvent) {
