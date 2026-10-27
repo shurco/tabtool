@@ -39,7 +39,11 @@ extension CSVGridCoordinator {
         for (index, tableColumn) in tableView.tableColumns.enumerated() {
             let isSorted = presenter.table.columns.indices.contains(index)
                 && presenter.table.columns[index].id == sort?.columnID
-            tableView.setIndicatorImage(isSorted ? image : nil, in: tableColumn)
+            let target = isSorted ? image : nil
+            // Skip unchanged columns so a plain update does not repaint the header.
+            if tableView.indicatorImage(in: tableColumn)?.name() != target?.name() {
+                tableView.setIndicatorImage(target, in: tableColumn)
+            }
         }
     }
 

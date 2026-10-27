@@ -19,7 +19,7 @@ enum CSVCellOrder {
            let value = Double(trimmed.replacingOccurrences(of: decimalMark, with: ".")) {
             return .number(value)
         }
-        return .text(cell)
+        return .text(trimmed)
     }
 
     /// Strict ordering; empty keys come last in both directions.

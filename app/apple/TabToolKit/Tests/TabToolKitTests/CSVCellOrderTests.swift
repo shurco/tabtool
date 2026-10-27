@@ -12,6 +12,10 @@ private func order(_ cells: [String], _ d: CSVSortDirection, mark: String = ".")
             == ["-3", "2", "10", "b", "item2", "item10", "", " "])
 }
 
+@Test func surroundingWhitespaceIsIgnoredWhenComparingText() {
+    #expect(order([" b", "a", "c"], .ascending) == ["a", " b", "c"])
+}
+
 @Test func descendingReversesValuesButKeepsEmptyLast() {
     #expect(order(["1", "", "a", "3"], .descending) == ["a", "3", "1", ""])
 }

@@ -528,7 +528,11 @@ final class TabToolUITests: XCTestCase {
         let firstCell = grid.descendants(matching: .tableRow).element(boundBy: 0)
             .textFields.element(boundBy: 0)
         XCTAssertTrue(firstCell.waitForExistence(timeout: 5))
-        XCTAssertEqual(firstCell.value as? String, "zebra")
+        let showsZebra = NSPredicate(format: "value == %@", "zebra")
+        let wait = XCTWaiter().wait(
+            for: [XCTNSPredicateExpectation(predicate: showsZebra, object: firstCell)],
+            timeout: 5)
+        XCTAssertEqual(wait, .completed, "first cell shows \(firstCell.value as? String ?? "nil")")
     }
 
     @MainActor
