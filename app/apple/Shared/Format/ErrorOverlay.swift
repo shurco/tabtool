@@ -126,6 +126,8 @@ enum FormatErrorText {
             return String(localized: "The text cannot be represented in the selected encoding.")
         case .ambiguousOutput:
             return String(localized: "A cell contains the separator or a line break, but quotes are off.")
+        case .rowNotEditable:
+            return String(localized: "This row cannot be edited right now.")
         }
     }
 
@@ -150,6 +152,8 @@ enum FormatErrorText {
             return String(localized: "Choose an encoding that can represent the text.")
         case .ambiguousOutput:
             return String(localized: "Turn quotes on, or remove separators and line breaks from cells.")
+        case .rowNotEditable:
+            return String(localized: "Wait for indexing to finish, or reload the file if it changed on disk.")
         }
     }
 }

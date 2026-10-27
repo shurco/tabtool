@@ -9,7 +9,8 @@ import Testing
             .malformedQuotedField,
             .quoteInUnquotedField,
             .unencodableText,
-            .ambiguousOutput
+            .ambiguousOutput,
+            .rowNotEditable
         ]
 
         for error in errors {

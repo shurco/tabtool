@@ -12,6 +12,9 @@ public enum CSVError: Error, Equatable, Sendable {
     case unencodableText
     /// A no-quote cell contains the separator or a line break.
     case ambiguousOutput
+    /// The row cannot be edited now: indexing is unfinished, the data is
+    /// unreadable, or the file changed on disk.
+    case rowNotEditable
 }
 
 /// English fallback text for generic error presentation.
@@ -32,6 +35,8 @@ extension CSVError: LocalizedError {
             return "The text cannot be represented in the selected encoding."
         case .ambiguousOutput:
             return "A cell contains the separator or a line break, but quotes are off."
+        case .rowNotEditable:
+            return "This row cannot be edited right now."
         }
     }
 
@@ -45,6 +50,8 @@ extension CSVError: LocalizedError {
             return "Undo the edit that added the text, or export with an encoding that can represent it."
         case .ambiguousOutput:
             return "Undo the edit that added the separator or line break, or export with quotes on."
+        case .rowNotEditable:
+            return "Wait for indexing to finish, or reload the file if it changed on disk."
         }
     }
 }
