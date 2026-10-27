@@ -19,6 +19,11 @@ extension CSVGridCoordinator {
         menu.addItem(menuItem(String(localized: "Remove Sort"),
                               #selector(removeSort(_:)), enabled: document.canRemoveSort))
         menu.addItem(.separator())
+        menu.addItem(menuItem(String(localized: "Add Column Left"),
+                              #selector(addColumnLeft(_:)), enabled: isEditable))
+        menu.addItem(menuItem(String(localized: "Add Column Right"),
+                              #selector(addColumnRight(_:)), enabled: isEditable))
+        menu.addItem(.separator())
         menu.addItem(menuItem(String(localized: "Move Column Left"),
                               #selector(moveColumnLeft(_:)),
                               enabled: document.canMoveSelectedColumns(by: -1)))
@@ -35,7 +40,7 @@ extension CSVGridCoordinator {
         headerView?.setSort(column: column, direction: sort?.direction)
     }
 
-    private func menuItem(_ title: String, _ action: Selector, enabled: Bool) -> NSMenuItem {
+    func menuItem(_ title: String, _ action: Selector, enabled: Bool) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
         item.isEnabled = enabled
@@ -57,6 +62,14 @@ extension CSVGridCoordinator {
 
     @objc private func removeSort(_ sender: NSMenuItem) {
         document.removeSort()
+    }
+
+    @objc private func addColumnLeft(_ sender: NSMenuItem) {
+        document.addColumnLeftOfSelection()
+    }
+
+    @objc private func addColumnRight(_ sender: NSMenuItem) {
+        document.addColumnRightOfSelection()
     }
 
     @objc private func moveColumnLeft(_ sender: NSMenuItem) {

@@ -46,6 +46,20 @@ final class CSVTableView: NSTableView {
         }
     }
 
+    /// The context menu for `row`, selecting the row first unless it is already
+    /// part of the selection. A negative row has no menu.
+    func contextMenu(forRow row: Int) -> NSMenu? {
+        guard row >= 0 else { return nil }
+        if !selectedRowIndexes.contains(row) {
+            selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        }
+        return coordinator?.rowMenu()
+    }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        contextMenu(forRow: row(at: convert(event.locationInWindow, from: nil)))
+    }
+
     override func keyDown(with event: NSEvent) {
         if isDeleteKey(event), coordinator?.deleteSelection() == true {
             return

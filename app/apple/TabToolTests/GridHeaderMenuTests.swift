@@ -21,8 +21,63 @@ import TabToolKit
         let (coordinator, _, _) = GridTestSupport.makeGrid(doc)
         let menu = coordinator.headerMenu(forColumn: 0)
         #expect(menu.items.map(\.title) == ["Sort Ascending", "Sort Descending", "Remove Sort",
+                                            "", "Add Column Left", "Add Column Right",
                                             "", "Move Column Left", "Move Column Right"])
         #expect(!menu.items[2].isEnabled)
+    }
+
+    @Test func headerMenuAddColumnItemsInsertAroundTheColumn() async {
+        let doc = await loaded("a,b\n1,2\n")
+        let (coordinator, _, header) = GridTestSupport.makeGrid(doc)
+        defer { withExtendedLifetime(coordinator) {} }
+        perform(header.contextMenu(forColumn: 1)!.items[5])
+        #expect(doc.table?.columns.count == 3)
+        #expect(doc.table?.columns[1].cells == ["b", "2"])
+        #expect(doc.table?.columns[2].cells == ["", ""])
+
+        GridTestSupport.update(coordinator, from: doc)
+        perform(header.contextMenu(forColumn: 0)!.items[4])
+        #expect(doc.table?.columns.count == 4)
+        #expect(doc.table?.columns[0].cells == ["", ""])
+        #expect(doc.table?.columns[1].cells == ["a", "1"])
+    }
+
+    @Test func insertItemsAreDisabledWhenNotEditable() async {
+        let doc = await loaded("a,b\n1,2\n")
+        let (coordinator, _, _) = GridTestSupport.makeGrid(doc)
+        coordinator.update(
+            presenter: GridPresenter(table: doc.table ?? .newDocument(),
+                                     configuration: doc.configuration),
+            isEditable: false)
+        #expect(!coordinator.headerMenu(forColumn: 0).items[4].isEnabled)
+        #expect(!coordinator.rowMenu().items[0].isEnabled)
+        #expect(!coordinator.rowMenu().items[1].isEnabled)
+    }
+
+    @Test func rowMenuInsertsAboveAndBelowTheRightClickedRow() async {
+        let doc = await loaded("a\nb\nc\n")
+        let (coordinator, tableView, _) = GridTestSupport.makeGrid(doc)
+        defer { withExtendedLifetime(coordinator) {} }
+        let menu = tableView.contextMenu(forRow: 1)!
+        #expect(menu.items.map(\.title) == ["Add Row Above", "Add Row Below"])
+        #expect(doc.selection.rows == [1])
+
+        perform(menu.items[1])
+        #expect(doc.table?.columns[0].cells == ["a", "b", "", "c"])
+        GridTestSupport.update(coordinator, from: doc)
+        perform(tableView.contextMenu(forRow: 0)!.items[0])
+        #expect(doc.table?.columns[0].cells == ["", "a", "b", "", "c"])
+    }
+
+    @Test func rowContextMenuKeepsAnExistingSelection() async {
+        let doc = await loaded("a\nb\nc\n")
+        let (coordinator, tableView, _) = GridTestSupport.makeGrid(doc)
+        defer { withExtendedLifetime(coordinator) {} }
+        doc.selection = GridSelection(rows: [0, 2])
+        GridTestSupport.update(coordinator, from: doc)
+        _ = tableView.contextMenu(forRow: 2)
+        #expect(doc.selection.rows == [0, 2])
+        #expect(tableView.contextMenu(forRow: -1) == nil)
     }
 
     @Test func headerMenuSortAscendingSortsAndShowsArrow() async {

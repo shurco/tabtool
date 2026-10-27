@@ -7,7 +7,7 @@ The project is in development. The public name, bundle ID, signing team, and App
 ## Features
 
 - Automatic detection of encoding, delimiter, quotes, escape character, decimal mark, and a first header row.
-- Editing cells, adding and removing rows and columns, reordering rows with drag & drop and columns by dragging the header, sorting rows by a column (click the arrow in the column header, the header menu, or the Table menu), and moving the selected rows or columns one step with `⌥⌘` arrows.
+- Editing cells, adding and removing rows and columns (also from the right-click menus on a row or a column header), reordering rows with drag & drop and columns by dragging the header, sorting rows by a column (click the arrow in the column header, the header menu, or the Table menu), and moving the selected rows or columns one step with `⌥⌘` arrows.
 - Copying and pasting rows/columns as TSV, undo/redo for cells, structure, paste, and format changes.
 - Saving and exporting with a different delimiter, encoding, quotes, decimal mark, and header.
 - CSV, TSV, and plain text formats; UTF-8/16/32, MacRoman, Windows Latin 1/2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, Japanese encodings.
