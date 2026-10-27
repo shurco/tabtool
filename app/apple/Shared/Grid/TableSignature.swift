@@ -21,7 +21,7 @@ struct TableSignature: Equatable {
     init(presenter: GridPresenter) {
         self.init(rowCount: presenter.numberOfRows,
                   columnCount: presenter.numberOfColumns,
-                  columnIDs: presenter.table.columns.map(\.id),
+                  columnIDs: presenter.table.columnIDs,
                   headers: presenter.table.headers)
     }
 }

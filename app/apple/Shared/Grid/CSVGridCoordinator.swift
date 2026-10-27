@@ -269,7 +269,7 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
         for index in 0..<presenter.numberOfColumns {
             let column = NSTableColumn(identifier: columnIdentifier(at: index))
             column.title = presenter.header(at: index)
-            column.width = columnWidths[presenter.table.columns[index].id] ?? 100
+            column.width = columnWidths[presenter.table.columnIDs[index]] ?? 100
             column.minWidth = 40
             column.resizingMask = .userResizingMask
             tableView.addTableColumn(column)

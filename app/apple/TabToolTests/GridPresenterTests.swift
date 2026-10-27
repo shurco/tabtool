@@ -33,3 +33,27 @@ import TabToolKit
         #expect(p.numberOfColumns == 3)
     }
 }
+
+private struct StubSource: RowSource {
+    let rowCount = 3
+    let columnCount = 2
+    let columnIDs = [UUID(), UUID()]
+    let headers: [String]? = nil
+
+    func cell(row: Int, column: Int) -> String {
+        row < rowCount && column < columnCount ? "\(row * 10 + column)" : ""
+    }
+}
+
+@Suite struct GridPresenterRowSourceTests {
+    @Test func presenterReadsAnyRowSource() {
+        let p = GridPresenter(table: StubSource(), configuration: .init())
+        #expect(p.numberOfRows == 3)
+        #expect(p.numberOfColumns == 2)
+        #expect(p.header(at: 1) == "B")
+        #expect(p.header(at: 2) == "")
+        #expect(p.cell(row: 2, column: 1) == "21")
+        #expect(p.alignment(row: 2, column: 1) == .right)
+        #expect(TableSignature(presenter: p).columnIDs.count == 2)
+    }
+}

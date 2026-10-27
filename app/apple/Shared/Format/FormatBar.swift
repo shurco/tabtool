@@ -133,7 +133,7 @@ struct FormatBar: View {
 
 /// A one-line summary of the table size and its format.
 struct DocumentStatusBar: View {
-    let table: CSVTable
+    let table: any RowSource
     let configuration: CSVConfiguration
 
     var body: some View {
@@ -150,7 +150,7 @@ struct DocumentStatusBar: View {
 
     private var summary: String {
         let rows = table.rowCount
-        let columns = table.columns.count
+        let columns = table.columnCount
         let rowsText = rows == 1
             ? String(localized: "1 row")
             : String(localized: "\(rows) rows")

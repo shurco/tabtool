@@ -45,7 +45,7 @@ extension CSVGridCoordinator {
     /// edit ends renames the same column or nothing.
     func beginRenamingColumn(at column: Int) {
         guard isEditable, document.canRenameColumn(at: column) else { return }
-        let columnID = presenter.table.columns[column].id
+        let columnID = presenter.table.columnIDs[column]
         headerView?.beginRename(column: column, text: presenter.header(at: column)) {
             [weak self] name in
             guard let self, let table = document.table,
@@ -57,7 +57,7 @@ extension CSVGridCoordinator {
     /// Points the header's sort arrows at the sorted column.
     func syncSortArrows() {
         let sort = document.activeSort
-        let column = presenter.table.columns.firstIndex { $0.id == sort?.columnID }
+        let column = presenter.table.columnIDs.firstIndex { $0 == sort?.columnID }
         headerView?.setSort(column: column, direction: sort?.direction)
     }
 
