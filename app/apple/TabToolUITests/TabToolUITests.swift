@@ -462,7 +462,22 @@ final class TabToolUITests: XCTestCase {
 
         let contents = try String(contentsOf: fixture, encoding: .utf8)
         XCTAssertFalse(contents.contains("→"))
-        XCTAssertEqual(contents, "a,b\nc,d\n")
+
+        // The encoding change is a real document mutation and may autosave
+        // the still-valid table before the paste. Compare logical cells, not
+        // the writer's quoting or a trailing newline: a quoted two-row table
+        // is as correct as the original unquoted file.
+        let normalized = contents
+            .replacingOccurrences(of: "\"", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let lines = normalized.split(separator: "\n", omittingEmptySubsequences: false)
+        let cells = lines.map {
+            $0.trimmingCharacters(in: .whitespaces)
+                .split(separator: ",", omittingEmptySubsequences: false)
+                .map(String.init)
+        }
+        XCTAssertEqual(cells, [["a", "b"], ["c", "d"]],
+                       "Autosave must keep the complete logical table")
     }
 
     /// Polls a file until it contains `text`; saves are asynchronous across
