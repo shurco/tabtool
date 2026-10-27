@@ -496,7 +496,7 @@ final class TabToolUITests: XCTestCase {
     }
 
     @MainActor
-    func testAboutShowsNoticeAndHelpLink() {
+    func testAboutShowsVersionAndDescription() {
         let app = launchApp()
 
         app.menuBars.menuBarItems["TabTool"].click()
@@ -504,17 +504,8 @@ final class TabToolUITests: XCTestCase {
         XCTAssertTrue(about.waitForExistence(timeout: 5))
         about.click()
 
-        XCTAssertTrue(app.staticTexts["About This App"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.links["Project Repository"].exists)
-        XCTAssertTrue(app.links["MIT License"].exists)
-        let license = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@",
-                        "MIT License", "MIT License")
-        ).firstMatch
-        XCTAssertTrue(license.exists)
-
-        app.menuBars.menuBarItems["Help"].click()
-        XCTAssertTrue(app.menuItems["Help"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["TabTool"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["A simple CSV editor for macOS."].waitForExistence(timeout: 5))
     }
 
     @MainActor

@@ -8,7 +8,7 @@ public struct SupportedEncoding: Identifiable, Sendable, Hashable {
     public let encoding: String.Encoding
 }
 
-/// The encoding choices, in display order.
+/// The supported encoding choices, in display order.
 public enum SupportedEncodings {
     /// GBK is not exposed as a `String.Encoding` convenience value, so the
     /// Core Foundation encoding constant is converted to its Foundation value.

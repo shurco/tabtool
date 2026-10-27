@@ -26,6 +26,8 @@ targets:
       - path: Shared
       - path: macOS/App/PrivacyInfo.xcprivacy
         buildPhase: resources
+      - path: ../../LICENSE
+        buildPhase: resources
     dependencies:
       - package: TabToolKit
     settings:

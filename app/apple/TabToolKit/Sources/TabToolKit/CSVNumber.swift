@@ -4,7 +4,7 @@ import Foundation
 public enum CSVNumber {
     /// Returns `true` when `text` is a number using `decimalMark`.
     ///
-    /// The pattern accepts an optional
+    /// The pattern matches numeric cells: optional
     /// whitespace and sign, digits around the configured decimal mark, an
     /// optional exponent, and optional trailing whitespace.
     public static func isNumeric(_ text: String, decimalMark: String) -> Bool {

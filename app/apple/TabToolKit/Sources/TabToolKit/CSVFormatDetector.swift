@@ -2,7 +2,7 @@ import Foundation
 
 /// Picks the most likely `CSVConfiguration` for raw data.
 ///
-/// Detects the format of a CSV file by scoring candidate configurations:
+/// The detector scores candidates in a fixed order:
 ///
 /// - Eleven candidate configurations are scored in a fixed order.
 /// - Each candidate parses at most five rows.
@@ -78,9 +78,8 @@ public struct CSVFormatDetector: Sendable {
         return best
     }
 
-    /// The candidates in scoring order, which differs
-    /// from the `config1`...`config11` numbering: 1, 10, 6, 2, 5, 7, 3, 8, 4,
-    /// 9, 11.
+    /// The candidates in scoring order, which differs from the
+    /// `config1`...`config11` numbering: 1, 10, 6, 2, 5, 7, 3, 8, 4, 9, 11.
     private static let configurations: [CSVConfiguration] = [
         CSVConfiguration(columnSeparator: ",", decimalMark: "."),
         CSVConfiguration(columnSeparator: ",", quoteCharacter: "\"",

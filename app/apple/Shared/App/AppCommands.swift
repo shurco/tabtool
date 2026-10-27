@@ -67,13 +67,6 @@ struct AppCommands: Commands {
         CommandGroup(after: .toolbar) {
             Toggle("Show Format Bar", isOn: $showFormatBar)
         }
-
-        CommandGroup(replacing: .help) {
-            Link("Help", destination: AboutView.repositoryURL)
-            Button("TabTool Notice") {
-                openWindow(id: AboutView.windowID)
-            }
-        }
     }
 
     private var isEditable: Bool {
