@@ -63,7 +63,7 @@ Typed errors: `cannotDecodeData`, `malformedQuotedField`, `quoteInUnquotedField`
 - Header in the document format is semantics: whether the table has a header.
 - Header in export is output only: the document headers, otherwise generated A, B, C…; disabled — no header is written.
 - Enabling/disabling the header moves the first row between headers and data and is undone via undo.
-- Rename Column changes one header name. It is available only while the first row is a header (without one, column names are generated A, B, C… and are not part of the file) and when exactly one column is selected. Start it with a double-click on the column title, Rename Column in the header context menu, or Rename Column in the Table menu. Return or focus loss commits, Escape cancels.
+- Rename Column changes one header name. It is available when exactly one column is selected. Without a header it turns Header on: every column gets its generated name (A, B, C…), the renamed column gets the new name, and all rows stay data rows (unlike the Header toggle, the first row is not consumed). Renaming to the column's own generated name without a header does nothing. Start it with a double-click on the column title, Rename Column in the header context menu, or Rename Column in the Table menu. Return or focus loss commits, Escape cancels.
 - A header name may be empty (an empty header cell is valid CSV); names containing the separator, quotes, or line breaks are quoted on export like any cell.
 - Renaming is a single undo step ("Rename Column"), keeps the active sort and column identities, and renaming to the same name records nothing.
 

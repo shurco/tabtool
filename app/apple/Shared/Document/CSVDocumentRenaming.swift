@@ -3,8 +3,8 @@ import TabToolKit
 
 /// Column header renaming and its menu predicates.
 ///
-/// Only a table whose first row is a header has names to change; without one,
-/// column names are generated (A, B, C…) and are not part of the file.
+/// Without a header, renaming turns Header on: the generated names (A, B, C…)
+/// become the header and every row stays a data row.
 extension CSVDocument {
     /// Renames the header of `column`; an empty name is allowed.
     ///
@@ -14,13 +14,15 @@ extension CSVDocument {
 
         var renamed = table
         guard renamed.renameHeader(name, at: column) else { return }
-        applyChange(table: renamed, configuration: configuration,
+        var newConfiguration = configuration
+        newConfiguration.firstRowAsHeader = true
+        applyChange(table: renamed, configuration: newConfiguration,
                     includesUTF8BOM: hadUTF8BOM, actionName: "Rename Column",
                     sort: activeSort)
     }
 
     func canRenameColumn(at column: Int) -> Bool {
-        guard isEditableContent, let table, table.headers != nil else { return false }
+        guard isEditableContent, let table else { return false }
         return table.columns.indices.contains(column)
     }
 

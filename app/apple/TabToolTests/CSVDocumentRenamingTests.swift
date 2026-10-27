@@ -63,13 +63,46 @@ import TabToolKit
         #expect(doc.table?.headers == ["", "b"])
     }
 
-    @Test func renameIsDisabledWithoutHeaderMode() async {
+    @Test func renameWithoutHeaderTurnsHeaderOnAndKeepsRows() async {
         let (doc, um) = await loaded("a,b\n1,2\n", header: false)
         doc.selection = GridSelection(columns: [0])
-        #expect(!doc.canRenameSelectedColumn)
-        doc.renameColumn(at: 0, to: "x")
+        #expect(doc.canRenameSelectedColumn)
+        doc.renameColumn(at: 1, to: "x")
+        #expect(doc.table?.headers == ["A", "x"])
+        #expect(doc.table?.rowCount == 2)
+        #expect(doc.configuration.firstRowAsHeader)
+        #expect(um.undoActionName == "Rename Column")
+
+        um.undo()
         #expect(doc.table?.headers == nil)
+        #expect(doc.table?.rowCount == 2)
+        #expect(!doc.configuration.firstRowAsHeader)
+    }
+
+    @Test func renameWithoutHeaderExportsHeaderLineFirst() async throws {
+        let (doc, _) = await loaded("a,b\n1,2\n", header: false)
+        doc.renameColumn(at: 1, to: "x")
+        let snapshot = try doc.snapshot(contentType: .commaSeparatedText)
+        let text = try String(decoding: CSVDocumentIO.serializedData(for: snapshot),
+                              as: UTF8.self)
+        let lines = text.split(whereSeparator: \.isNewline).map(String.init)
+        #expect(lines == ["\"A\",\"x\"", "\"a\",\"b\"", "\"1\",\"2\""])
+    }
+
+    @Test func renameWithoutHeaderKeepsTheSort() async {
+        let (doc, _) = await loaded("b,1\na,2\n", header: false)
+        doc.sortRows(column: 0, direction: .ascending)
+        let sort = doc.activeSort
+        doc.renameColumn(at: 0, to: "key")
+        #expect(doc.activeSort == sort)
+        #expect(doc.table?.columns[0].cells == ["a", "b"])
+    }
+
+    @Test func renameWithoutHeaderToGeneratedNameRecordsNothing() async {
+        let (doc, um) = await loaded("a,b\n1,2\n", header: false)
+        doc.renameColumn(at: 0, to: "A")
         #expect(!um.canUndo)
+        #expect(doc.table?.headers == nil)
     }
 
     @Test func selectedColumnRenameNeedsExactlyOneColumn() async {

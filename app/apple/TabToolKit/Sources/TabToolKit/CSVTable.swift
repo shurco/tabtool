@@ -148,11 +148,19 @@ public struct CSVTable: Sendable, Equatable {
 
     /// Renames one column's header.
     ///
-    /// The name may be empty. Returns `false` and changes nothing when the
-    /// table has no headers or `index` is invalid.
+    /// The name may be empty. Without headers, every column first gets its
+    /// generated name (A, B, C…) and all rows stay data rows. Returns `false`
+    /// and changes nothing when `index` is invalid or a table without headers
+    /// is "renamed" to the column's generated name.
     @discardableResult
     public mutating func renameHeader(_ name: String, at index: Int) -> Bool {
-        guard headers != nil, columns.indices.contains(index) else { return false }
+        guard columns.indices.contains(index) else { return false }
+        if headers == nil {
+            guard name != ColumnNameGenerator.name(for: index) else { return false }
+            for column in columns.indices {
+                columns[column].header = ColumnNameGenerator.name(for: column)
+            }
+        }
         columns[index].header = name
         return true
     }

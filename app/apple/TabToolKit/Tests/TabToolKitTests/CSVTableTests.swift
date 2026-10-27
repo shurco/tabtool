@@ -167,14 +167,30 @@ import Testing
     #expect(t.headers == [""])
 }
 
-@Test func renameHeaderIsRejectedWithoutHeadersOrForBadIndex() {
+@Test func renameHeaderWithoutHeadersGeneratesNamesAndKeepsAllRows() {
+    var t = CSVTable(rows: [["1", "2"], ["3", "4"]], headers: nil)
+    let r1 = t.renameHeader("x", at: 1)
+    #expect(r1)
+    #expect(t.headers == ["A", "x"])
+    #expect(t.rowCount == 2)
+    #expect(t.columns.map(\.cells) == [["1", "3"], ["2", "4"]])
+}
+
+@Test func renameHeaderToGeneratedNameWithoutHeadersChangesNothing() {
+    var t = CSVTable(rows: [["1", "2"]], headers: nil)
+    let r2 = t.renameHeader("B", at: 1)
+    #expect(!r2)
+    #expect(t.headers == nil)
+}
+
+@Test func renameHeaderIsRejectedForBadIndex() {
     var plain = CSVTable(rows: [["1"]], headers: nil)
-    let plainRenamed958 = plain.renameHeader("x", at: 0)
-    #expect(!plainRenamed958)
+    let r3 = plain.renameHeader("x", at: 3)
+    #expect(!r3)
     #expect(plain.headers == nil)
 
     var named = CSVTable(rows: [["1"]], headers: ["a"])
-    let namedRenamed204 = named.renameHeader("x", at: 3)
-    #expect(!namedRenamed204)
+    let r4 = named.renameHeader("x", at: 3)
+    #expect(!r4)
     #expect(named.headers == ["a"])
 }

@@ -27,10 +27,10 @@ import TabToolKit
         #expect(!menu.items[2].isEnabled)
     }
 
-    @Test func renameItemIsEnabledOnlyWithHeaderMode() async {
+    @Test func renameItemIsEnabledWithAndWithoutHeaderMode() async {
         let plain = await loaded("a,b\n1,2\n")
         let (plainGrid, _, _) = GridTestSupport.makeGrid(plain)
-        #expect(!plainGrid.headerMenu(forColumn: 0).items.last!.isEnabled)
+        #expect(plainGrid.headerMenu(forColumn: 0).items.last!.isEnabled)
 
         let doc = CSVDocument(data: Data("a,b\n1,2\n".utf8),
                               configuration: CSVConfiguration(firstRowAsHeader: true),
