@@ -22,8 +22,70 @@ import TabToolKit
         let menu = coordinator.headerMenu(forColumn: 0)
         #expect(menu.items.map(\.title) == ["Sort Ascending", "Sort Descending", "Remove Sort",
                                             "", "Add Column Left", "Add Column Right",
-                                            "", "Move Column Left", "Move Column Right"])
+                                            "", "Move Column Left", "Move Column Right",
+                                            "", "Rename Column"])
         #expect(!menu.items[2].isEnabled)
+    }
+
+    @Test func renameItemIsEnabledOnlyWithHeaderMode() async {
+        let plain = await loaded("a,b\n1,2\n")
+        let (plainGrid, _, _) = GridTestSupport.makeGrid(plain)
+        #expect(!plainGrid.headerMenu(forColumn: 0).items.last!.isEnabled)
+
+        let doc = CSVDocument(data: Data("a,b\n1,2\n".utf8),
+                              configuration: CSVConfiguration(firstRowAsHeader: true),
+                              undoManager: UndoManager())
+        await doc.load()
+        let (coordinator, _, _) = GridTestSupport.makeGrid(doc)
+        #expect(coordinator.headerMenu(forColumn: 0).items.last!.isEnabled)
+    }
+
+    @Test func renameEditorCommitsOnEndAndCancelsOnEscape() async {
+        let doc = CSVDocument(data: Data("a,b\n1,2\n".utf8),
+                              configuration: CSVConfiguration(firstRowAsHeader: true),
+                              undoManager: UndoManager())
+        await doc.load()
+        let (coordinator, tableView, header) = GridTestSupport.makeGrid(doc)
+        defer { withExtendedLifetime(coordinator) {} }
+        tableView.frame = NSRect(x: 0, y: 0, width: 400, height: 100)
+
+        coordinator.beginRenamingColumn(at: 1)
+        let field = header.subviews.compactMap { $0 as? NSTextField }.first
+        #expect(field?.stringValue == "b")
+        field?.stringValue = "x"
+        header.controlTextDidEndEditing(Notification(name: NSControl.textDidEndEditingNotification))
+        #expect(doc.table?.headers == ["a", "x"])
+        #expect(header.subviews.compactMap { $0 as? NSTextField }.isEmpty)
+
+        GridTestSupport.update(coordinator, from: doc)
+        coordinator.beginRenamingColumn(at: 0)
+        _ = header.control(NSTextField(), textView: NSTextView(),
+                           doCommandBy: #selector(NSResponder.cancelOperation(_:)))
+        header.subviews.compactMap { $0 as? NSTextField }.first?.stringValue = "zzz"
+        header.controlTextDidEndEditing(Notification(name: NSControl.textDidEndEditingNotification))
+        #expect(doc.table?.headers == ["a", "x"])
+    }
+
+    @Test func doubleClickOnTitleRequestsRename() async {
+        let doc = await loaded("a,b\n1,2\n")
+        let (coordinator, tableView, header) = GridTestSupport.makeGrid(doc)
+        defer { withExtendedLifetime(coordinator) {} }
+        tableView.frame = NSRect(x: 0, y: 0, width: 400, height: 100)
+        var requested: [Int] = []
+        header.onRenameRequest = { requested.append($0) }
+
+        let rect = header.headerRect(ofColumn: 0)
+        func doubleClick(atX x: CGFloat) {
+            let point = NSPoint(x: x, y: rect.midY)
+            header.mouseDown(with: NSEvent.mouseEvent(
+                with: .leftMouseDown, location: header.convert(point, to: nil),
+                modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+                eventNumber: 0, clickCount: 2, pressure: 1)!)
+        }
+        // Arrow and divider double-clicks fall through to AppKit's blocking
+        // drag loop, so only the title hit is exercised here.
+        doubleClick(atX: rect.minX + 10)
+        #expect(requested == [0])
     }
 
     @Test func headerMenuAddColumnItemsInsertAroundTheColumn() async {

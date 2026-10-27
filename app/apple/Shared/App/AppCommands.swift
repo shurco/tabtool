@@ -66,6 +66,13 @@ struct AppCommands: Commands {
 
             Divider()
 
+            Button("Rename Column") {
+                document?.renameSelectedColumn()
+            }
+            .disabled(!(document?.canRenameSelectedColumn ?? false))
+
+            Divider()
+
             Button("Sort Ascending") {
                 sortSelectedColumn(.ascending)
             }

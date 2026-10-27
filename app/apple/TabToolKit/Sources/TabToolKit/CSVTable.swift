@@ -146,6 +146,17 @@ public struct CSVTable: Sendable, Equatable {
         }
     }
 
+    /// Renames one column's header.
+    ///
+    /// The name may be empty. Returns `false` and changes nothing when the
+    /// table has no headers or `index` is invalid.
+    @discardableResult
+    public mutating func renameHeader(_ name: String, at index: Int) -> Bool {
+        guard headers != nil, columns.indices.contains(index) else { return false }
+        columns[index].header = name
+        return true
+    }
+
     /// Inserts a blank row, clamping the index to the table bounds.
     public mutating func addRow(at index: Int) {
         guard !columns.isEmpty else { return }

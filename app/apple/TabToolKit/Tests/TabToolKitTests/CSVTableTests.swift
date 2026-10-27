@@ -149,3 +149,32 @@ import Testing
     #expect(t.columns.map(\.header) == [nil, nil])
     #expect(t.columns.map(\.cells) == [["a"], [""]])
 }
+
+@Test func renameHeaderChangesOnlyThatColumnAndKeepsIdentity() {
+    var t = CSVTable(rows: [["1", "2"]], headers: ["a", "b"])
+    let ids = t.columns.map(\.id)
+    let tRenamed994 = t.renameHeader("x", at: 1)
+    #expect(tRenamed994)
+    #expect(t.headers == ["a", "x"])
+    #expect(t.columns.map(\.id) == ids)
+    #expect(t.columns.map(\.cells) == [["1"], ["2"]])
+}
+
+@Test func renameHeaderAllowsEmptyName() {
+    var t = CSVTable(rows: [["1"]], headers: ["a"])
+    let tRenamed743 = t.renameHeader("", at: 0)
+    #expect(tRenamed743)
+    #expect(t.headers == [""])
+}
+
+@Test func renameHeaderIsRejectedWithoutHeadersOrForBadIndex() {
+    var plain = CSVTable(rows: [["1"]], headers: nil)
+    let plainRenamed958 = plain.renameHeader("x", at: 0)
+    #expect(!plainRenamed958)
+    #expect(plain.headers == nil)
+
+    var named = CSVTable(rows: [["1"]], headers: ["a"])
+    let namedRenamed204 = named.renameHeader("x", at: 3)
+    #expect(!namedRenamed204)
+    #expect(named.headers == ["a"])
+}

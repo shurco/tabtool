@@ -71,6 +71,9 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
             guard let self, isEditable else { return }
             document.cycleSort(column: column)
         }
+        headerView?.onRenameRequest = { [weak self] column in
+            self?.beginRenamingColumn(at: column)
+        }
         headerView?.menuProvider = { [weak self] column in
             self?.headerMenu(forColumn: column)
         }

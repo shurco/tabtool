@@ -189,3 +189,15 @@ import Testing
         _ = try CSVWriter(table: t, header: nil, configuration: c).data()
     }
 }
+
+@Test func renamedHeaderWithSeparatorAndQuotesRoundTrips() throws {
+    var table = CSVTable(rows: [["1", "2"]], headers: ["a", "b"])
+    let name = "x,\"y\"\nz"
+    let tableRenamed7 = table.renameHeader(name, at: 0)
+    #expect(tableRenamed7)
+    let config = CSVConfiguration()
+    let data = try CSVWriter(table: table, header: table.headers, configuration: config).data()
+    var parser = try CSVParser(data: data, configuration: config)
+    let rows = try parser.readAll()
+    #expect(rows.first == [name, "b"])
+}

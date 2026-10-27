@@ -12,6 +12,8 @@ import TabToolKit
             onEndEditing = nil
             action?()
         }
+
+        func beginRenamingColumn(at column: Int) {}
     }
 
     private func loaded(_ csv: String) async -> (CSVDocument, UndoManager) {

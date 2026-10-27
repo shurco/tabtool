@@ -631,6 +631,16 @@
         }
       }
     },
+    "Rename Column": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename Column"
+          }
+        }
+      }
+    },
     "Semicolon": {
       "localizations": {
         "en": {

@@ -6,7 +6,7 @@ import TabToolKit
 /// AppKit does not support its column-selection mode in view-based tables, so
 /// the header reports clicks to the coordinator and draws its own highlight
 /// and the sort arrows at the right edge of every column.
-final class CSVTableHeaderView: NSTableHeaderView {
+final class CSVTableHeaderView: NSTableHeaderView, NSTextFieldDelegate {
     /// Distance from a column divider where a click starts a resize instead of
     /// selecting the column.
     private static let resizeMargin: CGFloat = 4
@@ -19,8 +19,15 @@ final class CSVTableHeaderView: NSTableHeaderView {
     /// Reports a click on a column's sort arrow.
     var onSortClick: ((Int) -> Void)?
 
+    /// Reports a double-click on a column's title.
+    var onRenameRequest: ((Int) -> Void)?
+
     /// Builds the context menu for a column index.
     var menuProvider: ((Int) -> NSMenu?)?
+
+    private var renameField: NSTextField?
+    private var renameCommit: ((String) -> Void)?
+    private var isRenameCancelled = false
 
     private(set) var selectedColumns = IndexSet() {
         didSet {
@@ -79,10 +86,51 @@ final class CSVTableHeaderView: NSTableHeaderView {
             onSortClick?(column)
             return
         }
+        if event.clickCount == 2, sortArrowColumn(at: point) == nil, isSelectionClick(at: point) {
+            onRenameRequest?(column(at: point))
+            return
+        }
         if event.clickCount == 1, isSelectionClick(at: point) {
             clickColumn(at: self.column(at: point), modifiers: event.modifierFlags)
         }
         super.mouseDown(with: event)
+    }
+
+    /// Shows a name editor over `column`'s header, pre-filled with `text`.
+    ///
+    /// Return and focus loss pass the edited text to `commit`; Escape discards it.
+    func beginRename(column: Int, text: String, commit: @escaping (String) -> Void) {
+        guard column >= 0, column < (tableView?.numberOfColumns ?? 0) else { return }
+        let field = NSTextField(string: text)
+        field.frame = headerRect(ofColumn: column).insetBy(dx: 1, dy: 1)
+        field.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        field.usesSingleLineMode = true
+        field.delegate = self
+        field.setAccessibilityIdentifier("column-rename-field")
+        renameField = field
+        renameCommit = commit
+        addSubview(field)
+        window?.makeFirstResponder(field)
+    }
+
+    func control(_ control: NSControl, textView: NSTextView,
+                 doCommandBy commandSelector: Selector) -> Bool {
+        guard commandSelector == #selector(NSResponder.cancelOperation(_:)) else { return false }
+        isRenameCancelled = true
+        window?.makeFirstResponder(tableView)
+        return true
+    }
+
+    func controlTextDidEndEditing(_ notification: Notification) {
+        guard let field = renameField else { return }
+        let text = field.stringValue
+        let commit = renameCommit
+        let cancelled = isRenameCancelled
+        field.removeFromSuperview()
+        renameField = nil
+        renameCommit = nil
+        isRenameCancelled = false
+        if !cancelled { commit?(text) }
     }
 
     /// The column whose sort arrow contains `point`, if any.

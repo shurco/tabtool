@@ -30,7 +30,28 @@ extension CSVGridCoordinator {
         menu.addItem(menuItem(String(localized: "Move Column Right"),
                               #selector(moveColumnRight(_:)),
                               enabled: document.canMoveSelectedColumns(by: 1)))
+        menu.addItem(.separator())
+        let rename = menuItem(String(localized: "Rename Column"),
+                              #selector(renameColumn(_:)),
+                              enabled: document.canRenameColumn(at: column))
+        rename.representedObject = column
+        menu.addItem(rename)
         return menu
+    }
+
+    /// Opens the inline name editor over the header of `column`.
+    ///
+    /// The column is tracked by identity, so a structural change before the
+    /// edit ends renames the same column or nothing.
+    func beginRenamingColumn(at column: Int) {
+        guard isEditable, document.canRenameColumn(at: column) else { return }
+        let columnID = presenter.table.columns[column].id
+        headerView?.beginRename(column: column, text: presenter.header(at: column)) {
+            [weak self] name in
+            guard let self, let table = document.table,
+                  let current = table.columns.firstIndex(where: { $0.id == columnID }) else { return }
+            document.renameColumn(at: current, to: name)
+        }
     }
 
     /// Points the header's sort arrows at the sorted column.
@@ -74,6 +95,11 @@ extension CSVGridCoordinator {
 
     @objc private func moveColumnLeft(_ sender: NSMenuItem) {
         document.moveSelectedColumns(by: -1)
+    }
+
+    @objc private func renameColumn(_ sender: NSMenuItem) {
+        guard let column = sender.representedObject as? Int else { return }
+        beginRenamingColumn(at: column)
     }
 
     @objc private func moveColumnRight(_ sender: NSMenuItem) {

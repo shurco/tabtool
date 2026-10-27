@@ -16,6 +16,8 @@ import Testing
             endEditingCount += 1
             onEndEditing?()
         }
+
+        func beginRenamingColumn(at column: Int) {}
     }
 
     @Test func structuralChangeEndsEditingBeforeTheUndoSnapshot() async {
