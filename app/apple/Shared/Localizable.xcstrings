@@ -1130,6 +1130,126 @@
           }
         }
       }
+    },
+    "Large file mode. You can browse and edit cells. Sorting, adding, deleting or moving rows and columns, renaming columns, changing the decimal mark and exporting are not available for files this size.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large file mode. You can browse and edit cells. Sorting, adding, deleting or moving rows and columns, renaming columns, changing the decimal mark and exporting are not available for files this size."
+          }
+        }
+      }
+    },
+    "New rows were appended. Reload to see them.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New rows were appended. Reload to see them."
+          }
+        }
+      }
+    },
+    "The file changed on disk. Reload to continue.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file changed on disk. Reload to continue."
+          }
+        }
+      }
+    },
+    "Reload": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reload"
+          }
+        }
+      }
+    },
+    "Not available in large file mode.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not available in large file mode."
+          }
+        }
+      }
+    },
+    "Indexing… %lld%% · %@ rows so far": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indexing… %lld%% · %@ rows so far"
+          }
+        }
+      }
+    },
+    "This encoding cannot be opened in large file mode.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This encoding cannot be opened in large file mode."
+          }
+        }
+      }
+    },
+    "Large file mode needs a single-character ASCII separator, quote and escape.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large file mode needs a single-character ASCII separator, quote and escape."
+          }
+        }
+      }
+    },
+    "This row cannot be edited right now.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This row cannot be edited right now."
+          }
+        }
+      }
+    },
+    "Convert the file to UTF-8 and open it again.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convert the file to UTF-8 and open it again."
+          }
+        }
+      }
+    },
+    "Choose a separator, quote and escape that are single ASCII characters.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a separator, quote and escape that are single ASCII characters."
+          }
+        }
+      }
+    },
+    "Wait for indexing to finish, or reload the file if it changed on disk.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wait for indexing to finish, or reload the file if it changed on disk."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

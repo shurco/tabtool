@@ -43,6 +43,20 @@ public final class LargeCSVSource: RowSource, @unchecked Sendable {
             && file.withBytes(0..<3) { Array($0) } == Self.utf8BOM
     }
 
+    deinit {
+        indexer.cancel()
+    }
+
+    // MARK: Indexing
+
+    /// Whether the whole file has been indexed.
+    public var isIndexed: Bool { indexer.isFinished }
+
+    /// The share of the file scanned so far, from 0 to 1.
+    public var indexingFraction: Double {
+        file.size == 0 ? 1 : min(1, Double(indexer.snapshot.scannedBytes) / Double(file.size))
+    }
+
     // MARK: RowSource
 
     public var rowCount: Int {

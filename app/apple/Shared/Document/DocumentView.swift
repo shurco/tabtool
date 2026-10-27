@@ -19,6 +19,17 @@ struct DocumentView: View {
         VStack(spacing: 0) {
             content
 
+            if document.isLargeMode, document.hasContent {
+                Divider()
+                LargeFileBanner()
+                if case .stale(let appended) = document.largeStatus {
+                    Divider()
+                    LargeFileStaleBanner(appended: appended) {
+                        Task { await document.reloadLargeFile() }
+                    }
+                }
+            }
+
             if let issue = document.writeIssue {
                 Divider()
                 NeedsAttentionBanner(
@@ -33,16 +44,17 @@ struct DocumentView: View {
                 Divider()
                 FormatBar(
                     document: document,
-                    isBusy: isReparsing || document.phase == .loading,
-                    isDetectAvailable: document.fileURL != nil,
+                    isBusy: isReparsing || document.phase == .loading || document.isLargeMode,
+                    isDetectAvailable: document.fileURL != nil && !document.isLargeMode,
                     onConfigurationChange: applyConfiguration,
                     onDetectAutomatically: detectAutomatically
                 )
             }
 
-            if let table = document.table {
+            if let source = document.rowSource {
                 Divider()
-                DocumentStatusBar(table: table, configuration: document.configuration)
+                DocumentStatusBar(table: source, configuration: document.configuration,
+                                  status: document.largeStatus)
             }
         }
         .frame(minWidth: 640, minHeight: 400)
@@ -57,6 +69,9 @@ struct DocumentView: View {
         }
         .onDisappear {
             document.cancelLoading()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            document.refreshLargeStaleness()
         }
         .onChange(of: fileURL) { _, newValue in
             // Save As changes the URL without recreating this view.
@@ -107,11 +122,11 @@ struct DocumentView: View {
             ProgressView("Loading…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .ready, .needsAttention:
-            if document.table != nil {
+            if document.hasContent {
                 VStack(spacing: 0) {
                     GridToolbar(document: document)
                     Divider()
-                    CSVGrid(document: document, isEditable: true)
+                    CSVGrid(document: document, isEditable: !document.isLargeMode)
                 }
             } else {
                 ProgressView("Loading…")
@@ -120,7 +135,7 @@ struct DocumentView: View {
         case .readFailed, .unreadableFile:
             ErrorOverlay(
                 phase: document.phase,
-                canDetect: document.fileURL != nil && !isReparsing,
+                canDetect: document.fileURL != nil && !isReparsing && !document.isLargeMode,
                 onDetectAutomatically: detectAutomatically
             )
         }
@@ -243,9 +258,10 @@ private struct GridToolbar: View {
             } label: {
                 GridInsertIcon(axis: .row)
             }
-            .help("Add Row Below")
+            .help(document.isLargeMode ? Text("Not available in large file mode.") : Text("Add Row Below"))
             .accessibilityLabel("Add Row Below")
             .accessibilityIdentifier("add-row")
+            .disabled(document.isLargeMode)
             .contextMenu {
                 Button("Add Row Above") {
                     document.addRowAboveSelection()
@@ -257,9 +273,10 @@ private struct GridToolbar: View {
             } label: {
                 GridInsertIcon(axis: .column)
             }
-            .help("Add Column Right")
+            .help(document.isLargeMode ? Text("Not available in large file mode.") : Text("Add Column Right"))
             .accessibilityLabel("Add Column Right")
             .accessibilityIdentifier("add-column")
+            .disabled(document.isLargeMode)
             .contextMenu {
                 Button("Add Column Left") {
                     document.addColumnLeftOfSelection()
@@ -277,7 +294,7 @@ private struct GridToolbar: View {
                 Label("Delete Selection", systemImage: "trash")
                     .labelStyle(.iconOnly)
             }
-            .help("Delete Selected Rows or Columns")
+            .help(document.isLargeMode ? Text("Not available in large file mode.") : Text("Delete Selected Rows or Columns"))
             .accessibilityLabel("Delete Selection")
             .accessibilityIdentifier("delete-selection")
             .disabled(!document.canDeleteSelection)

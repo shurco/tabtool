@@ -47,7 +47,7 @@ struct CSVGrid: NSViewRepresentable {
 
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard scrollView.documentView is CSVTableView,
-              let table = document.table else {
+              let table = document.rowSource else {
             return
         }
         context.coordinator.update(

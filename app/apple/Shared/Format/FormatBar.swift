@@ -135,6 +135,7 @@ struct FormatBar: View {
 struct DocumentStatusBar: View {
     let table: any RowSource
     let configuration: CSVConfiguration
+    var status = LargeStatus.none
 
     var body: some View {
         HStack {
@@ -149,6 +150,9 @@ struct DocumentStatusBar: View {
     }
 
     private var summary: String {
+        if case .indexing(let fraction) = status {
+            return LargeStatusText.indexing(fraction: fraction, rows: table.rowCount)
+        }
         let rows = table.rowCount
         let columns = table.columnCount
         let rowsText = rows == 1

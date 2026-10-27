@@ -1,4 +1,5 @@
 import AppKit
+import TabToolKit
 
 /// Bridges the document and the AppKit table view.
 ///
@@ -45,7 +46,7 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
 
     init(document: CSVDocument) {
         self.document = document
-        self.presenter = GridPresenter(table: document.table ?? .newDocument(),
+        self.presenter = GridPresenter(table: document.rowSource ?? CSVTable.newDocument(),
                                        configuration: document.configuration)
         super.init()
     }
@@ -172,6 +173,7 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
         guard let tableView else { return }
         self.presenter = presenter
         self.isEditable = isEditable
+        tableView.allowsColumnReordering = isEditable
 
         let previous = signature
         let current = TableSignature(presenter: presenter)
@@ -189,7 +191,13 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
                 updateHeaderTitles()
             }
             if previous.rowCount != current.rowCount {
-                tableView.reloadData()
+                // A file still being indexed only gains rows; reloading would
+                // reset the scroll position and the selection every tick.
+                if presenter.table is LargeCSVSource, current.rowCount > previous.rowCount {
+                    tableView.noteNumberOfRowsChanged()
+                } else {
+                    tableView.reloadData()
+                }
             } else {
                 updateVisibleCells()
             }

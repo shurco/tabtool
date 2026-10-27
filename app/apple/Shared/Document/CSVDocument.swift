@@ -22,6 +22,17 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     @Published private(set) var phase: DocumentPhase = .loading
     @Published var selection = GridSelection()
 
+    /// The memory-mapped rows of a large file. `table` stays nil in large mode,
+    /// which keeps every structural command disabled.
+    @Published private(set) var largeSource: LargeCSVSource?
+    @Published private(set) var largeStatus = LargeStatus.none
+
+    /// Whether this document opens its file through the memory-mapped path.
+    private(set) var isLargeMode = false
+
+    /// Keeps the sandbox grant for the mapped file alive.
+    private var largeAccess: SecurityScope?
+
     /// The active row sort, if any. Set by `applyChange(sort:)` and the
     /// sorting extension only; any other structural change clears it.
     @Published var activeSort: ActiveSort?
@@ -51,6 +62,8 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     private enum InitialContent {
         case newDocument
         case data(Data, configuration: CSVConfiguration?)
+        /// A file at or above the large file threshold; nothing is read until `load()`.
+        case largeFile
     }
     private var initialContent: InitialContent?
     let prefersChineseEncoding: Bool
@@ -109,7 +122,24 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         self.loader = CSVDocumentIO.load
     }
 
+    /// Creates a document that maps its file instead of reading it.
+    ///
+    /// The URL may arrive later through `setFileURL`.
+    nonisolated init(largeFileURL: URL?, prefersChineseEncoding: Bool = false) {
+        self.fileURL = largeFileURL
+        self.initialContent = .largeFile
+        self.isLargeMode = true
+        self.prefersChineseEncoding = prefersChineseEncoding
+        self.undoManager = nil
+        self.loader = CSVDocumentIO.load
+    }
+
     nonisolated convenience init(configuration: ReferenceFileDocument.ReadConfiguration) throws {
+        let size = (configuration.file.fileAttributes[FileAttributeKey.size.rawValue] as? NSNumber)?.int64Value ?? 0
+        if Self.usesLargeMode(forFileSize: size) {
+            self.init(largeFileURL: nil, prefersChineseEncoding: Self.systemPrefersChineseEncoding)
+            return
+        }
         guard let data = configuration.file.regularFileContents else {
             throw CSVError.cannotDecodeData
         }
@@ -196,10 +226,33 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
                 : .releaseAfterCompletedAttempt
             await performSharedLoad(data: data, configuration: configuration,
                                     initialContentPolicy: policy)
+        case .largeFile:
+            let task = Task { await self.openLargeFile(); return LoadResult.success }
+            loadTask = task
+            _ = await task.value
+            loadTask = nil
         case nil:
             await performSharedLoad(data: nil, configuration: self.configuration,
                                     initialContentPolicy: nil)
         }
+    }
+
+    /// Publishes the outcome of opening a large file.
+    ///
+    /// `table` stays nil; the phase is not refreshed because there is no table
+    /// to validate.
+    func publishLarge(source: LargeCSVSource?, configuration: CSVConfiguration,
+                      phase newPhase: DocumentPhase, access: SecurityScope?) {
+        largeSource = source
+        largeAccess = access
+        self.configuration = configuration
+        phase = newPhase
+        largeStatus = source.map { .indexing($0.indexingFraction) } ?? .none
+        mutationRevision &+= 1
+    }
+
+    func setLargeStatus(_ status: LargeStatus) {
+        if largeStatus != status { largeStatus = status }
     }
 
     /// How a load attempt treats the initializer's bytes.
