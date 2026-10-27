@@ -179,7 +179,8 @@ extension CSVDocument {
         var updated = table
         updated.moveColumn(from: from, to: to)
         applyChange(table: updated, configuration: configuration,
-                    includesUTF8BOM: hadUTF8BOM, actionName: "Move Column")
+                    includesUTF8BOM: hadUTF8BOM, actionName: "Move Column",
+                    sort: activeSort)
     }
 
     /// Converts numeric cells from the current mark to `mark` in place.

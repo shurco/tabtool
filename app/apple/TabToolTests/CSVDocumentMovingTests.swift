@@ -54,4 +54,26 @@ import TabToolKit
         doc.moveSelectedRows(by: 1)
         #expect(doc.activeSort == nil)
     }
+
+    @Test func columnMovesKeepTheSort() async {
+        let (doc, um) = await loaded("b,1\na,2\n")
+        doc.sortRows(column: 0, direction: .ascending)
+        let sort = doc.activeSort
+        #expect(sort != nil)
+
+        doc.moveColumn(from: 0, to: 1)
+        #expect(doc.activeSort == sort)
+        #expect(doc.canRemoveSort)
+
+        doc.selection = GridSelection(columns: [1])
+        doc.moveSelectedColumns(by: -1)
+        #expect(doc.activeSort == sort)
+
+        um.undo()
+        #expect(doc.activeSort == sort)
+        #expect(doc.table?.columns[0].cells == ["2", "1"])
+
+        doc.removeSort()
+        #expect(doc.table?.columns[1].cells == ["b", "a"])
+    }
 }

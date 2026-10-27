@@ -64,4 +64,17 @@ import TabToolKit
 
         #expect(header.contextMenu(forColumn: -1) == nil)
     }
+
+    @Test func indicatorFollowsAMovedSortedColumn() async {
+        let doc = await loaded("b,1\na,2\n")
+        let (coordinator, tableView, _) = GridTestSupport.makeGrid(doc)
+        doc.sortRows(column: 0, direction: .ascending)
+        doc.selection = GridSelection(columns: [0])
+        doc.moveSelectedColumns(by: 1)
+        GridTestSupport.update(coordinator, from: doc)
+
+        #expect(tableView.indicatorImage(in: tableView.tableColumns[0]) == nil)
+        #expect(tableView.indicatorImage(in: tableView.tableColumns[1])?.name()
+                == "NSAscendingSortIndicator")
+    }
 }

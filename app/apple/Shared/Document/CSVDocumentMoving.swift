@@ -23,7 +23,8 @@ extension CSVDocument {
         var updated = table
         updated.reorderColumns(order)
         applyChange(table: updated, configuration: configuration,
-                    includesUTF8BOM: hadUTF8BOM, actionName: "Move Columns")
+                    includesUTF8BOM: hadUTF8BOM, actionName: "Move Columns",
+                    sort: activeSort)
         selection = GridSelection(columns: shifted(selection.columns, by: offset))
     }
 
