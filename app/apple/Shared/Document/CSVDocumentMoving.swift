@@ -37,18 +37,19 @@ extension CSVDocument {
     }
 
     private func rowMoveOrder(by offset: Int) -> [Int]? {
-        guard let table, isEditableContent else { return nil }
-        return CSVReorder.shifted(
-            count: table.rowCount,
-            moving: selection.rows.intersection(IndexSet(0..<table.rowCount)), by: offset)
+        moveOrder(count: table?.rowCount ?? 0, selected: selection.rows, by: offset)
     }
 
     private func columnMoveOrder(by offset: Int) -> [Int]? {
-        guard let table, isEditableContent else { return nil }
-        return CSVReorder.shifted(
-            count: table.columns.count,
-            moving: selection.columns.intersection(IndexSet(0..<table.columns.count)),
-            by: offset)
+        moveOrder(count: table?.columns.count ?? 0, selected: selection.columns, by: offset)
+    }
+
+    /// The order that moves the valid part of `selected` by `offset`.
+    private func moveOrder(count: Int, selected: IndexSet, by offset: Int) -> [Int]? {
+        guard isEditableContent else { return nil }
+        return CSVReorder.shifted(count: count,
+                                  moving: selected.intersection(IndexSet(0..<count)),
+                                  by: offset)
     }
 
     private func shifted(_ indexes: IndexSet, by offset: Int) -> IndexSet {
