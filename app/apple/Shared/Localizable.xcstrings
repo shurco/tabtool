@@ -511,6 +511,26 @@
         }
       }
     },
+    "Move Row Down": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move Row Down"
+          }
+        }
+      }
+    },
+    "Move Row Up": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move Row Up"
+          }
+        }
+      }
+    },
     "None": {
       "localizations": {
         "en": {

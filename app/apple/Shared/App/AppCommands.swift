@@ -1,4 +1,5 @@
 import SwiftUI
+import TabToolKit
 
 /// App-wide menu commands that act on the focused document.
 struct AppCommands: Commands {
@@ -62,11 +63,59 @@ struct AppCommands: Commands {
                 document?.deleteSelectedColumns()
             }
             .disabled(!(document?.canDeleteSelectedColumns ?? false))
+
+            Divider()
+
+            Button("Sort Ascending") {
+                sortSelectedColumn(.ascending)
+            }
+            .disabled(!(document?.canSortSelection ?? false))
+
+            Button("Sort Descending") {
+                sortSelectedColumn(.descending)
+            }
+            .disabled(!(document?.canSortSelection ?? false))
+
+            Button("Remove Sort") {
+                document?.removeSort()
+            }
+            .disabled(!(document?.canRemoveSort ?? false))
+
+            Divider()
+
+            Button("Move Row Up") {
+                document?.moveSelectedRows(by: -1)
+            }
+            .keyboardShortcut(.upArrow, modifiers: [.command, .option])
+            .disabled(!(document?.canMoveSelectedRows(by: -1) ?? false))
+
+            Button("Move Row Down") {
+                document?.moveSelectedRows(by: 1)
+            }
+            .keyboardShortcut(.downArrow, modifiers: [.command, .option])
+            .disabled(!(document?.canMoveSelectedRows(by: 1) ?? false))
+
+            Button("Move Column Left") {
+                document?.moveSelectedColumns(by: -1)
+            }
+            .keyboardShortcut(.leftArrow, modifiers: [.command, .option])
+            .disabled(!(document?.canMoveSelectedColumns(by: -1) ?? false))
+
+            Button("Move Column Right") {
+                document?.moveSelectedColumns(by: 1)
+            }
+            .keyboardShortcut(.rightArrow, modifiers: [.command, .option])
+            .disabled(!(document?.canMoveSelectedColumns(by: 1) ?? false))
         }
 
         CommandGroup(after: .toolbar) {
             Toggle("Show Format Bar", isOn: $showFormatBar)
         }
+    }
+
+    private func sortSelectedColumn(_ direction: CSVSortDirection) {
+        guard let document, let column = document.selection.columns.first else { return }
+        document.sortRows(column: column, direction: direction)
     }
 
     private var isEditable: Bool {

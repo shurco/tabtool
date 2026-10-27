@@ -509,6 +509,65 @@ final class TabToolUITests: XCTestCase {
     }
 
     @MainActor
+    func testHeaderMenuSortsRows() throws {
+        let fixture = try makeFixture("pear,1\napple,2\nzebra,3\n",
+                                      name: "sort-fixture-\(UUID().uuidString).csv")
+        defer { try? FileManager.default.removeItem(at: fixture) }
+        let app = launchApp()
+        try openDocument(at: fixture)
+
+        let grid = app.tables["grid"]
+        XCTAssertTrue(grid.waitForExistence(timeout: 10))
+        let header = grid.buttons["A"]
+        XCTAssertTrue(header.waitForExistence(timeout: 5))
+        header.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).rightClick()
+        let sortDescending = app.menuItems["sortDescending:"]
+        XCTAssertTrue(sortDescending.waitForExistence(timeout: 5))
+        sortDescending.click()
+
+        let firstCell = grid.descendants(matching: .tableRow).element(boundBy: 0)
+            .textFields.element(boundBy: 0)
+        XCTAssertTrue(firstCell.waitForExistence(timeout: 5))
+        XCTAssertEqual(firstCell.value as? String, "zebra")
+    }
+
+    @MainActor
+    func testTableMenuMovesRowDown() {
+        let app = launchApp()
+        app.menuBars.menuItems["New"].click()
+        let grid = app.tables["grid"]
+        XCTAssertTrue(grid.waitForExistence(timeout: 5))
+
+        app.menuBars.menuBarItems["Table"].click()
+        app.menuItems["Add Row Below"].click()
+        let rows = grid.descendants(matching: .tableRow)
+        XCTAssertEqual(rows.count, 2)
+
+        NSPasteboard.general.clearContents()
+        XCTAssertTrue(NSPasteboard.general.setString("x", forType: .string))
+        rows.element(boundBy: 0).coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).click()
+        app.typeKey(.return, modifierFlags: [])
+        Thread.sleep(forTimeInterval: 0.5)
+        app.menuBars.menuItems["Paste"].click()
+        Thread.sleep(forTimeInterval: 0.5)
+        app.typeKey(.return, modifierFlags: [])
+
+        rows.element(boundBy: 0).coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).click()
+        app.menuBars.menuBarItems["Table"].click()
+        let moveDown = app.menuItems["Move Row Down"]
+        XCTAssertTrue(moveDown.waitForExistence(timeout: 5))
+        XCTAssertTrue(moveDown.isEnabled)
+        moveDown.click()
+
+        let moved = rows.element(boundBy: 1).textFields.element(boundBy: 0)
+        XCTAssertTrue(moved.waitForExistence(timeout: 5))
+        let showsX = NSPredicate(format: "value == %@", "x")
+        let wait = XCTWaiter().wait(
+            for: [XCTNSPredicateExpectation(predicate: showsX, object: moved)], timeout: 5)
+        XCTAssertEqual(wait, .completed, "row 1 shows \(moved.value as? String ?? "nil")")
+    }
+
+    @MainActor
     func testHeaderClickSelectsAColumn() {
         let app = launchApp()
         app.menuBars.menuItems["New"].click()
