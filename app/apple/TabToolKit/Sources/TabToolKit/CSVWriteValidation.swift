@@ -63,6 +63,15 @@ public enum CSVWriteValidation {
 
     private static func isAmbiguous(_ field: String,
                                     configuration: CSVConfiguration) -> Bool {
+        // A cheap byte scan clears almost every field: the first byte of the
+        // separator and the lead bytes of LF, CR, NEL, LS and PS are the only
+        // ways a field can contain one of them.
+        let separatorByte = configuration.columnSeparator.utf8.first
+        let mayBreak = field.utf8.contains {
+            $0 == separatorByte || $0 == 0x0A || $0 == 0x0D || $0 == 0xC2 || $0 == 0xE2
+        }
+        guard mayBreak else { return false }
+
         let separator = configuration.columnSeparator
         if !separator.isEmpty, field.contains(separator) {
             return true

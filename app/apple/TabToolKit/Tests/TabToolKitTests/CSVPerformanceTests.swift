@@ -173,4 +173,25 @@ final class CSVPerformanceTests: XCTestCase {
                        table.cell(row: 1, column: 0).replacingOccurrences(of: ".", with: ","))
         XCTAssertEqual(converted.cell(row: 1, column: 1), table.cell(row: 1, column: 1))
     }
+
+    /// Every edit re-validates the table; with quoting off that is a scan of
+    /// every cell for separators and line breaks.
+    func testValidatesLargeUnquotedTable() throws {
+        let unquoted = CSVConfiguration(quoteCharacter: "")
+        let data = makeBenchmarkCSV(rows: 5_000, cols: 20, quoted: false)
+        var parser = try CSVParser(data: data, configuration: unquoted)
+        let rows = try parser.readAll()
+        let table = CSVTable(rows: Array(rows.dropFirst()), headers: rows.first)
+        measure {
+            XCTAssertNil(CSVWriteValidation.issue(table: table, header: table.headers,
+                                                  configuration: unquoted))
+        }
+        var broken = table
+        broken.setCell("a,b", row: 4_999, column: 19)
+        XCTAssertEqual(CSVWriteValidation.issue(table: broken, header: nil,
+                                                configuration: unquoted), .ambiguousOutput)
+        broken.setCell("a\u{2028}b", row: 4_999, column: 19)
+        XCTAssertEqual(CSVWriteValidation.issue(table: broken, header: nil,
+                                                configuration: unquoted), .ambiguousOutput)
+    }
 }
