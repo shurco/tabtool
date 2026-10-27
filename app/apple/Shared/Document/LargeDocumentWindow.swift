@@ -32,8 +32,7 @@ final class LargeDocumentWindow: NSObject, NSWindowDelegate {
     private var changes: AnyCancellable?
     // `nonisolated(unsafe)` lets the nonisolated deinit remove them; they are
     // set once on the main actor.
-    nonisolated(unsafe) private var menuObserver: Any?
-    nonisolated(unsafe) private var keyMonitor: Any?
+    nonisolated(unsafe) private var menuObservers: [Any] = []
 
     init(window: NSWindow, document: CSVDocument, grid: NSView, ask: @escaping Ask = askToSave) {
         self.window = window
@@ -52,8 +51,7 @@ final class LargeDocumentWindow: NSObject, NSWindowDelegate {
     }
 
     deinit {
-        menuObserver.map(NotificationCenter.default.removeObserver)
-        keyMonitor.map(NSEvent.removeMonitor)
+        menuObservers.forEach(NotificationCenter.default.removeObserver)
     }
 
     /// Gives the window its own delegate back.
@@ -171,24 +169,31 @@ final class LargeDocumentWindow: NSObject, NSWindowDelegate {
         window.makeFirstResponder(grid)
     }
 
-    /// Focuses the grid before a Command-S key equivalent and when the menu
-    /// bar opens, wherever the focus was.
+    /// Focuses the grid when the menu bar opens, so its items validate against
+    /// the grid, and right before a menu sends Save, Save As or Duplicate.
+    /// The menu has already matched the key equivalent, so a shortcut typed
+    /// with any keyboard layout is covered. Menus post both notifications on
+    /// the main thread; `queue: nil` runs the blocks before the action is sent.
     private func observeSaveRequests() {
-        menuObserver = NotificationCenter.default.addObserver(
-            forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, self.window?.isKeyWindow == true else { return }
-                self.focusGrid()
-            }
-        }
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if let self, event.window === self.window, event.modifierFlags.contains(.command),
-               event.charactersIgnoringModifiers?.lowercased() == "s" {
-                self.focusGrid()
-            }
-            return event
-        }
+        let center = NotificationCenter.default
+        menuObservers = [
+            center.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: nil) {
+                [weak self] _ in
+                MainActor.assumeIsolated { self?.focusGridIfKey() }
+            },
+            center.addObserver(forName: NSMenu.willSendActionNotification, object: nil, queue: nil) {
+                [weak self] notification in
+                nonisolated(unsafe) let item = notification.userInfo?["MenuItem"] as? NSMenuItem
+                MainActor.assumeIsolated {
+                    guard let action = item?.action, CSVTableView.largeFileActions.contains(action) else { return }
+                    self?.focusGridIfKey()
+                }
+            },
+        ]
+    }
+
+    private func focusGridIfKey() {
+        if window?.isKeyWindow == true { focusGrid() }
     }
 
     private static func askToSave(_ window: NSWindow) async -> Decision {

@@ -12,6 +12,11 @@ private final class OriginalDelegate: NSObject, NSWindowDelegate {
     func windowDidResize(_ notification: Notification) { resizes += 1 }
 }
 
+/// A window that takes the keyboard, as the one the user types in.
+private final class KeyWindow: NSWindow {
+    override var isKeyWindow: Bool { true }
+}
+
 @Suite(.serialized) @MainActor struct LargeDocumentWindowTests {
     private func makeWindow() -> NSWindow {
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
@@ -113,6 +118,33 @@ private final class OriginalDelegate: NSObject, NSWindowDelegate {
 
         window.makeFirstResponder(other)
         session.focusGrid()
+        #expect(window.firstResponder === grid)
+    }
+
+    /// Command-S typed with a non-Latin layout (Russian gives "ы") still fires
+    /// File > Save, so Save must be routed by the menu action, not by the key.
+    @Test func saveMenuActionFocusesTheGridWhateverTheLayout() async throws {
+        let dir = LargeTestDirectory()
+        let document = try await open(dir)
+        let window = KeyWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                               styleMask: [.titled], backing: .buffered, defer: true)
+        window.isReleasedWhenClosed = false
+        let grid = NSTextView()
+        let other = NSTextView()
+        window.contentView?.addSubview(grid)
+        window.contentView?.addSubview(other)
+        let session = LargeDocumentWindow(window: window, document: document, grid: grid)
+        defer { session.detach() }
+        window.makeFirstResponder(other)
+
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        menu.addItem(withTitle: "Save", action: #selector(NSDocument.save(_:)), keyEquivalent: "s")
+        menu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+
+        menu.performActionForItem(at: 1)
+        #expect(window.firstResponder === other)
+        menu.performActionForItem(at: 0)
         #expect(window.firstResponder === grid)
     }
 

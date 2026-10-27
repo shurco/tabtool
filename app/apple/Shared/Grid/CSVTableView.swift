@@ -168,7 +168,7 @@ final class CSVTableView: NSTableView {
     // A large file saves by streaming, never through the system document, so
     // its grid answers Save, Save As and Duplicate. In memory these actions
     // still reach the system document.
-    nonisolated private static let largeFileActions: Set<Selector> = [
+    nonisolated static let largeFileActions: Set<Selector> = [
         #selector(NSDocument.save(_:)), #selector(NSDocument.saveAs(_:)), #selector(NSDocument.duplicate(_:)),
     ]
 
