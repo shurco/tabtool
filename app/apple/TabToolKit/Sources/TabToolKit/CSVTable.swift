@@ -199,6 +199,22 @@ public struct CSVTable: Sendable, Equatable {
         applyRowOrder(remaining)
     }
 
+    /// Reorders rows so result row `i` is current row `order[i]`.
+    ///
+    /// Input that is not a permutation of the row indexes is ignored.
+    public mutating func reorderRows(_ order: [Int]) {
+        guard CSVReorder.isPermutation(order, count: rowCount) else { return }
+        applyRowOrder(order)
+    }
+
+    /// Reorders columns so result column `i` is current column `order[i]`.
+    ///
+    /// Input that is not a permutation of the column indexes is ignored.
+    public mutating func reorderColumns(_ order: [Int]) {
+        guard CSVReorder.isPermutation(order, count: columns.count) else { return }
+        columns = order.map { columns[$0] }
+    }
+
     /// Rebuilds every column from a row-index order in one pass.
     private mutating func applyRowOrder(_ order: [Int]) {
         for columnIndex in columns.indices {
