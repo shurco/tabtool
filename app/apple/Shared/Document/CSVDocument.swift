@@ -12,7 +12,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     typealias Loader = @Sendable (Data?, URL?, CSVConfiguration?, Bool) -> CSVDocumentIO.LoadOutcome
 
     static var readableContentTypes: [UTType] {
-        [.commaSeparatedText, .tabSeparatedText, .plainText]
+        DroppedFiles.readableContentTypes
     }
 
     // A document may be created off the main actor, so the published state

@@ -44,6 +44,8 @@
             <key>CFBundleTypeExtensions</key>
             <array>
                 <string>txt</string>
+                <string>tab</string>
+                <string>dat</string>
             </array>
             <key>CFBundleTypeName</key>
             <string>Plain Text Document</string>

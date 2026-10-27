@@ -45,9 +45,9 @@ In `Info.plist`:
 |---|---|---|---|
 | CSV | `public.comma-separated-values-text` | Editor, Owner | `.csv` |
 | TSV | `public.tab-separated-values-text` | Editor, Owner | `.tsv` |
-| Plain text | `public.plain-text` | Editor, Alternate | `.txt` |
+| Plain text | `public.plain-text` | Editor, Alternate | `.txt`, `.tab`, `.dat` |
 
-Plain text is Alternate so the app does not intercept all text files. Arbitrary extensions are not opened.
+Plain text is Alternate so the app does not intercept all text files. Arbitrary extensions are not opened. Files dropped on a document window open as new documents only when the extension is one of the above (`DroppedFiles.tableExtensions`).
 
 ## Name, bundle ID, icon
 

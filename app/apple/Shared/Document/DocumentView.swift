@@ -46,6 +46,7 @@ struct DocumentView: View {
             }
         }
         .frame(minWidth: 640, minHeight: 400)
+        .opensDroppedTableFiles()
         .focusedSceneObject(document)
         .onAppear {
             document.setUndoManager(undoManager)
