@@ -22,15 +22,18 @@ enum CSVCellOrder {
         return .text(trimmed)
     }
 
-    /// Strict ordering; empty keys come last in both directions.
-    static func precedes(_ lhs: Key, _ rhs: Key, direction: CSVSortDirection) -> Bool {
+    /// Three-way ordering in `direction`; empty keys come last in both
+    /// directions and compare equal to each other.
+    static func compare(_ lhs: Key, _ rhs: Key, direction: CSVSortDirection) -> ComparisonResult {
         switch (lhs, rhs) {
-        case (.empty, _): return false
-        case (_, .empty): return true
+        case (.empty, .empty): return .orderedSame
+        case (.empty, _): return .orderedDescending
+        case (_, .empty): return .orderedAscending
         default:
             let result = ascendingResult(lhs, rhs)
-            return direction == .ascending ? result == .orderedAscending
-                                           : result == .orderedDescending
+            guard direction == .descending else { return result }
+            return result == .orderedAscending ? .orderedDescending
+                : result == .orderedDescending ? .orderedAscending : .orderedSame
         }
     }
 
@@ -59,9 +62,11 @@ extension CSVTable {
             CSVCellOrder.key(for: $0, decimalMark: decimalMark)
         }
         return keys.indices.sorted { lhs, rhs in
-            if CSVCellOrder.precedes(keys[lhs], keys[rhs], direction: direction) { return true }
-            if CSVCellOrder.precedes(keys[rhs], keys[lhs], direction: direction) { return false }
-            return lhs < rhs
+            switch CSVCellOrder.compare(keys[lhs], keys[rhs], direction: direction) {
+            case .orderedAscending: return true
+            case .orderedDescending: return false
+            case .orderedSame: return lhs < rhs
+            }
         }
     }
 }

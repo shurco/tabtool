@@ -125,4 +125,36 @@ final class CSVPerformanceTests: XCTestCase {
             XCTAssertEqual(try! reparsed.readAll(), rows)
         }
     }
+
+    /// Sorting text compares with `localizedStandardCompare`; each pair must
+    /// be compared once. Empties stay last and ties keep their row order.
+    func testSortsTextColumn() {
+        let rowCount = 20_000
+        var generator = SeededGenerator(seed: 7)
+        let cells = (0..<rowCount).map { row in
+            row % 50 == 0 ? "" : "text\(generator.next() % 5000)"
+        }
+        let table = CSVTable(columns: [CSVColumn(header: nil, cells: cells)])
+        for direction in [CSVSortDirection.ascending, .descending] {
+            var order: [Int] = []
+            if direction == .ascending {
+                measure {
+                    order = table.rowOrder(sortedByColumn: 0, direction: direction,
+                                           decimalMark: ".")
+                }
+            } else {
+                order = table.rowOrder(sortedByColumn: 0, direction: direction,
+                                       decimalMark: ".")
+            }
+            let sorted = order.map { cells[$0] }
+            XCTAssertEqual(sorted.suffix(rowCount / 50), Array(repeating: "", count: rowCount / 50))
+            let text = sorted.filter { !$0.isEmpty }
+            XCTAssertEqual(text, text.sorted {
+                direction == .ascending ? $0.localizedStandardCompare($1) == .orderedAscending
+                    : $0.localizedStandardCompare($1) == .orderedDescending
+            })
+            let equalRuns = zip(order, order.dropFirst()).filter { cells[$0] == cells[$1] }
+            XCTAssertTrue(equalRuns.allSatisfy { $0 < $1 })
+        }
+    }
 }
