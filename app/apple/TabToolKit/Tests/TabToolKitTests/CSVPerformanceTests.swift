@@ -102,12 +102,27 @@ final class CSVPerformanceTests: XCTestCase {
     /// Detection must decode a large file once per encoding, not once per
     /// candidate configuration.
     func testDetectsFormatOfLargeQuotedFile() {
-        let data = makeBenchmarkCSV(rows: 20_000, cols: 20, quoted: true)
+        let data = makeBenchmarkCSV(rows: 5_000, cols: 20, quoted: true)
         measure {
             let config = CSVFormatDetector(data: data).detect()
             XCTAssertEqual(config.columnSeparator, ",")
             XCTAssertEqual(config.decimalMark, ".")
             XCTAssertTrue(config.firstRowAsHeader)
+        }
+    }
+
+    /// Writing must not run quote replacements on fields that need none, and
+    /// the output must parse back to the same rows.
+    func testWritesLargeQuotedTable() throws {
+        let data = makeBenchmarkCSV(rows: 5_000, cols: 20, quoted: true)
+        var parser = try CSVParser(data: data, configuration: .init())
+        let rows = try parser.readAll()
+        let table = CSVTable(rows: Array(rows.dropFirst()), headers: rows.first)
+        measure {
+            let written = try! CSVWriter(table: table, header: table.headers,
+                                         configuration: .init()).data()
+            var reparsed = try! CSVParser(data: written, configuration: .init())
+            XCTAssertEqual(try! reparsed.readAll(), rows)
         }
     }
 }

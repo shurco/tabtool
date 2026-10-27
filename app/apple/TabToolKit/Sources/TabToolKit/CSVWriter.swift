@@ -109,6 +109,15 @@ public struct CSVWriter: Sendable {
         // stays literal, and a quote is prefixed with that escape. When the
         // quote is its own escape, the quote is doubled instead.
         let escape = configuration.escapeCharacter
+        // Scanning for the first byte of each marker is a cheap superset test;
+        // only a field that may contain one pays for the replacements.
+        let markers = [quote.utf8.first, escape.utf8.first]
+        if !field.utf8.contains(where: { markers.contains($0) }) {
+            text.append(quote)
+            text.append(field)
+            text.append(quote)
+            return
+        }
         var escaped = field
         if escape == quote {
             escaped = escaped.replacingOccurrences(of: quote, with: quote + quote)
