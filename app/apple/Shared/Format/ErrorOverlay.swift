@@ -18,16 +18,16 @@ struct ErrorOverlay: View {
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
 
-            Text(LocalizedStringKey(FormatErrorText.title(for: phase)))
+            Text(verbatim: FormatErrorText.title(for: phase))
                 .font(.title2.weight(.semibold))
                 .multilineTextAlignment(.center)
 
-            Text(LocalizedStringKey(FormatErrorText.message(for: phase)))
+            Text(verbatim: FormatErrorText.message(for: phase))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 460)
 
             if let hint = FormatErrorText.hint(for: phase) {
-                Text(LocalizedStringKey(hint))
+                Text(verbatim: hint)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -58,11 +58,11 @@ enum FormatErrorText {
     static func title(for phase: DocumentPhase) -> String {
         switch phase {
         case .readFailed:
-            return "The file could not be read"
+            return String(localized: "The file could not be read")
         case .unreadableFile:
-            return "The file could not be opened"
+            return String(localized: "The file could not be opened")
         default:
-            return "The document is not available"
+            return String(localized: "The document is not available")
         }
     }
 
@@ -71,9 +71,9 @@ enum FormatErrorText {
         case .readFailed(let error):
             return message(for: error)
         case .unreadableFile:
-            return "The file could not be read from disk."
+            return String(localized: "The file could not be read from disk.")
         default:
-            return "The document is not available."
+            return String(localized: "The document is not available.")
         }
     }
 
@@ -82,7 +82,7 @@ enum FormatErrorText {
         case .readFailed(let error):
             return hint(for: error)
         case .unreadableFile:
-            return "Check that the file still exists and that you have permission to open it."
+            return String(localized: "Check that the file still exists and that you have permission to open it.")
         default:
             return nil
         }
@@ -109,7 +109,7 @@ enum FormatErrorText {
             return hint(for: csvError)
         }
         if error as? DocumentError == .cannotReadFile {
-            return "Check that the file still exists and that you have permission to open it."
+            return String(localized: "Check that the file still exists and that you have permission to open it.")
         }
         return nil
     }
@@ -117,39 +117,39 @@ enum FormatErrorText {
     private static func message(for error: CSVError) -> String {
         switch error {
         case .cannotDecodeData:
-            return "The file is not valid text in the selected encoding."
+            return String(localized: "The file is not valid text in the selected encoding.")
         case .malformedQuotedField:
-            return "A quoted field is not closed or ends with an incomplete escape."
+            return String(localized: "A quoted field is not closed or ends with an incomplete escape.")
         case .quoteInUnquotedField:
-            return "A quote character appears inside an unquoted field."
+            return String(localized: "A quote character appears inside an unquoted field.")
         case .unencodableText:
-            return "The text cannot be represented in the selected encoding."
+            return String(localized: "The text cannot be represented in the selected encoding.")
         case .ambiguousOutput:
-            return "A cell contains the separator or a line break, but quotes are off."
+            return String(localized: "A cell contains the separator or a line break, but quotes are off.")
         }
     }
 
     private static func message(for error: DocumentError) -> String {
         switch error {
         case .notReady:
-            return "The document is still loading or could not be read."
+            return String(localized: "The document is still loading or could not be read.")
         case .requiresConfirmation:
-            return "The document changed while the operation was running. Try again."
+            return String(localized: "The document changed while the operation was running. Try again.")
         case .cannotReadFile:
-            return "The file could not be read from disk."
+            return String(localized: "The file could not be read from disk.")
         }
     }
 
     private static func hint(for error: CSVError) -> String? {
         switch error {
         case .cannotDecodeData:
-            return "Choose another encoding, or detect the format automatically."
+            return String(localized: "Choose another encoding, or detect the format automatically.")
         case .malformedQuotedField, .quoteInUnquotedField:
-            return "Check the quote style and escape character, or detect the format automatically."
+            return String(localized: "Check the quote style and escape character, or detect the format automatically.")
         case .unencodableText:
-            return "Choose an encoding that can represent the text."
+            return String(localized: "Choose an encoding that can represent the text.")
         case .ambiguousOutput:
-            return "Turn quotes on, or remove separators and line breaks from cells."
+            return String(localized: "Turn quotes on, or remove separators and line breaks from cells.")
         }
     }
 }

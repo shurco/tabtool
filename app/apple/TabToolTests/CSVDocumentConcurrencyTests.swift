@@ -70,6 +70,64 @@ import UniformTypeIdentifiers
         #expect(document.table?.cell(row: 0, column: 1) == "2")
     }
 
+    @Test(.timeLimit(.minutes(1))) @MainActor
+    func cancellingDuringLoadKeepsBytesAndReloads() async {
+        let data = Data("a,b\n1,2\n".utf8)
+        let starts = AsyncStream<Int>.makeStream()
+        let releaseFirstLoad = DispatchSemaphore(value: 0)
+        let calls = LoaderCallCounter()
+        let loader: CSVDocument.Loader = { data, fileURL, configuration, prefersChinese in
+            let call = calls.next()
+            starts.continuation.yield(call)
+            if call == 1 {
+                releaseFirstLoad.wait()
+            }
+            return CSVDocumentIO.load(data: data, fileURL: fileURL,
+                                      configuration: configuration,
+                                      prefersChineseEncoding: prefersChinese)
+        }
+        let document = CSVDocument(data: data, loader: loader)
+
+        let firstLoad = Task { await document.load() }
+        var startIterator = starts.stream.makeAsyncIterator()
+        let firstStart = await startIterator.next()
+        #expect(firstStart == 1)
+
+        // The window closes while the first parse is still in flight.
+        document.cancelLoading()
+        #expect(document.phase == .loading)
+        #expect(document.table == nil)
+
+        // A new load must start a fresh attempt instead of awaiting the
+        // cancelled one, and the supplied bytes must still be available.
+        await document.load()
+        #expect(document.phase == .ready)
+        #expect(document.table?.cell(row: 0, column: 1) == "2")
+
+        // Let the cancelled parse finish; it must not publish over the
+        // newer attempt or discard its result.
+        releaseFirstLoad.signal()
+        await firstLoad.value
+        #expect(calls.count == 2)
+        #expect(document.phase == .ready)
+        #expect(document.table?.cell(row: 0, column: 1) == "2")
+    }
+
+    @Test @MainActor func failedDataOnlyLoadKeepsSuppliedBytes() async {
+        let invalid = Data([0xFF, 0xFE, 0xFD])
+        let document = CSVDocument(data: invalid,
+                                   configuration: CSVConfiguration(encoding: .utf8))
+
+        await document.load()
+        #expect(document.phase == .readFailed(.cannotDecodeData))
+
+        // A data-only document has no file to re-read. Its supplied bytes
+        // must survive the failed attempt so a later load repeats the parse
+        // instead of reporting an unreadable file.
+        await document.load()
+        #expect(document.phase == .readFailed(.cannotDecodeData))
+    }
+
     @Test @MainActor func loadingANewDocumentIsIdempotent() async {
         let document = CSVDocument()
         await document.load()
@@ -203,5 +261,24 @@ import UniformTypeIdentifiers
         #expect(throws: CSVError.ambiguousOutput) {
             _ = try document.encodedData()
         }
+    }
+}
+
+/// Counts loader invocations from the detached parse tasks.
+private final class LoaderCallCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+
+    func next() -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        value += 1
+        return value
+    }
+
+    var count: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return value
     }
 }

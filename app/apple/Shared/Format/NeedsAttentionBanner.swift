@@ -20,9 +20,9 @@ struct NeedsAttentionBanner: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(LocalizedStringKey(title))
+                Text(verbatim: title)
                     .font(.callout.weight(.semibold))
-                Text(LocalizedStringKey(detail))
+                Text(verbatim: detail)
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
@@ -50,20 +50,18 @@ struct NeedsAttentionBanner: View {
     private var title: String {
         switch issue {
         case .unencodableText:
-            return "This document can’t be saved in its current encoding."
+            return String(localized: "This document can’t be saved in its current encoding.")
         case .ambiguousOutput:
-            return "This document can’t be saved with quotes off."
+            return String(localized: "This document can’t be saved with quotes off.")
         }
     }
 
     private var detail: String {
         switch issue {
         case .unencodableText:
-            return "Some text does not exist in the selected encoding. "
-                + "Choose another encoding, or undo the edit that added it."
+            return String(localized: "Some text does not exist in the selected encoding. Choose another encoding, or undo the edit that added it.")
         case .ambiguousOutput:
-            return "A cell contains the separator or a line break. "
-                + "Turn quotes on, or undo the edit that added it."
+            return String(localized: "A cell contains the separator or a line break. Turn quotes on, or undo the edit that added it.")
         }
     }
 }

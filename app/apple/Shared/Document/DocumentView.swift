@@ -82,7 +82,7 @@ struct DocumentView: View {
             Text("The table will be replaced with the last saved version from disk. The file itself is not changed.")
         }
         .alert(
-            LocalizedStringKey(formatAlert?.title ?? ""),
+            formatAlert?.title ?? LocalizedStringKey(""),
             isPresented: Binding(
                 get: { formatAlert != nil },
                 set: { isPresented in
@@ -95,7 +95,7 @@ struct DocumentView: View {
         ) { _ in
             Button("OK", role: .cancel) {}
         } message: { alert in
-            Text(alert.message)
+            Text(verbatim: alert.message)
         }
     }
 
@@ -191,8 +191,7 @@ struct DocumentView: View {
         } catch DocumentError.requiresConfirmation {
             formatAlert = FormatAlert(
                 title: "Re-read Interrupted",
-                message: "The document changed while it was being re-read, "
-                    + "so the new format was not applied. Try again."
+                message: String(localized: "The document changed while it was being re-read, so the new format was not applied. Try again.")
             )
         } catch {
             formatAlert = FormatAlert(
@@ -224,7 +223,7 @@ struct DocumentView: View {
 
 private struct FormatAlert: Identifiable {
     let id = UUID()
-    let title: String
+    let title: LocalizedStringKey
     let message: String
 }
 

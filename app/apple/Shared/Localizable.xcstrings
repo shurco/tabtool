@@ -381,6 +381,16 @@
         }
       }
     },
+    "Export…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export…"
+          }
+        }
+      }
+    },
     "Export Anyway": {
       "localizations": {
         "en": {

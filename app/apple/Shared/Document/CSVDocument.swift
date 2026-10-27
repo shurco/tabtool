@@ -7,6 +7,10 @@ import UniformTypeIdentifiers
 final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument, @unchecked Sendable {
     typealias Snapshot = CSVDocumentSnapshot
 
+    /// The parse operation used by a load. Production always uses
+    /// `CSVDocumentIO.load`; tests can suspend it to exercise cancellation.
+    typealias Loader = @Sendable (Data?, URL?, CSVConfiguration?, Bool) -> CSVDocumentIO.LoadOutcome
+
     static var readableContentTypes: [UTType] {
         [.commaSeparatedText, .tabSeparatedText, .plainText]
     }
@@ -33,10 +37,13 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// changed, so edits made while the re-read was parsing are not lost.
     private(set) var mutationRevision: UInt64 = 0
 
-    /// What the initializer supplied, consumed by the first `load()`.
+    /// What the initializer supplied, retained across cancelled attempts.
     ///
     /// Construction can run off the main actor, so an initializer stores plain
-    /// values only and the main actor builds the visible document state.
+    /// values only and the main actor builds the visible document state. A
+    /// data-only document (no file URL) has no other copy after its window
+    /// closes, so its bytes are kept until a parse succeeds; a file-backed
+    /// document releases them after a completed attempt and retries from disk.
     private enum InitialContent {
         case newDocument
         case data(Data, configuration: CSVConfiguration?)
@@ -44,19 +51,26 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     private var initialContent: InitialContent?
     let prefersChineseEncoding: Bool
     private var undoManager: UndoManager?
+    private let loader: Loader
 
     /// The load currently in flight, so overlapping `load()` calls share it.
-    private var loadTask: Task<Void, Never>?
+    private var loadTask: Task<LoadResult, Never>?
+
+    /// Identifies the current attempt. Cancelling or starting a new attempt
+    /// invalidates an older task's right to clear `loadTask`.
+    private var loadGeneration: UInt64 = 0
 
     /// Cancels the initial load when its document window goes away.
     ///
-    /// An unstarted file document keeps its supplied bytes: cancelling that
-    /// case would discard the only copy when the view had no URL yet. A load
-    /// that already started can be safely restarted from `fileURL` or the
-    /// file's current bytes when the window reopens.
+    /// The supplied bytes stay in `initialContent` until a load completes
+    /// without cancellation, so a data-only document can start a fresh parse
+    /// when the window reopens. The cancelled task is detached from
+    /// `loadTask` immediately; a later `load()` must not await it forever.
     func cancelLoading() {
-        guard table == nil, fileURL != nil || initialContent == nil else { return }
-        loadTask?.cancel()
+        guard table == nil, let task = loadTask else { return }
+        loadGeneration &+= 1
+        task.cancel()
+        loadTask = nil
     }
 
     /// Whether a file re-read is currently awaiting bytes or a parse.
@@ -67,11 +81,13 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// Runs off the main actor: it stores the bytes for the first main-actor
     /// `load()` instead of publishing document state.
     nonisolated init(data: Data, fileURL: URL? = nil, configuration: CSVConfiguration? = nil,
-                     prefersChineseEncoding: Bool = false, undoManager: UndoManager? = nil) {
+                     prefersChineseEncoding: Bool = false, undoManager: UndoManager? = nil,
+                     loader: @escaping Loader = CSVDocumentIO.load) {
         self.fileURL = fileURL
         self.initialContent = .data(data, configuration: configuration)
         self.prefersChineseEncoding = prefersChineseEncoding
         self.undoManager = undoManager
+        self.loader = loader
     }
 
     /// Creates a new document; `load()` materializes the table.
@@ -80,6 +96,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         self.initialContent = .newDocument
         self.prefersChineseEncoding = false
         self.undoManager = nil
+        self.loader = CSVDocumentIO.load
     }
 
     nonisolated convenience init(configuration: ReferenceFileDocument.ReadConfiguration) throws {
@@ -134,13 +151,16 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// Detects the format and parses the bytes off the main actor.
     ///
     /// A new document becomes a 3×1 ready table. A supplied configuration
-    /// skips detection. The initial bytes are used once; retrying after a read
-    /// failure reads the current file through `fileURL`. A loaded document is
-    /// a no-op. Overlapping calls await the same in-flight load instead of
-    /// racing over the initial content.
+    /// skips detection. Initial bytes stay available until an attempt
+    /// finishes without cancellation: a data-only document keeps them until
+    /// a parse succeeds, while a file-backed document releases them after a
+    /// failure and retries from `fileURL`. A loaded document is a no-op.
+    /// Overlapping calls await the same in-flight load instead of racing over
+    /// the initial content. A cancelled task is never awaited a second time:
+    /// the next call starts a fresh attempt.
     func load() async {
-        if let loadTask {
-            await loadTask.value
+        if let task = loadTask {
+            await task.value
             return
         }
         switch phase {
@@ -159,11 +179,34 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
             initialContent = nil
             materializeNewDocument()
         case .data(let data, let configuration):
-            initialContent = nil
-            await performSharedLoad(data: data, configuration: configuration)
+            // A data-only document has no other copy if its window closes.
+            // File-backed documents can safely retry from the file on disk.
+            let policy: InitialContentPolicy = fileURL == nil
+                ? .retainUntilSuccess
+                : .releaseAfterCompletedAttempt
+            await performSharedLoad(data: data, configuration: configuration,
+                                    initialContentPolicy: policy)
         case nil:
-            await performSharedLoad(data: nil, configuration: self.configuration)
+            await performSharedLoad(data: nil, configuration: self.configuration,
+                                    initialContentPolicy: nil)
         }
+    }
+
+    /// How a load attempt treats the initializer's bytes.
+    private enum InitialContentPolicy {
+        /// Keep bytes until a successful parse (data-only documents).
+        case retainUntilSuccess
+        /// Release after a successful or failed parse; the file URL is the
+        /// retry source. A cancelled attempt releases nothing.
+        case releaseAfterCompletedAttempt
+    }
+
+    /// The outcome of one parse attempt, used only to decide whether the
+    /// initial bytes can be released.
+    private enum LoadResult {
+        case success
+        case failure
+        case cancelled
     }
 
     /// Builds the table for a new document; `load()` is idempotent.
@@ -174,43 +217,64 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         refreshPhase()
     }
 
-    private func performSharedLoad(data: Data?, configuration: CSVConfiguration?) async {
+    private func performSharedLoad(data: Data?, configuration: CSVConfiguration?,
+                                   initialContentPolicy: InitialContentPolicy?) async {
+        loadGeneration &+= 1
+        let generation = loadGeneration
         let task = Task { await self.performLoad(data: data, configuration: configuration) }
         loadTask = task
-        await task.value
+        let result = await task.value
+
+        // A cancellation or a newer attempt already detached this task. It
+        // must not clear the newer attempt's task or its retained bytes.
+        guard generation == loadGeneration else { return }
         loadTask = nil
+
+        guard let initialContentPolicy else { return }
+        switch (initialContentPolicy, result) {
+        case (.retainUntilSuccess, .success),
+             (.releaseAfterCompletedAttempt, .success),
+             (.releaseAfterCompletedAttempt, .failure):
+            initialContent = nil
+        case (.retainUntilSuccess, .failure), (_, .cancelled):
+            break
+        }
     }
 
-    private func performLoad(data: Data?, configuration: CSVConfiguration?) async {
+    private func performLoad(data: Data?, configuration: CSVConfiguration?) async -> LoadResult {
         let fileURL = self.fileURL
         let prefersChinese = prefersChineseEncoding
+        let loader = self.loader
 
         let outcome = await Task.detached(priority: .userInitiated) {
-            CSVDocumentIO.load(data: data, fileURL: fileURL,
-                               configuration: configuration,
-                               prefersChineseEncoding: prefersChinese)
+            loader(data, fileURL, configuration, prefersChinese)
         }.value
 
         // The window may have closed while the bytes were parsed. Do not
         // publish a result into a document that is no longer visible.
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled else { return .cancelled }
         self.configuration = outcome.configuration
+        let result: LoadResult
         switch outcome.result {
         case .success(let parsed):
             table = parsed.table
             hadUTF8BOM = parsed.includesUTF8BOM
             phase = .ready
             refreshPhase()
+            result = .success
         case .failure(.csv(let error)):
             table = nil
             phase = .readFailed(error)
             refreshSnapshotCache()
+            result = .failure
         case .failure(.cannotReadFile):
             table = nil
             phase = .unreadableFile
             refreshSnapshotCache()
+            result = .failure
         }
         mutationRevision &+= 1
+        return result
     }
 
     /// Replaces table, configuration, and BOM as one undoable user change.

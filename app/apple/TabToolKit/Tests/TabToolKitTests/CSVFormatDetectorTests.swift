@@ -34,19 +34,18 @@ func detectsExpectedFormats(name: String, expected: ExpectedFormat) throws {
 }
 
 @Test(arguments: [
-    ("heuristic-comma-separated-people-1", true),
-    ("heuristic-comma-separated-people-2", true),
-    ("heuristic-comma-separated-places", true)
+    "heuristic-comma-separated-people-1",
+    "heuristic-comma-separated-people-2",
+    "heuristic-comma-separated-places"
 ])
-func peopleAndPlacesFixturesDetectCommaHeader(name: String,
-                                                      header: Bool) throws {
+func peopleAndPlacesFixturesDetectCommaHeader(name: String) throws {
     let config = CSVFormatDetector(data: try fixture(name)).detect()
     #expect(config.encoding == .utf8)
     #expect(config.columnSeparator == ",")
     #expect(config.decimalMark == ".")
     #expect(config.quoteCharacter == "\"")
     #expect(config.escapeCharacter == "\"")
-    #expect(config.firstRowAsHeader == header)
+    #expect(config.firstRowAsHeader)
 }
 
 @Test func emptyFirstRowCellMeansNoHeader() {
