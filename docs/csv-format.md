@@ -80,7 +80,7 @@ Typed errors: `cannotDecodeData`, `malformedQuotedField`, `quoteInUnquotedField`
 
 ## Sorting and moving
 
-- Sort Ascending and Sort Descending order the rows by one column. They are in the column header's context menu and in the Table menu (one column selected).
+- Sort Ascending and Sort Descending order the rows by one column. They are in the column header's context menu and in the Table menu (one column selected). Every column header also shows a sort arrow at its right edge; clicking it cycles that column through ascending, descending, and no sort without selecting the column.
 - Comparison: empty cells (including whitespace-only ones) go last in both directions; numbers are compared by value (using the document decimal mark) and come before text; surrounding whitespace is ignored when comparing; text uses natural order (`item2` before `item10`). Descending is the exact reverse of the non-empty cells, so text comes before numbers. Equal cells keep their current relative order in both directions.
 - Sorting rewrites the row order in the table, is a single undo step, and is saved like any other edit.
 - Remove Sort restores the row order from before the first sort, keeping any cell edits made in between.

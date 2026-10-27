@@ -121,11 +121,32 @@ import TabToolKit
         #expect(other.activeSort == nil)
     }
 
-    @Test func alreadySortedColumnSetsIndicatorWithoutUndo() async {
+    @Test func alreadySortedColumnSetsSortWithoutUndo() async {
         let (doc, um) = await loaded("a\nb\n")
         doc.sortRows(column: 0, direction: .ascending)
         #expect(doc.activeSort != nil)
         #expect(!um.canUndo)
+    }
+
+    @Test func cycleSortGoesAscendingDescendingThenRemoves() async {
+        let (doc, _) = await loaded("b\na\nc\n")
+        doc.cycleSort(column: 0)
+        #expect(doc.sortDirection(forColumn: 0) == .ascending)
+        #expect(column(doc, 0) == ["a", "b", "c"])
+        doc.cycleSort(column: 0)
+        #expect(doc.sortDirection(forColumn: 0) == .descending)
+        #expect(column(doc, 0) == ["c", "b", "a"])
+        doc.cycleSort(column: 0)
+        #expect(doc.activeSort == nil)
+        #expect(column(doc, 0) == ["b", "a", "c"])
+    }
+
+    @Test func cycleSortOnAnotherColumnStartsAscending() async {
+        let (doc, _) = await loaded("b,1\na,2\n")
+        doc.sortRows(column: 0, direction: .descending)
+        doc.cycleSort(column: 1)
+        #expect(doc.sortDirection(forColumn: 1) == .ascending)
+        #expect(doc.sortDirection(forColumn: 0) == nil)
     }
 
     @Test func sortCommitsTheFieldEditorFirst() async {

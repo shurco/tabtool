@@ -1,7 +1,7 @@
 import AppKit
 import TabToolKit
 
-/// The column header's context menu and sort indicator.
+/// The column header's context menu and sort arrows.
 extension CSVGridCoordinator {
     /// Builds the menu for a right click on `column`.
     func headerMenu(forColumn column: Int) -> NSMenu {
@@ -28,23 +28,11 @@ extension CSVGridCoordinator {
         return menu
     }
 
-    /// Shows the sort direction on the sorted column only.
-    func syncSortIndicator() {
-        guard let tableView else { return }
+    /// Points the header's sort arrows at the sorted column.
+    func syncSortArrows() {
         let sort = document.activeSort
-        let image = sort.flatMap {
-            NSImage(named: $0.direction == .ascending ? "NSAscendingSortIndicator"
-                                                       : "NSDescendingSortIndicator")
-        }
-        for (index, tableColumn) in tableView.tableColumns.enumerated() {
-            let isSorted = presenter.table.columns.indices.contains(index)
-                && presenter.table.columns[index].id == sort?.columnID
-            let target = isSorted ? image : nil
-            // Skip unchanged columns so a plain update does not repaint the header.
-            if tableView.indicatorImage(in: tableColumn)?.name() != target?.name() {
-                tableView.setIndicatorImage(target, in: tableColumn)
-            }
-        }
+        let column = presenter.table.columns.firstIndex { $0.id == sort?.columnID }
+        headerView?.setSort(column: column, direction: sort?.direction)
     }
 
     private func menuItem(_ title: String, _ action: Selector, enabled: Bool) -> NSMenuItem {

@@ -67,6 +67,10 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
         headerView?.onColumnClick = { [weak self] column, modifiers in
             self?.selectColumn(at: column, modifiers: modifiers)
         }
+        headerView?.onSortClick = { [weak self] column in
+            guard let self, isEditable else { return }
+            document.cycleSort(column: column)
+        }
         headerView?.menuProvider = { [weak self] column in
             self?.headerMenu(forColumn: column)
         }
@@ -193,7 +197,7 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
             applySelectionFromDocument()
         }
         syncSelectionDisplay()
-        syncSortIndicator()
+        syncSortArrows()
     }
 
     // MARK: - Data source

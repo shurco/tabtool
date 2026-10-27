@@ -18,7 +18,7 @@ extension CSVDocument {
     /// Sorts the rows by `column`, keeping the sort removable.
     ///
     /// A sort that leaves the rows unchanged records no undo step; the
-    /// indicator is still set.
+    /// sort arrow is still set.
     func sortRows(column: Int, direction: CSVSortDirection) {
         guard isEditableContent, let table = tableAfterEndingEditing(),
               table.columns.indices.contains(column) else { return }
@@ -50,6 +50,15 @@ extension CSVDocument {
         applyChange(table: restored, configuration: configuration,
                     includesUTF8BOM: hadUTF8BOM, actionName: "Remove Sort")
         activeSort = nil
+    }
+
+    /// Advances `column` through none, ascending, descending, none.
+    func cycleSort(column: Int) {
+        switch sortDirection(forColumn: column) {
+        case nil: sortRows(column: column, direction: .ascending)
+        case .ascending: sortRows(column: column, direction: .descending)
+        case .descending: removeSort()
+        }
     }
 
     /// The sort direction of `column` when it is the sorted column.
