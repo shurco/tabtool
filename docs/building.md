@@ -92,7 +92,7 @@ xcodebuild -project TabTool.xcodeproj -scheme TabTool \
   -destination 'platform=macOS' -only-testing:TabToolUITests test
 ```
 
-Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 115 core Swift Testing tests plus 4 XCTest performance tests, 126 app unit tests, and 14 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.
+Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 124 core Swift Testing tests plus 5 XCTest performance tests, 147 app unit tests, and 16 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.
 
 ## Signing and App Store
 
@@ -121,7 +121,7 @@ The automated suites cover parsing, writing, encoding, detection, document save/
 | Numbers | dot/comma decimal conversion, copy/paste | Core + app tests; Numbers/TextEdit interoperability manual |
 | Header | on/off detection, toggle, export header | Core + app tests |
 | Errors | empty file, blank lines, ragged rows, trailing fields, invalid quote/encoding, unencodable edit, ambiguous no-quote edit, failed re-read | Core + app tests; dialog text manual |
-| Editing | undo/redo of cell, edit, add/delete/move/paste/format; multi-row drag; column reorder | App tests; drag and focus manual |
+| Editing | undo/redo of cell, edit, add/delete/move/paste/format; multi-row drag; column reorder; sort (header and Table menu), remove sort, ⌥⌘ arrow row/column moves | App tests; drag and focus manual |
 | Files | open fixture, save, Save As, reopen, export/re-import | App tests for snapshots; panels manual |
 | Scale | 100k-row file loads, scrolls, edits, saves | Performance tests; GUI smoke manual |
 | Accessibility | VoiceOver reads the grid, toolbar, format bar, banner, and errors; full keyboard access reaches grid and format bar | Labels/identifiers committed; VoiceOver manual |

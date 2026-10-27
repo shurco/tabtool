@@ -245,6 +245,8 @@ Pure Swift 6, macOS 14+, no AppKit/SwiftUI, no dependencies.
 - `CSVWriter` — table + configuration → `String`/`Data`. Quoting, escape, and encoding-error rules are part of the writer contract.
 - `CSVFormatDetector` — 11 configurations, order, scores, encodings, Chinese preference; result `CSVConfiguration`.
 - `CSVTable` / `CSVColumn` — pure table model (see 6.3).
+- `CSVReorder` — index permutations: `shifted(count:moving:by:)` for one-step moves and the permutation check behind `CSVTable.reorderRows/reorderColumns`.
+- `CSVCellOrder` / `CSVSortDirection` — sort keys (number, text, empty) and `CSVTable.rowOrder(sortedByColumn:direction:decimalMark:)`; stable, empties last.
 - `CSVNumber` — numeric classification by decimal mark; shared by the parser, heuristic, alignment, and copying.
 - `CSVError` — typed errors.
 - `SupportedEncodings` — the list of 18 encodings and stable identifiers for the UI.
@@ -278,6 +280,7 @@ Invariants:
 - headers are separate from data;
 - row reorder/delete adds/removes values in all columns;
 - column reorder changes only the order of the array;
+- sorting is a pure row permutation: it only reorders cells within every column, never changes values or the row count, and the document can undo it exactly (`ActiveSort.sourceOrder`);
 - content equality ignores column IDs, but `applyChange` treats a changed ID order as a real mutation, so moving one of several identical columns still updates the model and undo.
 
 The parser builds the table from rows: `max(fields)` columns, short rows are padded with empty values. The header, if present, is extracted into `header`. The writer serializes the header first if `firstRowAsHeader`, then the rows in the visual column order.

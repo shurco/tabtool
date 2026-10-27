@@ -7,7 +7,7 @@ The project is in development. The public name, bundle ID, signing team, and App
 ## Features
 
 - Automatic detection of encoding, delimiter, quotes, escape character, decimal mark, and a first header row.
-- Editing cells, adding and removing rows and columns, reordering rows with drag & drop and columns by dragging the header.
+- Editing cells, adding and removing rows and columns, reordering rows with drag & drop and columns by dragging the header, sorting rows by a column (header menu or Table menu), and moving the selected rows or columns one step with `⌥⌘` arrows.
 - Copying and pasting rows/columns as TSV, undo/redo for cells, structure, paste, and format changes.
 - Saving and exporting with a different delimiter, encoding, quotes, decimal mark, and header.
 - CSV, TSV, and plain text formats; UTF-8/16/32, MacRoman, Windows Latin 1/2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, Japanese encodings.
@@ -66,7 +66,7 @@ cd app/apple/TabToolKit && swift test
 ./scripts/test --ui
 ```
 
-`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 115 core Swift Testing tests plus 4 performance tests, 126 app unit tests, and 14 UI tests. Details are in [docs/building.md](docs/building.md).
+`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 124 core Swift Testing tests plus 5 performance tests, 147 app unit tests, and 16 UI tests. Details are in [docs/building.md](docs/building.md).
 
 ## Documentation
 

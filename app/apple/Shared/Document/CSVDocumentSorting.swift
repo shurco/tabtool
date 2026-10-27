@@ -4,8 +4,9 @@ import TabToolKit
 /// The row sort currently applied to the table.
 ///
 /// `sourceOrder[i]` is the pre-sort index of current row `i`, so removing the
-/// sort is the inverse permutation. It stays valid only while the row
-/// structure is unchanged; every structural change clears it.
+/// sort is the inverse permutation. It stays valid while rows and column
+/// identities are unchanged, so column moves keep it; every other structural
+/// change clears it.
 struct ActiveSort: Equatable {
     let columnID: UUID
     let direction: CSVSortDirection
