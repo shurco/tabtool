@@ -42,8 +42,8 @@ func readsUnquotedRows(name: String, config: CSVConfiguration,
     #expect(rows.count == 6)
     #expect(rows[2] == [""])
     #expect(rows[3] == [""])
-    #expect(rows.first == ["1"])
-    #expect(rows.last == ["6"])
+    #expect(rows.first == ["10"])
+    #expect(rows.last == ["60"])
 }
 
 @Test func emptyInputReturnsOneEmptyRow() throws {
@@ -117,7 +117,7 @@ func malformedQuotedFixturesThrow(name: String, config: CSVConfiguration) throws
 @Test func doubledQuoteEscapeDecodesExactCells() throws {
     let data = try fixture("quote-quote-escape")
     let rows = try parseAll(data, .init())
-    #expect(rows == [["test\" test", "test"], ["1.2", "1,3"]])
+    #expect(rows == [["sample\" value", "sample"], ["2.4", "2,5"]])
     try #require(rows.count == 2)
     try #require(rows[1].count == 2)
     #expect(CSVNumber.isNumeric(rows[1][0], decimalMark: "."))
@@ -127,7 +127,7 @@ func malformedQuotedFixturesThrow(name: String, config: CSVConfiguration) throws
 @Test func backslashEscapeDecodesExactCells() throws {
     let data = try fixture("quote-backslash-escape")
     let rows = try parseAll(data, CSVConfiguration(escapeCharacter: "\\"))
-    #expect(rows == [["test\" test", "test"], ["1.2", "1,3"]])
+    #expect(rows == [["sample\" value", "sample"], ["2.4", "2,5"]])
 }
 
 @Test func noQuoteModeTreatsQuotesAsText() throws {
