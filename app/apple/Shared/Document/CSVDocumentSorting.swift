@@ -16,30 +16,23 @@ struct ActiveSort: Equatable {
 extension CSVDocument {
     /// Sorts the rows by `column`, keeping the sort removable.
     ///
-    /// Sorting by the column and direction that is already active does
-    /// nothing. A sort that leaves the rows unchanged only sets the indicator,
-    /// since the table did not change and there is nothing to undo.
+    /// A sort that leaves the rows unchanged records no undo step; the
+    /// indicator is still set.
     func sortRows(column: Int, direction: CSVSortDirection) {
         guard isEditableContent, let table = tableAfterEndingEditing(),
               table.columns.indices.contains(column) else { return }
 
-        let columnID = table.columns[column].id
-        if activeSort?.columnID == columnID, activeSort?.direction == direction { return }
-
         let order = table.rowOrder(sortedByColumn: column, direction: direction,
                                    decimalMark: configuration.decimalMark)
         let previousSource = activeSort?.sourceOrder ?? Array(0..<table.rowCount)
-        let sort = ActiveSort(columnID: columnID, direction: direction,
-                              sourceOrder: order.map { previousSource[$0] })
+        let newSort = ActiveSort(columnID: table.columns[column].id, direction: direction,
+                                 sourceOrder: order.map { previousSource[$0] })
 
-        if order == Array(0..<table.rowCount) {
-            activeSort = sort
-        } else {
-            var sorted = table
-            sorted.reorderRows(order)
-            applyChange(table: sorted, configuration: configuration,
-                        includesUTF8BOM: hadUTF8BOM, actionName: "Sort Rows", sort: sort)
-        }
+        var sorted = table
+        sorted.reorderRows(order)
+        applyChange(table: sorted, configuration: configuration,
+                    includesUTF8BOM: hadUTF8BOM, actionName: "Sort Rows", sort: newSort)
+        activeSort = newSort
         selection = GridSelection(columns: [column])
     }
 
@@ -51,14 +44,11 @@ extension CSVDocument {
         var inverse = Array(repeating: 0, count: sort.sourceOrder.count)
         for (current, source) in sort.sourceOrder.enumerated() { inverse[source] = current }
 
-        if inverse == Array(0..<inverse.count) {
-            activeSort = nil
-            return
-        }
         var restored = table
         restored.reorderRows(inverse)
         applyChange(table: restored, configuration: configuration,
                     includesUTF8BOM: hadUTF8BOM, actionName: "Remove Sort")
+        activeSort = nil
     }
 
     /// The sort direction of `column` when it is the sorted column.

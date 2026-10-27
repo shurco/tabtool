@@ -64,6 +64,51 @@ import TabToolKit
         #expect(column(doc, 1) == ["1", "z"])
     }
 
+    @Test func removeSortClearsStateWhenRowsLookIdentical() async {
+        let (doc, _) = await loaded("b\na\n")
+        doc.sortRows(column: 0, direction: .ascending)
+        doc.setCell("b", row: 0, column: 0)
+        doc.removeSort()
+        #expect(doc.activeSort == nil)
+        #expect(!doc.canRemoveSort)
+    }
+
+    @Test func resortingSameDirectionAfterEditReordersAndKeepsSource() async {
+        let (doc, _) = await loaded("b\na\nc\n")
+        doc.sortRows(column: 0, direction: .ascending)
+        doc.setCell("z", row: 0, column: 0)
+        doc.sortRows(column: 0, direction: .ascending)
+        #expect(column(doc, 0) == ["b", "c", "z"])
+
+        doc.removeSort()
+        #expect(column(doc, 0) == ["b", "z", "c"])
+    }
+
+    @Test func sortingAnotherColumnComposesAndRemoveSortRestoresOriginal() async {
+        let (doc, _) = await loaded("b,2\na,3\nc,1\n")
+        doc.sortRows(column: 0, direction: .ascending)
+        doc.sortRows(column: 1, direction: .ascending)
+        #expect(column(doc, 1) == ["1", "2", "3"])
+
+        doc.removeSort()
+        #expect(column(doc, 0) == ["b", "a", "c"])
+        #expect(doc.activeSort == nil)
+    }
+
+    @Test func removeSortUndoAndRedo() async {
+        let (doc, um) = await loaded("b\na\nc\n")
+        doc.sortRows(column: 0, direction: .ascending)
+        doc.removeSort()
+
+        um.undo()
+        #expect(column(doc, 0) == ["a", "b", "c"])
+        #expect(doc.activeSort?.direction == .ascending)
+
+        um.redo()
+        #expect(column(doc, 0) == ["b", "a", "c"])
+        #expect(doc.activeSort == nil)
+    }
+
     @Test func structuralChangeClearsSort() async {
         let (doc, _) = await loaded("b\na\n")
         doc.sortRows(column: 0, direction: .ascending)

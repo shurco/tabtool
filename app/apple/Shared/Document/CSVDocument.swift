@@ -268,7 +268,6 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         switch outcome.result {
         case .success(let parsed):
             table = parsed.table
-            activeSort = nil
             hadUTF8BOM = parsed.includesUTF8BOM
             phase = .ready
             refreshPhase()
