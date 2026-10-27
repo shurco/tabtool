@@ -81,11 +81,11 @@ Typed errors: `cannotDecodeData`, `malformedQuotedField`, `quoteInUnquotedField`
 ## Sorting and moving
 
 - Sort Ascending and Sort Descending order the rows by one column. They are in the column header's context menu and in the Table menu (one column selected).
-- Comparison: empty cells (including whitespace-only ones) go last in both directions; numbers are compared by value (using the document decimal mark) and come before text; text uses natural order (`item2` before `item10`). Descending is the exact reverse of the non-empty cells, so text comes before numbers. Equal cells keep their current relative order in both directions.
+- Comparison: empty cells (including whitespace-only ones) go last in both directions; numbers are compared by value (using the document decimal mark) and come before text; surrounding whitespace is ignored when comparing; text uses natural order (`item2` before `item10`). Descending is the exact reverse of the non-empty cells, so text comes before numbers. Equal cells keep their current relative order in both directions.
 - Sorting rewrites the row order in the table, is a single undo step, and is saved like any other edit.
 - Remove Sort restores the row order from before the first sort, keeping any cell edits made in between.
 - Repeating a sort always recomputes the order, so Sort Ascending after editing cells re-sorts. If the order does not change, no undo step is recorded.
-- Column moves (header drag, Move Column Left/Right) keep the sort. Every other change clears it: moving, adding, deleting, or pasting rows; adding, deleting, or pasting columns; format changes (such as the decimal mark); toggling the header; and re-reading the file.
+- Column moves (header drag, Move Column Left/Right) keep the sort. Every other structural or format change clears it (cell edits keep it): moving, adding, deleting, or pasting rows; adding, deleting, or pasting columns; format changes (such as the decimal mark); toggling the header; and re-reading the file.
 - Move Row Up/Down and Move Column Left/Right (`⌥⌘` + arrow) move the selection one step, keeping gaps between selected items, and are disabled when the selection touches the edge.
 
 ## Limitations

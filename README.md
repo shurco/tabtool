@@ -66,7 +66,7 @@ cd app/apple/TabToolKit && swift test
 ./scripts/test --ui
 ```
 
-`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 124 core Swift Testing tests plus 5 performance tests, 147 app unit tests, and 16 UI tests. Details are in [docs/building.md](docs/building.md).
+`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 125 core Swift Testing tests plus 5 performance tests, 147 app unit tests, and 16 UI tests. Details are in [docs/building.md](docs/building.md).
 
 ## Documentation
 

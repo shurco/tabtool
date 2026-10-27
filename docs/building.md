@@ -92,7 +92,7 @@ xcodebuild -project TabTool.xcodeproj -scheme TabTool \
   -destination 'platform=macOS' -only-testing:TabToolUITests test
 ```
 
-Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 124 core Swift Testing tests plus 5 XCTest performance tests, 147 app unit tests, and 16 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.
+Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 125 core Swift Testing tests plus 5 XCTest performance tests, 147 app unit tests, and 16 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.
 
 ## Signing and App Store
 

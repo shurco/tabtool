@@ -280,7 +280,7 @@ Invariants:
 - headers are separate from data;
 - row reorder/delete adds/removes values in all columns;
 - column reorder changes only the order of the array;
-- sorting is a pure row permutation: it only reorders cells within every column, never changes values or the row count, and the document can undo it exactly (`ActiveSort.sourceOrder`);
+- sorting is a pure row permutation: it only reorders cells within every column, never changes values or the row count, undo restores a snapshot, and Remove Sort inverts the permutation through the recorded source order (`ActiveSort.sourceOrder`);
 - content equality ignores column IDs, but `applyChange` treats a changed ID order as a real mutation, so moving one of several identical columns still updates the model and undo.
 
 The parser builds the table from rows: `max(fields)` columns, short rows are padded with empty values. The header, if present, is extracted into `header`. The writer serializes the header first if `firstRowAsHeader`, then the rows in the visual column order.
