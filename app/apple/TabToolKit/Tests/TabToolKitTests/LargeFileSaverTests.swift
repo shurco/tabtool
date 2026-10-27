@@ -210,4 +210,17 @@ private func bytes(_ text: String) -> [UInt8] { Array(text.utf8) }
                                     availableCapacity: { _ in 1 << 40 }, progress: { _ in })
         }
     }
+
+    @Test func truncationDuringTheCopyFailsTheSave() throws {
+        let dir = TempDirectory()
+        let source = try makeSource(bytes((0..<2000).map { "row\($0),v" }.joined(separator: "\n")), dir)
+        let url = dir.url.appendingPathComponent("source.csv")
+        let output = dir.url.appendingPathComponent("out.csv")
+        #expect(throws: LargeFileSaveError.sourceChanged) {
+            try LargeFileSaver.write(source.saveSnapshot(), to: output, bufferBytes: 1024) { _ in
+                try? FileHandle(forWritingTo: url).truncate(atOffset: 10)
+            }
+        }
+        #expect(!FileManager.default.fileExists(atPath: output.path))
+    }
 }

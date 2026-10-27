@@ -75,25 +75,28 @@ public final class MappedFile: @unchecked Sendable {
         return try body(UnsafeRawBufferPointer(start: base + lower, count: upper - lower))
     }
 
-    /// Calls `body` with the bytes of `range`, clamped to the file, through a
-    /// temporary mapping of just that range.
+    /// Reads the bytes of `range`, clamped to the file, into `buffer` and
+    /// calls `body` with the bytes read; fewer than asked when the file was
+    /// truncated meanwhile. `buffer` grows as needed and can be reused.
     ///
-    /// Pages read through the long-lived mapping stay resident, and `madvise`
-    /// does not release them on macOS. Unmapping the window does, so a scan of
-    /// a multi-gigabyte file keeps a small resident size.
-    public func withWindow<R>(_ range: Range<Int>,
-                              _ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
+    /// For sequential scans: walking a mapping faults pages in one by one
+    /// (about 0.7 GB/s measured) and keeps them resident, while `pread` runs
+    /// at 4-9 GB/s, holds only `buffer` and never faults on a truncated file.
+    public func read<R>(_ range: Range<Int>, into buffer: inout [UInt8],
+                        _ body: (UnsafeRawBufferPointer) throws -> R) rethrows -> R {
         let lower = min(max(range.lowerBound, 0), size)
-        let upper = min(max(range.upperBound, lower), size)
-        let aligned = lower / Int(getpagesize()) * Int(getpagesize())
-        guard upper > lower,
-              let window = mmap(nil, upper - aligned, PROT_READ, MAP_PRIVATE, descriptor, off_t(aligned)),
-              window != MAP_FAILED else {
-            return try withBytes(range, body)
+        let wanted = min(max(range.upperBound, lower), size) - lower
+        if buffer.count < wanted { buffer = [UInt8](repeating: 0, count: wanted) }
+        return try buffer.withUnsafeMutableBytes { storage in
+            var done = 0
+            while done < wanted {
+                let count = pread(descriptor, storage.baseAddress! + done, wanted - done, off_t(lower + done))
+                if count < 0 && errno == EINTR { continue }
+                guard count > 0 else { break }
+                done += count
+            }
+            return try body(UnsafeRawBufferPointer(rebasing: storage[..<done]))
         }
-        defer { munmap(window, upper - aligned) }
-        madvise(window, upper - aligned, MADV_SEQUENTIAL)
-        return try body(UnsafeRawBufferPointer(start: window + (lower - aligned), count: upper - lower))
     }
 
     /// Whether the mapped bytes can still be read: the open file was neither

@@ -49,20 +49,31 @@ private func bytes(_ file: MappedFile, _ range: Range<Int>) -> [UInt8] {
         #expect(bytes(file, 50..<60).isEmpty)
     }
 
-    @Test func windowReadsTheSameBytesAsTheMapping() throws {
+    @Test func readGivesTheSameBytesAsTheMapping() throws {
         let dir = TempDirectory()
         let content = (0..<20_000).map { UInt8($0 % 251) }
         let file = try MappedFile(url: dir.file("a.csv", content))
+        var buffer: [UInt8] = []
         for range in [0..<20_000, 5_000..<13_001, 4_096..<8_192, 19_990..<20_500, 30_000..<31_000, 7..<7] {
             let expected = file.withBytes(range) { Array($0) }
-            #expect(file.withWindow(range) { Array($0) } == expected)
+            #expect(file.read(range, into: &buffer) { Array($0) } == expected)
         }
     }
 
-    @Test func windowOfAnEmptyFileIsEmpty() throws {
+    @Test func readOfAnEmptyFileIsEmpty() throws {
         let dir = TempDirectory()
         let file = try MappedFile(url: dir.file("e.csv", []))
-        #expect(file.withWindow(0..<10) { Array($0) }.isEmpty)
+        var buffer: [UInt8] = []
+        #expect(file.read(0..<10, into: &buffer) { Array($0) }.isEmpty)
+    }
+
+    @Test func readStopsAtATruncatedEnd() throws {
+        let dir = TempDirectory()
+        let url = try dir.file("a.csv", Array(repeating: 7, count: 20_000))
+        let file = try MappedFile(url: url)
+        try FileHandle(forWritingTo: url).truncate(atOffset: 100)
+        var buffer: [UInt8] = []
+        #expect(file.read(0..<20_000, into: &buffer) { $0.count } == 100)
     }
 
     @Test func detectsUnchanged() throws {

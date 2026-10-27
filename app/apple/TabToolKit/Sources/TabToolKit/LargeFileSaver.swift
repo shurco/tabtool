@@ -84,6 +84,7 @@ public enum LargeFileSaver {
         let file = snapshot.file
         var cursor = 0
         var written = 0
+        var buffer: [UInt8] = []
 
         func emit(_ data: Data) throws {
             try data.withUnsafeBytes { try writeAll($0, to: descriptor) }
@@ -93,7 +94,10 @@ public enum LargeFileSaver {
             while cursor < end {
                 try Task.checkCancellation()
                 let range = cursor..<min(cursor + bufferBytes, end)
-                try file.withWindow(range) { try writeAll($0, to: descriptor) }
+                try file.read(range, into: &buffer) { bytes in
+                    guard bytes.count == range.count else { throw LargeFileSaveError.sourceChanged }
+                    try writeAll(bytes, to: descriptor)
+                }
                 written += range.count
                 cursor = range.upperBound
                 progress(Double(cursor) / Double(max(file.size, 1)))

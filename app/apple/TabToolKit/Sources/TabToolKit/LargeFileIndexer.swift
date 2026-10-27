@@ -10,10 +10,9 @@ public struct IndexProgress: Sendable {
 
 /// Scans a mapped file on a background queue and publishes the growing `RowIndex`.
 ///
-/// The file is read in steps of `stepBytes`. After every step the index so far
-/// is available through `snapshot`, so a reader can show the first rows while
-/// the scan continues. Each step is read through a temporary window mapping,
-/// which keeps the resident size bounded.
+/// The file is read in steps of `stepBytes` into one reused buffer. After
+/// every step the index so far is available through `snapshot`, so a reader
+/// can show the first rows while the scan continues.
 public final class LargeFileIndexer: @unchecked Sendable {
     private let file: MappedFile
     private let configuration: CSVConfiguration
@@ -29,7 +28,7 @@ public final class LargeFileIndexer: @unchecked Sendable {
     private var started = false
 
     public init(file: MappedFile, configuration: CSVConfiguration,
-                stepBytes: Int = 64 << 20, progressInterval: TimeInterval = 0.1) {
+                stepBytes: Int = 8 << 20, progressInterval: TimeInterval = 0.1) {
         self.file = file
         self.configuration = configuration
         self.stepBytes = max(stepBytes, 1)
@@ -73,13 +72,14 @@ public final class LargeFileIndexer: @unchecked Sendable {
         // into `published`. Sharing the whole growing array with `published`
         // made every step copy it, and the freed copies stayed with malloc.
         var index = RowIndex()
+        var buffer: [UInt8] = []
         var offset = 0
         var lastReport: Date?
         repeat {
             if locked({ cancelled }) { return }
             let end = min(offset + stepBytes, file.size)
             let isLast = end == file.size
-            file.withWindow(offset..<end) {
+            file.read(offset..<end, into: &buffer) {
                 scanner.scan($0, base: offset, into: &index, final: isLast)
             }
             offset = end
