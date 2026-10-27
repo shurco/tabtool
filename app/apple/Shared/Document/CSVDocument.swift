@@ -21,6 +21,10 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     @Published private(set) var configuration = CSVConfiguration()
     @Published private(set) var phase: DocumentPhase = .loading
     @Published var selection = GridSelection()
+
+    /// The active row sort, if any. Set by `applyChange(sort:)` and the
+    /// sorting extension only; any other structural change clears it.
+    @Published var activeSort: ActiveSort?
     private(set) var fileURL: URL?
 
     /// Whether the loaded bytes began with a UTF-8 BOM. Captured in every
@@ -264,6 +268,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         switch outcome.result {
         case .success(let parsed):
             table = parsed.table
+            activeSort = nil
             hadUTF8BOM = parsed.includesUTF8BOM
             phase = .ready
             refreshPhase()
@@ -303,8 +308,10 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     func applyChange(table newTable: CSVTable,
                      configuration newConfiguration: CSVConfiguration,
                      includesUTF8BOM newIncludesUTF8BOM: Bool,
-                     actionName: String) {
+                     actionName: String,
+                     sort newSort: ActiveSort? = nil) {
         endEditing()
+        let previousSort = activeSort
         let previous = table.map { current in
             CSVDocumentSnapshot(table: current, configuration: configuration,
                                 includesUTF8BOM: hadUTF8BOM)
@@ -320,6 +327,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         table = newTable
         configuration = newConfiguration
         hadUTF8BOM = newIncludesUTF8BOM
+        activeSort = newSort
         validateSelection()
         phase = .ready
         refreshPhase()
@@ -327,7 +335,8 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
 
         if let previous {
             registerAction(actionName) { document in
-                document.restore(snapshot: previous, actionName: actionName)
+                document.restore(snapshot: previous, sort: previousSort,
+                                 actionName: actionName)
             }
         }
     }
@@ -369,21 +378,25 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     }
 
     /// Restores a snapshot and registers the inverse so redo works.
-    private func restore(snapshot: CSVDocumentSnapshot, actionName: String) {
+    private func restore(snapshot: CSVDocumentSnapshot, sort: ActiveSort?,
+                         actionName: String) {
         endEditing()
         guard let currentTable = table else { return }
+        let currentSort = activeSort
         let previous = CSVDocumentSnapshot(table: currentTable,
                                            configuration: configuration,
                                            includesUTF8BOM: hadUTF8BOM)
         table = snapshot.table
         configuration = snapshot.configuration
         hadUTF8BOM = snapshot.includesUTF8BOM
+        activeSort = sort
         validateSelection()
         phase = .ready
         refreshPhase()
         mutationRevision &+= 1
         registerAction(actionName) { document in
-            document.restore(snapshot: previous, actionName: actionName)
+            document.restore(snapshot: previous, sort: currentSort,
+                             actionName: actionName)
         }
     }
 
