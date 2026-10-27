@@ -195,13 +195,9 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
                 updateHeaderTitles()
             }
             if previous.rowCount != current.rowCount {
-                // A file still being indexed only gains rows; reloading would
-                // reset the scroll position and the selection every tick.
-                if presenter.table is LargeCSVSource, current.rowCount > previous.rowCount {
-                    tableView.noteNumberOfRowsChanged()
-                } else {
-                    tableView.reloadData()
-                }
+                // Not noteNumberOfRowsChanged(): AppKit records an update item
+                // per added row, megabytes per tick while a large file is indexed.
+                tableView.reloadData()
             } else {
                 updateVisibleCells()
             }

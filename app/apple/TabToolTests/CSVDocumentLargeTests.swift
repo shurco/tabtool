@@ -118,6 +118,43 @@ func waitForIndexing(of document: CSVDocument) async throws {
         }
     }
 
+    /// Rows arriving from the indexer keep the scroll position and the selection.
+    @Test func growingRowCountKeepsScrollAndSelection() async throws {
+        let dir = LargeTestDirectory()
+        let file = try MappedFile(url: dir.csv(rows: 20_000))
+        func source(upToStep stop: Bool, columnIDs: [UUID] = []) -> LargeCSVSource {
+            let indexer = LargeFileIndexer(file: file, configuration: CSVConfiguration(), stepBytes: 65_536,
+                                           progressInterval: 0)
+            indexer.start { _ in if stop { indexer.cancel() } }
+            indexer.wait()
+            return LargeCSVSource(file: file, configuration: CSVConfiguration(), indexer: indexer,
+                                  columnIDs: columnIDs)
+        }
+        let partial = source(upToStep: true)
+        let full = source(upToStep: false, columnIDs: partial.columnIDs)
+        #expect(partial.rowCount < full.rowCount)
+
+        let document = await GridTestSupport.makeLoadedNewDocument()
+        let (coordinator, tableView, _) = GridTestSupport.makeGrid(document)
+        let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 600, height: 200))
+        scrollView.documentView = tableView
+        withExtendedLifetime(coordinator) {
+            coordinator.update(presenter: GridPresenter(table: partial, configuration: CSVConfiguration()),
+                               isEditable: false)
+            let selected = IndexSet(integer: partial.rowCount - 2)
+            tableView.selectRowIndexes(selected, byExtendingSelection: false)
+            tableView.scrollRowToVisible(partial.rowCount - 1)
+            let origin = scrollView.contentView.bounds.origin
+            #expect(origin.y > 0)
+
+            coordinator.update(presenter: GridPresenter(table: full, configuration: CSVConfiguration()),
+                               isEditable: false)
+            #expect(tableView.numberOfRows == full.rowCount)
+            #expect(scrollView.contentView.bounds.origin == origin)
+            #expect(tableView.selectedRowIndexes == selected)
+        }
+    }
+
     @Test func statusTextShowsIndexingProgress() {
         let text = LargeStatusText.indexing(fraction: 0.376, rows: 12_345_678)
         #expect(text.hasPrefix("Indexing… 37%"))
