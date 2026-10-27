@@ -14,7 +14,7 @@ import AppKit
 /// Clipboard actions and drag/column reorder live in focused extensions.
 @MainActor
 final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate,
-                                NSTextFieldDelegate {
+                                NSTextFieldDelegate, DocumentEditingSession {
     let document: CSVDocument
     private(set) weak var tableView: CSVTableView?
     private(set) var presenter: GridPresenter
@@ -29,6 +29,13 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
     /// True while applying a column order, to ignore echoed notifications.
     var isSyncingColumns = false
     private var columnWidths: [UUID: CGFloat] = [:]
+    /// Local key monitor that commits the field editor before Save/close.
+    ///
+    /// `nonisolated(unsafe)` lets the nonisolated deinit remove the monitor.
+    /// Installation and all other access stay on the main actor.
+    nonisolated(unsafe) private var keyMonitor: Any?
+    /// The window whose close and resign-key notifications are observed.
+    private weak var observedWindow: NSWindow?
 
     private static let columnIdentifierPrefix = "column-"
 
@@ -45,6 +52,9 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        if let keyMonitor {
+            NSEvent.removeMonitor(keyMonitor)
+        }
     }
 
     /// Connects the coordinator to the table view built by the representable.
@@ -53,6 +63,7 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
         tableView.coordinator = self
         tableView.dataSource = self
         tableView.delegate = self
+        document.editingSession = self
         headerView?.onColumnClick = { [weak self] column, modifiers in
             self?.selectColumn(at: column, modifiers: modifiers)
         }
@@ -60,6 +71,84 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
             self, selector: #selector(columnDidMove(_:)),
             name: NSTableView.columnDidMoveNotification, object: tableView
         )
+        installKeyMonitor()
+    }
+
+    // MARK: - Editing session
+
+    /// Commits and ends the cell field editor before the model changes.
+    ///
+    /// The coordinator owns the only field editor for the grid. Structural
+    /// actions read the table through `CSVDocument.tableAfterEndingEditing()`
+    /// before deriving a new one; save key equivalents and window
+    /// close/resign-key call this directly.
+    func endEditing() {
+        guard let tableView, let window = tableView.window,
+              let editor = window.firstResponder as? NSTextView,
+              editor.isFieldEditor else {
+            return
+        }
+        window.makeFirstResponder(tableView)
+    }
+
+    /// Commits the field editor before Command-S/Save As, Command-W, or
+    /// Command-Q leaves the window, so a save cannot capture a stale model.
+    ///
+    /// The monitor only observes events for this grid's window and never
+    /// consumes them; the standard menu command still runs afterwards.
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
+            [weak self] event in
+            self?.handleCommandKey(event)
+            return event
+        }
+    }
+
+    private func handleCommandKey(_ event: NSEvent) {
+        guard let tableView, let window = tableView.window,
+              event.window === window || (event.window == nil && window.isKeyWindow),
+              event.modifierFlags.contains(.command),
+              let key = event.charactersIgnoringModifiers?.lowercased(),
+              key == "s" || key == "w" || key == "q" else {
+            return
+        }
+        endEditing()
+    }
+
+    /// Observes the window that currently hosts the grid.
+    ///
+    /// Resigning key commits like any other focus loss; closing commits before
+    /// the document is saved or the table view is torn down.
+    func tableDidMoveToWindow(_ tableView: CSVTableView) {
+        let window = tableView.window
+        guard window !== observedWindow else { return }
+        if let observedWindow {
+            NotificationCenter.default.removeObserver(
+                self, name: NSWindow.willCloseNotification, object: observedWindow
+            )
+            NotificationCenter.default.removeObserver(
+                self, name: NSWindow.didResignKeyNotification, object: observedWindow
+            )
+        }
+        observedWindow = window
+        guard let window else { return }
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(windowWillClose(_:)),
+            name: NSWindow.willCloseNotification, object: window
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(windowDidResignKey(_:)),
+            name: NSWindow.didResignKeyNotification, object: window
+        )
+    }
+
+    @objc private func windowWillClose(_ notification: Notification) {
+        endEditing()
+    }
+
+    @objc private func windowDidResignKey(_ notification: Notification) {
+        endEditing()
     }
 
     /// Applies the latest document snapshot to the table view.
@@ -67,6 +156,8 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
     /// Columns are rebuilt only when their identity or count changes, and rows
     /// are reloaded only when their count changes. A cell edit updates the
     /// visible cell views without a reload, which preserves the field editor.
+    /// A model column move changes `columnIDs`, so the rebuild also realigns
+    /// the view-index identifiers before another user drag.
     func update(presenter: GridPresenter, isEditable: Bool) {
         guard let tableView else { return }
         self.presenter = presenter

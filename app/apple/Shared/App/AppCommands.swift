@@ -14,6 +14,12 @@ struct AppCommands: Commands {
         }
 
         CommandGroup(after: .saveItem) {
+            Button("Revert to Saved") {
+                guard let document else { return }
+                RevertCoordinator.present(for: document)
+            }
+            .disabled(!(document?.canRevertToSaved ?? false))
+
             Button("Export…") {
                 guard let document else { return }
                 ExportCoordinator.present(for: document)

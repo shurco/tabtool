@@ -59,9 +59,9 @@ struct NeedsAttentionBanner: View {
     private var detail: String {
         switch issue {
         case .unencodableText:
-            return String(localized: "Some text does not exist in the selected encoding. Choose another encoding, or undo the edit that added it.")
+            return String(localized: "Some text does not exist in the selected encoding. Undo the edit that added it, or export the table in an encoding that can represent it.")
         case .ambiguousOutput:
-            return String(localized: "A cell contains the separator or a line break. Turn quotes on, or undo the edit that added it.")
+            return String(localized: "A cell contains the separator or a line break and quotes are off. Undo the edit that added it, or export with quotes on.")
         }
     }
 }

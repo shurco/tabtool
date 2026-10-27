@@ -273,6 +273,9 @@ final class TabToolUITests: XCTestCase {
         XCTAssertTrue(app.menuItems["Show Format Bar"].waitForExistence(timeout: 5))
 
         app.menuBars.menuBarItems["File"].click()
+        let revert = app.menuItems["Revert to Saved"]
+        XCTAssertTrue(revert.waitForExistence(timeout: 5))
+        XCTAssertFalse(revert.isEnabled)
         let export = app.menuItems["Export…"]
         XCTAssertTrue(export.waitForExistence(timeout: 5))
         XCTAssertTrue(export.isEnabled)
@@ -299,6 +302,9 @@ final class TabToolUITests: XCTestCase {
 
         app.popUpButtons["format-encoding"].click()
         let latin1 = app.menuItems["Western (Windows Latin 1)"]
+        if !latin1.waitForExistence(timeout: 2) {
+            app.popUpButtons["format-encoding"].click()
+        }
         XCTAssertTrue(latin1.waitForExistence(timeout: 5))
         latin1.click()
 
@@ -318,6 +324,12 @@ final class TabToolUITests: XCTestCase {
         let banner = app.descendants(matching: .any)["needs-attention-banner"].firstMatch
         XCTAssertTrue(banner.waitForExistence(timeout: 5))
 
+        // Autosave is suspended by the typed snapshot error. Give it a moment
+        // to prove it does not add a modal error on every retry.
+        Thread.sleep(forTimeInterval: 2)
+        XCTAssertEqual(app.alerts.count, 0)
+        XCTAssertEqual(app.sheets.count, 0)
+
         let showControls = app.buttons["show-format-controls"]
         XCTAssertTrue(showControls.waitForExistence(timeout: 5))
         showControls.click()
@@ -328,6 +340,144 @@ final class TabToolUITests: XCTestCase {
         XCTAssertTrue(undo.isEnabled)
         undo.click()
         XCTAssertFalse(banner.waitForExistence(timeout: 1))
+    }
+
+    /// Types through the real field editor, then uses Add Row and Save while
+    /// an edit is still in progress. The text must be committed against the
+    /// original row and column, survive the save, and be present after reopen.
+    @MainActor
+    func testTypedCellSurvivesAddRowSaveAndReopen() throws {
+        NSPasteboard.general.clearContents()
+        let fixture = try makeFixture("a,b\nc,d\n",
+                                      name: "edit-save-\(UUID().uuidString).csv")
+        defer { try? FileManager.default.removeItem(at: fixture) }
+        let app = launchApp()
+        try openDocument(at: fixture)
+
+        let grid = app.tables["grid"]
+        XCTAssertTrue(grid.waitForExistence(timeout: 10))
+        let rows = grid.descendants(matching: .tableRow)
+        let firstRow = rows.element(boundBy: 0)
+        XCTAssertTrue(firstRow.waitForExistence(timeout: 5))
+        NSPasteboard.general.clearContents()
+        XCTAssertTrue(NSPasteboard.general.setString("typed", forType: .string))
+        firstRow.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).click()
+        app.typeKey(.return, modifierFlags: [])
+        Thread.sleep(forTimeInterval: 0.5)
+        app.menuBars.menuItems["Paste"].click()
+        Thread.sleep(forTimeInterval: 0.5)
+
+        // Add Row is a structural mutation: it must commit the open editor
+        // first, then keep the text on the original row.
+        app.buttons["add-row"].click()
+        let addedRow = rows.element(boundBy: 1)
+        XCTAssertTrue(addedRow.waitForExistence(timeout: 5),
+                      "Add Row did not run while the field editor was open")
+        NSPasteboard.general.clearContents()
+        XCTAssertTrue(NSPasteboard.general.setString("saved", forType: .string))
+        addedRow.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5)).click()
+        app.typeKey(.return, modifierFlags: [])
+        Thread.sleep(forTimeInterval: 0.5)
+        app.menuBars.menuItems["Paste"].click()
+        Thread.sleep(forTimeInterval: 0.5)
+        app.activate()
+        app.typeKey("s", modifierFlags: .command)
+        XCTAssertTrue(waitForFile(fixture, containing: "saved", timeout: 10),
+                      "Save did not commit the in-progress field editor")
+
+        app.typeKey("w", modifierFlags: .command)
+        XCTAssertTrue(grid.waitForNonExistence(timeout: 5))
+
+        try openDocument(at: fixture)
+        let reopened = app.tables["grid"]
+        XCTAssertTrue(reopened.waitForExistence(timeout: 10))
+        let status = app.staticTexts["status-text"]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        XCTAssertTrue((status.value as? String ?? "").contains("2 rows"))
+
+        // The file and the reopened table agree on the intended cells:
+        // header a,b; the typed cell in row 0; the saved cell in row 1.
+        let saved = try String(contentsOf: fixture, encoding: .utf8)
+        XCTAssertEqual(saved, "\"a\",\"b\"\n\"typed\",\"d\"\n\"saved\",\"\"")
+
+        // The focused file-backed document enables Revert to Saved.
+        app.menuBars.menuBarItems["File"].click()
+        let revert = app.menuItems["Revert to Saved"]
+        XCTAssertTrue(revert.waitForExistence(timeout: 5))
+        XCTAssertTrue(revert.isEnabled)
+        app.typeKey(.escape, modifierFlags: [])
+    }
+
+    /// A file-backed document in needsAttention must suspend autosave without
+    /// spamming modal alerts; the persistent banner is the only error UI.
+    @MainActor
+    func testFileBackedNeedsAttentionSuspendsAutosaveQuietly() throws {
+        let fixture = try makeFixture("a,b\nc,d\n",
+                                      name: "needs-attention-\(UUID().uuidString).csv")
+        defer { try? FileManager.default.removeItem(at: fixture) }
+        let app = launchApp()
+        try openDocument(at: fixture)
+        let grid = app.tables["grid"]
+        XCTAssertTrue(grid.waitForExistence(timeout: 10))
+        showFormatBar(in: app)
+
+        app.popUpButtons["format-encoding"].click()
+        let latin1 = app.menuItems["Western (Windows Latin 1)"]
+        XCTAssertTrue(latin1.waitForExistence(timeout: 5))
+        latin1.click()
+        XCTAssertTrue(grid.waitForExistence(timeout: 5))
+
+        NSPasteboard.general.clearContents()
+        XCTAssertTrue(NSPasteboard.general.setString("→", forType: .string))
+        let cell = grid.descendants(matching: .cell).element(boundBy: 0)
+        XCTAssertTrue(cell.waitForExistence(timeout: 5))
+        cell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        app.menuBars.menuItems["Paste"].click()
+
+        let banner = app.descendants(matching: .any)["needs-attention-banner"].firstMatch
+        XCTAssertTrue(banner.waitForExistence(timeout: 5))
+
+        // Autosave has a file URL but cannot serialize this table. It must stay
+        // suspended instead of presenting retry alerts or writing a partial file.
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertEqual(app.alerts.count, 0)
+        XCTAssertEqual(app.sheets.count, 0)
+
+        // Explicit Save is blocked by the same typed snapshot error: no
+        // partial file is written and the banner remains the error UI.
+        app.activate()
+        Thread.sleep(forTimeInterval: 0.5)
+        app.typeKey("s", modifierFlags: .command)
+        let sheet = app.sheets.firstMatch
+        if !sheet.waitForExistence(timeout: 2) {
+            // A key event can be lost when the runner briefly takes focus.
+            app.typeKey("s", modifierFlags: .command)
+        }
+        XCTAssertTrue(sheet.waitForExistence(timeout: 5),
+                      "Explicit Save must report the blocked write")
+        if sheet.buttons.firstMatch.exists {
+            sheet.buttons.firstMatch.click()
+        }
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 5))
+
+        let contents = try String(contentsOf: fixture, encoding: .utf8)
+        XCTAssertFalse(contents.contains("→"))
+        XCTAssertEqual(contents, "a,b\nc,d\n")
+    }
+
+    /// Polls a file until it contains `text`; saves are asynchronous across
+    /// the test-runner and app processes.
+    private func waitForFile(_ url: URL, containing text: String,
+                             timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if let contents = try? String(contentsOf: url, encoding: .utf8),
+               contents.contains(text) {
+                return true
+            }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+        return false
     }
 
     @MainActor

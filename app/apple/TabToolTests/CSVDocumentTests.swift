@@ -118,4 +118,29 @@ import UniformTypeIdentifiers
         await doc.load()
         #expect(try doc.encodedData().starts(with: [0xEF, 0xBB, 0xBF]))
     }
+
+    /// Repeated autosave attempts must keep reporting the typed issue, and the
+    /// localized error must explain how to recover without discarding the edit.
+    @Test @MainActor func needsAttentionSnapshotKeepsThrowingTheTypedError() async {
+        let doc = CSVDocument(data: Data("a,b\n".utf8),
+                              configuration: CSVConfiguration(encoding: .ascii))
+        await doc.load()
+        doc.setCell("ж", row: 0, column: 0)
+        #expect(doc.phase == .needsAttention(.unencodableText))
+
+        for _ in 0..<2 {
+            #expect(throws: CSVError.unencodableText) {
+                _ = try doc.snapshot(contentType: .commaSeparatedText)
+            }
+        }
+        #expect(doc.writeIssue == .unencodableText)
+        #expect(CSVError.unencodableText.recoverySuggestion?.contains("Undo the edit") == true)
+    }
+
+    @Test func documentErrorsHaveLocalizedDescriptions() {
+        for error in [DocumentError.notReady, .requiresConfirmation, .cannotReadFile] {
+            #expect(error.errorDescription?.isEmpty == false,
+                    "Missing description for \(error)")
+        }
+    }
 }

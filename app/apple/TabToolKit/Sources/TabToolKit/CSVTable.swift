@@ -87,10 +87,21 @@ public struct CSVTable: Sendable, Equatable {
     ///
     /// Two tables with the same headers and cell values are equal even when
     /// their columns carry different `UUID`s, as happens after re-reading a
-    /// file.
+    /// file. Use `hasSameColumnOrder(as:)` when identity or visual order must
+    /// also be checked.
     public static func == (lhs: CSVTable, rhs: CSVTable) -> Bool {
         lhs.headers == rhs.headers
             && lhs.columns.map(\.cells) == rhs.columns.map(\.cells)
+    }
+
+    /// Whether both tables hold the same column identities in the same order.
+    ///
+    /// Content equality alone cannot detect a column move when the moved
+    /// columns contain identical values, so document mutations also compare
+    /// this. Re-reading a file produces new identities and is therefore a real
+    /// state change even when the parsed content matches.
+    public func hasSameColumnOrder(as other: CSVTable) -> Bool {
+        columns.map(\.id) == other.columns.map(\.id)
     }
 
     /// Creates a blank document with at least one row and one column.
@@ -147,22 +158,24 @@ public struct CSVTable: Sendable, Equatable {
     }
 
     /// Removes the rows at `indexes`; out-of-range indexes are ignored.
+    ///
+    /// Every column is rebuilt in one pass. Removing selected indexes one by
+    /// one costs O(rows × selected) and is too slow for large selection on a
+    /// 100k-row table.
     public mutating func deleteRows(at indexes: IndexSet) {
         let selected = indexes.intersection(IndexSet(0..<rowCount))
         guard !selected.isEmpty else { return }
 
-        for columnIndex in columns.indices {
-            for row in selected.reversed() {
-                columns[columnIndex].cells.remove(at: row)
-            }
-        }
+        let order = (0..<rowCount).filter { !selected.contains($0) }
+        applyRowOrder(order)
     }
 
     /// Moves the rows at `indexes` so they end up before `destination`.
     ///
     /// `destination` is an index in the pre-move table, clamped to the table
     /// bounds. The insertion point is adjusted for selected rows removed above
-    /// it, and moved rows keep their original order.
+    /// it, and moved rows keep their original order. Each column is rebuilt in
+    /// one pass so a large move stays linear in the table size.
     public mutating func moveRows(at indexes: IndexSet, to destination: Int) {
         let selected = indexes.intersection(IndexSet(0..<rowCount))
         guard !selected.isEmpty else { return }
@@ -170,14 +183,27 @@ public struct CSVTable: Sendable, Equatable {
         let destination = min(max(destination, 0), rowCount)
         let insertion = destination - selected.filter { $0 < destination }.count
 
-        for columnIndex in columns.indices {
-            var cells = columns[columnIndex].cells
-            let moving = selected.map { cells[$0] }
-            for row in selected.reversed() {
-                cells.remove(at: row)
+        var remaining: [Int] = []
+        remaining.reserveCapacity(rowCount - selected.count)
+        var moving: [Int] = []
+        moving.reserveCapacity(selected.count)
+        for row in 0..<rowCount {
+            if selected.contains(row) {
+                moving.append(row)
+            } else {
+                remaining.append(row)
             }
-            cells.insert(contentsOf: moving, at: min(max(insertion, 0), cells.count))
-            columns[columnIndex].cells = cells
+        }
+        let target = min(max(insertion, 0), remaining.count)
+        remaining.insert(contentsOf: moving, at: target)
+        applyRowOrder(remaining)
+    }
+
+    /// Rebuilds every column from a row-index order in one pass.
+    private mutating func applyRowOrder(_ order: [Int]) {
+        for columnIndex in columns.indices {
+            let cells = columns[columnIndex].cells
+            columns[columnIndex].cells = order.map { cells[$0] }
         }
     }
 

@@ -182,6 +182,40 @@ import Testing
         #expect(doc.selection == GridSelection(columns: IndexSet([2])))
     }
 
+    /// Regression: equal cell values must not hide a column move.
+    ///
+    /// A new document is 3×1 with three identical empty columns. Content-only
+    /// equality used to treat the move as a no-op, leaving the AppKit view and
+    /// the model in different orders.
+    @Test func movingAnIdenticalColumnUpdatesModelAndUndo() async throws {
+        let um = UndoManager()
+        let doc = CSVDocument()
+        await doc.load()
+        doc.setUndoManager(um)
+        let (coordinator, tableView, _) = GridTestSupport.makeGrid(doc)
+        let originalIDs = try #require(doc.table?.columns.map(\.id))
+        #expect(Set(originalIDs).count == 3)
+
+        withExtendedLifetime(coordinator) {
+            tableView.moveColumn(0, toColumn: 2)
+            GridTestSupport.update(coordinator, from: doc)
+        }
+
+        let movedIDs = try #require(doc.table?.columns.map(\.id))
+        #expect(movedIDs == [originalIDs[1], originalIDs[2], originalIDs[0]])
+        #expect(um.undoActionName == "Move Column")
+
+        // The first visual column is the dragged column; an edit must land
+        // under it, not under the column that used to be first.
+        doc.setCell("typed", row: 0, column: 0)
+        #expect(doc.table?.columns[0].id == originalIDs[1])
+        #expect(doc.table?.cell(row: 0, column: 0) == "typed")
+
+        um.undo() // cell edit
+        um.undo() // column move
+        #expect(doc.table?.columns.map(\.id) == originalIDs)
+    }
+
     @Test func columnMoveIsAppliedOnceAcrossUpdates() async throws {
         let doc = CSVDocument(data: Data("a,b,c\n1,2,3\n".utf8), configuration: .init())
         await doc.load()

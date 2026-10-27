@@ -19,6 +19,7 @@ final class CSVTableView: NSTableView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        coordinator?.tableDidMoveToWindow(self)
         guard let window else { return }
         if window.firstResponder === window || window.firstResponder == nil {
             window.makeFirstResponder(self)

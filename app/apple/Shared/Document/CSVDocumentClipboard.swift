@@ -49,7 +49,7 @@ extension CSVDocument {
     /// the locale decimal separator to the document mark. The inserted rows
     /// become the selection and the whole paste is one undo operation.
     func pasteTSV(_ string: String, locale: Locale = .current) {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
 
         let parsedRows = CSVClipboard.parseTSV(string)
         let fieldCount = parsedRows.map(\.count).max() ?? 0

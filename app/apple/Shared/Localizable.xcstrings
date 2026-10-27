@@ -51,16 +51,6 @@
         }
       }
     },
-    "A cell contains the separator or a line break. Turn quotes on, or undo the edit that added it.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A cell contains the separator or a line break. Turn quotes on, or undo the edit that added it."
-          }
-        }
-      }
-    },
     "A quote character appears inside an unquoted field.": {
       "localizations": {
         "en": {
@@ -681,16 +671,6 @@
         }
       }
     },
-    "Some text does not exist in the selected encoding. Choose another encoding, or undo the edit that added it.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Some text does not exist in the selected encoding. Choose another encoding, or undo the edit that added it."
-          }
-        }
-      }
-    },
     "Project Repository": {
       "localizations": {
         "en": {
@@ -1047,6 +1027,96 @@
           "stringUnit": {
             "state": "translated",
             "value": "Write Header Row"
+          }
+        }
+      }
+    },
+    "Some text does not exist in the selected encoding. Undo the edit that added it, or export the table in an encoding that can represent it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some text does not exist in the selected encoding. Undo the edit that added it, or export the table in an encoding that can represent it."
+          }
+        }
+      }
+    },
+    "A cell contains the separator or a line break and quotes are off. Undo the edit that added it, or export with quotes on.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A cell contains the separator or a line break and quotes are off. Undo the edit that added it, or export with quotes on."
+          }
+        }
+      }
+    },
+    "Revert to Saved": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert to Saved"
+          }
+        }
+      }
+    },
+    "Revert to Saved?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert to Saved?"
+          }
+        }
+      }
+    },
+    "Your unsaved changes will be discarded. The table will be replaced with the last saved version from disk.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your unsaved changes will be discarded. The table will be replaced with the last saved version from disk."
+          }
+        }
+      }
+    },
+    "Revert": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert"
+          }
+        }
+      }
+    },
+    "Revert Not Completed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revert Not Completed"
+          }
+        }
+      }
+    },
+    "Undo the edit that added the text, or export with an encoding that can represent it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo the edit that added the text, or export with an encoding that can represent it."
+          }
+        }
+      }
+    },
+    "Undo the edit that added the separator or line break, or export with quotes on.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo the edit that added the separator or line break, or export with quotes on."
           }
         }
       }

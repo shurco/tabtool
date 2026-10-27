@@ -50,15 +50,30 @@ import UniformTypeIdentifiers
             == "Sales-export.csv")
     }
 
-    @Test func outputURLUsesTheConfigurationExtension() {
-        let tab = CSVConfiguration(columnSeparator: "\t")
-        let comma = CSVConfiguration(columnSeparator: ",")
-        #expect(ExportPlan.outputURL(URL(fileURLWithPath: "/tmp/out.csv"),
-                                     configuration: tab).path == "/tmp/out.tsv")
-        #expect(ExportPlan.outputURL(URL(fileURLWithPath: "/tmp/out"),
-                                     configuration: tab).path == "/tmp/out.tsv")
-        #expect(ExportPlan.outputURL(URL(fileURLWithPath: "/tmp/out.tsv"),
-                                     configuration: comma).path == "/tmp/out.csv")
+    /// The panel owns the final URL and its replace confirmation.
+    ///
+    /// Writing to a rewritten extension could overwrite an existing file
+    /// without asking.
+    @Test func exportWritesThePanelURLWithoutRewritingTheExtension() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ExportPlanTests-\(UUID().uuidString)",
+                                    isDirectory: true)
+        try FileManager.default.createDirectory(at: directory,
+                                                withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let panelURL = directory.appendingPathComponent("notes.txt")
+        let sibling = directory.appendingPathComponent("notes.csv")
+        try "keep".write(to: sibling, atomically: true, encoding: .utf8)
+
+        let table = CSVTable(rows: [["a", "b"]], headers: nil)
+        try ExportPlan.write(table: table, documentConfiguration: .init(),
+                             configuration: .init(columnSeparator: ";"),
+                             to: panelURL)
+
+        #expect(FileManager.default.fileExists(atPath: panelURL.path))
+        #expect(try String(contentsOf: sibling, encoding: .utf8) == "keep")
+        #expect(try String(contentsOf: panelURL, encoding: .utf8) == "\"a\";\"b\"")
     }
 
     @Test func convertedDecimalAmbiguityAsksForConfirmation() {

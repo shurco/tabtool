@@ -131,6 +131,17 @@ import Testing
     #expect(first != changed)
 }
 
+@Test func columnOrderComparisonDetectsIdentityEvenWhenContentMatches() {
+    var t = CSVTable(rows: [["", "", ""]], headers: nil)
+    let original = t
+    t.moveColumn(from: 0, to: 2)
+
+    // Content equality alone cannot see the move: all cells are empty.
+    #expect(t == original)
+    #expect(!t.hasSameColumnOrder(as: original))
+    #expect(t.hasSameColumnOrder(as: t))
+}
+
 @Test func addColumnOnHeaderlessTableIgnoresHeader() {
     var t = CSVTable(rows: [["a"]], headers: nil)
     t.addColumn(at: 1, header: "X")

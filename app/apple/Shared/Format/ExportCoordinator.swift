@@ -34,20 +34,13 @@ enum ExportPlan {
     }
 
     /// Replaces the extension of a file name while keeping its stem.
+    ///
+    /// This runs before the panel validates the name, so the panel owns the
+    /// final extension and any replace confirmation.
     static func renaming(_ filename: String, configuration: CSVConfiguration) -> String {
         let stem = (filename as NSString).deletingPathExtension
         guard !stem.isEmpty else { return filename }
         return "\(stem).\(fileExtension(for: configuration))"
-    }
-
-    /// The URL as written: its extension always matches the configuration.
-    ///
-    /// The save panel already validates the extension, but a typed name or a
-    /// separator change can leave a stale one.
-    static func outputURL(_ url: URL, configuration: CSVConfiguration) -> URL {
-        let expected = fileExtension(for: configuration)
-        guard url.pathExtension.lowercased() != expected else { return url }
-        return url.deletingPathExtension().appendingPathExtension(expected)
     }
 
     /// Writes the exported bytes to `url` atomically.
@@ -186,8 +179,11 @@ final class ExportCoordinator {
             return
         }
 
+        // The panel validated this exact URL and its replace confirmation.
+        // Rewriting the extension here could overwrite a different file
+        // without asking.
         let configuration = options.configuration
-        let url = ExportPlan.outputURL(selectedURL, configuration: configuration)
+        let url = selectedURL
         teardown()
 
         switch ExportPlan.decision(

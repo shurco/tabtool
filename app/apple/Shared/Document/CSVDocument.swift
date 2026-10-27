@@ -53,6 +53,12 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     private var undoManager: UndoManager?
     private let loader: Loader
 
+    /// The grid that owns the active field editor, if any.
+    ///
+    /// Weak because the coordinator belongs to the view hierarchy; the
+    /// document outlives individual windows during re-reads and saving.
+    weak var editingSession: DocumentEditingSession?
+
     /// The load currently in flight, so overlapping `load()` calls share it.
     private var loadTask: Task<LoadResult, Never>?
 
@@ -277,21 +283,35 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         return result
     }
 
+    /// Commits any in-progress cell edit before the caller changes the table.
+    ///
+    /// Structural actions, format changes, save key equivalents, and window
+    /// close call this through their entry points. The field editor's row and
+    /// column indexes describe the table before the mutation, so committing
+    /// first prevents text from landing under a reused or shifted cell.
+    func endEditing() {
+        editingSession?.endEditing()
+    }
+
     /// Replaces table, configuration, and BOM as one undoable user change.
     ///
     /// The editing, clipboard, and format extensions route every mutation
     /// through this method so phase refresh and undo recording stay in one
-    /// place. A change with identical state records nothing.
+    /// place. A change with identical state records nothing, except for a
+    /// column identity or order change: equal cell values cannot distinguish
+    /// moving one of several identical columns.
     func applyChange(table newTable: CSVTable,
                      configuration newConfiguration: CSVConfiguration,
                      includesUTF8BOM newIncludesUTF8BOM: Bool,
                      actionName: String) {
+        endEditing()
         let previous = table.map { current in
             CSVDocumentSnapshot(table: current, configuration: configuration,
                                 includesUTF8BOM: hadUTF8BOM)
         }
         if let previous,
            previous.table == newTable,
+           previous.table.hasSameColumnOrder(as: newTable),
            previous.configuration == newConfiguration,
            previous.includesUTF8BOM == newIncludesUTF8BOM {
             return
@@ -350,6 +370,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
 
     /// Restores a snapshot and registers the inverse so redo works.
     private func restore(snapshot: CSVDocumentSnapshot, actionName: String) {
+        endEditing()
         guard let currentTable = table else { return }
         let previous = CSVDocumentSnapshot(table: currentTable,
                                            configuration: configuration,

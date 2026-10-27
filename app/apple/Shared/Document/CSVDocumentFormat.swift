@@ -21,6 +21,10 @@ extension CSVDocument {
             break
         }
 
+        // Commit the field editor before the revision is captured so a re-read
+        // cannot race with text that is still in the field editor.
+        endEditing()
+
         guard let fileURL else {
             guard let table else { throw DocumentError.notReady }
             applyChange(table: table, configuration: new,
@@ -55,16 +59,53 @@ extension CSVDocument {
     ///
     /// The async re-read captures the revision before its awaits. A cell edit,
     /// format change, undo, or Save As during the parse makes the candidate
-    /// stale, so it must not replace the newer state.
+    /// stale, so it must not replace the newer state. Committing the field
+    /// editor first also bumps the revision when text is still being edited,
+    /// which rejects the stale candidate instead of overwriting the edit.
     func applyReparsedCandidate(_ candidate: CSVDocumentIO.ParsedTable,
                                 configuration newConfiguration: CSVConfiguration,
-                                expectedRevision: UInt64) throws {
+                                expectedRevision: UInt64,
+                                actionName: String = "Change Format") throws {
+        endEditing()
         guard mutationRevision == expectedRevision else {
             throw DocumentError.requiresConfirmation
         }
         applyChange(table: candidate.table, configuration: newConfiguration,
                     includesUTF8BOM: candidate.includesUTF8BOM,
-                    actionName: "Change Format")
+                    actionName: actionName)
+    }
+
+    /// Whether File > Revert to Saved can run.
+    var canRevertToSaved: Bool {
+        fileURL != nil && table != nil && phase != .loading
+    }
+
+    /// Replaces the table with the file at `fileURL` parsed with the current
+    /// configuration.
+    ///
+    /// The caller confirms a dirty document first. The replacement is one
+    /// undoable action, so a mistaken revert can be undone like any other
+    /// structural change.
+    func revertToSaved() async throws {
+        guard let fileURL, table != nil else {
+            throw DocumentError.notReady
+        }
+        guard beginReread() else {
+            throw DocumentError.requiresConfirmation
+        }
+        defer { endReread() }
+
+        endEditing()
+        let expectedRevision = mutationRevision
+        let configuration = configuration
+        let parsed = try await Task.detached(priority: .userInitiated) {
+            let data = try CSVDocumentIO.readData(at: fileURL)
+            return try CSVDocumentIO.parse(data: data, configuration: configuration)
+        }.value
+
+        try applyReparsedCandidate(parsed, configuration: configuration,
+                                   expectedRevision: expectedRevision,
+                                   actionName: "Revert to Saved")
     }
 
     /// Runs the format heuristic over the current bytes of the file on disk.

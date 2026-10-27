@@ -35,4 +35,48 @@ final class CSVPerformanceTests: XCTestCase {
             XCTAssertTrue(config.firstRowAsHeader)
         }
     }
+
+    /// Correctness and rough timing for delete/move/save on 100k rows.
+    ///
+    /// There is no hard latency assertion: CI machines vary. The test records
+    /// the three durations and fails only if the resulting table is wrong.
+    func testDeleteMoveAndSaveOn100KRows() throws {
+        let rowCount = 100_000
+        let columns = (0..<2).map { column in
+            CSVColumn(header: nil,
+                      cells: (0..<rowCount).map { row in "\(column)-\(row)" })
+        }
+        var table = CSVTable(columns: columns)
+
+        let deleted = IndexSet((0..<rowCount).filter { $0 % 7 == 0 })
+        let deleteStart = Date()
+        table.deleteRows(at: deleted)
+        let deleteDuration = Date().timeIntervalSince(deleteStart)
+
+        let keptCount = rowCount - deleted.count
+        XCTAssertEqual(table.rowCount, keptCount)
+        XCTAssertEqual(table.cell(row: 0, column: 0), "0-1")
+        XCTAssertEqual(table.cell(row: 0, column: 1), "1-1")
+        XCTAssertEqual(table.cell(row: keptCount - 1, column: 0),
+                       "0-\(rowCount - 1)")
+
+        let moved = IndexSet(stride(from: 0, to: keptCount, by: 3))
+        let expectedMoved = moved.map { table.cell(row: $0, column: 0) }
+        let moveStart = Date()
+        table.moveRows(at: moved, to: keptCount)
+        let moveDuration = Date().timeIntervalSince(moveStart)
+
+        XCTAssertEqual(table.rowCount, keptCount)
+        XCTAssertEqual(Array(table.columns[0].cells.suffix(moved.count)),
+                       expectedMoved)
+
+        let saveStart = Date()
+        let data = try CSVWriter(table: table, header: nil,
+                                 configuration: .init()).data()
+        let saveDuration = Date().timeIntervalSince(saveStart)
+        XCTAssertGreaterThan(data.count, 0)
+
+        print(String(format: "100k delete %.3fs, move %.3fs, save %.3fs",
+                     deleteDuration, moveDuration, saveDuration))
+    }
 }

@@ -1,3 +1,4 @@
+import Foundation
 import TabToolKit
 
 /// Why the document cannot currently be edited or saved.
@@ -27,4 +28,18 @@ enum DocumentError: Error, Equatable {
     case requiresConfirmation
     /// The file bytes are unavailable to the document.
     case cannotReadFile
+}
+
+/// Localized fallback text for generic error presentation.
+extension DocumentError: LocalizedError {
+    var errorDescription: String? {
+        switch self {
+        case .notReady:
+            return String(localized: "The document is still loading or could not be read.")
+        case .requiresConfirmation:
+            return String(localized: "The document changed while the operation was running. Try again.")
+        case .cannotReadFile:
+            return String(localized: "The file could not be read from disk.")
+        }
+    }
 }

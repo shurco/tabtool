@@ -3,6 +3,16 @@ import TabToolKit
 
 /// Table mutations exposed to the grid, menus, and format controls.
 extension CSVDocument {
+    /// Commits the grid's field editor and returns the current table.
+    ///
+    /// Structural actions must read the table only after this. A caller that
+    /// derives a new table from a stale copy would otherwise replace the cell
+    /// edit that the field editor just committed.
+    func tableAfterEndingEditing() -> CSVTable? {
+        endEditing()
+        return table
+    }
+
     /// Whether the current selection can be deleted.
     ///
     /// A column-only selection is disabled when the table has a single column:
@@ -44,27 +54,27 @@ extension CSVDocument {
 
     /// Inserts a blank row above the first selected row, or at the top.
     func addRowAboveSelection() {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         insertRowSelecting(at: selection.rows.first ?? 0, rowCount: table.rowCount)
     }
 
     /// Inserts a blank row below the last selected row, or at the end.
     func addRowBelowSelection() {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         let index = selection.rows.last.map { $0 + 1 } ?? table.rowCount
         insertRowSelecting(at: index, rowCount: table.rowCount)
     }
 
     /// Inserts a blank column left of the first selected column, or at the left.
     func addColumnLeftOfSelection() {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         insertColumnSelecting(at: selection.columns.first ?? 0,
                               columnCount: table.columns.count)
     }
 
     /// Inserts a blank column right of the last selected column, or at the right.
     func addColumnRightOfSelection() {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         let index = selection.columns.last.map { $0 + 1 } ?? table.columns.count
         insertColumnSelecting(at: index, columnCount: table.columns.count)
     }
@@ -105,7 +115,7 @@ extension CSVDocument {
 
     /// Inserts a blank row, clamped by the table model.
     func addRow(at index: Int) {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         var updated = table
         updated.addRow(at: index)
         applyChange(table: updated, configuration: configuration,
@@ -114,7 +124,7 @@ extension CSVDocument {
 
     /// Removes the rows at `indexes`; invalid indexes are ignored.
     func deleteRows(at indexes: IndexSet) {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         var updated = table
         updated.deleteRows(at: indexes)
         applyChange(table: updated, configuration: configuration,
@@ -123,7 +133,7 @@ extension CSVDocument {
 
     /// Moves the rows at `indexes` before `destination`.
     func moveRows(at indexes: IndexSet, to destination: Int) {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         var updated = table
         updated.moveRows(at: indexes, to: destination)
         applyChange(table: updated, configuration: configuration,
@@ -134,7 +144,7 @@ extension CSVDocument {
     ///
     /// The new column gets an empty header only when header mode is enabled.
     func addColumn(at index: Int) {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         var updated = table
         updated.addColumn(at: index,
                           header: configuration.firstRowAsHeader ? "" : nil)
@@ -147,7 +157,7 @@ extension CSVDocument {
     /// Deleting every column keeps the leftmost selected column, so the
     /// document and the grid always have at least one column.
     func deleteColumns(at indexes: IndexSet) {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         let selected = indexes.intersection(IndexSet(0..<table.columns.count))
         guard !selected.isEmpty else { return }
 
@@ -165,7 +175,7 @@ extension CSVDocument {
 
     /// Moves a column to another visual position.
     func moveColumn(from: Int, to: Int) {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         var updated = table
         updated.moveColumn(from: from, to: to)
         applyChange(table: updated, configuration: configuration,
@@ -178,10 +188,8 @@ extension CSVDocument {
     /// exponents is preserved. The configuration follows the table so saving
     /// and pasting use the new mark.
     func setDecimalMark(_ mark: String) {
-        guard !mark.isEmpty, mark != configuration.decimalMark,
-              let table else {
-            return
-        }
+        guard !mark.isEmpty, mark != configuration.decimalMark else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         var updated = table
         updated.convertDecimalMark(from: configuration.decimalMark, to: mark)
         var newConfiguration = configuration
@@ -193,7 +201,7 @@ extension CSVDocument {
     /// Turns header mode on or off by moving the first row across the header
     /// boundary, updating both the table and the configuration.
     func setHeaderEnabled(_ enabled: Bool) {
-        guard let table else { return }
+        guard let table = tableAfterEndingEditing() else { return }
         let hasHeaders = table.headers != nil
 
         if hasHeaders == enabled {

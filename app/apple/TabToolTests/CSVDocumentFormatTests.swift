@@ -4,12 +4,12 @@ import TabToolKit
 @testable import TabTool
 
 /// Writes `contents` to a unique file in the temporary directory.
-private func tempFile(_ contents: String) throws -> URL {
+func tempFile(_ contents: String) throws -> URL {
     try tempFile(Data(contents.utf8))
 }
 
 /// Writes `data` to a unique file in the temporary directory.
-private func tempFile(_ data: Data) throws -> URL {
+func tempFile(_ data: Data) throws -> URL {
     let url = FileManager.default.temporaryDirectory
         .appendingPathComponent("TabToolTests-\(UUID().uuidString).csv")
     try data.write(to: url)
