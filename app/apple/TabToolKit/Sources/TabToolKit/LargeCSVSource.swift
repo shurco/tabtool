@@ -113,6 +113,12 @@ public final class LargeCSVSource: RowSource, @unchecked Sendable {
         return previous
     }
 
+    /// The state a streaming save needs: the file, its index and the edits so far.
+    public func saveSnapshot() -> LargeSaveSnapshot {
+        LargeSaveSnapshot(file: file, index: indexer.snapshot, configuration: configuration,
+                          hadBOM: hadUTF8BOM, edits: overlay.copy())
+    }
+
     private func validate(_ text: String) throws {
         let table = CSVTable(rows: [[text]], headers: nil)
         switch CSVWriteValidation.issue(table: table, header: nil, configuration: configuration) {
