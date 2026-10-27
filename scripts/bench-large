@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Benchmarks the large file mode of the core in a release build: generates a
+# CSV of the given size in the temporary directory, then measures opening,
+# indexing, cell reads and streaming saves. The file is deleted afterwards.
+# Usage: ./scripts/bench-large [GiB]   (default 5; fractions such as 0.5 work)
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "${here}/.." && pwd)"
+
+# shellcheck source=scripts/_helper
+source "${here}/_helper"
+
+size="${1:-5}"
+if [ "$#" -gt 1 ] || ! [[ "${size}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+  printf 'Usage: %s [GiB]\n' "$0" >&2
+  exit 1
+fi
+if ! command_exists swift; then
+  print_answer "swift not found — install Xcode" red
+  exit 1
+fi
+
+bytes="$(awk -v gib="${size}" 'BEGIN { printf "%d", gib * 1073741824 }')"
+# The generated file and one saved copy live side by side; keep a margin.
+free_kb="$(df -Pk "${TMPDIR:-/tmp}" | awk 'NR == 2 { print $4 }')"
+if [ $((free_kb * 1024)) -lt $((bytes * 3)) ]; then
+  print_answer "Not enough free disk space: ${size} GiB needs three times its size free" red
+  exit 1
+fi
+
+print_answer "Benchmarking a ${size} GiB file (release build)…" grey
+TABTOOL_BENCH_BYTES="${bytes}" swift test \
+  --package-path "${root}/app/apple/TabToolKit" \
+  -c release -Xswiftc -enable-testing \
+  --filter LargeFileBenchmark 2>&1 | grep -E '^\||✘|error:'
