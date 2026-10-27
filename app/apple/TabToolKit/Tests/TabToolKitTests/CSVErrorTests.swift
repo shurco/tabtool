@@ -10,6 +10,8 @@ import Testing
             .quoteInUnquotedField,
             .unencodableText,
             .ambiguousOutput,
+            .unsupportedLargeFileEncoding,
+            .unsupportedLargeFileDelimiter,
             .rowNotEditable
         ]
 

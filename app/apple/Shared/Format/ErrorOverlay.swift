@@ -126,6 +126,10 @@ enum FormatErrorText {
             return String(localized: "The text cannot be represented in the selected encoding.")
         case .ambiguousOutput:
             return String(localized: "A cell contains the separator or a line break, but quotes are off.")
+        case .unsupportedLargeFileEncoding:
+            return String(localized: "This encoding cannot be opened in large file mode.")
+        case .unsupportedLargeFileDelimiter:
+            return String(localized: "Large file mode needs a single-character ASCII separator, quote and escape.")
         case .rowNotEditable:
             return String(localized: "This row cannot be edited right now.")
         }
@@ -152,6 +156,10 @@ enum FormatErrorText {
             return String(localized: "Choose an encoding that can represent the text.")
         case .ambiguousOutput:
             return String(localized: "Turn quotes on, or remove separators and line breaks from cells.")
+        case .unsupportedLargeFileEncoding:
+            return String(localized: "Convert the file to UTF-8 and open it again.")
+        case .unsupportedLargeFileDelimiter:
+            return String(localized: "Choose a separator, quote and escape that are single ASCII characters.")
         case .rowNotEditable:
             return String(localized: "Wait for indexing to finish, or reload the file if it changed on disk.")
         }
