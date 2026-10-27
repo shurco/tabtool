@@ -56,3 +56,18 @@ func generateLargeCSV(at url: URL, targetBytes: Int, columns: Int, quoted: Bool,
     try flush()
     return (rows, written)
 }
+
+/// A value shared between the test thread and a background worker.
+final class Locked<Value>: @unchecked Sendable {
+    // The lock guards `value`.
+    private let lock = NSLock()
+    private var value: Value
+
+    init(_ value: Value) { self.value = value }
+
+    func withValue<R>(_ body: (inout Value) -> R) -> R {
+        lock.lock()
+        defer { lock.unlock() }
+        return body(&value)
+    }
+}
