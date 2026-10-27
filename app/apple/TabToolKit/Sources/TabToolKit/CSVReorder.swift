@@ -7,10 +7,10 @@ public enum CSVReorder {
     /// Result position `i` holds the old index to place there. Selected
     /// indexes keep their relative gaps; the rest fill the free slots in
     /// ascending order. Returns `nil` for an empty selection or when any
-    /// selected index would leave `0..<count`.
+    /// selected index, or its target, falls outside `0..<count`.
     public static func shifted(count: Int, moving: IndexSet, by offset: Int) -> [Int]? {
         guard !moving.isEmpty,
-              moving.allSatisfy({ (0..<count).contains($0 + offset) })
+              moving.allSatisfy({ (0..<count).contains($0) && (0..<count).contains($0 + offset) })
         else { return nil }
 
         var result = [Int?](repeating: nil, count: count)

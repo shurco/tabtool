@@ -12,6 +12,7 @@ import Testing
     #expect(CSVReorder.shifted(count: 3, moving: [2], by: 1) == nil)
     #expect(CSVReorder.shifted(count: 3, moving: [], by: 1) == nil)
     #expect(CSVReorder.shifted(count: 3, moving: [5], by: -1) == nil)
+    #expect(CSVReorder.shifted(count: 3, moving: [5], by: -3) == nil)
 }
 
 @Test func reorderRowsAppliesAPermutationToEveryColumn() {
