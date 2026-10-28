@@ -381,7 +381,7 @@ All of it is in the app shell (`Shared/Settings`); `TabToolKit` has no preferenc
 - Language: `AppLanguage` is System plus the 11 codes of `CFBundleLocalizations` (`Info.plist`); a test keeps the two lists equal. The picker writes the `appLanguage` key and `AppLanguage.applyOverride(to:)` mirrors it to `AppleLanguages` in the app's own defaults domain: `[code]` for a language, the key removed for System. A separate key is needed because reading `AppleLanguages` returns the system list even when no override is set. The override is read at launch, so a change applies after a restart.
 - `Localizable.xcstrings` has 166 keys, each translated into all 11 languages; `LocalizationTests` checks that every key has every translation and keeps its format specifiers. Strings that are not SwiftUI literals (the status line with its encoding and separator names, undo action names) go through `Bundle.localized(_:)` (`Shared/App/Bundle+Localized.swift`).
 - Not localized: `Info.plist` strings. The translations are machine-generated and need native review.
-- `systemPrefersChineseEncoding` (file encoding detection from the system locale) is independent of the interface language.
+- `AppLanguage.systemPrefersChinese()` (the encoding preference for opened files) is independent of the interface language: it reads the first entry of `AppleLanguages` from the global defaults domain (`AppLanguage.systemLanguages()`), not `Locale.preferredLanguages`, which follows the per-app override the picker writes. A Chinese system keeps GBK first when English is picked, and a European system keeps CP1252 first when 简体中文 is picked.
 
 ## 7. Behavior and deliberate differences
 

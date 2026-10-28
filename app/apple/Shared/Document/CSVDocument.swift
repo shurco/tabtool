@@ -149,17 +149,13 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     nonisolated convenience init(configuration: ReferenceFileDocument.ReadConfiguration) throws {
         let size = (configuration.file.fileAttributes[FileAttributeKey.size.rawValue] as? NSNumber)?.int64Value ?? 0
         if Self.usesLargeMode(forFileSize: size) {
-            self.init(largeFileURL: nil, prefersChineseEncoding: Self.systemPrefersChineseEncoding)
+            self.init(largeFileURL: nil, prefersChineseEncoding: AppLanguage.systemPrefersChinese())
             return
         }
         guard let data = configuration.file.regularFileContents else {
             throw CSVError.cannotDecodeData
         }
-        self.init(data: data, prefersChineseEncoding: Self.systemPrefersChineseEncoding)
-    }
-
-    private nonisolated static var systemPrefersChineseEncoding: Bool {
-        Locale.preferredLanguages.first?.lowercased().hasPrefix("zh") == true
+        self.init(data: data, prefersChineseEncoding: AppLanguage.systemPrefersChinese())
     }
 
     /// The issue that blocks saving, or `nil` when the content is writable.

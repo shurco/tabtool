@@ -28,6 +28,22 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         }
     }
 
+    /// The system's language list from the global defaults domain.
+    ///
+    /// `Locale.preferredLanguages` follows the per-app override `applyOverride`
+    /// writes, so it only serves as the fallback when the global list is absent.
+    nonisolated static func systemLanguages(
+        globalDomain: [String: Any]? = UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain),
+        preferred: [String] = Locale.preferredLanguages
+    ) -> [String] {
+        globalDomain?[appleLanguagesKey] as? [String] ?? preferred
+    }
+
+    /// Whether the first language is Chinese, which makes CSV detection try GBK before CP1252.
+    nonisolated static func systemPrefersChinese(in languages: [String] = systemLanguages()) -> Bool {
+        languages.first?.lowercased().hasPrefix("zh") == true
+    }
+
     /// Writes the per-app language override read at the next launch.
     func applyOverride(to defaults: UserDefaults = .standard) {
         if self == .system {

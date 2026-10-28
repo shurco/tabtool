@@ -34,4 +34,24 @@ import Testing
         let declared = Set(Bundle.main.infoDictionary?["CFBundleLocalizations"] as? [String] ?? [])
         #expect(declared == Set(AppLanguage.allCases.filter { $0 != .system }.map(\.rawValue)))
     }
+
+    @Test(arguments: [["zh-Hans-CN"], ["zh-Hant"], ["zh"], ["ZH-hans", "en"]])
+    func aChineseFirstLanguagePrefersTheChineseEncoding(languages: [String]) {
+        #expect(AppLanguage.systemPrefersChinese(in: languages))
+    }
+
+    @Test(arguments: [["en"], ["ru-RU"], ["en", "zh-Hans"], []])
+    func otherFirstLanguagesDoNotPreferTheChineseEncoding(languages: [String]) {
+        #expect(!AppLanguage.systemPrefersChinese(in: languages))
+    }
+
+    @Test func systemLanguagesComeFromTheGlobalDomainNotTheAppOverride() {
+        let global: [String: Any] = ["AppleLanguages": ["zh-Hans-CN", "en"]]
+        #expect(AppLanguage.systemLanguages(globalDomain: global, preferred: ["en"]) == ["zh-Hans-CN", "en"])
+    }
+
+    @Test func systemLanguagesFallBackToThePreferredList() {
+        #expect(AppLanguage.systemLanguages(globalDomain: nil, preferred: ["fr"]) == ["fr"])
+        #expect(AppLanguage.systemLanguages(globalDomain: [:], preferred: ["fr"]) == ["fr"])
+    }
 }
