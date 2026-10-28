@@ -10,6 +10,14 @@ import Testing
         #expect(table.rowHeight == 32)
     }
 
+    @Test func horizontalGridLinesReplaceAlternatingRows() {
+        let table = NSTableView()
+        table.applyGridAppearance(alternatingRows: false, rowHeight: 24)
+        #expect(table.gridStyleMask == [.solidVerticalGridLineMask, .solidHorizontalGridLineMask])
+        table.applyGridAppearance(alternatingRows: true, rowHeight: 24)
+        #expect(table.gridStyleMask == .solidVerticalGridLineMask)
+    }
+
     @Test func rowsUseTheGridRowView() async {
         let document = await GridTestSupport.makeLoadedNewDocument()
         let (coordinator, tableView, _) = GridTestSupport.makeGrid(document)

@@ -36,7 +36,6 @@ struct CSVGrid: NSViewRepresentable {
         tableView.allowsColumnReordering = true
         tableView.applyGridAppearance(alternatingRows: alternatingRows, rowHeight: rowHeight)
         tableView.intercellSpacing = NSSize(width: 8, height: 2)
-        tableView.gridStyleMask = .solidVerticalGridLineMask
         tableView.style = .fullWidth
         tableView.setDraggingSourceOperationMask(.move, forLocal: true)
         tableView.setDraggingSourceOperationMask(.copy, forLocal: false)
@@ -81,6 +80,12 @@ extension NSTableView {
     func applyGridAppearance(alternatingRows: Bool, rowHeight: CGFloat) {
         if usesAlternatingRowBackgroundColors != alternatingRows {
             usesAlternatingRowBackgroundColors = alternatingRows
+        }
+        let gridLines: GridLineStyle = alternatingRows
+            ? .solidVerticalGridLineMask
+            : [.solidVerticalGridLineMask, .solidHorizontalGridLineMask]
+        if gridStyleMask != gridLines {
+            gridStyleMask = gridLines
         }
         if self.rowHeight != rowHeight {
             self.rowHeight = rowHeight
