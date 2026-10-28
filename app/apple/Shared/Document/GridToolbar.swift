@@ -55,31 +55,29 @@ struct GridToolbar: View {
             .accessibilityIdentifier("delete-selection")
             .disabled(!document.canDeleteSelection)
 
-            Divider()
-                .frame(height: 16)
-                .padding(.horizontal, 4)
+            Spacer()
 
             filterToggle
-
-            Spacer()
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
     }
 
-    /// Shows or hides the filter bar; badged while a filter is applied.
+    /// Shows or hides the filter bar; blue with a light glyph while the bar
+    /// is open.
     private var filterToggle: some View {
         let title: LocalizedStringKey = document.rowFilter.isBarVisible ? "Hide Filter" : "Show Filter"
-        return Button {
-            document.toggleFilterBar()
-        } label: {
-            GridToolbarGlyph(
-                symbolName: "magnifyingglass",
-                pointSize: 15,
-                badge: document.rowFilter.isFiltering
-                    ? .init(symbolName: "checkmark.circle.fill", color: .accentColor)
-                    : nil
-            )
+        return Group {
+            let button = Button {
+                document.toggleFilterBar()
+            } label: {
+                GridToolbarGlyph(symbolName: "magnifyingglass", pointSize: 15)
+            }
+            if document.rowFilter.isBarVisible {
+                button.buttonStyle(.borderedProminent)
+            } else {
+                button
+            }
         }
         .help(document.isLargeMode ? Text("Not available in large file mode.") : Text(title))
         .accessibilityLabel(title)
