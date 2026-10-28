@@ -13,7 +13,7 @@ xcodegen generate
 
 `project.yml` defines three targets — the `TabTool` app, the `TabToolTests` unit tests, and the `TabToolUITests` UI tests — plus the `TabTool` scheme. The local `app/apple/TabToolKit` package is wired in as a Swift Package; the Xcode project contains no core sources. The `1.0.0` / `1` version in `project.yml` is a fallback in case `version.json` is unavailable.
 
-The development bundle ID is `app.shurco.tabtool`. The public bundle ID, signing team, and app name are chosen before the App Store; they must be changed in `project.yml`, `Info.plist`, `docs/app-store-compliance.md`, and `version.json`. `project.yml` keeps `CODE_SIGN_IDENTITY=-` so local Debug builds and the verification archive need no team; a release build overrides the identity, team, and provisioning in Xcode or on the archive command line rather than committing signing material.
+The bundle ID is `app.shurco.tabtool`. The signing team is chosen before the App Store; if the name or bundle ID changes, update `project.yml`, `Info.plist`, `docs/app-store-compliance.md`, and `version.json`. `project.yml` keeps `CODE_SIGN_IDENTITY=-` so local Debug builds and the verification archive need no team; a release build overrides the identity, team, and provisioning in Xcode or on the archive command line rather than committing signing material.
 
 The app target reads `macOS/App/Info.plist`, signs with `macOS/App/TabTool.entitlements`, and bundles `macOS/App/PrivacyInfo.xcprivacy`. `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon` points at the placeholder asset catalog in `Shared/Assets.xcassets`. `ENABLE_TESTABILITY=YES` is Debug-only.
 

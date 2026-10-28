@@ -2,7 +2,7 @@
 
 A modern, independent CSV editor for macOS in Swift. The app opens CSV/TSV/text files, detects the format automatically, lets you edit the table, and saves/exports data in the selected encoding and with the selected delimiter.
 
-The project is in development. The public name, bundle ID, signing team, and App Store icon have not been chosen yet; placeholders are used in the code. The release checklist is at the end of this file.
+The project is in development. The name is TabTool and the bundle ID is `app.shurco.tabtool`; the signing team and App Store icon have not been chosen yet, and placeholders are used in the code. The release checklist is at the end of this file.
 
 ## Features
 
@@ -117,7 +117,7 @@ The local working spec/plan and execution log live in `.superpowers/sdd/` and ar
 
 The code is feature-complete for a 1.0 release, but the release identity is deliberately not chosen in the repository:
 
-- [ ] Choose a unique public product name, bundle ID, and signing team. Update `app/apple/project.yml`, `app/apple/macOS/App/Info.plist`, and `docs/app-store-compliance.md`; replace `app.shurco.tabtool`.
+- [ ] Choose the signing team and check that the name TabTool and bundle ID `app.shurco.tabtool` do not conflict with an existing App Store listing.
 - [ ] Replace the placeholder icon in `app/apple/Shared/Assets.xcassets/AppIcon.appiconset` with final 1024 px macOS artwork.
 - [ ] Set `app/apple/version.json` (`name`, `build`) and sign with the team. Archive with Xcode Organizer (Product > Archive) or an explicit `xcodebuild archive` command without `CODE_SIGNING_ALLOWED=NO`; `./scripts/app archive macos` is an unsigned verification build.
 - [ ] Inspect the archive: three document types in `Info.plist`, sandbox and user-selected read-write entitlements, `PrivacyInfo.xcprivacy` in `Contents/Resources`, and the app icon.

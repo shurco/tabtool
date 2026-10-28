@@ -63,8 +63,8 @@ Plain text is Alternate so the app does not intercept all text files. Arbitrary 
 
 Before release, the build must have:
 
-- a unique public name;
-- a new bundle ID (in development `app.shurco.tabtool`);
+- a public name (TabTool) that does not conflict with an existing listing;
+- the bundle ID `app.shurco.tabtool`;
 - a signing team and provisioning setup;
 - its own icon and branding. The repository ships a blue table placeholder in `Shared/Assets.xcassets/AppIcon.appiconset` (16–1024 px); replace it with final 1024 px artwork at release.
 
@@ -92,7 +92,7 @@ The app does not implement its own cryptography and does not transmit data over 
 
 ## Before submitting
 
-- [ ] Public name, bundle ID, signing team are chosen; `app.shurco.tabtool` is gone from `project.yml` and `Info.plist`.
+- [ ] Signing team is chosen; the name TabTool and bundle ID `app.shurco.tabtool` are checked against existing listings.
 - [ ] Final icon replaces the placeholder in `Shared/Assets.xcassets/AppIcon.appiconset`.
 - [ ] `version.json` carries the release version and build.
 - [ ] `./scripts/test` and `./scripts/test --ui` pass.
