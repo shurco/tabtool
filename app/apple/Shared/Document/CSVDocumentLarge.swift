@@ -25,8 +25,11 @@ enum DocumentNotice: Equatable {
 /// Opening and watching a memory-mapped file.
 extension CSVDocument {
     /// Whether a file of this size opens through the memory-mapped path.
-    nonisolated static func usesLargeMode(forFileSize size: Int64) -> Bool {
-        size >= LargeFile.thresholdBytes
+    nonisolated static func usesLargeMode(
+        forFileSize size: Int64,
+        thresholdBytes: Int64 = Preferences.largeFileThresholdBytes()
+    ) -> Bool {
+        size >= thresholdBytes
     }
 
     /// Whether the index of a large file is still being built.

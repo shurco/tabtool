@@ -57,8 +57,14 @@ func waitForIndexing(of document: CSVDocument) async throws {
     }
 
     @Test func routesBySizeAgainstTheThreshold() {
-        #expect(!CSVDocument.usesLargeMode(forFileSize: LargeFile.thresholdBytes - 1))
-        #expect(CSVDocument.usesLargeMode(forFileSize: LargeFile.thresholdBytes))
+        #expect(CSVDocument.usesLargeMode(forFileSize: 1_000, thresholdBytes: 1_000))
+        #expect(!CSVDocument.usesLargeMode(forFileSize: 999, thresholdBytes: 1_000))
+    }
+
+    @Test func defaultThresholdIsTheDocumentedLargeFileThreshold() {
+        let cleanThreshold = Preferences.largeFileThresholdBytes(TestDefaults().defaults)
+        #expect(CSVDocument.usesLargeMode(forFileSize: LargeFile.thresholdBytes, thresholdBytes: cleanThreshold))
+        #expect(!CSVDocument.usesLargeMode(forFileSize: LargeFile.thresholdBytes - 1, thresholdBytes: cleanThreshold))
     }
 
     @Test func smallDocumentStaysInMemory() async {

@@ -26,6 +26,24 @@ import UniformTypeIdentifiers
         #expect(doc.table?.headers == nil)
     }
 
+    @Test @MainActor func newDocumentUsesTheInjectedConfiguration() async {
+        let doc = CSVDocument(newDocumentConfiguration: {
+            CSVConfiguration(columnSeparator: ";", decimalMark: ",")
+        })
+        await doc.load()
+        #expect(doc.configuration.columnSeparator == ";")
+        #expect(doc.configuration.decimalMark == ",")
+        #expect(doc.phase == .ready)
+    }
+
+    @Test @MainActor func newDocumentWithHeaderPreferenceHasMatchingHeaders() async {
+        let doc = CSVDocument(newDocumentConfiguration: { CSVConfiguration(firstRowAsHeader: true) })
+        await doc.load()
+        #expect(doc.table?.headers == ["", "", ""])
+        #expect(doc.table?.rowCount == 1)
+        #expect(doc.configuration.firstRowAsHeader == true)
+    }
+
     @Test @MainActor func loadDetectsFormatWhenConfigurationIsNil() async throws {
         let doc = CSVDocument(data: Data("a;b\n1,5;2,5\n".utf8), fileURL: nil)
         await doc.load()

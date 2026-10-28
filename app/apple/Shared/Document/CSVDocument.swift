@@ -66,7 +66,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// closes, so its bytes are kept until a parse succeeds; a file-backed
     /// document releases them after a completed attempt and retries from disk.
     private enum InitialContent {
-        case newDocument
+        case newDocument(makeConfiguration: @Sendable () -> CSVConfiguration)
         case data(Data, configuration: CSVConfiguration?)
         /// A file at or above the large file threshold; nothing is read until `load()`.
         case largeFile
@@ -119,10 +119,13 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         self.loader = loader
     }
 
-    /// Creates a new document; `load()` materializes the table.
-    nonisolated init() {
+    /// Creates a new document; `load()` materializes the table in the
+    /// configuration `newDocumentConfiguration` returns.
+    nonisolated init(
+        newDocumentConfiguration: @escaping @Sendable () -> CSVConfiguration = { Preferences.newDocumentConfiguration() }
+    ) {
         self.fileURL = nil
-        self.initialContent = .newDocument
+        self.initialContent = .newDocument(makeConfiguration: newDocumentConfiguration)
         self.prefersChineseEncoding = false
         self.undoManager = nil
         self.loader = CSVDocumentIO.load
@@ -225,9 +228,9 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         undoManager?.groupsByEvent = false
 
         switch initialContent {
-        case .newDocument:
+        case .newDocument(let makeConfiguration):
             initialContent = nil
-            materializeNewDocument()
+            materializeNewDocument(configuration: makeConfiguration())
         case .data(let data, let configuration):
             // A data-only document has no other copy if its window closes.
             // File-backed documents can safely retry from the file on disk.
@@ -289,9 +292,13 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     }
 
     /// Builds the table for a new document; `load()` is idempotent.
-    private func materializeNewDocument() {
-        table = .newDocument()
-        configuration = CSVConfiguration()
+    private func materializeNewDocument(configuration newConfiguration: CSVConfiguration) {
+        var newTable = CSVTable.newDocument()
+        if newConfiguration.firstRowAsHeader {
+            newTable.setHeaders(Array(repeating: "", count: newTable.columns.count))
+        }
+        table = newTable
+        configuration = newConfiguration
         phase = .ready
         refreshPhase()
     }
