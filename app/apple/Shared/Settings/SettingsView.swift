@@ -26,6 +26,7 @@ struct SettingsView: View {
 private struct GeneralSettings: View {
     @AppStorage(Preferences.Key.appLanguage) private var language = Preferences.Default.appLanguage
     @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
+    @State private var needsRestart = false
 
     var body: some View {
         Form {
@@ -39,8 +40,23 @@ private struct GeneralSettings: View {
                 }
             }
             .accessibilityIdentifier("settings-language")
-            .onChange(of: language) { _, new in new.applyOverride() }
-            caption("Takes effect after restart.")
+            .onChange(of: language) { _, new in
+                new.applyOverride()
+                needsRestart = true
+            }
+            HStack {
+                caption("Takes effect after restart.")
+                if needsRestart {
+                    Spacer()
+                    Button { AppRelaunch.request() } label: {
+                        Label("Restart Now", systemImage: "arrow.clockwise")
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .help("Restart Now")
+                    .accessibilityIdentifier("settings-restart")
+                }
+            }
 
             Toggle("Show Format Bar", isOn: $showFormatBar)
                 .accessibilityIdentifier("settings-show-format-bar")
