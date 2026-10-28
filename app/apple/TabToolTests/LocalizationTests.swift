@@ -56,11 +56,35 @@ import Testing
         #expect(problems.isEmpty, "\(language.rawValue): \(problems.joined(separator: "\n"))")
     }
 
+    /// The strings looked up at runtime, not through a SwiftUI literal, must be in the catalog.
+    @Test func runtimeLookupsResolveInFrench() throws {
+        let french = try frenchBundle()
+        #expect(french.localized("Decimal") == "Décimal")
+        #expect(french.localized("Edit Cell") == "Modifier la cellule")
+        #expect(FormatDisplay.separatorName(for: ",", in: french) == "Virgule")
+        #expect(FormatDisplay.encodingName(for: .macOSRoman, in: french) == "Occidental (Mac OS Roman)")
+    }
+
+    @Test(arguments: [
+        "Paste Data", "Edit Cell", "Add Row", "Delete Rows", "Move Rows", "Add Column", "Delete Columns",
+        "Move Column", "Move Columns", "Change Format", "Toggle Header", "Sort Rows", "Remove Sort",
+        "Rename Column", "Revert to Saved",
+    ])
+    func undoActionNamesAreTranslated(_ name: String) throws {
+        #expect(try frenchBundle().localized(name) != name)
+    }
+
     @Test func formatSpecifiersIgnorePositionalIndexes() {
         #expect(formatSpecifiers(of: "%1$@ %2$lld") == formatSpecifiers(of: "%lld %@"))
         #expect(formatSpecifiers(of: "%lld%% · %@") == ["%%", "%@", "%lld"])
         #expect(formatSpecifiers(of: "%@") != formatSpecifiers(of: "%lld"))
     }
+}
+
+/// The app bundle's French resources, to check lookups that take a bundle.
+private func frenchBundle() throws -> Bundle {
+    let path = try #require(Bundle.main.path(forResource: "fr", ofType: "lproj"))
+    return try #require(Bundle(path: path))
 }
 
 /// The compiled `Localizable.strings` of a language, read from the app bundle.

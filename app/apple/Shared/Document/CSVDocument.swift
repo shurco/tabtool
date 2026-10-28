@@ -452,7 +452,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         guard let undoManager else { return }
         undoManager.beginUndoGrouping()
         undoManager.registerUndo(withTarget: self, handler: handler)
-        undoManager.setActionName(actionName)
+        undoManager.setActionName(Bundle.main.localized(actionName))
         undoManager.endUndoGrouping()
     }
 

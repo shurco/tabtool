@@ -255,12 +255,12 @@ enum DecimalOption: String, CaseIterable, Identifiable {
 
 /// Human-readable names shared by the format bar and the status line.
 enum FormatDisplay {
-    static func encodingName(for encoding: String.Encoding) -> String {
-        SupportedEncodings.all.first { $0.encoding == encoding }?.name
+    static func encodingName(for encoding: String.Encoding, in bundle: Bundle = .main) -> String {
+        SupportedEncodings.all.first { $0.encoding == encoding }.map { bundle.localized($0.name) }
             ?? String.localizedName(of: encoding)
     }
 
-    static func separatorName(for separator: String) -> String {
-        SeparatorOption(rawValue: separator)?.name ?? separator
+    static func separatorName(for separator: String, in bundle: Bundle = .main) -> String {
+        SeparatorOption(rawValue: separator).map { bundle.localized($0.name) } ?? separator
     }
 }

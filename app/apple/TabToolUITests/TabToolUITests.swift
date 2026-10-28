@@ -6,12 +6,14 @@ final class TabToolUITests: XCTestCase {
     ///
     /// The document app restores windows on relaunch. Without ignoring the
     /// saved state, windows left by earlier tests make identifiers ambiguous.
+    /// The tests match English texts, so the language is pinned.
     @MainActor
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
             "-ApplePersistenceIgnoreState", "YES",
-            "-NSQuitAlwaysKeepsWindows", "NO"
+            "-NSQuitAlwaysKeepsWindows", "NO",
+            "-AppleLanguages", "(en)"
         ]
         app.launch()
         return app
