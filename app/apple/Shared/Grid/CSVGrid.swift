@@ -36,6 +36,8 @@ struct CSVGrid: NSViewRepresentable {
         tableView.allowsColumnReordering = true
         tableView.applyGridAppearance(alternatingRows: alternatingRows, rowHeight: rowHeight)
         tableView.intercellSpacing = NSSize(width: 8, height: 2)
+        tableView.gridStyleMask = .solidVerticalGridLineMask
+        tableView.style = .fullWidth
         tableView.setDraggingSourceOperationMask(.move, forLocal: true)
         tableView.setDraggingSourceOperationMask(.copy, forLocal: false)
         tableView.registerForDraggedTypes([GridPasteboard.rowIndexes])

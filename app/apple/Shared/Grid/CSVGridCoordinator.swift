@@ -238,6 +238,16 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
         return cell
     }
 
+    func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        let identifier = NSUserInterfaceItemIdentifier("grid-row")
+        if let reused = tableView.makeView(withIdentifier: identifier, owner: self) as? CSVTableRowView {
+            return reused
+        }
+        let rowView = CSVTableRowView()
+        rowView.identifier = identifier
+        return rowView
+    }
+
     // MARK: - Delegate
 
     func tableView(_ tableView: NSTableView,

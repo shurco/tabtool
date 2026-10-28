@@ -37,6 +37,26 @@ final class CSVTableView: NSTableView {
         }
     }
 
+    override func drawGrid(inClipRect clipRect: NSRect) {
+        super.drawGrid(inClipRect: clipRect)
+        // Row views draw the line beside rows; drawing it twice there would
+        // stack the translucent grid color.
+        let rowsBottom = numberOfRows > 0 ? rect(ofRow: numberOfRows - 1).maxY : bounds.minY
+        drawTrailingGridLine(in: self, clipRect: clipRect.intersection(
+            NSRect(x: clipRect.minX, y: rowsBottom, width: clipRect.width, height: bounds.maxY - rowsBottom)
+        ))
+    }
+
+    /// AppKit draws vertical grid lines only between columns, so the last
+    /// column's trailing border, which matches the header divider, is drawn
+    /// here into `view`: this table, or a row view whose background covers it.
+    func drawTrailingGridLine(in view: NSView, clipRect: NSRect) {
+        guard gridStyleMask.contains(.solidVerticalGridLineMask), numberOfColumns > 0 else { return }
+        let x = view.convert(NSPoint(x: rect(ofColumn: numberOfColumns - 1).maxX - 1, y: 0), from: self).x
+        gridColor.setFill()
+        NSRect(x: x, y: clipRect.minY, width: 1, height: clipRect.height).fill()
+    }
+
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
         let clickedRow = row(at: point)

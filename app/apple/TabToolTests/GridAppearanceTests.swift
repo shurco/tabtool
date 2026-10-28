@@ -9,4 +9,12 @@ import Testing
         #expect(table.usesAlternatingRowBackgroundColors == false)
         #expect(table.rowHeight == 32)
     }
+
+    @Test func rowsUseTheGridRowView() async {
+        let document = await GridTestSupport.makeLoadedNewDocument()
+        let (coordinator, tableView, _) = GridTestSupport.makeGrid(document)
+        withExtendedLifetime(coordinator) {
+            #expect(tableView.rowView(atRow: 0, makeIfNecessary: true) is CSVTableRowView)
+        }
+    }
 }
