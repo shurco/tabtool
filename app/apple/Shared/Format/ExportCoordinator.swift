@@ -118,9 +118,10 @@ final class ExportCoordinator {
         self.options = ExportOptions(configuration: documentConfiguration)
     }
 
-    /// Shows the export panel for the focused document.
+    /// Shows the export panel for the focused document; a filtered document
+    /// exports only the rows it shows.
     static func present(for document: CSVDocument) {
-        guard let table = document.table else { return }
+        guard let table = document.visibleTableAfterEndingEditing() else { return }
         let coordinator = ExportCoordinator(
             table: table,
             documentConfiguration: document.configuration,

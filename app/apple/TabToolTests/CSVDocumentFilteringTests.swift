@@ -51,6 +51,32 @@ import TabToolKit
         #expect(doc.selection == GridSelection(rows: IndexSet([0, 2])))
     }
 
+    @Test func visibleTableKeepsOnlyTheFilteredRowsWithTheirEdits() async throws {
+        let (doc, _) = await loaded("a,1\nb,2\na,3\n")
+        doc.addColumnRightOfSelection()
+        try applyFilter(doc, value: "a")
+        doc.setCell("z", row: 2, column: 1)
+
+        let table = try #require(doc.visibleTableAfterEndingEditing())
+        #expect(table.rowCount == 2)
+        #expect(table.columns.count == 3)
+        #expect(table.cell(row: 0, column: 1) == "1")
+        #expect(table.cell(row: 1, column: 1) == "z")
+    }
+
+    @Test func visibleTableIsTheWholeTableWithoutAFilter() async throws {
+        let (doc, _) = await loaded("a\nb\n")
+        #expect(doc.visibleTableAfterEndingEditing() == doc.table)
+    }
+
+    @Test func visibleTableCommitsTheCellBeingEdited() async {
+        let (doc, _) = await loaded("a\nb\n")
+        let session = CountingSession()
+        doc.editingSession = session
+        _ = doc.visibleTableAfterEndingEditing()
+        #expect(session.endCount == 1)
+    }
+
     @Test func cellEditDoesNotReevaluateTheFilter() async throws {
         let (doc, _) = await loaded("a\nb\na\n")
         try applyFilter(doc, value: "a")

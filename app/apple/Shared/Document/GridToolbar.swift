@@ -42,6 +42,16 @@ struct GridToolbar: View {
 
             Spacer()
 
+            Button {
+                ExportCoordinator.present(for: document)
+            } label: {
+                GridToolbarGlyph(symbolName: "square.and.arrow.up", pointSize: 14)
+            }
+            .help(document.isLargeMode ? Text("Not available in large file mode.") : Text("Export…"))
+            .accessibilityLabel("Export…")
+            .accessibilityIdentifier("export")
+            .disabled(!document.isEditableContent)
+
             filterToggle
         }
         .padding(.horizontal, 8)

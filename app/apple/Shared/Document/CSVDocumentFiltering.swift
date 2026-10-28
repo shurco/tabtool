@@ -21,6 +21,16 @@ extension CSVDocument {
         isEditableContent && canEditRowStructure
     }
 
+    /// The table as shown, for export: only the rows that pass the applied
+    /// filter, read after the cell being edited is committed.
+    func visibleTableAfterEndingEditing() -> CSVTable? {
+        guard var table = tableAfterEndingEditing() else { return nil }
+        if let visibleRows = rowFilter.visibleRows {
+            table.deleteRows(at: IndexSet(integersIn: 0..<table.rowCount).subtracting(IndexSet(visibleRows)))
+        }
+        return table
+    }
+
     /// Applies every enabled draft criterion to the current table.
     func applyAllFilters() {
         guard canFilter, let table = tableAfterEndingEditing() else { return }
