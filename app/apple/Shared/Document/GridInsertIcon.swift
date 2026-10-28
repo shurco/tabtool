@@ -22,16 +22,9 @@ struct GridInsertIcon: View {
     let axis: Axis
 
     var body: some View {
-        Image(systemName: axis.symbolName)
-            .font(.system(size: 16))
-            .overlay(alignment: .bottomTrailing) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 8, weight: .bold))
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, .green)
-                    .offset(x: 2, y: 2)
-                    .accessibilityHidden(true)
-            }
-            .frame(width: 22, height: 20)
+        GridToolbarGlyph(
+            symbolName: axis.symbolName,
+            badge: .init(symbolName: "plus.circle.fill", color: .green)
+        )
     }
 }

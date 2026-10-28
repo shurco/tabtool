@@ -48,8 +48,7 @@ struct GridToolbar: View {
                 guard document.canDeleteSelection else { return }
                 document.deleteSelection()
             } label: {
-                Label("Delete Selection", systemImage: "trash")
-                    .labelStyle(.iconOnly)
+                GridToolbarGlyph(symbolName: "trash")
             }
             .help(document.isLargeMode ? Text("Not available in large file mode.") : Text("Delete Selected Rows or Columns"))
             .accessibilityLabel("Delete Selection")
@@ -74,12 +73,13 @@ struct GridToolbar: View {
         return Button {
             document.toggleFilterBar()
         } label: {
-            Label(title, systemImage: document.rowFilter.isFiltering
-                  ? "line.3.horizontal.decrease.circle.fill"
-                  : "line.3.horizontal.decrease.circle")
-                .labelStyle(.iconOnly)
+            GridToolbarGlyph(
+                symbolName: "line.3.horizontal.decrease",
+                badge: document.rowFilter.isFiltering
+                    ? .init(symbolName: "checkmark.circle.fill", color: .accentColor)
+                    : nil
+            )
         }
-        .foregroundStyle(document.rowFilter.isFiltering ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
         .help(document.isLargeMode ? Text("Not available in large file mode.") : Text(title))
         .accessibilityLabel(title)
         .accessibilityIdentifier("filter-toggle")
