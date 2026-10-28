@@ -128,30 +128,28 @@ final class TabToolUITests: XCTestCase {
     }
 
     @MainActor
-    func testToolbarContextMenusAddAboveAndLeft() {
+    func testToolbarAddsBeforeTheSelectionOnlyWithASelection() {
         let app = launchApp()
         app.menuBars.menuItems["New"].click()
         let grid = app.tables["grid"]
         XCTAssertTrue(grid.waitForExistence(timeout: 5))
 
-        let addRow = app.buttons["add-row"]
-        XCTAssertTrue(addRow.waitForExistence(timeout: 5))
-        addRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).rightClick()
-
-        // The Table menu now exposes commands with the same titles, so scope
-        // the query to the context menu attached to the document window.
-        let contextMenu = app.windows.firstMatch.menus.firstMatch
-        let addAbove = contextMenu.menuItems["Add Row Above"]
+        let addAbove = app.buttons["add-row-above"]
+        let addLeft = app.buttons["add-column-left"]
         XCTAssertTrue(addAbove.waitForExistence(timeout: 5))
-        addAbove.click()
-        XCTAssertEqual(grid.descendants(matching: .tableRow).count, 2)
+        XCTAssertFalse(addAbove.isEnabled)
+        XCTAssertFalse(addLeft.isEnabled)
 
-        let addColumn = app.buttons["add-column"]
-        addColumn.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).rightClick()
-        let addLeft = app.windows.firstMatch.menus.firstMatch.menuItems["Add Column Left"]
-        XCTAssertTrue(addLeft.waitForExistence(timeout: 5))
+        // A new row becomes the selection, so a row can then go above it.
+        app.buttons["add-row"].click()
+        XCTAssertTrue(addAbove.isEnabled)
+        addAbove.click()
+        XCTAssertEqual(grid.descendants(matching: .tableRow).count, 3)
+
+        app.buttons["add-column"].click()
+        XCTAssertTrue(addLeft.isEnabled)
         addLeft.click()
-        XCTAssertEqual(grid.descendants(matching: .tableColumn).count, 4)
+        XCTAssertEqual(grid.descendants(matching: .tableColumn).count, 5)
     }
 
     @MainActor

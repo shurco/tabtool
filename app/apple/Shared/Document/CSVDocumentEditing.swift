@@ -53,6 +53,18 @@ extension CSVDocument {
         return !columns.isEmpty && table.columns.count > 1
     }
 
+    /// Whether the toolbar can insert a row above the selection; it needs a
+    /// selected row to insert before.
+    var canAddRowAboveSelection: Bool {
+        canInsertRows && !selection.rows.isEmpty
+    }
+
+    /// Whether the toolbar can insert a column left of the selection; it
+    /// needs a selected column to insert before.
+    var canAddColumnLeftOfSelection: Bool {
+        !isLargeMode && isEditableContent && !selection.columns.isEmpty
+    }
+
     /// Inserts a blank row above the first selected row, or at the top.
     func addRowAboveSelection() {
         guard let table = tableAfterEndingEditing(), canEditRowStructure else { return }

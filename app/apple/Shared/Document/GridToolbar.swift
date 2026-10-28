@@ -2,43 +2,28 @@ import SwiftUI
 
 /// Row and column actions above the grid.
 ///
-/// The primary action inserts below or to the right of the selection; the
-/// context menu offers the opposite side. A new row or column becomes the
-/// selection.
+/// Inserting before the selection needs a selected row or column; inserting
+/// after it appends at the end when nothing is selected. A new row or column
+/// becomes the selection.
 struct GridToolbar: View {
     @ObservedObject var document: CSVDocument
 
     var body: some View {
         HStack(spacing: 2) {
-            Button {
-                document.addRowBelowSelection()
-            } label: {
-                GridInsertIcon(axis: .row)
-            }
-            .help(document.isLargeMode ? Text("Not available in large file mode.") : Text("Add Row Below"))
-            .accessibilityLabel("Add Row Below")
-            .accessibilityIdentifier("add-row")
-            .disabled(!document.canInsertRows)
-            .contextMenu {
-                Button("Add Row Above") {
-                    document.addRowAboveSelection()
-                }
-            }
+            insertButton(.rowAbove, title: "Add Row Above", id: "add-row-above",
+                         isEnabled: document.canAddRowAboveSelection, action: document.addRowAboveSelection)
+            insertButton(.rowBelow, title: "Add Row Below", id: "add-row",
+                         isEnabled: document.canInsertRows, action: document.addRowBelowSelection)
 
-            Button {
-                document.addColumnRightOfSelection()
-            } label: {
-                GridInsertIcon(axis: .column)
-            }
-            .help(document.isLargeMode ? Text("Not available in large file mode.") : Text("Add Column Right"))
-            .accessibilityLabel("Add Column Right")
-            .accessibilityIdentifier("add-column")
-            .disabled(document.isLargeMode)
-            .contextMenu {
-                Button("Add Column Left") {
-                    document.addColumnLeftOfSelection()
-                }
-            }
+            Divider()
+                .frame(height: 16)
+                .padding(.horizontal, 4)
+
+            insertButton(.columnLeft, title: "Add Column Left", id: "add-column-left",
+                         isEnabled: document.canAddColumnLeftOfSelection,
+                         action: document.addColumnLeftOfSelection)
+            insertButton(.columnRight, title: "Add Column Right", id: "add-column",
+                         isEnabled: !document.isLargeMode, action: document.addColumnRightOfSelection)
 
             Divider()
                 .frame(height: 16)
@@ -61,6 +46,17 @@ struct GridToolbar: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
+    }
+
+    private func insertButton(_ position: GridInsertIcon.Position, title: LocalizedStringKey, id: String,
+                              isEnabled: Bool, action: @escaping @MainActor () -> Void) -> some View {
+        Button(action: action) {
+            GridInsertIcon(position: position)
+        }
+        .help(document.isLargeMode ? Text("Not available in large file mode.") : Text(title))
+        .accessibilityLabel(title)
+        .accessibilityIdentifier(id)
+        .disabled(!isEnabled)
     }
 
     /// Shows or hides the filter bar; blue with a light glyph while the bar
