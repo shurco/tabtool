@@ -10,11 +10,42 @@ The project is in development. The name is TabTool and the bundle ID is `app.shu
 - Opening files by dropping them on the Dock icon, the app icon in Finder, or an open window (`.csv`, `.tsv`, `.txt`, `.tab`, `.dat`).
 - Editing cells, adding and removing rows and columns (also from the right-click menus on a row or a column header), reordering rows with drag & drop and columns by dragging the header, sorting rows by a column (click the arrow in the column header, the header menu, or the Table menu), renaming a column (double-click its title, the header menu, or the Table menu; without a header it turns Header on and keeps all rows), and moving the selected rows or columns one step with `⌥⌘` arrows.
 - Copying and pasting rows/columns as TSV, undo/redo for cells, structure, paste, and format changes.
-- Large file mode (files of 100 MiB and more): the file is memory-mapped and indexed in the background, so rows appear at once and a 5 GB file with 77.7 million rows is fully indexed about 2.7 seconds after launch, using under 100 MB of memory. You can browse, jump with `⌘↑`/`⌘↓`, and edit cells with undo; structural commands, sorting, export, Duplicate and the decimal mark are unavailable. Save and Save As stream the file (only edited rows are rewritten; the 5 GB file saves in about 6 seconds with the status bar showing progress and a Cancel button); the file is never autosaved, and closing the window or quitting with unsaved edits asks Save / Don't Save / Cancel. Saving needs free disk space of about twice the file size. Supported encodings, the row-break and quoting rules, and what is unavailable are listed in [docs/csv-format.md](docs/csv-format.md#large-file-mode).
+- Large file mode (files of 100 MiB and more by default; the threshold is a setting): the file is memory-mapped and indexed in the background, so rows appear at once and a 5 GB file with 77.7 million rows is fully indexed about 2.7 seconds after launch, using under 100 MB of memory. You can browse, jump with `⌘↑`/`⌘↓`, and edit cells with undo; structural commands, sorting, export, Duplicate and the decimal mark are unavailable. Save and Save As stream the file (only edited rows are rewritten; the 5 GB file saves in about 6 seconds with the status bar showing progress and a Cancel button); the file is never autosaved, and closing the window or quitting with unsaved edits asks Save / Don't Save / Cancel. Saving needs free disk space of about twice the file size. Supported encodings, the row-break and quoting rules, and what is unavailable are listed in [docs/csv-format.md](docs/csv-format.md#large-file-mode).
 - Saving and exporting with a different delimiter, encoding, quotes, decimal mark, and header.
 - CSV, TSV, and plain text formats; UTF-8/16/32, MacRoman, Windows Latin 1/2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, Japanese encodings.
+- Settings window (`⌘,`): interface language, defaults for new documents, grid appearance, large file threshold, format bar. See [Settings](#settings).
+- Interface in 11 languages, chosen in Settings or following the system. See [Languages](#languages).
 - No formulas, styles, or charts — this is a simple CSV editor.
 - App Store: sandbox, no network, analytics, or third-party SDKs.
+
+## Settings
+
+`TabTool > Settings…` (`⌘,`) opens one window with four sections. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the language the next launch. A stored value that is not one of the offered options falls back to the default.
+
+| Section | Setting | Key | Default |
+| --- | --- | --- | --- |
+| General | Language | `appLanguage` | System |
+| General | Show Format Bar (also `View > Show Format Bar`) | `showFormatBar` | on |
+| New Document | Encoding | `newDocumentEncoding` | UTF-8 |
+| New Document | Separator | `newDocumentSeparator` | Comma |
+| New Document | Quote | `newDocumentQuoteStyle` | Doubled |
+| New Document | Decimal Mark | `newDocumentDecimalMark` | Dot |
+| New Document | First Row as Header | `newDocumentFirstRowAsHeader` | off |
+| Grid | Alternating Row Colors | `gridAlternatingRows` | on |
+| Grid | Row Height: Compact 20 pt, Default 24 pt, Comfortable 32 pt | `gridRowHeight` | Default (24 pt) |
+| Large Files | Large File Threshold: 25, 50, 100, 250, 500, or 1024 MiB | `largeFileThresholdMiB` | 100 MiB |
+
+- The New Document settings apply only to new documents. A file you open keeps the format detected from its content, and the format bar still changes the format of an open document.
+- Files at or above the large file threshold open in large file mode.
+
+## Languages
+
+The interface is available in English (`en`), Français (`fr`), Español (`es`), Deutsch (`de`), Italiano (`it`), Polski (`pl`), Беларуская (`be`), Українська (`uk`), 简体中文 (`zh-Hans`), 日本語 (`ja`), and 한국어 (`ko`). Settings > General > Language lists them by their own names, plus System, which follows the macOS language and is the default.
+
+- The choice is stored in `appLanguage` and mirrored to `AppleLanguages` in the app's own defaults domain (`[code]` for a language, the key removed for System). It applies after a restart because menus and panels resolve their strings at launch; the window shows "Takes effect after restart."
+- The language list is `AppLanguage` and `CFBundleLocalizations` in `Info.plist`; a unit test keeps them equal. The translations are in `app/apple/Shared/Localizable.xcstrings` (166 keys); a unit test checks that every key is translated into every language and keeps its format specifiers.
+- The 10 translations are machine-generated and have not been reviewed by native speakers.
+- Not localized: the strings in `Info.plist` (for example document type names). macOS itself has no Belarusian localization, so system-provided items stay English when Belarusian is chosen.
 
 ## Requirements
 
@@ -29,10 +60,10 @@ The repository follows these conventions:
 
 - `app/apple` — the macOS app: XcodeGen `project.yml`, the `TabToolKit` package, the `Shared` shell, platform files `macOS/App`.
 - `app/apple/TabToolKit` — CSV core: parser, writer, format heuristics, table model, clipboard, export. No AppKit/SwiftUI.
-- `app/apple/Shared` — SwiftUI shell, document, grid on `NSTableView`, format panel, export, resources.
+- `app/apple/Shared` — SwiftUI shell, document, grid on `NSTableView`, format panel, export, Settings window and preferences (`Settings/`), resources.
 - `app/apple/macOS/App` — `Info.plist` (document types, category, encryption flag), entitlements, privacy manifest.
 - `app/apple/Shared/Assets.xcassets` — placeholder `AppIcon`; final branding is a release task.
-- `app/apple/Shared/Localizable.xcstrings` — String Catalog for all UI text; English only in v1.
+- `app/apple/Shared/Localizable.xcstrings` — String Catalog for all UI text: English plus 10 machine-generated translations (see [Languages](#languages)).
 - `app/apple/TabToolTests` and `app/apple/TabToolUITests` — app unit and UI tests.
 - `scripts` — `app` (XcodeGen + xcodebuild), `test`, `bench-large` (large file benchmark), `lib/version`.
 - `docs` — architecture, build, App Store, CSV format.
@@ -68,7 +99,7 @@ cd app/apple/TabToolKit && swift test
 ./scripts/test --ui
 ```
 
-`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 229 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 217 app unit tests, and 16 UI tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
+`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 229 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 238 app unit tests, and 17 UI tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
 
 ## Performance
 
@@ -123,6 +154,7 @@ The code is feature-complete for a 1.0 release, but the release identity is deli
 - [ ] Inspect the archive: three document types in `Info.plist`, sandbox and user-selected read-write entitlements, `PrivacyInfo.xcprivacy` in `Contents/Resources`, and the app icon.
 - [ ] Run `./scripts/test`, `./scripts/test --ui`, and the manual QA matrix in `docs/building.md`.
 - [ ] Fill in App Privacy as **Data Not Collected**; confirm `ITSAppUsesNonExemptEncryption=false` with the account owner.
+- [ ] Have native speakers review the machine-generated translations in `app/apple/Shared/Localizable.xcstrings`.
 - [ ] Prepare screenshots, description, keywords, and reviewer notes without promising formulas, databases, or "any tables"; include the required MIT notice.
 - [ ] After upload, pin the uploaded build in `app/apple/version.lock.json` and never reuse a build number.
 

@@ -27,7 +27,7 @@ The UI and architecture are implemented in modern Swift.
 - Grid on `NSTableView` via `NSViewRepresentable`: it provides quality editing, multi-selection, drag&drop, and undo that would have to be reinvented in SwiftUI `Table`.
 - App Store: sandbox, hardened runtime, document types, no network/analytics/third-party SDKs, the required MIT notice in `LICENSE`.
 - macOS 14+.
-- English UI in v1; all strings go through String Catalog so that a Russian localization can be added without reworking the code.
+- The UI is available in 11 languages (English, French, Spanish, German, Italian, Polish, Belarusian, Ukrainian, Simplified Chinese, Japanese, Korean) and can follow the system language; all strings go through String Catalog. The 10 translations are machine-generated and need native review.
 
 ### v1 non-goals
 
@@ -92,7 +92,7 @@ User decision: **A**.
 - Autosave never writes a document that cannot be saved safely. On a read error, text that cannot be represented in the current encoding, or an ambiguous no-quote CSV, autosave is suspended: the document stays dirty, and a persistent banner with an explanation and actions is shown in the window. Save in such states is blocked by a typed error; the edit that caused the issue must be undone, or Export can write another encoding or quote style. Export may ask for confirmation for no-quote, but cannot write unrepresentable text. There is no silent format change or data loss.
 - Openable types: CSV (`public.comma-separated-values-text`), TSV (`public.tab-separated-values-text`), plain text (`public.plain-text`). For CSV/TSV the app is the Owner, for plain text — Alternate, so as not to intercept all `.txt`.
 - Export always goes through the save panel; default is `.csv`, the format (separator/encoding/quotes/decimal mark/header) is chosen in the panel's accessory view. Export does not change the format of the current document.
-- New document: 3 columns × 1 empty row, UTF-8, comma, quotes `"` with doubling, decimal point, no header.
+- New document: 3 columns × 1 empty row. The format comes from the New Document settings (6.10); by default UTF-8, comma, quotes `"` with doubling, decimal point, no header.
 - An empty file opens as a 1×1 table; this is pinned by a test.
 - UTF-8/UTF-16 BOM is recognized, does not get into cell text, and is preserved when writing in the same encoding.
 - Line endings when reading: CRLF, CR, LF, and Unicode newlines. When writing — `\n`, without a trailing newline.
@@ -110,7 +110,7 @@ User decision: **A**.
 
 ### 5.3 Editor
 
-- `NSTableView` grid (view-based) with alternating background, resizable columns, column reordering, and multiple row selection.
+- `NSTableView` grid (view-based) with alternating background (a setting, on by default), resizable columns, column reordering, and multiple row selection.
 - Cell editing: double-click/Return, commit on Enter, Tab, or loss of focus.
 - Numeric cells are right-aligned; text cells are left-aligned. Numeric classification is only presentation; cell content is stored as the original string.
 - Add a row above/below the selection; add a column to the left/right; delete selected rows/columns. If nothing is selected: row above — at the beginning, below — at the end; column to the left — at the beginning, to the right — at the end.
@@ -209,6 +209,7 @@ TabTool/
 │       │   ├── Document/
 │       │   ├── Grid/
 │       │   ├── Format/
+│       │   ├── Settings/                # Preferences, AppLanguage, SettingsView
 │       │   ├── About/
 │       │   ├── Assets.xcassets
 │       │   └── Localizable.xcstrings
@@ -335,10 +336,10 @@ The parser builds the table from rows: `max(fields)` columns, short rows are pad
 
 - Entitlements: App Sandbox, user-selected read-write. No network, no iCloud, no Apple Events. File — `app/apple/macOS/App/TabTool.entitlements`.
 - Hardened runtime; Archive; no private APIs. The project is built from `app/apple/project.yml`; `.xcodeproj` is not committed.
-- `PrivacyInfo.xcprivacy` — `app/apple/macOS/App/PrivacyInfo.xcprivacy`: we collect no data and there is no tracking. Required-reason APIs: User defaults (`CA92.1`, the app's own window and format-bar preferences in `@AppStorage`), File timestamp (`3B52.1`, size and modification time of the user's large file to notice changes on disk), and Disk space (`E174.1`, the free-space check before a large-file save).
+- `PrivacyInfo.xcprivacy` — `app/apple/macOS/App/PrivacyInfo.xcprivacy`: we collect no data and there is no tracking. Required-reason APIs: User defaults (`CA92.1`, the app's own window, format-bar, and Settings preferences, including the language override, in its own defaults domain), File timestamp (`3B52.1`, size and modification time of the user's large file to notice changes on disk), and Disk space (`E174.1`, the free-space check before a large-file save).
 - `Info.plist` — `app/apple/macOS/App/Info.plist`: CSV/TSV/plain-text document types, `LSHandlerRank`, `LSApplicationCategoryType=public.app-category.utilities`, `ITSAppUsesNonExemptEncryption=false`, deployment target 14.0. The required MIT notice is bundled from the repository `LICENSE` file.
 - `PrivacyInfo.xcprivacy` is copied into the app resources by the `TabTool` target in `project.yml`; `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon` points at `Shared/Assets.xcassets`.
-- `Shared/Localizable.xcstrings` holds the English UI strings; user-facing controls use localizable SwiftUI initializers. Accessibility identifiers from earlier tasks are preserved, and the banner/error overlay announce through `AccessibilityNotification`.
+- `Shared/Localizable.xcstrings` holds the UI strings in English plus 10 translations (6.10); user-facing controls use localizable SwiftUI initializers. Accessibility identifiers from earlier tasks are preserved, and the banner/error overlay announce through `AccessibilityNotification`.
 - `ENABLE_TESTABILITY=YES` is Debug-only; the Release archive is hardened but unsigned in development (`CODE_SIGNING_ALLOWED=NO` in `scripts/app archive`). `project.yml` sets `CODE_SIGN_IDENTITY=-` for local builds; a release build overrides the identity/team in Xcode or on the archive command line instead of committing signing material.
 - Store version — `app/apple/version.json`; the build substitutes it into `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` via `scripts/app`.
 - New public name, bundle ID, team ID, icon — before release; placeholders are used during development. Choose a unique name and icon.
@@ -347,7 +348,7 @@ The parser builds the table from rows: `max(fields)` columns, short rows are pad
 
 ### 6.9 Large file mode
 
-Files of `LargeFile.thresholdBytes` (100 MiB) and more never become a `CSVTable`. `CSVDocument.init(configuration:)` routes on `fileAttributes[.size]` without reading the bytes; the document keeps `table == nil` (which already disables every structural command) and publishes `largeSource`. The grid, the status bar and copy read `document.rowSource` (`table ?? largeSource`) through `RowSource`. Smaller files take the in-memory path unchanged.
+Files of the large file threshold and more never become a `CSVTable`. The threshold is the `largeFileThresholdMiB` preference (default `LargeFile.thresholdBytes`, 100 MiB). `CSVDocument.init(configuration:)` routes on `fileAttributes[.size]` without reading the bytes; the document keeps `table == nil` (which already disables every structural command) and publishes `largeSource`. The grid, the status bar and copy read `document.rowSource` (`table ?? largeSource`) through `RowSource`. Smaller files take the in-memory path unchanged.
 
 Core (`TabToolKit`):
 
@@ -367,6 +368,20 @@ App:
 - Save routing: the window's `NSDocument` would answer File > Save itself, and neither the window delegate nor a responder after the window is asked first. A view in the first-responder chain is, so `CSVTableView` answers `saveDocument:`, `saveDocumentAs:` and `duplicateDocument:` (always disabled) only in large mode (`responds(to:)`). `LargeDocumentWindow` keeps the grid in that chain: it focuses the grid when the menu bar opens (`NSMenu.didBeginTrackingNotification`, so the items validate against the grid) and right before a menu sends one of those actions (`NSMenu.willSendActionNotification`). The menu has already matched the key equivalent at that point, so Command-S works with any keyboard layout and any focused control.
 - Adoption after a save (`CSVDocumentLargeSaving`): the background task writes the file, maps the written file and indexes it completely; the window keeps showing the old mapping meanwhile (the replaced file stays readable through its descriptor). Then a new `LargeCSVSource` with the same overlay object and column identities replaces the old one, so columns, scroll position and selection stay; the saved edits leave the overlay, edits made during the save stay, and the undo history is kept (undo restores the text a cell showed).
 - Grid: `reloadData()` on every row count change, also while indexing. `noteNumberOfRowsChanged()` would make AppKit keep one update item per added row (tens of megabytes per tick on a multi-gigabyte file). Column reordering is off in large mode. Accessibility exposes only the visible rows of a large table, through both the modern overrides and the legacy `accessibilityAttributeValue(_:)` that System Events and VoiceOver use; otherwise AppKit builds one element per row.
+
+### 6.10 Settings and languages
+
+All of it is in the app shell (`Shared/Settings`); `TabToolKit` has no preference code. The user-facing list of settings, keys, and defaults is in the README ([Settings](../README.md#settings)).
+
+- `Preferences` holds the `UserDefaults` keys (persisted data, never renamed), the defaults, and the readers that turn stored values into app types: `newDocumentConfiguration`, `largeFileThresholdBytes`, `validRowHeight`. A missing, mistyped, or unknown stored value falls back to the default. The readers take an injectable `UserDefaults` (default `.standard`), so tests use a suite (`TestDefaults`) and never touch the app's real defaults.
+- `SettingsView` is the `Settings` scene of `TabToolApp` (⌘, and the "Settings…" menu item): one grouped `Form` with General, New Document, Grid, and Large Files sections. Controls bind to the keys with `@AppStorage`; the encoding, separator, quote, and decimal pickers reuse `SupportedEncodings.all`, `SeparatorOption`, `QuoteStyle`, and `DecimalOption` from the format bar. Accessibility identifiers use the `settings-` prefix.
+- New documents: `CSVDocument.init(newDocumentConfiguration:)` takes a closure (default `Preferences.newDocumentConfiguration()`) that travels in `InitialContent.newDocument(makeConfiguration:)`; `materializeNewDocument` calls it. With First Row as Header, the new table gets empty headers so the table and the configuration agree. Opened files keep the format detected from their bytes.
+- Large files: `CSVDocument.usesLargeMode(forFileSize:thresholdBytes:)` compares with `Preferences.largeFileThresholdBytes()` by default, when the document is created.
+- Grid: `CSVGrid` reads `gridAlternatingRows` and `gridRowHeight` through `@AppStorage`, so open windows update when the setting changes; `validRowHeight` accepts only 20, 24, or 32.
+- Language: `AppLanguage` is System plus the 11 codes of `CFBundleLocalizations` (`Info.plist`); a test keeps the two lists equal. The picker writes the `appLanguage` key and `AppLanguage.applyOverride(to:)` mirrors it to `AppleLanguages` in the app's own defaults domain: `[code]` for a language, the key removed for System. A separate key is needed because reading `AppleLanguages` returns the system list even when no override is set. The override is read at launch, so a change applies after a restart.
+- `Localizable.xcstrings` has 166 keys, each translated into all 11 languages; `LocalizationTests` checks that every key has every translation and keeps its format specifiers. Strings that are not SwiftUI literals (the status line with its encoding and separator names, undo action names) go through `Bundle.localized(_:)` (`Shared/App/Bundle+Localized.swift`).
+- Not localized: `Info.plist` strings. The translations are machine-generated and need native review.
+- `systemPrefersChineseEncoding` (file encoding detection from the system locale) is independent of the interface language.
 
 ## 7. Behavior and deliberate differences
 

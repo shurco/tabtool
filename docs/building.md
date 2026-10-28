@@ -94,7 +94,7 @@ xcodebuild -project TabTool.xcodeproj -scheme TabTool \
   -destination 'platform=macOS' -only-testing:TabToolUITests test
 ```
 
-Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 229 core Swift Testing tests plus the opt-in large file benchmark and 10 XCTest performance tests, 217 app unit tests, and 16 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.
+Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 229 core Swift Testing tests plus the opt-in large file benchmark and 10 XCTest performance tests, 238 app unit tests, and 17 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The UI tests launch the app with `-AppleLanguages (en)` because they match English texts. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.
 
 ## Signing and App Store
 
@@ -127,6 +127,7 @@ The automated suites cover parsing, writing, encoding, detection, document save/
 | Files | open fixture, save, Save As, reopen, export/re-import | App tests for snapshots; panels manual |
 | Scale | 100k-row file loads, scrolls, edits, saves | Performance tests; GUI smoke manual |
 | Large files | a multi-GB file opens with rows at once, indexes, jumps with ⌘↑/⌘↓, edits and undoes a cell, saves with progress, Save As, close/quit prompts, Reload after an outside change | Core + app tests, `scripts/bench-large`; GUI manual |
+| Settings and languages | `⌘,` opens Settings; each setting in the README Settings table takes effect as described; after a restart the UI, menus, and panels show the chosen language and System follows macOS; translations read well to a native speaker | Preferences, language, and catalog tests; GUI and translation review manual |
 | Accessibility | VoiceOver reads the grid, toolbar, format bar, banner, and errors; full keyboard access reaches grid and format bar | Labels/identifiers committed; VoiceOver manual |
 | Appearance | light/dark mode, minimum window size | Manual |
 

@@ -15,7 +15,7 @@ TabTool is a simple CSV editor for macOS. It opens CSV/TSV/text files, detects t
 
 There is no network, iCloud, Apple Events, camera, microphone, contacts, or other permissions. The app does not download or execute code. `ENABLE_HARDENED_RUNTIME=YES` is set in `app/apple/project.yml`; the development archive is unsigned only because no team is configured yet.
 
-Large file mode (files of 100 MiB and more) needs no further entitlement:
+Large file mode (files at or above the large file threshold, 100 MiB by default) needs no further entitlement:
 
 - Reading: the user-selected file is opened read-only and memory-mapped (`mmap`, `MAP_PRIVATE`) and read with `pread`, inside the document's security-scoped access. `stat`/`fstat` compare its size, modification time, and inode with the values at open to notice changes on disk.
 - Save: the file is streamed into the item-replacement directory on the same volume (`FileManager.url(for: .itemReplacementDirectory, ...)`, allowed by the sandbox) and swapped in with `FileManager.replaceItemAt`. Before writing, the free space of the volume is checked (`volumeAvailableCapacityForImportantUsageKey`).
@@ -33,7 +33,7 @@ Large file mode (files of 100 MiB and more) needs no further entitlement:
 - `ENABLE_TESTABILITY=YES` is Debug-only;
 - `PrivacyInfo.xcprivacy` is copied into the app's resources.
 
-`Info.plist` also carries `LSApplicationCategoryType=public.app-category.utilities`, `ITSAppUsesNonExemptEncryption=false`, `LSMinimumSystemVersion=$(MACOSX_DEPLOYMENT_TARGET)`, `NSPrincipalClass=NSApplication`, and `CFBundleDevelopmentRegion=en`. The required MIT notice is bundled from the repository `LICENSE` file.
+`Info.plist` also carries `LSApplicationCategoryType=public.app-category.utilities`, `ITSAppUsesNonExemptEncryption=false`, `LSMinimumSystemVersion=$(MACOSX_DEPLOYMENT_TARGET)`, `NSPrincipalClass=NSApplication`, `CFBundleDevelopmentRegion=en`, and `CFBundleLocalizations` with the 11 interface language codes (`en`, `fr`, `es`, `de`, `it`, `pl`, `be`, `uk`, `zh-Hans`, `ja`, `ko`). The required MIT notice is bundled from the repository `LICENSE` file.
 
 ## Privacy
 
@@ -41,11 +41,11 @@ Large file mode (files of 100 MiB and more) needs no further entitlement:
 - No analytics, Crashlytics, Firebase, ads, or third-party SDKs.
 - App Privacy in App Store Connect: **Data Not Collected**.
 - `app/apple/macOS/App/PrivacyInfo.xcprivacy`: `NSPrivacyTracking=false`, empty `NSPrivacyCollectedDataTypes`, empty `NSPrivacyTrackingDomains`, and three accessed-API entries. None of them changes the Data Not Collected answer. The file is copied into `Contents/Resources`.
-  - `NSPrivacyAccessedAPICategoryUserDefaults`, reason `CA92.1`: the app stores only its own window and format-bar preferences with `@AppStorage`.
+  - `NSPrivacyAccessedAPICategoryUserDefaults`, reason `CA92.1`: the app stores only its own preferences in its own defaults domain: window and format-bar state, the Settings window values (new document format, grid, large file threshold), and the language override (`appLanguage`, mirrored to `AppleLanguages`). The one declaration covers all of them; no further manifest entry is needed for Settings.
   - `NSPrivacyAccessedAPICategoryFileTimestamp`, reason `3B52.1`: large file mode reads the size and modification time (`stat`, `fstat`, `contentModificationDateKey`) of the file the user opened or saved, to notice changes on disk.
   - `NSPrivacyAccessedAPICategoryDiskSpace`, reason `E174.1`: before saving a large file, the app checks that the volume has room for the rewritten copy and shows an error instead of starting the write.
 - Local settings and unsaved data stay on the device; the app makes no network requests.
-- `Shared/Localizable.xcstrings` contains the English UI strings; there are no hidden network or analytics strings.
+- `Shared/Localizable.xcstrings` contains the UI strings in English and 10 translations; there are no hidden network or analytics strings.
 
 ## Document types
 
@@ -76,7 +76,7 @@ Choose a unique name and icon. The required MIT copyright and permission notice 
 - Subtitle and description: a simple CSV editor for macOS, without promises of formulas, databases, or "any tables".
 - Screenshots: empty document, opened CSV, format panel, export.
 - Keywords: CSV, TSV, editor, table, delimiter, encoding.
-- The v1 language is English; the String Catalog is ready for Russian localization.
+- Languages: English, French, Spanish, German, Italian, Polish, Belarusian, Ukrainian, Simplified Chinese, Japanese, Korean. The 10 translations are machine-generated.
 
 ## Notes for Review
 
@@ -99,6 +99,7 @@ The app does not implement its own cryptography and does not transmit data over 
 - [ ] `./scripts/app archive macos` succeeds; inspect `Info.plist`, entitlements, `PrivacyInfo.xcprivacy`, and `AppIcon.icns` in the archive.
 - [ ] The archive is signed with the team and validated in Xcode Organizer or Transporter.
 - [ ] App Privacy: Data Not Collected.
+- [ ] Native speakers have reviewed the machine-generated translations in `Shared/Localizable.xcstrings`.
 - [ ] Screenshots and description without promises of formulas/databases.
 - [ ] The required MIT notice is bundled with the app and kept in `LICENSE`.
 - [ ] Sandbox, open/save, export, errors, dark mode, VoiceOver, and a 100k-row file verified on a clean system.
