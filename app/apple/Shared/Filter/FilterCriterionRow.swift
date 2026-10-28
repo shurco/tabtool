@@ -53,19 +53,25 @@ struct FilterCriterionRow: View {
                 .accessibilityIdentifier("filter-apply")
 
             Button(action: onRemove) {
-                Label("Remove Criterion", systemImage: "minus")
-                    .labelStyle(.iconOnly)
+                rowActionIcon("Remove Criterion", systemImage: "minus")
             }
             .help("Remove Criterion")
             .accessibilityIdentifier("filter-remove")
 
             Button(action: onAdd) {
-                Label("Add Criterion", systemImage: "plus")
-                    .labelStyle(.iconOnly)
+                rowActionIcon("Add Criterion", systemImage: "plus")
             }
             .help("Add Criterion")
             .accessibilityIdentifier("filter-add")
         }
         .controlSize(.small)
+    }
+
+    /// A fixed frame keeps the − and + buttons the same size; a bare minus
+    /// glyph is so flat that its button would shrink.
+    private func rowActionIcon(_ title: LocalizedStringKey, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .labelStyle(.iconOnly)
+            .frame(width: 12, height: 14)
     }
 }
