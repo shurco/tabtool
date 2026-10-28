@@ -8,7 +8,7 @@ import AppKit
 extension CSVGridCoordinator {
     func tableViewSelectionDidChange(_ notification: Notification) {
         guard !isSyncingSelection, let tableView else { return }
-        let rows = tableView.selectedRowIndexes
+        let rows = presenter.modelRows(forDisplayRows: tableView.selectedRowIndexes)
 
         if rows.isEmpty {
             // Keep an explicit header selection when the user clicks outside
@@ -71,7 +71,7 @@ extension CSVGridCoordinator {
     /// Whether AppKit already shows the document selection.
     var selectionMatchesDocument: Bool {
         guard let tableView else { return true }
-        let rows = document.selection.rows.intersection(IndexSet(integersIn: 0..<presenter.numberOfRows))
+        let rows = presenter.displayRows(forModelRows: document.selection.rows)
         if !rows.isEmpty {
             return tableView.selectedRowIndexes == rows
         }
@@ -81,7 +81,7 @@ extension CSVGridCoordinator {
 
     func applySelectionFromDocument() {
         guard let tableView else { return }
-        let rows = document.selection.rows.intersection(IndexSet(integersIn: 0..<presenter.numberOfRows))
+        let rows = presenter.displayRows(forModelRows: document.selection.rows)
 
         isSyncingSelection = true
         if rows.isEmpty {

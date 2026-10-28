@@ -7,9 +7,9 @@ extension CSVGridCoordinator {
         let menu = NSMenu()
         menu.autoenablesItems = false
         menu.addItem(menuItem(String(localized: "Add Row Above"),
-                              #selector(addRowAbove(_:)), enabled: allowsStructuralEdits))
+                              #selector(addRowAbove(_:)), enabled: allowsRowStructuralEdits))
         menu.addItem(menuItem(String(localized: "Add Row Below"),
-                              #selector(addRowBelow(_:)), enabled: allowsStructuralEdits))
+                              #selector(addRowBelow(_:)), enabled: allowsRowStructuralEdits))
         return menu
     }
 

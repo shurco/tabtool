@@ -618,4 +618,53 @@ final class TabToolUITests: XCTestCase {
         XCTAssertEqual(grid.descendants(matching: .tableColumn).count, 2)
         XCTAssertEqual(grid.descendants(matching: .tableRow).count, 1)
     }
+
+    @MainActor
+    func testFilterBarFiltersRowsAndClears() throws {
+        let fixture = try makeFixture("name,age\nRex,5\nCaesar,3\nRexa,9\n",
+                                      name: "filter-fixture-\(UUID().uuidString).csv")
+        defer { try? FileManager.default.removeItem(at: fixture) }
+        let app = launchApp()
+        try openDocument(at: fixture)
+
+        let status = app.staticTexts["status-text"]
+        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        XCTAssertTrue((status.value as? String ?? "").contains("3 rows"))
+
+        app.menuBars.menuBarItems["View"].click()
+        app.menuItems["Show Filter"].click()
+        XCTAssertTrue(app.groups["filter-bar"].waitForExistence(timeout: 5))
+
+        let value = app.textFields["filter-value"].firstMatch
+        XCTAssertTrue(value.waitForExistence(timeout: 5))
+        value.click()
+        value.typeText("Rex")
+        app.buttons["filter-apply"].firstMatch.click()
+
+        let filtered = NSPredicate(format: "value CONTAINS %@", "2 of 3 rows")
+        XCTAssertEqual(XCTWaiter().wait(
+            for: [XCTNSPredicateExpectation(predicate: filtered, object: status)], timeout: 5), .completed,
+            "status shows \(status.value as? String ?? "nil")")
+        XCTAssertEqual(app.tables["grid"].descendants(matching: .tableRow).count, 2)
+
+        app.buttons["filter-clear"].click()
+        let cleared = NSPredicate(format: "value CONTAINS %@", "3 rows")
+        XCTAssertEqual(XCTWaiter().wait(
+            for: [XCTNSPredicateExpectation(predicate: cleared, object: status)], timeout: 5), .completed)
+        XCTAssertEqual(app.tables["grid"].descendants(matching: .tableRow).count, 3)
+
+        // The bar shortcuts: insert and remove a criterion, then Esc hides the bar.
+        let values = app.textFields.matching(identifier: "filter-value")
+        value.click()
+        app.typeKey("i", modifierFlags: .command)
+        XCTAssertTrue(values.element(boundBy: 1).waitForExistence(timeout: 5))
+        XCTAssertEqual(values.count, 2)
+        app.typeKey(.delete, modifierFlags: [.command, .shift])
+        XCTAssertTrue(values.element(boundBy: 1).waitForNonExistence(timeout: 5))
+        XCTAssertEqual(values.count, 1)
+
+        value.click()
+        app.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(app.groups["filter-bar"].waitForNonExistence(timeout: 5))
+    }
 }

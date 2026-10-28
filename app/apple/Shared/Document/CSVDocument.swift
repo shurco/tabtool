@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import TabToolKit
 import UniformTypeIdentifiers
@@ -42,6 +43,10 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// The active row sort, if any. Set by `applyChange(sort:)` and the
     /// sorting extension only; any other structural change clears it.
     @Published var activeSort: ActiveSort?
+
+    /// The row filter; its changes republish the document once `load()` ran.
+    let rowFilter = RowFilterModel()
+    var filterObservation: AnyCancellable?
     private(set) var fileURL: URL?
 
     /// Whether the loaded bytes began with a UTF-8 BOM. Captured in every
@@ -208,6 +213,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// the initial content. A cancelled task is never awaited a second time:
     /// the next call starts a fresh attempt.
     func load() async {
+        observeRowFilter()
         if let task = loadTask {
             await task.value
             return
@@ -343,6 +349,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
             hadUTF8BOM = parsed.includesUTF8BOM
             phase = .ready
             refreshPhase()
+            refreshFilter()
             result = .success
         case .failure(.csv(let error)):
             table = nil
@@ -400,6 +407,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         hadUTF8BOM = newIncludesUTF8BOM
         activeSort = newSort
         validateSelection()
+        refreshFilter()
         phase = .ready
         refreshPhase()
         mutationRevision &+= 1
@@ -435,9 +443,11 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         refreshPhase()
         mutationRevision &+= 1
 
+        // Undo and redo are the only cell changes that re-evaluate the filter.
         registerAction(actionName) { document in
             document.applyCellChange(previous, row: row, column: column,
                                      actionName: actionName)
+            document.refreshFilter()
         }
     }
 
@@ -466,6 +476,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         hadUTF8BOM = snapshot.includesUTF8BOM
         activeSort = sort
         validateSelection()
+        refreshFilter()
         phase = .ready
         refreshPhase()
         mutationRevision &+= 1

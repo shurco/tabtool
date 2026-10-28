@@ -132,6 +132,8 @@ struct FormatBar: View {
 struct DocumentStatusBar: View {
     let table: any RowSource
     let configuration: CSVConfiguration
+    /// The number of rows a row filter lets through, or `nil` without one.
+    var visibleRowCount: Int?
     var status = LargeStatus.none
     var onCancelSave: () -> Void = {}
 
@@ -163,15 +165,21 @@ struct DocumentStatusBar: View {
         }
         let rows = table.rowCount
         let columns = table.columnCount
-        let rowsText = rows == 1
-            ? String(localized: "1 row")
-            : String(localized: "\(rows) rows")
+        let rowsText = Self.rowsText(total: rows, visible: visibleRowCount)
         let columnsText = columns == 1
             ? String(localized: "1 column")
             : String(localized: "\(columns) columns")
         return "\(rowsText) × \(columnsText) · "
             + "\(FormatDisplay.encodingName(for: configuration.encoding)) · "
             + FormatDisplay.separatorName(for: configuration.columnSeparator)
+    }
+
+    /// "N rows", or "N of M rows" while a row filter is applied.
+    static func rowsText(total: Int, visible: Int?) -> String {
+        if let visible {
+            return String(localized: "\(visible) of \(total) rows")
+        }
+        return total == 1 ? String(localized: "1 row") : String(localized: "\(total) rows")
     }
 }
 

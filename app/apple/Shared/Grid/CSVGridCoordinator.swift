@@ -23,6 +23,8 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
     private(set) var isEditable = false
     /// Whether rows and columns can be added, removed, moved, sorted or renamed.
     private(set) var allowsStructuralEdits = false
+    /// Whether rows can be added, removed or moved; a filtered view locks them.
+    var allowsRowStructuralEdits: Bool { allowsStructuralEdits && document.canEditRowStructure }
     private var signature = TableSignature.empty
     /// True while mirroring document selection into AppKit.
     var isSyncingSelection = false
@@ -168,7 +170,7 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
     /// Applies the latest document snapshot to the table view.
     ///
     /// Columns are rebuilt only when their identity or count changes, and rows
-    /// are reloaded only when their count changes. A cell edit updates the
+    /// are reloaded only when their count or the filtered row set changes. A cell edit updates the
     /// visible cell views without a reload, which preserves the field editor.
     /// A model column move changes `columnIDs`, so the rebuild also realigns
     /// the view-index identifiers before another user drag.
@@ -194,7 +196,7 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
             if previous.headers != current.headers {
                 updateHeaderTitles()
             }
-            if previous.rowCount != current.rowCount {
+            if previous.rowCount != current.rowCount || previous.visibleRows != current.visibleRows {
                 // Not noteNumberOfRowsChanged(): AppKit records an update item
                 // per added row, megabytes per tick while a large file is indexed.
                 tableView.reloadData()
@@ -262,7 +264,8 @@ final class CSVGridCoordinator: NSObject, NSTableViewDataSource, NSTableViewDele
               tableView.column(for: cell) == cell.column else {
             return
         }
-        document.setCell(textField.stringValue, row: cell.row, column: cell.column)
+        guard let modelRow = presenter.modelRow(forDisplayRow: cell.row) else { return }
+        document.setCell(textField.stringValue, row: modelRow, column: cell.column)
     }
 
     // MARK: - Columns and cells

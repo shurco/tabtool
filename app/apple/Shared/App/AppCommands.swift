@@ -33,12 +33,12 @@ struct AppCommands: Commands {
             Button("Add Row Above") {
                 document?.addRowAboveSelection()
             }
-            .disabled(!isEditable)
+            .disabled(!(document?.canInsertRows ?? false))
 
             Button("Add Row Below") {
                 document?.addRowBelowSelection()
             }
-            .disabled(!isEditable)
+            .disabled(!(document?.canInsertRows ?? false))
 
             Divider()
 
@@ -117,6 +117,13 @@ struct AppCommands: Commands {
 
         CommandGroup(after: .toolbar) {
             Toggle("Show Format Bar", isOn: $showFormatBar)
+
+            Button(document?.rowFilter.isBarVisible == true
+                   ? LocalizedStringKey("Hide Filter") : LocalizedStringKey("Show Filter")) {
+                document?.toggleFilterBar()
+            }
+            .keyboardShortcut("f", modifiers: .command)
+            .disabled(!(document?.canFilter ?? false))
         }
     }
 

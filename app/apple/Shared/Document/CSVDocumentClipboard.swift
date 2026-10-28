@@ -19,7 +19,7 @@ extension CSVDocument {
 
         let selected = selection.columns.intersection(IndexSet(integersIn: 0..<source.columnCount))
         guard !selected.isEmpty, fitsCopyLimit(cells: source.rowCount * selected.count) else { return nil }
-        let rows = (0..<source.rowCount).map { row in
+        let rows = (rowFilter.visibleRows ?? Array(0..<source.rowCount)).map { row in
             selected.map { source.cell(row: row, column: $0) }
         }
         return CSVClipboard.makeTSV(rows: rows,
@@ -57,7 +57,7 @@ extension CSVDocument {
     /// the locale decimal separator to the document mark. The inserted rows
     /// become the selection and the whole paste is one undo operation.
     func pasteTSV(_ string: String, locale: Locale = .current) {
-        guard let table = tableAfterEndingEditing() else { return }
+        guard let table = tableAfterEndingEditing(), canEditRowStructure else { return }
 
         let parsedRows = CSVClipboard.parseTSV(string)
         let fieldCount = parsedRows.map(\.count).max() ?? 0

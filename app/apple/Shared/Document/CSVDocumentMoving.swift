@@ -37,7 +37,8 @@ extension CSVDocument {
     }
 
     private func rowMoveOrder(by offset: Int) -> [Int]? {
-        moveOrder(count: table?.rowCount ?? 0, selected: selection.rows, by: offset)
+        guard canEditRowStructure else { return nil }
+        return moveOrder(count: table?.rowCount ?? 0, selected: selection.rows, by: offset)
     }
 
     private func columnMoveOrder(by offset: Int) -> [Int]? {

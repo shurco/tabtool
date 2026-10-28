@@ -57,7 +57,8 @@ struct CSVGrid: NSViewRepresentable {
         }
         tableView.applyGridAppearance(alternatingRows: alternatingRows, rowHeight: rowHeight)
         context.coordinator.update(
-            presenter: GridPresenter(table: table, configuration: document.configuration),
+            presenter: GridPresenter(table: table, configuration: document.configuration,
+                                     visibleRows: document.rowFilter.visibleRows),
             isEditable: isEditable,
             allowsStructuralEdits: allowsStructuralEdits
         )

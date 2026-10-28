@@ -30,7 +30,8 @@ enum GridTestSupport {
     static func update(_ coordinator: CSVGridCoordinator, from document: CSVDocument) {
         coordinator.update(
             presenter: GridPresenter(table: document.table ?? .newDocument(),
-                                     configuration: document.configuration),
+                                     configuration: document.configuration,
+                                     visibleRows: document.rowFilter.visibleRows),
             isEditable: true
         )
     }

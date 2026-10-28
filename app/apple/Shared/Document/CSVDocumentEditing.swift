@@ -13,7 +13,8 @@ extension CSVDocument {
         return table
     }
 
-    /// Whether the current selection can be deleted.
+    /// Whether the current selection can be deleted. Rows cannot be deleted
+    /// while a filter is applied.
     ///
     /// A column-only selection is disabled when the table has a single column:
     /// the document keeps that column, so the command would do nothing. The
@@ -22,7 +23,7 @@ extension CSVDocument {
         guard let table, isEditableContent else { return false }
 
         let rows = selection.rows.intersection(IndexSet(integersIn: 0..<table.rowCount))
-        if !rows.isEmpty { return true }
+        if !rows.isEmpty { return canEditRowStructure }
 
         let columns = selection.columns.intersection(IndexSet(integersIn: 0..<table.columns.count))
         return !columns.isEmpty && table.columns.count > 1
@@ -41,7 +42,7 @@ extension CSVDocument {
 
     /// Whether a valid row selection can be deleted.
     var canDeleteSelectedRows: Bool {
-        guard let table, isEditableContent else { return false }
+        guard let table, isEditableContent, canEditRowStructure else { return false }
         return !selection.rows.intersection(IndexSet(integersIn: 0..<table.rowCount)).isEmpty
     }
 
@@ -54,13 +55,13 @@ extension CSVDocument {
 
     /// Inserts a blank row above the first selected row, or at the top.
     func addRowAboveSelection() {
-        guard let table = tableAfterEndingEditing() else { return }
+        guard let table = tableAfterEndingEditing(), canEditRowStructure else { return }
         insertRowSelecting(at: selection.rows.first ?? 0, rowCount: table.rowCount)
     }
 
     /// Inserts a blank row below the last selected row, or at the end.
     func addRowBelowSelection() {
-        guard let table = tableAfterEndingEditing() else { return }
+        guard let table = tableAfterEndingEditing(), canEditRowStructure else { return }
         let index = selection.rows.last.map { $0 + 1 } ?? table.rowCount
         insertRowSelecting(at: index, rowCount: table.rowCount)
     }

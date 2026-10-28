@@ -16,7 +16,7 @@ extension CSVGridCoordinator {
 
     /// Whether the pasteboard currently provides text for a paste.
     var canPaste: Bool {
-        allowsStructuralEdits
+        allowsRowStructuralEdits
             && NSPasteboard.general.availableType(from: [.string, .tabularText]) != nil
     }
 
@@ -25,9 +25,9 @@ extension CSVGridCoordinator {
         allowsStructuralEdits && document.canDeleteSelection
     }
 
-    /// Whether the table has rows to select.
+    /// Whether the grid shows rows to select.
     var canSelectAll: Bool {
-        (document.rowSource?.rowCount ?? 0) > 0
+        presenter.numberOfRows > 0
     }
 
     /// Copies the selected rows or columns as TSV.
@@ -51,7 +51,7 @@ extension CSVGridCoordinator {
     /// without text must not insert an empty cell.
     @discardableResult
     func paste(from pasteboard: NSPasteboard = .general) -> Bool {
-        guard allowsStructuralEdits,
+        guard allowsRowStructuralEdits,
               let type = pasteboard.availableType(from: [.string, .tabularText]),
               let text = pasteboard.string(forType: type) else {
             return false
@@ -70,13 +70,13 @@ extension CSVGridCoordinator {
 
     /// Selects every row in the table.
     func selectAllRows() {
-        guard let source = document.rowSource, source.rowCount > 0 else { return }
-        let rows = IndexSet(integersIn: 0..<source.rowCount)
-        document.selection = GridSelection(rows: rows)
+        guard presenter.numberOfRows > 0 else { return }
+        let displayRows = IndexSet(integersIn: 0..<presenter.numberOfRows)
+        document.selection = GridSelection(rows: presenter.modelRows(forDisplayRows: displayRows))
 
         guard let tableView else { return }
         isSyncingSelection = true
-        tableView.selectRowIndexes(rows, byExtendingSelection: false)
+        tableView.selectRowIndexes(displayRows, byExtendingSelection: false)
         isSyncingSelection = false
         syncSelectionDisplay()
     }
