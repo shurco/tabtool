@@ -4,6 +4,20 @@
 <dict>
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>fr</string>
+        <string>es</string>
+        <string>de</string>
+        <string>it</string>
+        <string>pl</string>
+        <string>be</string>
+        <string>uk</string>
+        <string>zh-Hans</string>
+        <string>ja</string>
+        <string>ko</string>
+    </array>
     <key>CFBundleDisplayName</key>
     <string>$(PRODUCT_NAME)</string>
     <key>CFBundleDocumentTypes</key>
