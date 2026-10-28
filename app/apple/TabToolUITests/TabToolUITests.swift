@@ -6,14 +6,22 @@ final class TabToolUITests: XCTestCase {
     ///
     /// The document app restores windows on relaunch. Without ignoring the
     /// saved state, windows left by earlier tests make identifiers ambiguous.
-    /// The tests match English texts, so the language is pinned.
+    /// The tests match English texts and the factory settings, so the language
+    /// and the new document and large file preferences are pinned instead of
+    /// read from the app's saved settings.
     @MainActor
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
             "-ApplePersistenceIgnoreState", "YES",
             "-NSQuitAlwaysKeepsWindows", "NO",
-            "-AppleLanguages", "(en)"
+            "-AppleLanguages", "(en)",
+            "-newDocumentEncoding", "4",
+            "-newDocumentSeparator", ",",
+            "-newDocumentQuoteStyle", "doubled",
+            "-newDocumentDecimalMark", ".",
+            "-newDocumentFirstRowAsHeader", "NO",
+            "-largeFileThresholdMiB", "100"
         ]
         app.launch()
         return app

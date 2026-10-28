@@ -94,7 +94,7 @@ xcodebuild -project TabTool.xcodeproj -scheme TabTool \
   -destination 'platform=macOS' -only-testing:TabToolUITests test
 ```
 
-Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 229 core Swift Testing tests plus the opt-in large file benchmark and 10 XCTest performance tests, 238 app unit tests, and 17 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The UI tests launch the app with `-AppleLanguages (en)` because they match English texts. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.
+Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 229 core Swift Testing tests plus the opt-in large file benchmark and 10 XCTest performance tests, 238 app unit tests, and 17 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The scheme's test action passes `-AppleLanguages (en)` (`project.yml`) so the unit tests, which match English texts, do not depend on the machine language or the app's saved language. The UI tests launch the app with the same argument and with explicit factory values for the new document and large file preferences, so saved settings do not change what they see. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.
 
 ## Signing and App Store
 

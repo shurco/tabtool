@@ -82,6 +82,8 @@ schemes:
     test:
       config: Debug
       gatherCoverageData: false
+      commandLineArguments:
+        "-AppleLanguages (en)": true
       targets:
         - TabToolTests
         - TabToolUITests
