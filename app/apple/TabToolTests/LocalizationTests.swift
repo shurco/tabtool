@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+@testable import TabTool
 
 /// The texts of the large file mode are in `Localizable.xcstrings`. The test
 /// host is the app, so its compiled string table answers.
@@ -35,4 +36,43 @@ import Testing
         let missing = "\u{0}missing"
         #expect(Bundle.main.localizedString(forKey: key, value: missing, table: nil) != missing)
     }
+
+    /// Every English key has a translation that keeps the key's format specifiers.
+    @Test(arguments: AppLanguage.allCases.filter { $0 != .system && $0 != .en })
+    func everyKeyIsTranslated(_ language: AppLanguage) throws {
+        let english = stringTable(for: .en)
+        let translated = stringTable(for: language)
+        try #require(!english.isEmpty, "the English table is missing from the app bundle")
+        var problems: [String] = []
+        for key in english.keys.sorted() {
+            guard let translation = translated[key], !translation.isEmpty else {
+                problems.append("missing: \(key)")
+                continue
+            }
+            if formatSpecifiers(of: translation) != formatSpecifiers(of: key) {
+                problems.append("format specifiers differ: \(key)")
+            }
+        }
+        #expect(problems.isEmpty, "\(language.rawValue): \(problems.joined(separator: "\n"))")
+    }
+
+    @Test func formatSpecifiersIgnorePositionalIndexes() {
+        #expect(formatSpecifiers(of: "%1$@ %2$lld") == formatSpecifiers(of: "%lld %@"))
+        #expect(formatSpecifiers(of: "%lld%% · %@") == ["%%", "%@", "%lld"])
+        #expect(formatSpecifiers(of: "%@") != formatSpecifiers(of: "%lld"))
+    }
+}
+
+/// The compiled `Localizable.strings` of a language, read from the app bundle.
+/// A language without any translated key has no table, so it reads as empty.
+private func stringTable(for language: AppLanguage) -> [String: String] {
+    Bundle.main.url(
+        forResource: "Localizable", withExtension: "strings", subdirectory: nil, localization: language.rawValue
+    )
+    .flatMap { NSDictionary(contentsOf: $0) as? [String: String] } ?? [:]
+}
+
+/// The sorted specifier types of a format string; a positional index (`%2$lld`) is ignored.
+private func formatSpecifiers(of text: String) -> [String] {
+    text.matches(of: /%(?:\d+\$)?([lh]*[@dDfsSuUxXcCp]|%)/).map { "%" + $0.output.1 }.sorted()
 }
