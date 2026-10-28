@@ -4,7 +4,7 @@ import TabToolKit
 /// App-wide menu commands that act on the focused document.
 struct AppCommands: Commands {
     @FocusedObject private var document: CSVDocument?
-    @AppStorage(FormatBarVisibility.storageKey) private var showFormatBar = true
+    @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {

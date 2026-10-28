@@ -8,7 +8,7 @@ struct DocumentView: View {
     let fileURL: URL?
 
     @Environment(\.undoManager) private var undoManager
-    @AppStorage(FormatBarVisibility.storageKey) private var showFormatBar = true
+    @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
 
     @State private var pendingReparse: CSVConfiguration?
     @State private var isConfirmingReparse = false

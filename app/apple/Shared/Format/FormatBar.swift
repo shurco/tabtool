@@ -1,11 +1,6 @@
 import SwiftUI
 import TabToolKit
 
-/// The user default shared by the View menu and the document window.
-enum FormatBarVisibility {
-    static let storageKey = "showFormatBar"
-}
-
 /// The format controls at the bottom of the document window.
 ///
 /// The bar reports a complete candidate configuration for every edit; the
