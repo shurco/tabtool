@@ -11,6 +11,7 @@ struct CSVGrid: NSViewRepresentable {
     let allowsStructuralEdits: Bool
     @AppStorage(Preferences.Key.gridAlternatingRows) private var alternatingRows = Preferences.Default.alternatingRows
     @AppStorage(Preferences.Key.gridRowHeight) private var storedRowHeight = Preferences.Default.rowHeight
+    @AppStorage(Preferences.Key.gridShowsRowNumbers) private var showsRowNumbers = Preferences.Default.showsRowNumbers
 
     /// A hand-edited stored height the settings do not offer must not reach the grid.
     private var rowHeight: CGFloat { CGFloat(Preferences.validRowHeight(storedRowHeight)) }
@@ -47,6 +48,9 @@ struct CSVGrid: NSViewRepresentable {
         scrollView.autohidesScrollers = true
 
         context.coordinator.attach(to: tableView)
+        scrollView.verticalRulerView = RowNumberRuler(scrollView: scrollView, tableView: tableView)
+        scrollView.hasVerticalRuler = true
+        scrollView.rulersVisible = showsRowNumbers
         return scrollView
     }
 
@@ -62,6 +66,10 @@ struct CSVGrid: NSViewRepresentable {
             isEditable: isEditable,
             allowsStructuralEdits: allowsStructuralEdits
         )
+        if scrollView.rulersVisible != showsRowNumbers {
+            scrollView.rulersVisible = showsRowNumbers
+        }
+        (scrollView.verticalRulerView as? RowNumberRuler)?.reload()
     }
 }
 

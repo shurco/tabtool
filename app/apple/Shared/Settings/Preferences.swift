@@ -18,6 +18,7 @@ enum Preferences {
         static let newDocumentFirstRowAsHeader = "newDocumentFirstRowAsHeader"
         static let gridAlternatingRows = "gridAlternatingRows"
         static let gridRowHeight = "gridRowHeight"
+        static let gridShowsRowNumbers = "gridShowsRowNumbers"
         static let largeFileThresholdMiB = "largeFileThresholdMiB"
     }
 
@@ -31,6 +32,7 @@ enum Preferences {
         static let firstRowAsHeader = false
         static let alternatingRows = true
         static let rowHeight = 24.0
+        static let showsRowNumbers = true
         static let largeFileThresholdMiB = Int(LargeFile.thresholdBytes / 1_048_576)
     }
 

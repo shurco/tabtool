@@ -14,6 +14,7 @@ import TabToolKit
         #expect(Preferences.Key.newDocumentFirstRowAsHeader == "newDocumentFirstRowAsHeader")
         #expect(Preferences.Key.gridAlternatingRows == "gridAlternatingRows")
         #expect(Preferences.Key.gridRowHeight == "gridRowHeight")
+        #expect(Preferences.Key.gridShowsRowNumbers == "gridShowsRowNumbers")
         #expect(Preferences.Key.largeFileThresholdMiB == "largeFileThresholdMiB")
     }
 

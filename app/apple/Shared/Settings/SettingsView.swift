@@ -98,11 +98,15 @@ private struct NewDocumentSettings: View {
 private struct GridSettings: View {
     @AppStorage(Preferences.Key.gridAlternatingRows) private var alternatingRows = Preferences.Default.alternatingRows
     @AppStorage(Preferences.Key.gridRowHeight) private var rowHeight = Preferences.Default.rowHeight
+    @AppStorage(Preferences.Key.gridShowsRowNumbers) private var showsRowNumbers = Preferences.Default.showsRowNumbers
 
     var body: some View {
         Form {
             Toggle("Alternating Row Colors", isOn: $alternatingRows)
                 .accessibilityIdentifier("settings-alternating-rows")
+
+            Toggle("Show Row Numbers", isOn: $showsRowNumbers)
+                .accessibilityIdentifier("settings-row-numbers")
 
             Picker("Row Height", selection: $rowHeight) {
                 ForEach(Preferences.rowHeights, id: \.self) { height in
