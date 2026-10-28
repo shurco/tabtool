@@ -9,11 +9,14 @@ struct GridToolbarGlyph: View {
     }
 
     let symbolName: String
+    /// Symbols differ in drawn height at the same size; callers pick the size
+    /// that draws 15 pt tall, the height of the add row and column glyphs.
+    var pointSize: CGFloat = 16
     var badge: Badge?
 
     var body: some View {
         Image(systemName: symbolName)
-            .font(.system(size: 16))
+            .font(.system(size: pointSize))
             .overlay(alignment: .bottomTrailing) {
                 if let badge {
                     Image(systemName: badge.symbolName)

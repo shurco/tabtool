@@ -48,7 +48,7 @@ struct GridToolbar: View {
                 guard document.canDeleteSelection else { return }
                 document.deleteSelection()
             } label: {
-                GridToolbarGlyph(symbolName: "trash")
+                GridToolbarGlyph(symbolName: "trash", pointSize: 13)
             }
             .help(document.isLargeMode ? Text("Not available in large file mode.") : Text("Delete Selected Rows or Columns"))
             .accessibilityLabel("Delete Selection")
@@ -67,14 +67,15 @@ struct GridToolbar: View {
         .padding(.vertical, 4)
     }
 
-    /// Shows or hides the filter bar; filled while a filter is applied.
+    /// Shows or hides the filter bar; badged while a filter is applied.
     private var filterToggle: some View {
         let title: LocalizedStringKey = document.rowFilter.isBarVisible ? "Hide Filter" : "Show Filter"
         return Button {
             document.toggleFilterBar()
         } label: {
             GridToolbarGlyph(
-                symbolName: "line.3.horizontal.decrease",
+                symbolName: "magnifyingglass",
+                pointSize: 15,
                 badge: document.rowFilter.isFiltering
                     ? .init(symbolName: "checkmark.circle.fill", color: .accentColor)
                     : nil
