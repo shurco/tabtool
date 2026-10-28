@@ -94,7 +94,7 @@ Typed errors: `cannotDecodeData`, `malformedQuotedField`, `quoteInUnquotedField`
 
 ## Large file mode
 
-Files of 100 MiB (104,857,600 bytes) and more open in large file mode; the threshold is a setting (default 100 MiB, options 25, 50, 100, 250, 500, and 1024 MiB): the file is memory-mapped and indexed in the background instead of being parsed into memory. The rules above apply with these differences.
+Files at or above the large file threshold (a setting; default 100 MiB = 104,857,600 bytes; options 25, 50, 100, 250, 500, and 1024 MiB) open in large file mode: the file is memory-mapped and indexed in the background instead of being parsed into memory. The rules above apply with these differences.
 
 - Encodings: UTF-8, Windows Latin 1/2 (CP1252/CP1250), MacRoman, ISO Latin 2, Cyrillic (CP1251), Greek (CP1253), Turkish (CP1254), and GBK. UTF-16/32, Shift_JIS, EUC-JP, and ISO-2022-JP are refused with "This encoding cannot be opened in large file mode"; convert the file to UTF-8. The same applies when one of them is chosen in the format bar.
 - The separator, quote, and escape must each be one ASCII character (or empty for quote and escape).

@@ -31,7 +31,7 @@ enum Preferences {
         static let firstRowAsHeader = false
         static let alternatingRows = true
         static let rowHeight = 24.0
-        static let largeFileThresholdMiB = 100
+        static let largeFileThresholdMiB = Int(LargeFile.thresholdBytes / 1_048_576)
     }
 
     /// The row heights, in points, offered for the grid.

@@ -49,7 +49,7 @@ import Testing
                 problems.append("missing: \(key)")
                 continue
             }
-            if formatSpecifiers(of: translation) != formatSpecifiers(of: key) {
+            if !keepsFormatSpecifiers(translation, of: key) {
                 problems.append("format specifiers differ: \(key)")
             }
         }
@@ -75,9 +75,15 @@ import Testing
     }
 
     @Test func formatSpecifiersIgnorePositionalIndexes() {
-        #expect(formatSpecifiers(of: "%1$@ %2$lld") == formatSpecifiers(of: "%lld %@"))
-        #expect(formatSpecifiers(of: "%lld%% · %@") == ["%%", "%@", "%lld"])
-        #expect(formatSpecifiers(of: "%@") != formatSpecifiers(of: "%lld"))
+        #expect(keepsFormatSpecifiers("%1$@ %2$lld", of: "%lld %@"))
+        #expect(keepsFormatSpecifiers("%2$lld %1$@", of: "%@ %lld"))
+        #expect(!keepsFormatSpecifiers("%1$@", of: "%lld"))
+    }
+
+    @Test func plainFormatSpecifiersKeepTheirOrder() {
+        #expect(keepsFormatSpecifiers("%lld%% · %@", of: "%lld%% · %@"))
+        #expect(!keepsFormatSpecifiers("%lld %@", of: "%@ %lld"))
+        #expect(!keepsFormatSpecifiers("%@", of: "%lld"))
     }
 }
 
@@ -96,7 +102,15 @@ private func stringTable(for language: AppLanguage) -> [String: String] {
     .flatMap { NSDictionary(contentsOf: $0) as? [String: String] } ?? [:]
 }
 
-/// The sorted specifier types of a format string; a positional index (`%2$lld`) is ignored.
-private func formatSpecifiers(of text: String) -> [String] {
-    text.matches(of: /%(?:\d+\$)?([lh]*[@dDfsSuUxXcCp]|%)/).map { "%" + $0.output.1 }.sorted()
+/// Whether a translation uses the same format specifier types as its key.
+///
+/// Without positional indexes the specifiers keep the key's order, because the arguments are
+/// substituted in that order. With positional indexes (`%2$lld`) the order may change, so only
+/// the types are compared.
+private func keepsFormatSpecifiers(_ translation: String, of key: String) -> Bool {
+    let specifier = /%(\d+\$)?([lh]*[@dDfsSuUxXcCp]|%)/
+    let found = translation.matches(of: specifier)
+    let types = found.map { "%" + $0.output.2 }
+    let keyTypes = key.matches(of: specifier).map { "%" + $0.output.2 }
+    return found.contains { $0.output.1 != nil } ? types.sorted() == keyTypes.sorted() : types == keyTypes
 }

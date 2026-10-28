@@ -70,7 +70,8 @@ import TabToolKit
         }
     }
 
-    @Test func defaultThresholdMatchesTheCoreConstant() {
-        #expect(Int64(Preferences.Default.largeFileThresholdMiB) * 1_048_576 == LargeFile.thresholdBytes)
+    @Test func defaultsAreAmongTheOptionsTheSettingsOffer() {
+        #expect(Preferences.largeFileThresholdsMiB.contains(Preferences.Default.largeFileThresholdMiB))
+        #expect(Preferences.rowHeights.contains(Preferences.Default.rowHeight))
     }
 }

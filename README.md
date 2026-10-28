@@ -43,7 +43,7 @@ The project is in development. The name is TabTool and the bundle ID is `app.shu
 The interface is available in English (`en`), Français (`fr`), Español (`es`), Deutsch (`de`), Italiano (`it`), Polski (`pl`), Беларуская (`be`), Українська (`uk`), 简体中文 (`zh-Hans`), 日本語 (`ja`), and 한국어 (`ko`). Settings > General > Language lists them by their own names, plus System, which follows the macOS language and is the default.
 
 - The choice is stored in `appLanguage` and mirrored to `AppleLanguages` in the app's own defaults domain (`[code]` for a language, the key removed for System). It applies after a restart because menus and panels resolve their strings at launch; the window shows "Takes effect after restart."
-- The language list is `AppLanguage` and `CFBundleLocalizations` in `Info.plist`; a unit test keeps them equal. The translations are in `app/apple/Shared/Localizable.xcstrings` (166 keys); a unit test checks that every key is translated into every language and keeps its format specifiers.
+- The language list is `AppLanguage` and `CFBundleLocalizations` in `Info.plist`; a unit test keeps them equal. The translations are in `app/apple/Shared/Localizable.xcstrings`; a unit test checks that every key is translated into every language and keeps its format specifiers.
 - The 10 translations are machine-generated and have not been reviewed by native speakers.
 - Not localized: the strings in `Info.plist` (for example document type names). macOS itself has no Belarusian localization, so system-provided items stay English when Belarusian is chosen.
 
@@ -99,7 +99,7 @@ cd app/apple/TabToolKit && swift test
 ./scripts/test --ui
 ```
 
-`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 229 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 238 app unit tests, and 17 UI tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
+`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 230 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 243 app unit tests, and 17 UI tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
 
 ## Performance
 
