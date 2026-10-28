@@ -1,109 +1,117 @@
 import SwiftUI
 import TabToolKit
 
-/// The Settings window.
+/// The Settings window: one tab per group of settings.
 ///
 /// Every control writes straight to the stored preference; open documents
 /// react to the grid and format bar preferences through their own `@AppStorage`.
+/// Each tab form is as tall as its rows, so the window follows the selected tab.
 struct SettingsView: View {
+    var body: some View {
+        TabView {
+            GeneralSettings()
+                .tabItem { Label("General", systemImage: "gearshape") }
+            NewDocumentSettings()
+                .tabItem { Label("New Document", systemImage: "doc") }
+            GridSettings()
+                .tabItem { Label("Grid", systemImage: "tablecells") }
+            LargeFileSettings()
+                .tabItem { Label("Large Files", systemImage: "externaldrive") }
+        }
+        .formStyle(.grouped)
+        .frame(width: 460)
+    }
+}
+
+private struct GeneralSettings: View {
     @AppStorage(Preferences.Key.appLanguage) private var language = Preferences.Default.appLanguage
     @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
+
+    var body: some View {
+        Form {
+            Picker("Language", selection: $language) {
+                ForEach(AppLanguage.allCases) { option in
+                    if let name = option.nativeName {
+                        Text(verbatim: name).tag(option)
+                    } else {
+                        Text("System").tag(option)
+                    }
+                }
+            }
+            .accessibilityIdentifier("settings-language")
+            .onChange(of: language) { _, new in new.applyOverride() }
+            caption("Takes effect after restart.")
+
+            Toggle("Show Format Bar", isOn: $showFormatBar)
+                .accessibilityIdentifier("settings-show-format-bar")
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private struct NewDocumentSettings: View {
     @AppStorage(Preferences.Key.newDocumentEncoding) private var encodingID = Preferences.Default.encodingID
     @AppStorage(Preferences.Key.newDocumentSeparator) private var separator = Preferences.Default.separator
     @AppStorage(Preferences.Key.newDocumentQuoteStyle) private var quoteStyle = Preferences.Default.quoteStyle
     @AppStorage(Preferences.Key.newDocumentDecimalMark) private var decimalMark = Preferences.Default.decimalMark
     @AppStorage(Preferences.Key.newDocumentFirstRowAsHeader)
     private var firstRowAsHeader = Preferences.Default.firstRowAsHeader
-    @AppStorage(Preferences.Key.gridAlternatingRows) private var alternatingRows = Preferences.Default.alternatingRows
-    @AppStorage(Preferences.Key.gridRowHeight) private var rowHeight = Preferences.Default.rowHeight
-    @AppStorage(Preferences.Key.largeFileThresholdMiB)
-    private var largeFileThresholdMiB = Preferences.Default.largeFileThresholdMiB
 
     var body: some View {
         Form {
-            Section("General") {
-                Picker("Language", selection: $language) {
-                    ForEach(AppLanguage.allCases) { option in
-                        if let name = option.nativeName {
-                            Text(verbatim: name).tag(option)
-                        } else {
-                            Text("System").tag(option)
-                        }
-                    }
+            Picker("Encoding", selection: $encodingID) {
+                ForEach(SupportedEncodings.all) { supported in
+                    Text(LocalizedStringKey(supported.name)).tag(Int(supported.id))
                 }
-                .accessibilityIdentifier("settings-language")
-                .onChange(of: language) { _, new in new.applyOverride() }
-                caption("Takes effect after restart.")
-
-                Toggle("Show Format Bar", isOn: $showFormatBar)
-                    .accessibilityIdentifier("settings-show-format-bar")
             }
+            .accessibilityIdentifier("settings-encoding")
 
-            Section("New Document") {
-                Picker("Encoding", selection: $encodingID) {
-                    ForEach(SupportedEncodings.all) { supported in
-                        Text(LocalizedStringKey(supported.name)).tag(Int(supported.id))
-                    }
+            Picker("Separator", selection: $separator) {
+                ForEach(SeparatorOption.allCases) { option in
+                    Text(LocalizedStringKey(option.title)).tag(option)
                 }
-                .accessibilityIdentifier("settings-encoding")
-
-                Picker("Separator", selection: $separator) {
-                    ForEach(SeparatorOption.allCases) { option in
-                        Text(LocalizedStringKey(option.title)).tag(option)
-                    }
-                }
-                .accessibilityIdentifier("settings-separator")
-
-                Picker("Quote", selection: $quoteStyle) {
-                    ForEach(QuoteStyle.allCases) { style in
-                        Text(LocalizedStringKey(style.title)).tag(style)
-                    }
-                }
-                .accessibilityIdentifier("settings-quote")
-
-                Picker("Decimal Mark", selection: $decimalMark) {
-                    ForEach(DecimalOption.allCases) { option in
-                        Text(LocalizedStringKey(option.title)).tag(option)
-                    }
-                }
-                .accessibilityIdentifier("settings-decimal")
-
-                Toggle("First Row as Header", isOn: $firstRowAsHeader)
-                    .accessibilityIdentifier("settings-header")
-                caption("These apply to new documents. Opened files keep the format detected from their content.")
             }
+            .accessibilityIdentifier("settings-separator")
 
-            Section("Grid") {
-                Toggle("Alternating Row Colors", isOn: $alternatingRows)
-                    .accessibilityIdentifier("settings-alternating-rows")
-
-                Picker("Row Height", selection: $rowHeight) {
-                    ForEach(Preferences.rowHeights, id: \.self) { height in
-                        Text(rowHeightTitle(height)).tag(height)
-                    }
+            Picker("Quote", selection: $quoteStyle) {
+                ForEach(QuoteStyle.allCases) { style in
+                    Text(LocalizedStringKey(style.title)).tag(style)
                 }
-                .accessibilityIdentifier("settings-row-height")
             }
+            .accessibilityIdentifier("settings-quote")
 
-            Section("Large Files") {
-                Picker("Large File Threshold", selection: $largeFileThresholdMiB) {
-                    ForEach(Preferences.largeFileThresholdsMiB, id: \.self) { mebibytes in
-                        Text(Int64(mebibytes) * 1_048_576, format: .byteCount(style: .binary)).tag(mebibytes)
-                    }
+            Picker("Decimal Mark", selection: $decimalMark) {
+                ForEach(DecimalOption.allCases) { option in
+                    Text(LocalizedStringKey(option.title)).tag(option)
                 }
-                .accessibilityIdentifier("settings-large-threshold")
-                caption("Files at or above this size open in large file mode.")
             }
+            .accessibilityIdentifier("settings-decimal")
+
+            Toggle("First Row as Header", isOn: $firstRowAsHeader)
+                .accessibilityIdentifier("settings-header")
+            caption("These apply to new documents. Opened files keep the format detected from their content.")
         }
-        .formStyle(.grouped)
-        .frame(width: 460)
         .fixedSize(horizontal: false, vertical: true)
     }
+}
 
-    private func caption(_ text: LocalizedStringKey) -> some View {
-        Text(text)
-            .font(.caption)
-            .foregroundStyle(.secondary)
+private struct GridSettings: View {
+    @AppStorage(Preferences.Key.gridAlternatingRows) private var alternatingRows = Preferences.Default.alternatingRows
+    @AppStorage(Preferences.Key.gridRowHeight) private var rowHeight = Preferences.Default.rowHeight
+
+    var body: some View {
+        Form {
+            Toggle("Alternating Row Colors", isOn: $alternatingRows)
+                .accessibilityIdentifier("settings-alternating-rows")
+
+            Picker("Row Height", selection: $rowHeight) {
+                ForEach(Preferences.rowHeights, id: \.self) { height in
+                    Text(rowHeightTitle(height)).tag(height)
+                }
+            }
+            .accessibilityIdentifier("settings-row-height")
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func rowHeightTitle(_ height: Double) -> LocalizedStringKey {
@@ -113,4 +121,28 @@ struct SettingsView: View {
         default: "Comfortable"
         }
     }
+}
+
+private struct LargeFileSettings: View {
+    @AppStorage(Preferences.Key.largeFileThresholdMiB)
+    private var largeFileThresholdMiB = Preferences.Default.largeFileThresholdMiB
+
+    var body: some View {
+        Form {
+            Picker("Large File Threshold", selection: $largeFileThresholdMiB) {
+                ForEach(Preferences.largeFileThresholdsMiB, id: \.self) { mebibytes in
+                    Text(Int64(mebibytes) * 1_048_576, format: .byteCount(style: .binary)).tag(mebibytes)
+                }
+            }
+            .accessibilityIdentifier("settings-large-threshold")
+            caption("Files at or above this size open in large file mode.")
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private func caption(_ text: LocalizedStringKey) -> some View {
+    Text(text)
+        .font(.caption)
+        .foregroundStyle(.secondary)
 }

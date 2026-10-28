@@ -527,6 +527,10 @@ final class TabToolUITests: XCTestCase {
         XCTAssertTrue(settings.waitForExistence(timeout: 5))
         settings.click()
 
+        // The window reopens on the tab selected last, so choose the first one.
+        let general = app.toolbars.buttons["General"]
+        XCTAssertTrue(general.waitForExistence(timeout: 5))
+        general.click()
         XCTAssertTrue(app.popUpButtons["settings-language"].waitForExistence(timeout: 5))
     }
 

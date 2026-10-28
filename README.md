@@ -20,16 +20,16 @@ The project is in development. The name is TabTool and the bundle ID is `app.shu
 
 ## Settings
 
-`TabTool > Settings…` (`⌘,`) opens one window with four sections. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the language the next launch. A stored value that is not one of the offered options falls back to the default.
+`TabTool > Settings…` (`⌘,`) opens one window with four tabs: General, New Document, Grid, and Large Files. The window fits the selected tab and reopens on the tab used last. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the language the next launch. A stored value that is not one of the offered options falls back to the default.
 
-| Section | Setting | Key | Default |
+| Tab | Setting | Key | Default |
 | --- | --- | --- | --- |
 | General | Language | `appLanguage` | System |
 | General | Show Format Bar (also `View > Show Format Bar`) | `showFormatBar` | on |
 | New Document | Encoding | `newDocumentEncoding` | UTF-8 |
 | New Document | Separator | `newDocumentSeparator` | Comma |
 | New Document | Quote | `newDocumentQuoteStyle` | Doubled |
-| New Document | Decimal Mark | `newDocumentDecimalMark` | Dot |
+| New Document | Decimal Mark | `newDocumentDecimalMark` | Dot (.) |
 | New Document | First Row as Header | `newDocumentFirstRowAsHeader` | off |
 | Grid | Alternating Row Colors | `gridAlternatingRows` | on |
 | Grid | Row Height: Compact 20 pt, Default 24 pt, Comfortable 32 pt | `gridRowHeight` | Default (24 pt) |
