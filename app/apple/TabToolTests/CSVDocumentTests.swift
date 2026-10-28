@@ -17,7 +17,7 @@ import UniformTypeIdentifiers
     }
 
     @Test @MainActor func newDocumentIsThreeByOneAndReady() async {
-        let doc = CSVDocument()
+        let doc = CSVDocument(newDocumentConfiguration: { CSVConfiguration() })
         #expect(doc.phase == .loading)
         await doc.load()
         #expect(doc.phase == .ready)
@@ -34,6 +34,13 @@ import UniformTypeIdentifiers
         #expect(doc.configuration.columnSeparator == ";")
         #expect(doc.configuration.decimalMark == ",")
         #expect(doc.phase == .ready)
+    }
+
+    @Test @MainActor func newDocumentWithoutHeaderPreferenceHasNoHeaders() async {
+        let doc = CSVDocument(newDocumentConfiguration: { CSVConfiguration(firstRowAsHeader: false) })
+        await doc.load()
+        #expect(doc.table?.headers == nil)
+        #expect(doc.configuration.firstRowAsHeader == false)
     }
 
     @Test @MainActor func newDocumentWithHeaderPreferenceHasMatchingHeaders() async {

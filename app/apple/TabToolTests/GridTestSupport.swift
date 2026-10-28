@@ -8,7 +8,7 @@ import TabToolKit
 enum GridTestSupport {
     /// A new document with the main-actor load applied.
     static func makeLoadedNewDocument() async -> CSVDocument {
-        let document = CSVDocument()
+        let document = CSVDocument(newDocumentConfiguration: { CSVConfiguration() })
         await document.load()
         return document
     }

@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 /// plain values and the main-actor `load()` publishes the visible state.
 @Suite struct CSVDocumentConcurrencyTests {
     @Test @MainActor func newDocumentIsConstructedOffMainActor() async {
-        let document = await Task.detached { CSVDocument() }.value
+        let document = await Task.detached { CSVDocument(newDocumentConfiguration: { CSVConfiguration() }) }.value
 
         #expect(document.phase == .loading)
         #expect(document.table == nil)
@@ -129,7 +129,7 @@ import UniformTypeIdentifiers
     }
 
     @Test @MainActor func loadingANewDocumentIsIdempotent() async {
-        let document = CSVDocument()
+        let document = CSVDocument(newDocumentConfiguration: { CSVConfiguration() })
         await document.load()
         document.setCell("edited", row: 0, column: 0)
 

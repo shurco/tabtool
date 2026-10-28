@@ -20,8 +20,6 @@ import TabToolKit
     @Test func emptyDefaultsGiveTheDocumentedDefaults() {
         let store = TestDefaults()
         #expect(Preferences.newDocumentConfiguration(store.defaults) == CSVConfiguration())
-        #expect(Preferences.gridAlternatingRows(store.defaults) == true)
-        #expect(Preferences.gridRowHeight(store.defaults) == 24)
         #expect(Preferences.largeFileThresholdBytes(store.defaults) == LargeFile.thresholdBytes)
     }
 
@@ -33,9 +31,7 @@ import TabToolKit
         defaults.set("backslash", forKey: Preferences.Key.newDocumentQuoteStyle)
         defaults.set(",", forKey: Preferences.Key.newDocumentDecimalMark)
         defaults.set(true, forKey: Preferences.Key.newDocumentFirstRowAsHeader)
-        defaults.set(32.0, forKey: Preferences.Key.gridRowHeight)
         defaults.set(250, forKey: Preferences.Key.largeFileThresholdMiB)
-        defaults.set(false, forKey: Preferences.Key.gridAlternatingRows)
 
         let configuration = Preferences.newDocumentConfiguration(defaults)
         #expect(configuration.encoding == .windowsCP1251)
@@ -44,9 +40,7 @@ import TabToolKit
         #expect(configuration.escapeCharacter == "\\")
         #expect(configuration.decimalMark == ",")
         #expect(configuration.firstRowAsHeader == true)
-        #expect(Preferences.gridRowHeight(defaults) == 32)
         #expect(Preferences.largeFileThresholdBytes(defaults) == 250 * 1_048_576)
-        #expect(Preferences.gridAlternatingRows(defaults) == false)
     }
 
     @Test func unknownStoredValuesFallBackToDefaults() {
@@ -58,16 +52,22 @@ import TabToolKit
         defaults.set("x", forKey: Preferences.Key.newDocumentDecimalMark)
         #expect(Preferences.newDocumentConfiguration(defaults) == CSVConfiguration())
 
-        defaults.set(7.0, forKey: Preferences.Key.gridRowHeight)
-        #expect(Preferences.gridRowHeight(defaults) == 24)
-
         for invalid in [0, -5, 7] {
             defaults.set(invalid, forKey: Preferences.Key.largeFileThresholdMiB)
             #expect(Preferences.largeFileThresholdBytes(defaults) == 100 * 1_048_576)
         }
+    }
 
-        defaults.set("no", forKey: Preferences.Key.gridAlternatingRows)
-        #expect(Preferences.gridAlternatingRows(defaults) == true)
+    @Test func rowHeightsTheSettingsOfferAreKept() {
+        for height in Preferences.rowHeights {
+            #expect(Preferences.validRowHeight(height) == height)
+        }
+    }
+
+    @Test func otherRowHeightsFallBackToTheDefault() {
+        for invalid in [0, 7, 99, -24] {
+            #expect(Preferences.validRowHeight(Double(invalid)) == 24)
+        }
     }
 
     @Test func defaultThresholdMatchesTheCoreConstant() {

@@ -58,13 +58,9 @@ enum Preferences {
         )
     }
 
-    static func gridAlternatingRows(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.object(forKey: Key.gridAlternatingRows) as? Bool ?? Default.alternatingRows
-    }
-
-    static func gridRowHeight(_ defaults: UserDefaults = .standard) -> Double {
-        let stored = defaults.double(forKey: Key.gridRowHeight)
-        return rowHeights.contains(stored) ? stored : Default.rowHeight
+    /// The grid row height for a stored value, or the default when the value is not one of `rowHeights`.
+    static func validRowHeight(_ value: Double) -> Double {
+        rowHeights.contains(value) ? value : Default.rowHeight
     }
 
     /// The file size from which a document opens in large file mode.

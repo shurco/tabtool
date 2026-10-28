@@ -12,10 +12,8 @@ struct CSVGrid: NSViewRepresentable {
     @AppStorage(Preferences.Key.gridAlternatingRows) private var alternatingRows = Preferences.Default.alternatingRows
     @AppStorage(Preferences.Key.gridRowHeight) private var storedRowHeight = Preferences.Default.rowHeight
 
-    /// The stored height when it is one the settings offer, so a hand-edited value cannot reach the grid.
-    private var rowHeight: CGFloat {
-        CGFloat(Preferences.rowHeights.contains(storedRowHeight) ? storedRowHeight : Preferences.Default.rowHeight)
-    }
+    /// A hand-edited stored height the settings do not offer must not reach the grid.
+    private var rowHeight: CGFloat { CGFloat(Preferences.validRowHeight(storedRowHeight)) }
 
     func makeCoordinator() -> CSVGridCoordinator {
         CSVGridCoordinator(document: document)

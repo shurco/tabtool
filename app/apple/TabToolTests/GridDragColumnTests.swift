@@ -52,7 +52,7 @@ import Testing
     }
 
     @Test func rowDropReadsEveryDraggedIndex() {
-        let doc = CSVDocument()
+        let doc = CSVDocument(newDocumentConfiguration: { CSVConfiguration() })
         let (coordinator, _, _) = GridTestSupport.makeGrid(doc)
         let pasteboard = GridTestSupport.makePasteboard()
         pasteboard.clearContents()
@@ -83,7 +83,7 @@ import Testing
     }
 
     @Test func dropAcceptsOnlyLocalAboveRowDrags() {
-        let doc = CSVDocument()
+        let doc = CSVDocument(newDocumentConfiguration: { CSVConfiguration() })
         let (coordinator, tableView, _) = GridTestSupport.makeGrid(doc)
         let pasteboard = GridTestSupport.makePasteboard()
         pasteboard.clearContents()
@@ -189,7 +189,7 @@ import Testing
     /// the model in different orders.
     @Test func movingAnIdenticalColumnUpdatesModelAndUndo() async throws {
         let um = UndoManager()
-        let doc = CSVDocument()
+        let doc = CSVDocument(newDocumentConfiguration: { CSVConfiguration() })
         await doc.load()
         doc.setUndoManager(um)
         let (coordinator, tableView, _) = GridTestSupport.makeGrid(doc)

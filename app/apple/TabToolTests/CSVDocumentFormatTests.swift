@@ -33,7 +33,7 @@ func tempFile(_ data: Data) throws -> URL {
     }
 
     @Test @MainActor func newDocumentDecimalAndHeaderTransformTypedTable() async {
-        let doc = CSVDocument()
+        let doc = CSVDocument(newDocumentConfiguration: { CSVConfiguration() })
         await doc.load()
         doc.setCell("1.50", row: 0, column: 0)
         doc.setDecimalMark(",")

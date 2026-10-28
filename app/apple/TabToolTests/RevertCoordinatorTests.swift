@@ -53,7 +53,7 @@ import TabToolKit
     }
 
     @Test func revertRequiresAFileBackedDocument() async {
-        let doc = CSVDocument()
+        let doc = CSVDocument(newDocumentConfiguration: { CSVConfiguration() })
         await doc.load()
         #expect(!doc.canRevertToSaved)
         await #expect(throws: DocumentError.notReady) {
