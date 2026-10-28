@@ -24,6 +24,7 @@ struct FilterCriterionRow: View {
                 }
             }
             .labelsHidden()
+            .fillsPopUpWidth()
             .frame(width: 130)
             .accessibilityIdentifier("filter-column")
 
@@ -33,6 +34,7 @@ struct FilterCriterionRow: View {
                 }
             }
             .labelsHidden()
+            .fillsPopUpWidth()
             .frame(width: 132)
             .accessibilityIdentifier("filter-operator")
 
@@ -73,5 +75,18 @@ struct FilterCriterionRow: View {
         Label(title, systemImage: systemImage)
             .labelStyle(.iconOnly)
             .frame(width: 12, height: 14)
+    }
+}
+
+private extension View {
+    /// macOS 26 sizes a pop-up button to its selected item; earlier systems
+    /// already fill the frame.
+    @ViewBuilder
+    func fillsPopUpWidth() -> some View {
+        if #available(macOS 26, *) {
+            buttonSizing(.flexible)
+        } else {
+            self
+        }
     }
 }
