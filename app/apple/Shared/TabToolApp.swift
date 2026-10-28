@@ -17,5 +17,9 @@ struct TabToolApp: App {
             AboutView()
         }
         .windowResizability(.contentSize)
+
+        Settings {
+            SettingsView()
+        }
     }
 }

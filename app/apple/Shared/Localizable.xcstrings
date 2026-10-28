@@ -131,6 +131,16 @@
         }
       }
     },
+    "Alternating Row Colors": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alternating Row Colors"
+          }
+        }
+      }
+    },
     "Backslash": {
       "localizations": {
         "en": {
@@ -231,6 +241,16 @@
         }
       }
     },
+    "Comfortable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comfortable"
+          }
+        }
+      }
+    },
     "Comma": {
       "localizations": {
         "en": {
@@ -251,6 +271,16 @@
         }
       }
     },
+    "Compact": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compact"
+          }
+        }
+      }
+    },
     "Cyrillic (Windows)": {
       "localizations": {
         "en": {
@@ -267,6 +297,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Decimal Mark"
+          }
+        }
+      }
+    },
+    "Default": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default"
           }
         }
       }
@@ -411,6 +451,26 @@
         }
       }
     },
+    "Files at or above this size open in large file mode.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files at or above this size open in large file mode."
+          }
+        }
+      }
+    },
+    "First Row as Header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First Row as Header"
+          }
+        }
+      }
+    },
     "Format Not Applied": {
       "localizations": {
         "en": {
@@ -431,12 +491,32 @@
         }
       }
     },
+    "General": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General"
+          }
+        }
+      }
+    },
     "Greek (Windows)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Greek (Windows)"
+          }
+        }
+      }
+    },
+    "Grid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grid"
           }
         }
       }
@@ -477,6 +557,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Japanese (Shift_JIS)"
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        }
+      }
+    },
+    "Large File Threshold": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large File Threshold"
+          }
+        }
+      }
+    },
+    "Large Files": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large Files"
           }
         }
       }
@@ -527,6 +637,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Move Row Up"
+          }
+        }
+      }
+    },
+    "New Document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Document"
           }
         }
       }
@@ -641,6 +761,16 @@
         }
       }
     },
+    "Row Height": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Row Height"
+          }
+        }
+      }
+    },
     "Semicolon": {
       "localizations": {
         "en": {
@@ -711,6 +841,16 @@
         }
       }
     },
+    "System": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        }
+      }
+    },
     "Tab": {
       "localizations": {
         "en": {
@@ -747,6 +887,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "TabTool"
+          }
+        }
+      }
+    },
+    "Takes effect after restart.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takes effect after restart."
           }
         }
       }
@@ -867,6 +1017,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "The text cannot be represented in the selected encoding."
+          }
+        }
+      }
+    },
+    "These apply to new documents. Opened files keep the format detected from their content.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These apply to new documents. Opened files keep the format detected from their content."
           }
         }
       }

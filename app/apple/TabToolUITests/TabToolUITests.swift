@@ -509,6 +509,18 @@ final class TabToolUITests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsWindowShowsLanguagePicker() {
+        let app = launchApp()
+
+        app.menuBars.menuBarItems["TabTool"].click()
+        let settings = app.menuBars.menuItems["Settings…"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        settings.click()
+
+        XCTAssertTrue(app.popUpButtons["settings-language"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testHeaderMenuSortsRows() throws {
         let fixture = try makeFixture("pear,1\napple,2\nzebra,3\n",
                                       name: "sort-fixture-\(UUID().uuidString).csv")
