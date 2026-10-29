@@ -13,7 +13,8 @@ enum GridEditorAccessory {
                         label: String(localized: "Previous Cell"), action: onPrevious),
             imageButton("chevron.right", identifier: "editor-next",
                         label: String(localized: "Next Cell"), action: onNext),
-            doneButton(String(localized: "Done"), identifier: "editor-done", action: onDone)
+            imageButton("checkmark", identifier: "editor-done",
+                        label: String(localized: "Done"), action: onDone)
         ]
         toolbar.sizeToFit()
         return toolbar
@@ -29,18 +30,6 @@ enum GridEditorAccessory {
                                    menu: nil)
         item.accessibilityIdentifier = identifier
         item.accessibilityLabel = label
-        return item
-    }
-
-    private static func doneButton(_ title: String,
-                                   identifier: String,
-                                   action: @escaping () -> Void) -> UIBarButtonItem {
-        let item = UIBarButtonItem(title: title,
-                                   image: nil,
-                                   primaryAction: UIAction { _ in action() },
-                                   menu: nil)
-        item.style = .done
-        item.accessibilityIdentifier = identifier
         return item
     }
 }

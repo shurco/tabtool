@@ -31,6 +31,7 @@ The iOS app opens with a Documents screen and then a touch-first editor on iPhon
 - Format lives in a sheet opened from the status line or the overflow menu: encoding, separator, quote, decimal mark, first row as header, and Detect Automatically. The decimal mark is unavailable in large file mode. Changing the format re-reads the file and asks before discarding unsaved edits.
 - The toolbar has Undo and Redo on the leading edge (after Save and Save As in large file mode); the trailing edge has a filter button with the number of applied criteria, export, and an overflow menu with Format, Settings, About, and Save As in large file mode.
 - Settings is a sheet with one form and five sections: General, New Document, Grid, Large Files, and About. Show Format Bar is not offered because the status line is always visible.
+- About shows the version, what the app does, the website [tabtool.shurco.app](https://tabtool.shurco.app), and the MIT license notice; the text is translated into all eleven interface languages.
 - Grid rows are touch-sized: Compact 32 pt, Default 44 pt, Comfortable 56 pt, against Compact 20 pt, Default 24 pt, Comfortable 32 pt on macOS. Cell text scales with Dynamic Type, capped by the row height.
 
 ## Settings
@@ -184,4 +185,4 @@ The code is feature-complete for a 1.0 release, but the release identity is deli
 
 ## License
 
-[MIT](LICENSE). The required copyright and permission notice is kept in the LICENSE file and bundled with the app.
+[MIT](LICENSE). The required copyright and permission notice is kept in the LICENSE file and bundled with the app. The About screen shows the same notice, and the project website is [tabtool.shurco.app](https://tabtool.shurco.app).

@@ -172,10 +172,10 @@ private struct ExportSheet: View {
                 .navigationTitle("Export")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel", action: onCancel)
+                        Button("Cancel", systemImage: "xmark", action: onCancel)
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Export") { onExport(options.configuration) }
+                        Button("Export", systemImage: "square.and.arrow.up") { onExport(options.configuration) }
                     }
                 }
         }

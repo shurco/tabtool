@@ -15890,6 +15890,216 @@
           }
         }
       }
+    },
+    "Opens, edits, and saves CSV, TSV, and plain text tables. Detects the encoding and separator, keeps large files responsive, filters and sorts rows, and exports in the format you choose.": {
+      "localizations": {
+        "be": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Адкрывае, рэдагуе і захоўвае табліцы CSV, TSV і звычайнага тэксту. Вызначае кадаванне і раздзяляльнік, хутка працуе з вялікімі файламі, фільтруе і сартуе радкі і экспартуе ў патрэбным фармаце."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet, bearbeitet und speichert CSV-, TSV- und Texttabellen. Erkennt Kodierung und Trennzeichen, bleibt bei großen Dateien schnell, filtert und sortiert Zeilen und exportiert im gewünschten Format."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens, edits, and saves CSV, TSV, and plain text tables. Detects the encoding and separator, keeps large files responsive, filters and sorts rows, and exports in the format you choose."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre, edita y guarda tablas CSV, TSV y de texto. Detecta la codificación y el separador, mantiene rápidos los archivos grandes, filtra y ordena filas y exporta en el formato que elijas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvre, modifie et enregistre des tableaux CSV, TSV et texte. Détecte l’encodage et le séparateur, reste rapide sur les gros fichiers, filtre et trie les lignes et exporte dans le format choisi."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apre, modifica e salva tabelle CSV, TSV e di testo. Rileva codifica e separatore, resta veloce con i file grandi, filtra e ordina le righe ed esporta nel formato scelto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV、TSV、テキストの表を開いて編集し、保存します。文字コードと区切り文字を検出し、大きなファイルでも快適に動作し、行の絞り込みと並べ替え、任意の形式での書き出しができます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV, TSV, 텍스트 표를 열고 편집하고 저장합니다. 인코딩과 구분자를 감지하고, 큰 파일에서도 빠르게 동작하며, 행을 필터링·정렬하고 원하는 형식으로 내보냅니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwiera, edytuje i zapisuje tabele CSV, TSV i tekstowe. Wykrywa kodowanie i separator, zachowuje szybkość na dużych plikach, filtruje i sortuje wiersze oraz eksportuje w wybranym formacie."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відкриває, редагує та зберігає таблиці CSV, TSV і звичайного тексту. Визначає кодування й роздільник, швидко працює з великими файлами, фільтрує та сортує рядки й експортує у потрібному форматі."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开、编辑并保存 CSV、TSV 和纯文本表格。自动识别编码与分隔符，大文件依然流畅，可筛选和排序行，并按所需格式导出。"
+          }
+        }
+      }
+    },
+    "MIT License": {
+      "localizations": {
+        "be": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MIT License"
+          }
+        }
+      }
+    },
+    "Free and open source. Copyright © 2026 Dmitry Shurco.": {
+      "localizations": {
+        "be": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Бясплатна і з адкрытым кодам. Copyright © 2026 Dmitry Shurco."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kostenlos und quelloffen. Copyright © 2026 Dmitry Shurco."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free and open source. Copyright © 2026 Dmitry Shurco."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gratis y de código abierto. Copyright © 2026 Dmitry Shurco."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gratuit et open source. Copyright © 2026 Dmitry Shurco."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gratuito e open source. Copyright © 2026 Dmitry Shurco."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無料のオープンソースです。Copyright © 2026 Dmitry Shurco."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무료 오픈 소스입니다. Copyright © 2026 Dmitry Shurco."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bezpłatna i otwarta. Copyright © 2026 Dmitry Shurco."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Безкоштовно з відкритим кодом. Copyright © 2026 Dmitry Shurco."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免费开源。Copyright © 2026 Dmitry Shurco."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
