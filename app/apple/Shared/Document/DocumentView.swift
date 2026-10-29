@@ -27,6 +27,15 @@ struct DocumentView: View {
         VStack(spacing: 0) {
             content
 
+            #if os(iOS)
+            let actions = ContextualActions.actions(for: document)
+            if !actions.isEmpty {
+                ContextualActionBar(actions: actions) { action in
+                    ContextualActions.run(action, on: document)
+                }
+            }
+            #endif
+
             if document.isLargeMode, document.hasContent {
                 Divider()
                 LargeFileBanner()
@@ -226,8 +235,10 @@ struct DocumentView: View {
         case .ready, .needsAttention:
             if document.hasContent {
                 VStack(spacing: 0) {
+                    #if os(macOS)
                     GridToolbar(document: document)
                     Divider()
+                    #endif
                     if document.canFilter, document.rowFilter.isBarVisible {
                         scrollingOnCompact {
                             RowFilterBar(document: document)
