@@ -4,7 +4,9 @@ import TabToolKit
 /// App-wide menu commands that act on the focused document.
 struct AppCommands: Commands {
     @FocusedObject private var document: CSVDocument?
+    #if os(macOS)
     @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
+    #endif
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
@@ -116,7 +118,9 @@ struct AppCommands: Commands {
         }
 
         CommandGroup(after: .toolbar) {
+            #if os(macOS)
             Toggle("Show Format Bar", isOn: $showFormatBar)
+            #endif
 
             Button(document?.rowFilter.isBarVisible == true
                    ? LocalizedStringKey("Hide Filter") : LocalizedStringKey("Show Filter")) {

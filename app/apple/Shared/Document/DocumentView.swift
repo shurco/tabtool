@@ -10,20 +10,19 @@ struct DocumentView: View {
     @Environment(\.undoManager) private var undoManager
     #if os(iOS)
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
     #if os(macOS)
     @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
     #endif
 
-    @State private var pendingReparse: CSVConfiguration?
-    @State private var isConfirmingReparse = false
-    @State private var isReparsing = false
-    @State private var formatAlert: FormatAlert?
+    @State var pendingReparse: CSVConfiguration?
+    @State var isConfirmingReparse = false
+    @State var isReparsing = false
+    @State var formatAlert: FormatAlert?
     #if os(iOS)
-    @State private var showsSettings = false
-    @State private var showsAbout = false
-    @State private var showsFormatSheet = false
+    @State var showsSettings = false
+    @State var showsAbout = false
+    @State var showsFormatSheet = false
     @State private var renamingColumn: RenamingColumn?
     @State private var renameText = ""
     #endif
@@ -73,16 +72,14 @@ struct DocumentView: View {
             #if os(macOS)
             if showFormatBar {
                 Divider()
-                scrollingOnCompact {
-                    FormatBar(
-                        document: document,
-                        isBusy: isReparsing || document.phase == .loading || document.isIndexing
-                            || document.isSaving,
-                        isDetectAvailable: document.fileURL != nil,
-                        onConfigurationChange: applyConfiguration,
-                        onDetectAutomatically: detectAutomatically
-                    )
-                }
+                FormatBar(
+                    document: document,
+                    isBusy: isReparsing || document.phase == .loading || document.isIndexing
+                        || document.isSaving,
+                    isDetectAvailable: document.fileURL != nil,
+                    onConfigurationChange: applyConfiguration,
+                    onDetectAutomatically: detectAutomatically
+                )
             }
             #endif
 
@@ -183,47 +180,27 @@ struct DocumentView: View {
             Button("Rename") { commitRename(column.column) }
         }
         .toolbar {
-            ToolbarItemGroup(placement: .topBarLeading) {
-                if document.isLargeMode {
-                    Button("Save") { LargeSaveCoordinator.shared.save(document) }
-                        .disabled(!document.hasUnsavedLargeEdits || document.largeStatus != .ready)
-                        .accessibilityIdentifier("save")
-                    Button("Save As") { LargeSaveCoordinator.shared.saveAs(document) }
-                        .disabled(document.largeStatus != .ready)
-                        .accessibilityIdentifier("save-as")
-                }
-                Button("Undo", systemImage: "arrow.uturn.backward") {
-                    document.undoManager?.undo()
-                }
-                .disabled(!(document.undoManager?.canUndo ?? false))
-                .accessibilityIdentifier("undo")
-                Button("Redo", systemImage: "arrow.uturn.forward") {
-                    document.undoManager?.redo()
-                }
-                .disabled(!(document.undoManager?.canRedo ?? false))
-                .accessibilityIdentifier("redo")
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button("Settings", systemImage: "gearshape") {
-                    showsSettings = true
-                }
-                .accessibilityIdentifier("settings")
-            }
+            documentToolbar
         }
         .sheet(isPresented: $showsSettings) {
             NavigationStack {
                 SettingsView()
                     .navigationTitle("Settings")
                     .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("About") { showsAbout = true }
-                        }
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") { showsSettings = false }
                         }
                     }
-                    .navigationDestination(isPresented: $showsAbout) {
-                        AboutView()
+            }
+        }
+        .sheet(isPresented: $showsAbout) {
+            NavigationStack {
+                AboutView()
+                    .navigationTitle("About")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showsAbout = false }
+                        }
                     }
             }
         }
@@ -242,20 +219,6 @@ struct DocumentView: View {
             get: { document.rowFilter.isBarVisible },
             set: { document.rowFilter.isBarVisible = $0 }
         )) { FilterSheet(document: document) }
-        #endif
-    }
-
-    /// Lets a wide format or filter bar slide sideways on a narrow phone.
-    @ViewBuilder
-    private func scrollingOnCompact<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        #if os(iOS)
-        if horizontalSizeClass == .compact {
-            ScrollView(.horizontal, showsIndicators: false) { content() }
-        } else {
-            content()
-        }
-        #else
-        content()
         #endif
     }
 
@@ -283,9 +246,7 @@ struct DocumentView: View {
                     #endif
                     #if os(macOS)
                     if document.canFilter, document.rowFilter.isBarVisible {
-                        scrollingOnCompact {
-                            RowFilterBar(document: document)
-                        }
+                        RowFilterBar(document: document)
                         Divider()
                     }
                     #endif
@@ -304,119 +265,6 @@ struct DocumentView: View {
             )
         }
     }
-
-    /// Applies one format-bar edit through the planner.
-    private func applyConfiguration(_ configuration: CSVConfiguration) {
-        guard !isReparsing else { return }
-        switch FormatChangePlanner.plan(from: document.configuration,
-                                       to: configuration) {
-        case .none:
-            break
-        case .decimalMark(let mark):
-            if !document.hasContent {
-                startReparse(configuration: configuration)
-            } else {
-                document.setDecimalMark(mark)
-            }
-        case .header(let enabled):
-            if !document.hasContent {
-                startReparse(configuration: configuration)
-            } else {
-                document.setHeaderEnabled(enabled)
-            }
-        case .reparse(let configuration):
-            startReparse(configuration: configuration)
-        }
-    }
-
-    /// Re-reads the file after an explicit format change.
-    ///
-    /// The dirty check runs off the main actor. Only an actually dirty
-    /// document asks to discard edits; a re-read rejected because it raced
-    /// with another change is reported as a retry instead.
-    private func startReparse(configuration: CSVConfiguration) {
-        guard !isReparsing else { return }
-        isReparsing = true
-        Task {
-            await continueReparse(to: configuration)
-            isReparsing = false
-        }
-    }
-
-    private func continueReparse(to configuration: CSVConfiguration) async {
-        guard document.fileURL != nil, document.hasContent else {
-            await applyReparse(to: configuration)
-            return
-        }
-        if await document.hasUnsavedChangesAsync() {
-            #if os(iOS)
-            // Dismiss the format sheet first: its `onDismiss` then shows the
-            // discard confirmation, so the two presentations never overlap.
-            let wasShowingFormatSheet = showsFormatSheet
-            showsFormatSheet = false
-            #endif
-            pendingReparse = configuration
-            #if os(macOS)
-            isConfirmingReparse = true
-            #else
-            if !wasShowingFormatSheet {
-                isConfirmingReparse = true
-            }
-            #endif
-            return
-        }
-        await applyReparse(to: configuration)
-    }
-
-    private func startConfirmedReparse(_ configuration: CSVConfiguration) {
-        pendingReparse = nil
-        isReparsing = true
-        Task {
-            await applyReparse(to: configuration)
-            isReparsing = false
-        }
-    }
-
-    private func applyReparse(to configuration: CSVConfiguration) async {
-        do {
-            try await document.applyParsingConfiguration(configuration, force: true)
-        } catch DocumentError.requiresConfirmation {
-            formatAlert = FormatAlert(
-                title: "Re-read Interrupted",
-                message: String(localized: "The document changed while it was being re-read, so the new format was not applied. Try again.")
-            )
-        } catch {
-            formatAlert = FormatAlert(
-                title: "Format Not Applied",
-                message: FormatErrorText.alertMessage(for: error)
-            )
-        }
-    }
-
-    private func detectAutomatically() {
-        guard !isReparsing, document.fileURL != nil else { return }
-        isReparsing = true
-        Task {
-            do {
-                let detected = try await document.detectFormatFromDisk()
-                if !document.hasContent || detected != document.configuration {
-                    await continueReparse(to: detected)
-                }
-            } catch {
-                formatAlert = FormatAlert(
-                    title: "Format Not Detected",
-                    message: FormatErrorText.alertMessage(for: error)
-                )
-            }
-            isReparsing = false
-        }
-    }
-}
-
-private struct FormatAlert: Identifiable {
-    let id = UUID()
-    let title: LocalizedStringKey
-    let message: String
 }
 
 #if os(iOS)
