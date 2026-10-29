@@ -55,7 +55,10 @@ struct FormatSheet: View {
 
                 Section {
                 } footer: {
-                    Text("Changing the format re-reads the file.")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Changing the format re-reads the file.")
+                        Text("Your unsaved changes will be discarded. The table will be replaced with the last saved version from disk.")
+                    }
                 }
             }
             .disabled(isBusy)

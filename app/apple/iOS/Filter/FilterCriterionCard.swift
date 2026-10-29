@@ -66,6 +66,7 @@ struct FilterCriterionCard: View {
             }
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
         .swipeActions {
             Button(role: .destructive, action: onRemove) {
                 Label("Remove", systemImage: "trash")

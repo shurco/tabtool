@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// The macOS Settings window: one tab per group of settings.
@@ -22,8 +23,7 @@ struct SettingsView: View {
                 .tabItem { Label("Large Files", systemImage: "externaldrive") }
         }
         .formStyle(.grouped)
-        #if os(macOS)
         .frame(width: 460)
-        #endif
     }
 }
+#endif

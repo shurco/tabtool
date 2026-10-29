@@ -12,11 +12,19 @@ struct LargeFileBanner: View {
                 .foregroundStyle(.secondary)
             Spacer(minLength: 12)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(bannerPadding)
         .background(Color.blue.opacity(0.10))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("large-file-banner")
+    }
+
+    /// The banner sits in a narrower phone layout, so it uses tighter padding.
+    private var bannerPadding: EdgeInsets {
+        #if os(iOS)
+        EdgeInsets(top: 6, leading: 10, bottom: 6, trailing: 10)
+        #else
+        EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12)
+        #endif
     }
 
     private var bannerText: Text {

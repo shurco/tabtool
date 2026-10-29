@@ -24,11 +24,11 @@ struct GeneralSettings: View {
             new.applyOverride()
             needsRestart = true
         }
+        #if os(macOS)
         HStack {
             caption("Takes effect after restart.")
             if needsRestart {
                 Spacer()
-                #if os(macOS)
                 Button { AppRelaunch.request() } label: {
                     Label("Restart Now", systemImage: "arrow.clockwise")
                 }
@@ -36,11 +36,13 @@ struct GeneralSettings: View {
                 .buttonStyle(.borderless)
                 .help("Restart Now")
                 .accessibilityIdentifier("settings-restart")
-                #else
-                caption("Open TabTool again to apply it.")
-                #endif
             }
         }
+        #else
+        if needsRestart {
+            caption("Open TabTool again to apply it.")
+        }
+        #endif
 
         #if os(macOS)
         Toggle("Show Format Bar", isOn: $showFormatBar)

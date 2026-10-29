@@ -7,13 +7,12 @@ struct ContextualAction: Identifiable {
     let title: LocalizedStringKey
     let systemImage: String
     let isEnabled: Bool
-    let isDestructive: Bool
 }
 
 extension ContextualAction {
     init(id: ContextualActionID, isEnabled: Bool) {
         self.init(id: id, title: Self.title(for: id), systemImage: Self.systemImage(for: id),
-                  isEnabled: isEnabled, isDestructive: id == .delete)
+                  isEnabled: isEnabled)
     }
 
     private static func title(for id: ContextualActionID) -> LocalizedStringKey {
@@ -58,7 +57,7 @@ struct ContextualActionBar: View {
             Divider()
             HStack(spacing: 0) {
                 ForEach(actions) { action in
-                    Button(role: action.isDestructive ? .destructive : nil) {
+                    Button(role: action.id == .delete ? .destructive : nil) {
                         perform(action.id)
                     } label: {
                         Image(systemName: action.systemImage)
@@ -68,7 +67,7 @@ struct ContextualActionBar: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.borderless)
-                    .tint(action.isDestructive ? .red : .accentColor)
+                    .tint(action.id == .delete ? .red : .accentColor)
                     .disabled(!action.isEnabled)
                     .accessibilityLabel(action.title)
                     .accessibilityIdentifier(action.id.rawValue)

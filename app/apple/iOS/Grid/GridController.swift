@@ -19,11 +19,24 @@ final class GridController: NSObject, UICollectionViewDataSource {
         guard let layout = collectionView.collectionViewLayout as? GridLayout else { return }
         let rows = presenter?.numberOfRows ?? 0
         let columns = presenter?.numberOfColumns ?? 0
+        validateFocus(rows: rows, columns: columns)
         layout.geometry = GridGeometry(rowHeight: rowHeight, showsRowNumbers: showsRowNumbers,
                                        rowCount: rows, columnCount: columns)
         layout.invalidateLayout()
         // ponytail: full reload. Update visible cells if a large edit stalls.
         collectionView.reloadData()
+    }
+
+    /// Drops a focus that the document no longer backs: a cleared selection or
+    /// a cell outside the reparsed table would otherwise keep its ring and
+    /// steer row-number and menu actions at a stale column.
+    private func validateFocus(rows: Int, columns: Int) {
+        guard let focus else { return }
+        if (document?.selection.rows.isEmpty ?? true)
+            || focus.displayRow < 0 || focus.displayRow >= rows
+            || focus.column < 0 || focus.column >= columns {
+            self.focus = nil
+        }
     }
 
     func numberOfSections(in collectionView: UICollectionView) -> Int {

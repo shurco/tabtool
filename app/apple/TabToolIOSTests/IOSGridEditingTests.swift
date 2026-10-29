@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 import TabToolKit
 @testable import TabTool
 
@@ -60,5 +61,29 @@ import TabToolKit
         controller.selectCell(displayRow: 0, column: 1)
         controller.moveFocus(rowDelta: 0, columnDelta: 1)
         #expect(controller.focus == GridFocus(displayRow: 1, column: 0))
+    }
+
+    @Test func clearingTheSelectionDropsTheFocus() async {
+        let document = await document()
+        let controller = GridController()
+        controller.document = document
+        controller.selectCell(displayRow: 0, column: 0)
+        document.selection = GridSelection()
+        controller.apply(to: grid())
+        #expect(controller.focus == nil)
+    }
+
+    @Test func aStaleColumnDropsTheFocus() async {
+        let document = await document()
+        let controller = GridController()
+        controller.document = document
+        controller.selectCell(displayRow: 0, column: 0)
+        controller.focus = GridFocus(displayRow: 0, column: 9)
+        controller.apply(to: grid())
+        #expect(controller.focus == nil)
+    }
+
+    private func grid() -> UICollectionView {
+        UICollectionView(frame: .zero, collectionViewLayout: GridLayout())
     }
 }

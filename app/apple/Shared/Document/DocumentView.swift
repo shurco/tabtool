@@ -235,8 +235,6 @@ struct DocumentView: View {
                     #if os(macOS)
                     GridToolbar(document: document)
                     Divider()
-                    #endif
-                    #if os(macOS)
                     if document.canFilter, document.rowFilter.isBarVisible {
                         RowFilterBar(document: document)
                         Divider()
