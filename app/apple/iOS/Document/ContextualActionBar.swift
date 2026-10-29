@@ -105,9 +105,9 @@ extension ContextualActions {
         }
     }
 
-    /// Runs `id` against `document`.
+    /// Runs `id` against `document`; renaming is presented by the caller.
     @MainActor
-    static func run(_ id: ContextualActionID, on document: CSVDocument) {
+    static func run(_ id: ContextualActionID, on document: CSVDocument, rename: () -> Void) {
         switch id {
         case .addRowAbove:
             document.addRowAboveSelection()
@@ -130,7 +130,7 @@ extension ContextualActions {
         case .removeSort:
             document.removeSort()
         case .renameColumn:
-            document.renameSelectedColumn()
+            rename()
         }
     }
 }

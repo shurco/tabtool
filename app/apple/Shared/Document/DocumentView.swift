@@ -33,10 +33,8 @@ struct DocumentView: View {
             let actions = ContextualActions.actions(for: document)
             if !actions.isEmpty {
                 ContextualActionBar(actions: actions) { action in
-                    if action == .renameColumn {
+                    ContextualActions.run(action, on: document) {
                         beginRenamingSelectedColumn()
-                    } else {
-                        ContextualActions.run(action, on: document)
                     }
                 }
             }
