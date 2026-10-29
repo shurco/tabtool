@@ -1,8 +1,22 @@
+<p align="center">
+  <img src="app/apple/Shared/Assets.xcassets/AppIcon.appiconset/icon_256x256@2x.png" alt="TabTool icon" width="128" height="128">
+</p>
+
 # TabTool
 
 A modern, independent CSV editor for macOS and iOS in Swift. The app opens CSV/TSV/text files, detects the format automatically, lets you edit the table, and saves/exports data in the selected encoding and with the selected delimiter.
 
 The project is in development. The name is TabTool and the bundle ID is `app.shurco.tabtool`; the signing team and App Store icon have not been chosen yet, and placeholders are used in the code. The release checklist is at the end of this file.
+
+## Screenshots
+
+| Grid | Columns |
+| --- | --- |
+| ![TabTool grid on macOS](web/static/img/mac-grid-1200.webp) | ![TabTool columns on macOS](web/static/img/mac-columns-1200.webp) |
+
+| Large file mode | iOS |
+| --- | --- |
+| ![TabTool large file mode on macOS](web/static/img/mac-large-1200.webp) | ![TabTool on iOS](web/static/img/ios-grid.webp) |
 
 ## Features
 

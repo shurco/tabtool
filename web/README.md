@@ -44,7 +44,11 @@ Connect the GitHub repository in the Cloudflare dashboard and use:
 | Build output directory | `build` |
 | Environment variable | `NODE_VERSION=22` |
 
-No Worker is required: the site is fully prerendered, so Pages serves `build/` as static assets. `static/_headers` sets security and cache headers, and `static/_redirects` keeps old legal and comparison URLs working.
+### Workers Builds
+
+If the Cloudflare project uses Workers Builds (it runs a deploy command after the build), keep the build command above and the deploy command `npm run deploy` (runs `wrangler deploy`) works as is. `wrangler.jsonc` serves `build/` as static assets; no Worker code is needed.
+
+For Pages, the site is fully prerendered, so Pages serves `build/` as static assets. `static/_headers` sets security and cache headers, and `static/_redirects` keeps old legal and comparison URLs working.
 
 ## Edit before launch
 
