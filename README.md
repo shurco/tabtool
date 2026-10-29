@@ -1,6 +1,6 @@
 # TabTool
 
-A modern, independent CSV editor for macOS in Swift. The app opens CSV/TSV/text files, detects the format automatically, lets you edit the table, and saves/exports data in the selected encoding and with the selected delimiter.
+A modern, independent CSV editor for macOS and iOS in Swift. The app opens CSV/TSV/text files, detects the format automatically, lets you edit the table, and saves/exports data in the selected encoding and with the selected delimiter.
 
 The project is in development. The name is TabTool and the bundle ID is `app.shurco.tabtool`; the signing team and App Store icon have not been chosen yet, and placeholders are used in the code. The release checklist is at the end of this file.
 
@@ -18,9 +18,23 @@ The project is in development. The name is TabTool and the bundle ID is `app.shu
 - No formulas, styles, or charts — this is a simple CSV editor.
 - App Store: sandbox, no network, analytics, or third-party SDKs.
 
+## iOS editor
+
+The iOS app opens the same documents with a touch-first editor on iPhone and iPad:
+
+- The first tap selects a cell and its row; a second tap on the selected cell opens the editor. The editor bar above the keyboard has Previous Cell, Next Cell, and Done.
+- A contextual action bar appears above the status line while a row or a column is selected. A selected row offers Add Row Above, Add Row Below, and Delete; a selected column offers Add Column Left, Add Column Right, Delete, Sort Ascending, Sort Descending, Remove Sort, and Rename. The bar is hidden without a selection and in large file mode.
+- Filters live in a sheet opened from the toolbar: each criterion is a card with an enable switch, a column, an operator, and a value; Clear and Apply sit at the bottom. Closing the sheet keeps the draft criteria and the applied filter.
+- Format lives in a sheet opened from the status line or the overflow menu: encoding, separator, quote, decimal mark, first row as header, and Detect Automatically. The decimal mark is unavailable in large file mode. Changing the format re-reads the file and asks before discarding unsaved edits.
+- The toolbar has Undo and Redo on the leading edge (after Save and Save As in large file mode); the trailing edge has a filter button with the number of applied criteria, export, and an overflow menu with Format, Settings, About, and Save As in large file mode.
+- Settings is a sheet with one form and five sections: General, New Document, Grid, Large Files, and About. Show Format Bar is not offered because the status line is always visible.
+- Grid rows are touch-sized: Compact 32 pt, Default 44 pt, Comfortable 56 pt, against Compact 20 pt, Default 24 pt, Comfortable 32 pt on macOS. Cell text scales with Dynamic Type, capped by the row height.
+
 ## Settings
 
-`TabTool > Settings…` (`⌘,`) opens one window with four tabs: General, New Document, Grid, and Large Files. The window fits the selected tab and reopens on the tab used last. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the language the next launch. A stored value that is not one of the offered options falls back to the default.
+On macOS, `TabTool > Settings…` (`⌘,`) opens one window with four tabs: General, New Document, Grid, and Large Files. The window fits the selected tab and reopens on the tab used last. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the language the next launch. A stored value that is not one of the offered options falls back to the default.
+
+On iOS, Settings is a sheet opened from the document's overflow menu: one form with sections for General, New Document, Grid, Large Files, and About. It writes the same defaults at once, and the row height options are the iOS ones in the table.
 
 | Tab | Setting | Key | Default |
 | --- | --- | --- | --- |
@@ -50,6 +64,7 @@ The interface is available in English (`en`), Français (`fr`), Español (`es`),
 ## Requirements
 
 - macOS 14 or later.
+- iOS 17 or later.
 - Xcode 27.1 / Swift 6.4.
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) 2.46 (`brew install xcodegen`).
 - Python 3 — only for the version script.
@@ -58,13 +73,14 @@ The interface is available in English (`en`), Français (`fr`), Español (`es`),
 
 The repository follows these conventions:
 
-- `app/apple` — the macOS app: XcodeGen `project.yml`, the `TabToolKit` package, the `Shared` shell, platform files `macOS/App`.
+- `app/apple` — the macOS and iOS app: XcodeGen `project.yml`, the `TabToolKit` package, the `Shared` shell, platform files `macOS/` and `iOS/`.
 - `app/apple/TabToolKit` — CSV core: parser, writer, format heuristics, table model, clipboard, export. No AppKit/SwiftUI.
-- `app/apple/Shared` — SwiftUI shell, document, grid on `NSTableView`, format panel, export, Settings window and preferences (`Settings/`), resources.
-- `app/apple/macOS/App` — `Info.plist` (document types, category, encryption flag), entitlements, privacy manifest.
+- `app/apple/Shared` — SwiftUI shell, document, the macOS grid on `NSTableView`, format controls, filters, export, Settings and preferences (`Settings/`), resources.
+- `app/apple/macOS` — the macOS platform files: `App` (Info.plist, entitlements, privacy manifest), `Document`, `Format`, `Grid`.
+- `app/apple/iOS` — the iOS platform files: `App`, `Document` (toolbar, format sheet, contextual action bar), `Filter` (filter sheet), `Format`, `Grid`, `Settings`.
 - `app/apple/Shared/Assets.xcassets` — placeholder `AppIcon`; final branding is a release task.
 - `app/apple/Shared/Localizable.xcstrings` — String Catalog for all UI text: English plus 10 machine-generated translations (see [Languages](#languages)).
-- `app/apple/TabToolTests` and `app/apple/TabToolUITests` — app unit and UI tests.
+- `app/apple/TabToolTests`, `app/apple/TabToolIOSTests`, and `app/apple/TabToolUITests` — app unit, iOS unit, and UI tests.
 - `scripts` — `app` (XcodeGen + xcodebuild), `test`, `bench-large` (large file benchmark), `lib/version`.
 - `docs` — architecture, build, App Store, CSV format.
 - `.superpowers/sdd` — working spec/plan artifacts, not tracked by git.
@@ -78,9 +94,11 @@ From the repository root:
 ./scripts/app run macos
 ./scripts/app build macos
 ./scripts/app archive macos
+./scripts/app run ios
+./scripts/app build ios
 ```
 
-`run macos` builds and opens the app. `build macos` and `archive macos` build without signing (`CODE_SIGNING_ALLOWED=NO`); the archive is an unsigned verification build, not an upload-ready App Store archive. The script calls `xcodegen generate` itself.
+`run macos` builds and opens the app. `build macos` and `archive macos` build without signing (`CODE_SIGNING_ALLOWED=NO`); the archive is an unsigned verification build, not an upload-ready App Store archive. `run ios` boots the first available iPhone simulator, installs, and opens the app; `build ios` builds for the iOS Simulator. The script calls `xcodegen generate` itself.
 
 Without the script:
 
@@ -96,10 +114,11 @@ xcodebuild -project TabTool.xcodeproj -scheme TabTool \
 ```sh
 cd app/apple/TabToolKit && swift test
 ./scripts/test
+./scripts/app test ios
 ./scripts/test --ui
 ```
 
-`./scripts/test` runs the core package and the app unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 230 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 243 app unit tests, and 17 UI tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
+`./scripts/test` runs the core package and the macOS app unit tests. `./scripts/app test ios` runs the iOS unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 254 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 320 app unit tests, 19 UI tests, and 196 iOS unit tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
 
 ## Performance
 
