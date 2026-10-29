@@ -1,5 +1,12 @@
 import UIKit
 
+/// How a grid cell is highlighted. Focus wins over a selected row or column.
+enum GridCellHighlight: Equatable {
+    case none
+    case focused
+    case selected
+}
+
 /// A data cell. Vertical borders always show. Horizontal borders show when
 /// alternating row colors are off, matching the Mac grid.
 final class GridDataCell: UICollectionViewCell {
@@ -40,18 +47,28 @@ final class GridDataCell: UICollectionViewCell {
     required init?(coder: NSCoder) { nil }
 
     func configure(text: String, alignment: NSTextAlignment, row: Int,
-                   alternating: Bool, rowHeight: CGFloat, highlighted: Bool) {
+                   alternating: Bool, rowHeight: CGFloat, highlight: GridCellHighlight) {
         label.text = text
         label.textAlignment = alignment
-        label.font = .systemFont(ofSize: min(15, rowHeight - 8))
+        label.adjustsFontForContentSizeCategory = true
+        label.font = UIFontMetrics(forTextStyle: .body)
+            .scaledFont(for: .systemFont(ofSize: 15), maximumPointSize: rowHeight - 8)
         label.textColor = .label
         bottomBorder.isHidden = alternating
-        if highlighted {
-            contentView.backgroundColor = UIColor.systemBlue.withAlphaComponent(0.18)
-        } else if alternating, row % 2 == 1 {
-            contentView.backgroundColor = .secondarySystemFill
-        } else {
+        contentView.layer.borderWidth = 0
+        switch highlight {
+        case .focused:
             contentView.backgroundColor = .systemBackground
+            contentView.layer.borderWidth = 2
+            contentView.layer.borderColor = tintColor.cgColor
+        case .selected:
+            contentView.backgroundColor = UIColor.tintColor.withAlphaComponent(0.10)
+        case .none:
+            if alternating, row % 2 == 1 {
+                contentView.backgroundColor = .secondarySystemFill
+            } else {
+                contentView.backgroundColor = .systemBackground
+            }
         }
     }
 }
@@ -86,7 +103,7 @@ final class GridChromeCell: UICollectionReusableView {
             : .systemFont(ofSize: 12, weight: .semibold)
         label.textColor = .secondaryLabel
         backgroundColor = highlighted
-            ? UIColor.systemBlue.withAlphaComponent(0.18)
+            ? UIColor.tintColor.withAlphaComponent(0.10)
             : .secondarySystemBackground
     }
 }

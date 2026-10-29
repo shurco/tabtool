@@ -43,7 +43,7 @@ final class GridController: NSObject, UICollectionViewDataSource {
                        row: indexPath.section,
                        alternating: alternatingRows,
                        rowHeight: rowHeight,
-                       highlighted: isHighlighted(displayRow: indexPath.section, column: indexPath.item))
+                       highlight: highlight(displayRow: indexPath.section, column: indexPath.item))
         return cell
     }
 

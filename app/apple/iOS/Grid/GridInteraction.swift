@@ -44,11 +44,12 @@ extension GridController {
         document?.setCell(text, row: model, column: focus.column)
     }
 
-    func isHighlighted(displayRow: Int, column: Int) -> Bool {
-        if focus == GridFocus(displayRow: displayRow, column: column) { return true }
-        if document?.selection.columns.contains(column) == true { return true }
-        guard let model = presenter?.modelRow(forDisplayRow: displayRow) else { return false }
-        return document?.selection.rows.contains(model) == true
+    func highlight(displayRow: Int, column: Int) -> GridCellHighlight {
+        if focus == GridFocus(displayRow: displayRow, column: column) { return .focused }
+        if let model = presenter?.modelRow(forDisplayRow: displayRow),
+           document?.selection.rows.contains(model) == true { return .selected }
+        if document?.selection.columns.contains(column) == true { return .selected }
+        return .none
     }
 
     func installGestures(on view: UICollectionView) {
