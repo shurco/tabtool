@@ -183,15 +183,7 @@ struct DocumentView: View {
             documentToolbar
         }
         .sheet(isPresented: $showsSettings) {
-            NavigationStack {
-                SettingsView()
-                    .navigationTitle("Settings")
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { showsSettings = false }
-                        }
-                    }
-            }
+            IOSSettingsView()
         }
         .sheet(isPresented: $showsAbout) {
             NavigationStack {
