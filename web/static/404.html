@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Page not found — TabTool</title>
+		<meta name="description" content="That page does not exist. Start from the overview, the comparisons, or the FAQ." />
+		<meta name="robots" content="noindex, follow" />
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+		<style>
+			:root {
+				--paper: #f6f5f1;
+				--ink: #14150f;
+				--muted: #6c6c60;
+				--line: #d9d7cd;
+				--accent: #2447f0;
+			}
+			* { box-sizing: border-box; }
+			body {
+				margin: 0;
+				min-height: 100vh;
+				background: var(--paper);
+				color: var(--ink);
+				font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+				display: flex;
+				flex-direction: column;
+			}
+			header, main, footer { padding-inline: clamp(20px, 4vw, 56px); }
+			header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 18px;
+				height: 64px;
+				border-bottom: 1px solid var(--line);
+			}
+			.brand {
+				display: inline-flex;
+				align-items: center;
+				gap: 10px;
+				color: var(--ink);
+				text-decoration: none;
+				font-weight: 650;
+				font-size: 17px;
+			}
+			.brand svg { width: 26px; height: 26px; }
+			.nav { display: flex; gap: 20px; font-size: 14px; }
+			.nav a { color: var(--ink); text-decoration: none; }
+			.nav a:hover { text-decoration: underline; text-underline-offset: 3px; }
+			main { flex: 1; display: flex; align-items: center; }
+			.inner { max-width: 1240px; margin: 0 auto; width: 100%; padding-block: 80px; }
+			.eyebrow {
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 11px;
+				letter-spacing: 0.13em;
+				text-transform: uppercase;
+				color: var(--muted);
+			}
+			h1 {
+				margin: 18px 0 0;
+				font-family: 'Iowan Old Style', Georgia, serif;
+				font-weight: 400;
+				font-size: clamp(2.6rem, 7vw, 5rem);
+				line-height: 1;
+				letter-spacing: -0.02em;
+			}
+			p.lede { margin: 22px 0 0; max-width: 46ch; color: #3c3d33; font-size: 17px; line-height: 1.6; }
+			.links {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 22px;
+				margin-top: 30px;
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 13px;
+			}
+			.links a { color: var(--accent); }
+			footer { border-top: 1px solid var(--line); padding-block: 22px; color: var(--muted); font-size: 12px; }
+		</style>
+	</head>
+	<body>
+		<header>
+			<a class="brand" href="/">
+				<svg viewBox="0 0 64 64" aria-hidden="true">
+					<rect width="64" height="64" rx="12" fill="#14150f" />
+					<g fill="none" stroke="#f6f5f1" stroke-width="2.6">
+						<rect x="12" y="12" width="40" height="40" rx="3" />
+						<path d="M25.3 12v40M38.6 12v40M12 25.3h40M12 38.6h40" />
+					</g>
+					<rect x="25.3" y="25.3" width="13.3" height="13.3" fill="#2447f0" />
+				</svg>
+				TabTool
+			</a>
+			<nav class="nav" aria-label="Main">
+				<a href="/download/">Download</a>
+				<a href="/vs/">Compare</a>
+				<a href="/faq/">FAQ</a>
+			</nav>
+		</header>
+
+		<main>
+			<div class="inner">
+				<p class="eyebrow">Error 404</p>
+				<h1>This row is empty.</h1>
+				<p class="lede">The page you asked for is not here. The overview, the comparisons, and the FAQ all are.</p>
+				<p class="links">
+					<a href="/">Overview →</a>
+					<a href="/vs/">Comparisons →</a>
+					<a href="/faq/">FAQ →</a>
+				</p>
+			</div>
+		</main>
+
+		<footer>© 2026 TabTool · MIT · No telemetry.</footer>
+	</body>
+</html>

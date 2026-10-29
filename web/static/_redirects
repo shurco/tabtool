@@ -1,0 +1,7 @@
+/privacy-policy /privacy/ 301
+/privacy-policy/ /privacy/ 301
+/terms-of-service /terms/ 301
+/terms-of-service/ /terms/ 301
+/compare /vs/ 301
+/compare/ /vs/ 301
+/compare/* /vs/:splat 301
