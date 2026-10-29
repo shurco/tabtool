@@ -8,6 +8,7 @@ The marketing site for [TabTool](../README.md), built with SvelteKit and prerend
 - `/download/` — availability and requirements, with an honest "in development" status per platform.
 - `/vs/` and `/vs/<slug>/` — five comparison pages: TableTool (TablePlus), the original open-source TableTool, Modern CSV, CSViewer, Tablecruncher.
 - `/faq/` — the full FAQ, also emitted as `FAQPage` structured data.
+- `/feedback/` — how to send feedback: GitHub issues link and what to include (no email or form, the site collects nothing).
 - `/privacy/`, `/terms/` — Privacy Policy and User Agreement.
 - `/sitemap.xml`, `/robots.txt` — generated at build time.
 - `/404.html` — static not-found page.

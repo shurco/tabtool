@@ -8,6 +8,14 @@ root="$(cd "${here}/.." && pwd)"
 app_dir="${root}/app/apple"
 project="${app_dir}/TabTool.xcodeproj"
 build_dir="${app_dir}/build"
+
+# Optional local settings (APPLE_TEAM_ID); .env is gitignored.
+if [ -f "${root}/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "${root}/.env"
+  set +a
+fi
 derived_data="${build_dir}/DerivedData"
 
 # shellcheck source=scripts/_helper
@@ -19,7 +27,7 @@ usage() {
   cat <<'EOF'
 Usage:
   scripts/app run [macos|ios] [--bump-version[=KIND]]
-  scripts/app build [macos|ios] [--bump-version[=KIND]]
+  scripts/app build [macos|ios] [--bump-version[=KIND]] [--upload]
   scripts/app test ios
   scripts/app archive [macos] [--bump-version[=KIND]]
   scripts/app clean
@@ -30,6 +38,9 @@ KIND is build (default), patch, minor, or major. A bare --bump-version
 bumps the build number. run, build, test, and archive regenerate the Xcode
 project from app/apple/project.yml first. archive is macOS-only. Mac unit
 tests stay on ./scripts/test.
+
+--upload (build only) makes a signed Release archive and sends it to App Store Connect.
+It needs APPLE_TEAM_ID (environment or .env in the repo root) and a signed-in Xcode account.
 EOF
 }
 
@@ -105,6 +116,26 @@ run_app() {
   open "${app_path}"
 }
 
+# Writes an ExportOptions.plist that makes xcodebuild upload straight to App
+# Store Connect. The version stays owned by version.json.
+upload_plist() {
+  local plist="${build_dir}/UploadExportOptions.plist"
+  cat >"${plist}" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>method</key><string>app-store-connect</string>
+  <key>destination</key><string>upload</string>
+  <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+  <key>signingStyle</key><string>automatic</string>
+  <key>manageAppVersionAndBuildNumber</key><false/>
+</dict>
+</plist>
+PLIST
+  printf '%s\n' "${plist}"
+}
+
 archive_app() {
   load_version macos
   generate_project
@@ -119,6 +150,38 @@ archive_app() {
     ${version_settings[@]+"${version_settings[@]}"} \
     archive
   print_answer "Archive: ${build_dir}/TabTool.xcarchive" green
+}
+
+# Signed Release archive of one platform, exported straight to App Store Connect.
+upload_app() {
+  local platform="$1"
+  local scheme="TabTool" destination="generic/platform=macOS"
+  if [ "${platform}" = "ios" ]; then
+    scheme="TabToolIOS"
+    destination="generic/platform=iOS"
+  fi
+  local archive_path="${build_dir}/${scheme}.xcarchive"
+  load_version "${platform}"
+  generate_project
+  xcodebuild \
+    -project "${project}" \
+    -scheme "${scheme}" \
+    -configuration Release \
+    -destination "${destination}" \
+    -derivedDataPath "${derived_data}" \
+    -archivePath "${archive_path}" \
+    -allowProvisioningUpdates \
+    DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
+    CODE_SIGN_STYLE=Automatic \
+    CODE_SIGN_IDENTITY="Apple Development" \
+    ${version_settings[@]+"${version_settings[@]}"} \
+    archive
+  xcodebuild -exportArchive \
+    -archivePath "${archive_path}" \
+    -exportPath "${build_dir}/export-${platform}" \
+    -exportOptionsPlist "$(upload_plist)" \
+    -allowProvisioningUpdates
+  print_answer "Uploaded to App Store Connect (processing takes a few minutes)" green
 }
 
 clean_build() {
@@ -193,6 +256,7 @@ test_ios() {
 }
 
 bump_kind=""
+upload=false
 positional=()
 for argument in "$@"; do
   case "${argument}" in
@@ -201,6 +265,9 @@ for argument in "$@"; do
       ;;
     --bump-version=*)
       bump_kind="${argument#--bump-version=}"
+      ;;
+    --upload)
+      upload=true
       ;;
     -h | --help)
       usage
@@ -220,7 +287,7 @@ fi
 
 case "${command}" in
   clean)
-    if [ "${#positional[@]}" -ne 1 ] || [ -n "${bump_kind}" ]; then
+    if [ "${#positional[@]}" -ne 1 ] || [ -n "${bump_kind}" ] || [ "${upload}" = true ]; then
       print_answer "clean takes no platform or version flags" red
       exit 1
     fi
@@ -275,6 +342,16 @@ case "${command}" in
       print_answer "Unsupported platform: ${platform} (only macos or ios)" red
       exit 1
     fi
+    if [ "${upload}" = true ]; then
+      if [ "${command}" != "build" ]; then
+        print_answer "--upload applies to build only" red
+        exit 1
+      fi
+      if [ -z "${APPLE_TEAM_ID:-}" ]; then
+        print_answer "--upload needs APPLE_TEAM_ID in the environment or .env (your Apple Developer team ID)" red
+        exit 1
+      fi
+    fi
     require_tools
     if [ -n "${bump_kind}" ]; then
       bump_version "${platform}" "${bump_kind}"
@@ -288,6 +365,10 @@ case "${command}" in
         fi
         ;;
       build)
+        if [ "${upload}" = true ]; then
+          upload_app "${platform}"
+          exit 0
+        fi
         load_version "${platform}"
         generate_project
         if [ "${platform}" = "ios" ]; then

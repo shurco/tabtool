@@ -19,7 +19,8 @@ export const footerNav = {
 		{ href: '/', label: 'Overview' },
 		{ href: '/download/', label: 'Download' },
 		{ href: '/vs/', label: 'Comparisons' },
-		{ href: '/faq/', label: 'FAQ' }
+		{ href: '/faq/', label: 'FAQ' },
+		{ href: '/feedback/', label: 'Feedback' }
 	],
 	legal: [
 		{ href: '/privacy/', label: 'Privacy Policy' },

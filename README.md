@@ -115,11 +115,13 @@ From the repository root:
 ./scripts/app run macos
 ./scripts/app build macos
 ./scripts/app archive macos
+./scripts/app build macos --bump-version --upload
+./scripts/app build ios --bump-version --upload
 ./scripts/app run ios
 ./scripts/app build ios
 ```
 
-`run macos` builds and opens the app. `build macos` and `archive macos` build without signing (`CODE_SIGNING_ALLOWED=NO`); the archive is an unsigned verification build, not an upload-ready App Store archive. `run ios` boots the first available iPhone simulator, installs, and opens the app; `build ios` builds for the iOS Simulator. The script calls `xcodegen generate` itself.
+`run macos` builds and opens the app. `build macos` and `archive macos` build without signing (`CODE_SIGNING_ALLOWED=NO`); the archive is an unsigned verification build, not an upload-ready App Store archive. `build macos --upload` and `build ios --upload` instead sign a Release archive (automatic signing; `APPLE_TEAM_ID=...` is read from the gitignored `.env` in the repo root or the environment; needs a signed-in Xcode account) and exports it with `destination=upload` straight to App Store Connect. `run ios` boots the first available iPhone simulator, installs, and opens the app; `build ios` builds for the iOS Simulator. The script calls `xcodegen generate` itself.
 
 Without the script:
 
@@ -190,7 +192,7 @@ The code is feature-complete for a 1.0 release, but the release identity is deli
 
 - [ ] Choose the signing team and check that the name TabTool and bundle ID `app.shurco.tabtool` do not conflict with an existing App Store listing.
 - [ ] Replace the placeholder icon in `app/apple/Shared/Assets.xcassets/AppIcon.appiconset` with final 1024 px macOS artwork.
-- [ ] Set `app/apple/version.json` (`name`, `build`) and sign with the team. Archive with Xcode Organizer (Product > Archive) or an explicit `xcodebuild archive` command without `CODE_SIGNING_ALLOWED=NO`; `./scripts/app archive macos` is an unsigned verification build.
+- [ ] Set `app/apple/version.json` (`name`, `build`) and sign with the team. Put `APPLE_TEAM_ID=...` in `.env`, then archive and upload with `./scripts/app build macos --upload` or `build ios --upload` (or Xcode Organizer); plain `./scripts/app archive macos` is an unsigned verification build.
 - [ ] Inspect the archive: three document types in `Info.plist`, sandbox and user-selected read-write entitlements, `PrivacyInfo.xcprivacy` in `Contents/Resources`, and the app icon.
 - [ ] Run `./scripts/test`, `./scripts/test --ui`, and the manual QA matrix in `docs/building.md`.
 - [ ] Fill in App Privacy as **Data Not Collected**; confirm `ITSAppUsesNonExemptEncryption=false` with the account owner.

@@ -49,6 +49,8 @@
 			<p class="mono">
 				<a href={site.github} rel="noopener">GitHub</a>
 				<span aria-hidden="true"> / </span>
+				<a href="/feedback/">Feedback</a>
+				<span aria-hidden="true"> / </span>
 				<a href="/privacy/">Privacy</a>
 				<span aria-hidden="true"> / </span>
 				<a href="/terms/">Terms</a>
