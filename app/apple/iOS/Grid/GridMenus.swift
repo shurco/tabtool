@@ -76,7 +76,7 @@ extension GridController {
         alert.addAction(UIAlertAction(title: String(localized: "Rename"), style: .default) { [weak self] _ in
             self?.renameFocusedColumn(to: alert.textFields?.first?.text ?? "")
         })
-        present(alert)
+        KeyWindow.present(alert)
     }
 
     func cellMenu() -> UIMenu {
@@ -118,16 +118,5 @@ extension GridController {
             guard let self else { return }
             run(self)
         }
-    }
-
-    private func present(_ alert: UIAlertController) {
-        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-        guard let root = scenes.flatMap(\.windows).first(where: \.isKeyWindow)?.rootViewController
-            ?? scenes.first?.windows.first?.rootViewController else { return }
-        var presenter = root
-        while let presented = presenter.presentedViewController {
-            presenter = presented
-        }
-        presenter.present(alert, animated: true)
     }
 }

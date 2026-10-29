@@ -28,7 +28,7 @@ extension RevertCoordinator {
             alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel) { _ in
                 finish(false)
             })
-            if !present(alert) {
+            if !KeyWindow.present(alert) {
                 finish(false)
             }
         }
@@ -41,23 +41,6 @@ extension RevertCoordinator {
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: String(localized: "OK"), style: .default))
-        _ = present(alert)
-    }
-
-    /// Presents `alert` on the topmost view controller. Returns false when no
-    /// window is available, so the caller can resume a continuation.
-    @discardableResult
-    private static func present(_ alert: UIAlertController) -> Bool {
-        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-        guard let root = scenes.flatMap(\.windows).first(where: \.isKeyWindow)?.rootViewController
-            ?? scenes.first?.windows.first?.rootViewController else {
-            return false
-        }
-        var presenter = root
-        while let presented = presenter.presentedViewController {
-            presenter = presented
-        }
-        presenter.present(alert, animated: true)
-        return true
+        _ = KeyWindow.present(alert)
     }
 }
