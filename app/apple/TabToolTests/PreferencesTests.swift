@@ -67,7 +67,7 @@ import TabToolKit
 
     @Test func otherRowHeightsFallBackToTheDefault() {
         for invalid in [0, 7, 99, -24] {
-            #expect(Preferences.validRowHeight(Double(invalid)) == 24)
+            #expect(Preferences.validRowHeight(Double(invalid)) == Preferences.Default.rowHeight)
         }
     }
 

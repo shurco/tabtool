@@ -31,13 +31,21 @@ enum Preferences {
         static let decimalMark = DecimalOption.dot
         static let firstRowAsHeader = false
         static let alternatingRows = false
+        #if os(iOS)
+        static let rowHeight = 44.0
+        #else
         static let rowHeight = 24.0
+        #endif
         static let showsRowNumbers = true
         static let largeFileThresholdMiB = Int(LargeFile.thresholdBytes / 1_048_576)
     }
 
     /// The row heights, in points, offered for the grid.
+    #if os(iOS)
+    static let rowHeights: [Double] = [32, 44, 56]
+    #else
     static let rowHeights: [Double] = [20, 24, 32]
+    #endif
 
     /// The large file thresholds, in MiB, offered in the settings.
     static let largeFileThresholdsMiB: [Int] = [25, 50, 100, 250, 500, 1024]
