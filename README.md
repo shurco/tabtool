@@ -32,7 +32,7 @@ The project is in development. The name is TabTool and the bundle ID is `app.shu
 | New Document | Decimal Mark | `newDocumentDecimalMark` | Dot (.) |
 | New Document | First Row as Header | `newDocumentFirstRowAsHeader` | off |
 | Grid | Alternating Row Colors | `gridAlternatingRows` | on |
-| Grid | Row Height: Compact 20 pt, Default 24 pt, Comfortable 32 pt | `gridRowHeight` | Default (24 pt) |
+| Grid | Row Height: macOS Compact 20 pt, Default 24 pt, Comfortable 32 pt; iOS Compact 32 pt, Default 44 pt, Comfortable 56 pt | `gridRowHeight` | Default (macOS 24 pt, iOS 44 pt) |
 | Large Files | Large File Threshold: 25, 50, 100, 250, 500, or 1024 MiB | `largeFileThresholdMiB` | 100 MiB |
 
 - The New Document settings apply only to new documents. A file you open keeps the format detected from its content, and the format bar still changes the format of an open document.
