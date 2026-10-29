@@ -8,6 +8,9 @@ struct DocumentView: View {
     let fileURL: URL?
 
     @Environment(\.undoManager) private var undoManager
+    #if os(iOS)
+    @Environment(\.scenePhase) private var scenePhase
+    #endif
     @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
 
     @State private var pendingReparse: CSVConfiguration?
@@ -60,7 +63,9 @@ struct DocumentView: View {
             }
         }
         .frame(minWidth: 640, minHeight: 400)
+        #if os(macOS)
         .opensDroppedTableFiles()
+        #endif
         .focusedSceneObject(document)
         .onAppear {
             document.setUndoManager(undoManager)
@@ -72,9 +77,17 @@ struct DocumentView: View {
         .onDisappear {
             document.cancelLoading()
         }
+        #if os(macOS)
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             document.refreshLargeStaleness()
         }
+        #else
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                document.refreshLargeStaleness()
+            }
+        }
+        #endif
         .onChange(of: fileURL) { _, newValue in
             // Save As changes the URL without recreating this view.
             document.setFileURL(newValue)

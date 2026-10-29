@@ -14,7 +14,7 @@ struct FilterCriterionRow: View {
     var body: some View {
         HStack(spacing: 6) {
             Toggle("Enable Criterion", isOn: $criterion.isEnabled)
-                .toggleStyle(.checkbox)
+                .checkboxToggleStyle()
                 .labelsHidden()
                 .accessibilityIdentifier("filter-enabled")
 
@@ -83,10 +83,22 @@ private extension View {
     /// already fill the frame.
     @ViewBuilder
     func fillsPopUpWidth() -> some View {
-        if #available(macOS 26, *) {
+        if #available(macOS 26, iOS 26, *) {
             buttonSizing(.flexible)
         } else {
             self
         }
+    }
+}
+
+extension View {
+    /// A checkbox on macOS. iOS keeps the system toggle.
+    @ViewBuilder
+    func checkboxToggleStyle() -> some View {
+        #if os(macOS)
+        toggleStyle(.checkbox)
+        #else
+        self
+        #endif
     }
 }

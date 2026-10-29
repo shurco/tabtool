@@ -73,7 +73,7 @@ struct ExportOptionsView: View {
 
                 row("Header") {
                     Toggle("Write Header Row", isOn: binding(\.firstRowAsHeader))
-                        .toggleStyle(.checkbox)
+                        .checkboxToggleStyle()
                         .labelsHidden()
                         .accessibilityLabel("Write Header Row")
                         .accessibilityIdentifier("export-header")

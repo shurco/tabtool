@@ -144,10 +144,11 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         self.initialContent = .largeFile
         self.isLargeMode = true
         self.prefersChineseEncoding = prefersChineseEncoding
-        // The document owns its undo stack: registering on the window's manager
-        // would mark the document edited and make the system autosave (rewrite)
-        // the whole file.
-        self.undoManager = UndoManager()
+        // UndoManager() is main-actor isolated on iOS, so the manager is
+        // created in load(). The document owns that stack: registering on the
+        // window's manager would mark the document edited and make the system
+        // autosave (rewrite) the whole file.
+        self.undoManager = nil
         self.loader = CSVDocumentIO.load
     }
 
@@ -213,9 +214,12 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// the initial content. A cancelled task is never awaited a second time:
     /// the next call starts a fresh attempt.
     func load() async {
+        if isLargeMode, undoManager == nil {
+            undoManager = UndoManager()
+        }
         observeRowFilter()
         if let task = loadTask {
-            await task.value
+            _ = await task.value
             return
         }
         switch phase {

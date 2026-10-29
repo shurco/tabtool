@@ -19,6 +19,7 @@ enum DroppedFiles {
     }
 }
 
+#if os(macOS)
 private struct OpenDroppedFiles: ViewModifier {
     @Environment(\.openDocument) private var openDocument
     @State private var isTargeted = false
@@ -51,3 +52,4 @@ extension View {
         modifier(OpenDroppedFiles())
     }
 }
+#endif

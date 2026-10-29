@@ -1,4 +1,8 @@
+#if canImport(AppKit)
 import AppKit
+#else
+import UIKit
+#endif
 import TabToolKit
 
 /// Read-only projection of a row source for the AppKit grid.

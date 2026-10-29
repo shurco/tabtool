@@ -63,7 +63,7 @@ struct FormatBar: View {
 
             control("Header") {
                 Toggle("Header", isOn: binding(\.firstRowAsHeader))
-                    .toggleStyle(.checkbox)
+                    .checkboxToggleStyle()
                     .labelsHidden()
                     .accessibilityLabel("Header")
                     .accessibilityIdentifier("format-header")

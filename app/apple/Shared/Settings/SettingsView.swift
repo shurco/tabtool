@@ -19,7 +19,9 @@ struct SettingsView: View {
                 .tabItem { Label("Large Files", systemImage: "externaldrive") }
         }
         .formStyle(.grouped)
+        #if os(macOS)
         .frame(width: 460)
+        #endif
     }
 }
 
@@ -48,6 +50,7 @@ private struct GeneralSettings: View {
                 caption("Takes effect after restart.")
                 if needsRestart {
                     Spacer()
+                    #if os(macOS)
                     Button { AppRelaunch.request() } label: {
                         Label("Restart Now", systemImage: "arrow.clockwise")
                     }
@@ -55,6 +58,9 @@ private struct GeneralSettings: View {
                     .buttonStyle(.borderless)
                     .help("Restart Now")
                     .accessibilityIdentifier("settings-restart")
+                    #else
+                    caption("Open TabTool again to apply it.")
+                    #endif
                 }
             }
 

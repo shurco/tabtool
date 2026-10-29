@@ -35,7 +35,9 @@ struct RowFilterBar: View {
         .padding(.vertical, 6)
         .background(.bar)
         .background { shortcutButtons }
+        #if os(macOS)
         .onExitCommand { model.isBarVisible = false }
+        #endif
         .onAppear { focusedID = model.criteria.first?.id }
         .onChange(of: missingColumnFill, initial: true) { _, id in
             if let id { model.fillMissingColumns(with: id) }
