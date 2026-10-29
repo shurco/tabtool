@@ -66,7 +66,16 @@ extension GridController {
         let indexPath = IndexPath(item: focus.column, section: focus.displayRow)
         guard let frame = collectionView.collectionViewLayout.layoutAttributesForItem(at: indexPath)?.frame else { return }
         editor.onCommit = { [weak self] text in self?.commitEditing(text) }
+        editor.onPrevious = { [weak self] in self?.stepEditing(columnDelta: -1) }
+        editor.onNext = { [weak self] in self?.stepEditing(columnDelta: 1) }
+        editor.onDone = { [weak self] in self?.editor.dismiss(commit: true) }
         editor.show(in: collectionView, frame: frame, text: text)
+    }
+
+    private func stepEditing(columnDelta: Int) {
+        editor.dismiss(commit: true)
+        moveFocus(rowDelta: 0, columnDelta: columnDelta)
+        beginEditing()
     }
 
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
@@ -107,6 +116,9 @@ extension GridController {
 final class GridEditor: NSObject, UITextFieldDelegate {
     let field = UITextField()
     var onCommit: (String) -> Void = { _ in }
+    var onPrevious: () -> Void = {}
+    var onNext: () -> Void = {}
+    var onDone: () -> Void = {}
 
     func show(in collectionView: UICollectionView, frame: CGRect, text: String) {
         field.frame = frame.insetBy(dx: 1, dy: 1)
@@ -114,9 +126,12 @@ final class GridEditor: NSObject, UITextFieldDelegate {
         field.font = .systemFont(ofSize: 15)
         field.backgroundColor = .systemBackground
         field.borderStyle = .roundedRect
+        field.autocapitalizationType = .none
         field.autocorrectionType = .no
+        field.smartQuotesType = .no
         field.delegate = self
-        field.inputAccessoryView = nil
+        field.inputAccessoryView = GridEditorAccessory.make(
+            onPrevious: onPrevious, onNext: onNext, onDone: onDone)
         collectionView.addSubview(field)
         field.becomeFirstResponder()
     }
