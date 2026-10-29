@@ -30,7 +30,7 @@ enum Preferences {
         static let quoteStyle = QuoteStyle.doubled
         static let decimalMark = DecimalOption.dot
         static let firstRowAsHeader = false
-        static let alternatingRows = true
+        static let alternatingRows = false
         static let rowHeight = 24.0
         static let showsRowNumbers = true
         static let largeFileThresholdMiB = Int(LargeFile.thresholdBytes / 1_048_576)

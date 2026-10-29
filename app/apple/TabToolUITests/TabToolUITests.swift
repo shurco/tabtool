@@ -8,10 +8,14 @@ final class TabToolUITests: XCTestCase {
     /// saved state, windows left by earlier tests make identifiers ambiguous.
     /// The tests match English texts and the factory settings, so the language
     /// and the new document and large file preferences are pinned instead of
-    /// read from the app's saved settings.
+    /// read from the app's saved settings. Unless `opensUntitledDocument` is set,
+    /// launch opens no window, so each test creates or opens the only document.
     @MainActor
-    private func launchApp() -> XCUIApplication {
+    private func launchApp(opensUntitledDocument: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
+        if !opensUntitledDocument {
+            app.launchArguments += ["-NSShowAppCentricOpenPanelInsteadOfUntitledFile", "YES"]
+        }
         app.launchArguments += [
             "-ApplePersistenceIgnoreState", "YES",
             "-NSQuitAlwaysKeepsWindows", "NO",
@@ -31,6 +35,12 @@ final class TabToolUITests: XCTestCase {
     func testLaunchStartsTheApp() {
         let app = launchApp()
         XCTAssertEqual(app.state, .runningForeground)
+    }
+
+    @MainActor
+    func testLaunchOpensAnUntitledDocument() {
+        let app = launchApp(opensUntitledDocument: true)
+        XCTAssertTrue(app.tables["grid"].waitForExistence(timeout: 5))
     }
 
     @MainActor

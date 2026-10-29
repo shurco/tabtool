@@ -75,4 +75,8 @@ import TabToolKit
         #expect(Preferences.largeFileThresholdsMiB.contains(Preferences.Default.largeFileThresholdMiB))
         #expect(Preferences.rowHeights.contains(Preferences.Default.rowHeight))
     }
+
+    @Test func alternatingRowsAreOffByDefault() {
+        #expect(Preferences.Default.alternatingRows == false)
+    }
 }
