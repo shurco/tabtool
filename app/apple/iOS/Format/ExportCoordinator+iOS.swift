@@ -6,6 +6,7 @@ import UIKit
 @MainActor
 final class ExportCoordinator {
     private static var sheet: UIViewController?
+    private static var cleanups: [ExportFileCleanup] = []
 
     /// Shows the export sheet for the focused document. A filtered document
     /// exports only the rows it shows.
@@ -39,10 +40,23 @@ final class ExportCoordinator {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appendingPathComponent(
             ExportPlan.filename(baseName: baseName, configuration: configuration))
-        try ExportPlan.write(table: table, documentConfiguration: documentConfiguration,
-                             configuration: configuration, to: url,
-                             allowAmbiguousOutput: allowAmbiguousOutput)
+        do {
+            try ExportPlan.write(table: table, documentConfiguration: documentConfiguration,
+                                 configuration: configuration, to: url,
+                                 allowAmbiguousOutput: allowAmbiguousOutput)
+        } catch {
+            removeTemporaryExport(url)
+            throw error
+        }
         return url
+    }
+
+    /// Deletes the export's temporary directory. A file that already sits in
+    /// the system temporary directory is left alone.
+    static func removeTemporaryExport(_ file: URL) {
+        let directory = file.deletingLastPathComponent().standardizedFileURL
+        guard directory != FileManager.default.temporaryDirectory.standardizedFileURL else { return }
+        try? FileManager.default.removeItem(at: directory)
     }
 
     private static func export(table: CSVTable, documentConfiguration: CSVConfiguration,
@@ -82,7 +96,14 @@ final class ExportCoordinator {
             let url = try prepare(table: table, documentConfiguration: documentConfiguration,
                                   configuration: configuration, baseName: baseName,
                                   allowAmbiguousOutput: allowAmbiguousOutput)
-            present(UIDocumentPickerViewController(forExporting: [url], asCopy: true))
+            let picker = UIDocumentPickerViewController(forExporting: [url], asCopy: true)
+            let cleanup = ExportFileCleanup(url.deletingLastPathComponent())
+            picker.delegate = cleanup
+            cleanups.append(cleanup)
+            guard KeyWindow.present(picker) else {
+                cleanup.finish()
+                return
+            }
         } catch let error as CSVError where error == .ambiguousOutput && !allowAmbiguousOutput {
             confirmAmbiguous(table: table, documentConfiguration: documentConfiguration,
                              configuration: configuration, baseName: baseName)
@@ -110,6 +131,33 @@ final class ExportCoordinator {
 
     private static func present(_ controller: UIViewController) {
         KeyWindow.present(controller)
+    }
+}
+
+private final class ExportFileCleanup: NSObject, UIDocumentPickerDelegate {
+    let directory: URL
+
+    init(_ directory: URL) {
+        self.directory = directory
+    }
+
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        finish()
+    }
+
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        finish()
+    }
+
+    func finish() {
+        try? FileManager.default.removeItem(at: directory)
+        ExportCoordinator.drop(self)
+    }
+}
+
+private extension ExportCoordinator {
+    static func drop(_ cleanup: ExportFileCleanup) {
+        cleanups.removeAll { $0 === cleanup }
     }
 }
 

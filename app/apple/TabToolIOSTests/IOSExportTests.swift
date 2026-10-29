@@ -12,8 +12,19 @@ import TabToolKit
             table: table, documentConfiguration: configuration,
             configuration: configuration, baseName: "Sales-export")
         let text = try String(contentsOf: url, encoding: .utf8)
+        let directory = url.deletingLastPathComponent()
         #expect(url.pathExtension == "csv")
         #expect(text.contains("apple"))
+        ExportCoordinator.removeTemporaryExport(url)
+        #expect(!FileManager.default.fileExists(atPath: directory.path))
+    }
+
+    @Test func removeTemporaryExportLeavesAFileInTheSystemTemporaryDirectory() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tabtool-export-guard-\(UUID().uuidString).csv")
+        try Data("a".utf8).write(to: url)
+        ExportCoordinator.removeTemporaryExport(url)
+        #expect(FileManager.default.fileExists(atPath: url.path))
         try? FileManager.default.removeItem(at: url)
     }
 }

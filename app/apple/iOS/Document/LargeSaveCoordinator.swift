@@ -68,14 +68,15 @@ final class LargeSaveCoordinator: NSObject, UIDocumentPickerDelegate {
     }
 
     private func confirmReplace(document: CSVDocument, at destination: URL, scope: SecurityScope) {
+        let name = destination.lastPathComponent
         let alert = UIAlertController(
-            title: String(localized: "Save"),
-            message: destination.lastPathComponent,
+            title: String(localized: "Replace the existing file?"),
+            message: String(localized: "A file named “\(name)” is already in this folder. Saving replaces that file."),
             preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
-        alert.addAction(UIAlertAction(title: String(localized: "Save"), style: .destructive) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: String(localized: "Replace"), style: .destructive) { [weak self] _ in
             Task { await self?.write(document, to: destination, scope: scope) }
         })
+        alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
         KeyWindow.present(alert)
     }
 
