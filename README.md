@@ -20,7 +20,10 @@ The project is in development. The name is TabTool and the bundle ID is `app.shu
 
 ## iOS editor
 
-The iOS app opens the same documents with a touch-first editor on iPhone and iPad:
+The iOS app opens with a Documents screen and then a touch-first editor on iPhone and iPad:
+
+- Documents lists the CSV, TSV, and text files in the app's own folder, newest first. The plus menu creates a new document (Untitled, Untitled 2, …) or imports a file; a swipe deletes with confirmation, and the context menu renames.
+- The editor saves by itself: 0.8 s after a change, when leaving the editor, and when the app goes to the background. A save blocked by the encoding or quote rules is explained by the banner above the status line.
 
 - The first tap selects a cell and its row; a second tap on the selected cell opens the editor. The editor bar above the keyboard has Previous Cell, Next Cell, and Done.
 - A contextual action bar appears above the status line while a row or a column is selected. A selected row offers Add Row Above, Add Row Below, and Delete; a selected column offers Add Column Left, Add Column Right, Delete, Sort Ascending, Sort Descending, Remove Sort, and Rename. The bar is hidden without a selection and in large file mode.
@@ -34,7 +37,7 @@ The iOS app opens the same documents with a touch-first editor on iPhone and iPa
 
 On macOS, `TabTool > Settings…` (`⌘,`) opens one window with four tabs: General, New Document, Grid, and Large Files. The window fits the selected tab and reopens on the tab used last. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the language the next launch. A stored value that is not one of the offered options falls back to the default.
 
-On iOS, Settings is a sheet opened from the document's overflow menu: one form with sections for General, New Document, Grid, Large Files, and About. It writes the same defaults at once, and the row height options are the iOS ones in the table.
+On iOS, Settings is a sheet opened from the gear on the Documents screen or from the document's overflow menu: one form with sections for General, New Document, Grid, Large Files, and About. It writes the same defaults at once, and the row height options are the iOS ones in the table.
 
 | Tab | Setting | Key | Default |
 | --- | --- | --- | --- |
@@ -77,7 +80,7 @@ The repository follows these conventions:
 - `app/apple/TabToolKit` — CSV core: parser, writer, format heuristics, table model, clipboard, export. No AppKit/SwiftUI.
 - `app/apple/Shared` — SwiftUI shell, document, the macOS grid on `NSTableView`, format controls, filters, export, Settings and preferences (`Settings/`), resources.
 - `app/apple/macOS` — the macOS platform files: `App` (Info.plist, entitlements, privacy manifest), `Document`, `Format`, `Grid`.
-- `app/apple/iOS` — the iOS platform files: `App`, `Document` (toolbar, format sheet, contextual action bar), `Filter` (filter sheet), `Format`, `Grid`, `Settings`.
+- `app/apple/iOS` — the iOS platform files: `App`, `Library` (document list and editor host), `Document` (toolbar, format sheet, contextual action bar), `Filter` (filter sheet), `Format`, `Grid`, `Settings`.
 - `app/apple/Shared/Assets.xcassets` — placeholder `AppIcon`; final branding is a release task.
 - `app/apple/Shared/Localizable.xcstrings` — String Catalog for all UI text: English plus 10 machine-generated translations (see [Languages](#languages)).
 - `app/apple/TabToolTests`, `app/apple/TabToolIOSTests`, and `app/apple/TabToolUITests` — app unit, iOS unit, and UI tests.

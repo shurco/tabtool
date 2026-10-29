@@ -57,8 +57,8 @@ struct DocumentView: View {
                 Divider()
                 NeedsAttentionBanner(
                     issue: issue,
-                    canUndo: undoManager?.canUndo == true,
-                    onUndo: { undoManager?.undo() },
+                    canUndo: document.undoManager?.canUndo == true,
+                    onUndo: { document.undoManager?.undo() },
                     onShowFormatControls: {
                         #if os(iOS)
                         showsFormatSheet = true
@@ -103,7 +103,11 @@ struct DocumentView: View {
         #endif
         .focusedSceneObject(document)
         .onAppear {
-            document.setUndoManager(undoManager)
+            // A grouped document supplies the manager; the iOS library installs
+            // its own before this view appears.
+            if let undoManager {
+                document.setUndoManager(undoManager)
+            }
         }
         .task {
             document.setFileURL(fileURL)

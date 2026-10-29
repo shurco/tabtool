@@ -20,59 +20,6 @@
     </array>
     <key>CFBundleDisplayName</key>
     <string>$(PRODUCT_NAME)</string>
-    <key>CFBundleDocumentTypes</key>
-    <array>
-        <dict>
-            <key>CFBundleTypeExtensions</key>
-            <array>
-                <string>csv</string>
-            </array>
-            <key>CFBundleTypeName</key>
-            <string>CSV Document</string>
-            <key>CFBundleTypeRole</key>
-            <string>Editor</string>
-            <key>LSHandlerRank</key>
-            <string>Owner</string>
-            <key>LSItemContentTypes</key>
-            <array>
-                <string>public.comma-separated-values-text</string>
-            </array>
-        </dict>
-        <dict>
-            <key>CFBundleTypeExtensions</key>
-            <array>
-                <string>tsv</string>
-            </array>
-            <key>CFBundleTypeName</key>
-            <string>TSV Document</string>
-            <key>CFBundleTypeRole</key>
-            <string>Editor</string>
-            <key>LSHandlerRank</key>
-            <string>Owner</string>
-            <key>LSItemContentTypes</key>
-            <array>
-                <string>public.tab-separated-values-text</string>
-            </array>
-        </dict>
-        <dict>
-            <key>CFBundleTypeExtensions</key>
-            <array>
-                <string>txt</string>
-                <string>tab</string>
-                <string>dat</string>
-            </array>
-            <key>CFBundleTypeName</key>
-            <string>Plain Text Document</string>
-            <key>CFBundleTypeRole</key>
-            <string>Editor</string>
-            <key>LSHandlerRank</key>
-            <string>Alternate</string>
-            <key>LSItemContentTypes</key>
-            <array>
-                <string>public.plain-text</string>
-            </array>
-        </dict>
-    </array>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIconName</key>
@@ -93,17 +40,8 @@
     <false/>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.utilities</string>
-    <key>LSSupportsOpeningDocumentsInPlace</key>
-    <true/>
-    <key>UIApplicationSceneManifest</key>
-    <dict>
-        <key>UIApplicationSupportsMultipleScenes</key>
-        <true/>
-    </dict>
     <key>UILaunchScreen</key>
     <dict/>
-    <key>UISupportsDocumentBrowser</key>
-    <true/>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
