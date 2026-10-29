@@ -1,11 +1,5 @@
 import UIKit
 
-/// The cell the keyboard and the editor act on. Rows are display rows.
-struct GridFocus: Equatable {
-    var displayRow: Int
-    var column: Int
-}
-
 extension GridController {
     func selectCell(displayRow: Int, column: Int) {
         guard let presenter,
@@ -60,12 +54,8 @@ extension GridController {
     func installGestures(on view: UICollectionView) {
         guard view.gestureRecognizers?.contains(where: { $0.name == "grid-tap" }) != true else { return }
         let single = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
-        let double = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
         single.name = "grid-tap"
-        double.numberOfTapsRequired = 2
-        single.require(toFail: double)
         view.addGestureRecognizer(single)
-        view.addGestureRecognizer(double)
         view.allowsSelection = false
         installDrag(on: view)
     }
@@ -79,10 +69,7 @@ extension GridController {
         editor.show(in: collectionView, frame: frame, text: text)
     }
 
-    @objc func handleTap(_ gesture: UITapGestureRecognizer) { hit(gesture, edit: false) }
-    @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) { hit(gesture, edit: true) }
-
-    private func hit(_ gesture: UITapGestureRecognizer, edit: Bool) {
+    @objc func handleTap(_ gesture: UITapGestureRecognizer) {
         guard let view = gesture.view as? UICollectionView,
               let layout = view.collectionViewLayout as? GridLayout else { return }
         editor.dismiss(commit: true)
@@ -91,17 +78,28 @@ extension GridController {
                             y: gesture.location(in: view).y + view.contentOffset.y)
         let hits = layout.layoutAttributesForElements(in: CGRect(origin: point, size: CGSize(width: 1, height: 1))) ?? []
         guard let hit = hits.filter({ $0.frame.contains(point) }).max(by: { $0.zIndex < $1.zIndex }) else { return }
-        switch hit.representedElementCategory {
-        case .cell:
+        let (element, tapped) = element(for: hit)
+        switch GridTapResolution.resolve(element: element, focus: focus, tapped: tapped) {
+        case .selectCell:
             selectCell(displayRow: hit.indexPath.section, column: hit.indexPath.item)
-            if edit { beginEditing() }
-        case .supplementaryView where hit.representedElementKind == GridLayout.columnHeader:
+        case .editCell:
+            beginEditing()
+        case .selectColumn:
             selectColumn(hit.indexPath.item)
-        case .supplementaryView where hit.representedElementKind == GridLayout.rowNumber:
+        case .selectRowNumber:
             selectCell(displayRow: hit.indexPath.section, column: focus?.column ?? 0)
-        default:
+        case .ignore:
             break
         }
+    }
+
+    private func element(for hit: UICollectionViewLayoutAttributes) -> (GridElementKind, GridFocus?) {
+        if hit.representedElementCategory == .cell {
+            return (.cell, GridFocus(displayRow: hit.indexPath.section, column: hit.indexPath.item))
+        }
+        if hit.representedElementKind == GridLayout.columnHeader { return (.columnHeader, nil) }
+        if hit.representedElementKind == GridLayout.rowNumber { return (.rowNumber, nil) }
+        return (.corner, nil)
     }
 }
 
