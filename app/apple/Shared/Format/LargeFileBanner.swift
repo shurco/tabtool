@@ -7,7 +7,7 @@ struct LargeFileBanner: View {
             Image(systemName: "info.circle.fill")
                 .foregroundStyle(.blue)
                 .accessibilityHidden(true)
-            Text("Large file mode. You can browse and edit cells. Sorting, adding, deleting or moving rows and columns, renaming columns, changing the decimal mark and exporting are not available for files this size.")
+            bannerText
                 .font(.callout)
                 .foregroundStyle(.secondary)
             Spacer(minLength: 12)
@@ -17,6 +17,14 @@ struct LargeFileBanner: View {
         .background(Color.blue.opacity(0.10))
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("large-file-banner")
+    }
+
+    private var bannerText: Text {
+        #if os(iOS)
+        Text("This file is too large to edit on this device. You can browse it. Saving is not available.")
+        #else
+        Text("Large file mode. You can browse and edit cells. Sorting, adding, deleting or moving rows and columns, renaming columns, changing the decimal mark and exporting are not available for files this size.")
+        #endif
     }
 }
 

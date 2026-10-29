@@ -17,6 +17,10 @@ struct DocumentView: View {
     @State private var isConfirmingReparse = false
     @State private var isReparsing = false
     @State private var formatAlert: FormatAlert?
+    #if os(iOS)
+    @State private var showsSettings = false
+    @State private var showsAbout = false
+    #endif
 
     var body: some View {
         VStack(spacing: 0) {
@@ -133,6 +137,42 @@ struct DocumentView: View {
         } message: { alert in
             Text(verbatim: alert.message)
         }
+        #if os(iOS)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Settings", systemImage: "gearshape") {
+                    showsSettings = true
+                }
+                .accessibilityIdentifier("settings")
+            }
+        }
+        .sheet(isPresented: $showsSettings) {
+            NavigationStack {
+                SettingsView()
+                    .navigationTitle("Settings")
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("About") { showsAbout = true }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showsSettings = false }
+                        }
+                    }
+                    .navigationDestination(isPresented: $showsAbout) {
+                        AboutView()
+                    }
+            }
+        }
+        #endif
+    }
+
+    /// Large files stay read-only on iOS until they can be saved.
+    private var cellsAreEditable: Bool {
+        #if os(iOS)
+        document.canEditCells && !document.isLargeMode
+        #else
+        document.canEditCells
+        #endif
     }
 
     private static func message(for notice: DocumentNotice) -> String {
@@ -159,7 +199,7 @@ struct DocumentView: View {
                         RowFilterBar(document: document)
                         Divider()
                     }
-                    CSVGrid(document: document, isEditable: document.canEditCells,
+                    CSVGrid(document: document, isEditable: cellsAreEditable,
                             allowsStructuralEdits: !document.isLargeMode)
                 }
             } else {

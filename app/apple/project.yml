@@ -4,6 +4,7 @@ options:
   bundleIdPrefix: app.shurco
   deploymentTarget:
     macOS: "14.0"
+    iOS: "17.0"
   createIntermediateGroups: true
 
 packages:
@@ -63,6 +64,68 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_IDENTITY: "-"
 
+  TabToolIOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: Shared
+      - path: iOS
+        excludes:
+          - App/Info.plist
+          - App/TabTool.entitlements
+          - App/PrivacyInfo.xcprivacy
+      - path: iOS/App/PrivacyInfo.xcprivacy
+        buildPhase: resources
+      - path: ../../LICENSE
+        buildPhase: resources
+    dependencies:
+      - package: TabToolKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.shurco.tabtool
+        PRODUCT_NAME: TabTool
+        PRODUCT_MODULE_NAME: TabTool
+        INFOPLIST_FILE: iOS/App/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: iOS/App/TabTool.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_IDENTITY: "-"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+      configs:
+        Debug:
+          ENABLE_TESTABILITY: YES
+
+  TabToolIOSTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: TabToolIOSTests
+      - path: TabToolTests/CSVDocumentTests.swift
+      - path: TabToolTests/CSVDocumentConcurrencyTests.swift
+      - path: TabToolTests/CSVDocumentFormatTests.swift
+      - path: TabToolTests/CSVDocumentMovingTests.swift
+      - path: TabToolTests/CSVDocumentRenamingTests.swift
+      - path: TabToolTests/CSVDocumentSortingTests.swift
+      - path: TabToolTests/FormatChangePlannerTests.swift
+      - path: TabToolTests/ExportPlanTests.swift
+      - path: TabToolTests/PreferencesTests.swift
+      - path: TabToolTests/LocalizationTests.swift
+      - path: TabToolTests/AppLanguageTests.swift
+      - path: TabToolTests/TestDefaults.swift
+    dependencies:
+      - target: TabToolIOS
+      - package: TabToolKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.shurco.tabtool.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: TabToolIOS
+        CODE_SIGN_IDENTITY: "-"
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/TabTool.app/TabTool
+        BUNDLE_LOADER: $(TEST_HOST)
+
   TabToolUITests:
     type: bundle.ui-testing
     platform: macOS
@@ -98,3 +161,15 @@ schemes:
       config: Debug
     archive:
       config: Release
+
+  TabToolIOS:
+    build:
+      targets:
+        TabToolIOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: false
+      targets:
+        - TabToolIOSTests

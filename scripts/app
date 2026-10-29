@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds and runs the macOS app through XcodeGen and xcodebuild.
-# Usage: ./scripts/app <run|build|archive|clean|version> ...
+# Builds, runs, and tests the macOS and iOS apps through XcodeGen and xcodebuild.
+# Usage: ./scripts/app <run|build|archive|test|clean|version> ...
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,16 +18,18 @@ source "${here}/lib/version"
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/app run [macos] [--bump-version[=KIND]]
-  scripts/app build [macos] [--bump-version[=KIND]]
+  scripts/app run [macos|ios] [--bump-version[=KIND]]
+  scripts/app build [macos|ios] [--bump-version[=KIND]]
+  scripts/app test ios
   scripts/app archive [macos] [--bump-version[=KIND]]
   scripts/app clean
-  scripts/app version [macos]
-  scripts/app version bump [macos] [KIND]
+  scripts/app version [macos|ios]
+  scripts/app version bump [macos|ios] [KIND]
 
 KIND is build (default), patch, minor, or major. A bare --bump-version
-bumps the build number. run, build, and archive regenerate the Xcode
-project from app/apple/project.yml first.
+bumps the build number. run, build, test, and archive regenerate the Xcode
+project from app/apple/project.yml first. archive is macOS-only. Mac unit
+tests stay on ./scripts/test.
 EOF
 }
 
@@ -50,7 +52,8 @@ generate_project() {
 # overrides used by every build command.
 version_settings=()
 load_version() {
-  if ! APP_DIR="${app_dir}" version_configure macos; then
+  local platform="$1"
+  if ! APP_DIR="${app_dir}" version_configure "${platform}"; then
     exit 1
   fi
   version_settings=()
@@ -63,24 +66,27 @@ load_version() {
 }
 
 bump_version() {
-  local kind="$1"
+  local platform="$1"
+  local kind="$2"
   if ! valid_bump_kind "${kind}"; then
     print_answer "Bump kind must be build, patch, minor, or major" red
     exit 1
   fi
-  if ! APP_DIR="${app_dir}" version_bump macos "${kind}"; then
+  if ! APP_DIR="${app_dir}" version_bump "${platform}" "${kind}"; then
     exit 1
   fi
 }
 
 build_app() {
   local configuration="$1"
-  shift
+  local scheme="$2"
+  local destination="$3"
+  shift 3
   xcodebuild \
     -project "${project}" \
-    -scheme TabTool \
+    -scheme "${scheme}" \
     -configuration "${configuration}" \
-    -destination "platform=macOS" \
+    -destination "${destination}" \
     -derivedDataPath "${derived_data}" \
     "$@" \
     ${version_settings[@]+"${version_settings[@]}"} \
@@ -88,9 +94,9 @@ build_app() {
 }
 
 run_app() {
-  load_version
+  load_version macos
   generate_project
-  build_app Debug
+  build_app Debug TabTool "platform=macOS"
   local app_path="${derived_data}/Build/Products/Debug/TabTool.app"
   if [ ! -d "${app_path}" ]; then
     print_answer "Built app not found at ${app_path}" red
@@ -100,7 +106,7 @@ run_app() {
 }
 
 archive_app() {
-  load_version
+  load_version macos
   generate_project
   xcodebuild \
     -project "${project}" \
@@ -118,6 +124,72 @@ archive_app() {
 clean_build() {
   rm -rf "${build_dir}"
   print_answer "Removed ${build_dir}" grey
+}
+
+# The first available iPhone simulator. Prints its UDID, or returns 1.
+ios_simulator_udid() {
+  python3 - <<'PY'
+import json, subprocess, sys
+raw = subprocess.check_output(["xcrun", "simctl", "list", "devices", "available", "-j"])
+devices = json.loads(raw).get("devices", {})
+for runtime, entries in devices.items():
+    if "iOS" not in runtime:
+        continue
+    for device in entries:
+        name = device.get("name", "")
+        if name.startswith("iPhone") and device.get("isAvailable") and device.get("udid"):
+            print(device["udid"])
+            sys.exit(0)
+sys.exit(1)
+PY
+}
+
+require_ios_simulator() {
+  local udid
+  if ! udid="$(ios_simulator_udid)"; then
+    print_answer "No iPhone simulator is available. Install an iOS simulator." red
+    exit 1
+  fi
+  printf '%s\n' "${udid}"
+}
+
+boot_ios_simulator() {
+  local udid="$1"
+  xcrun simctl boot "${udid}" >/dev/null 2>&1 || true
+  xcrun simctl bootstatus "${udid}" -b
+}
+
+run_ios() {
+  local udid app_path
+  udid="$(require_ios_simulator)"
+  load_version ios
+  generate_project
+  build_app Debug TabToolIOS "id=${udid}" CODE_SIGNING_ALLOWED=NO
+  boot_ios_simulator "${udid}"
+  app_path="${derived_data}/Build/Products/Debug-iphonesimulator/TabTool.app"
+  if [ ! -d "${app_path}" ]; then
+    print_answer "Built app not found at ${app_path}" red
+    exit 1
+  fi
+  xcrun simctl install "${udid}" "${app_path}"
+  xcrun simctl launch "${udid}" app.shurco.tabtool
+}
+
+test_ios() {
+  local udid
+  udid="$(require_ios_simulator)"
+  load_version ios
+  generate_project
+  boot_ios_simulator "${udid}"
+  xcodebuild \
+    -project "${project}" \
+    -scheme TabToolIOS \
+    -configuration Debug \
+    -destination "id=${udid}" \
+    -derivedDataPath "${derived_data}" \
+    CODE_SIGNING_ALLOWED=NO \
+    ${version_settings[@]+"${version_settings[@]}"} \
+    test
 }
 
 bump_kind=""
@@ -164,10 +236,10 @@ case "${command}" in
         exit 1
       fi
       if ! valid_platform "${platform}"; then
-        print_answer "Unsupported platform: ${platform} (only macos)" red
+        print_answer "Unsupported platform: ${platform} (only macos or ios)" red
         exit 1
       fi
-      bump_version "${kind}"
+      bump_version "${platform}" "${kind}"
     else
       platform="${positional[1]:-macos}"
       if [ "${#positional[@]}" -gt 2 ]; then
@@ -175,38 +247,57 @@ case "${command}" in
         exit 1
       fi
       if ! valid_platform "${platform}"; then
-        print_answer "Unsupported platform: ${platform} (only macos)" red
+        print_answer "Unsupported platform: ${platform} (only macos or ios)" red
         exit 1
       fi
       if [ -n "${bump_kind}" ]; then
-        bump_version "${bump_kind}"
+        bump_version "${platform}" "${bump_kind}"
       fi
     fi
-    load_version
+    load_version "${platform}"
     ;;
 
-  run | build | archive)
+  run | build | archive | test)
     platform="${positional[1]:-macos}"
     if [ "${#positional[@]}" -gt 2 ]; then
       usage
       exit 1
     fi
+    if [ "${command}" = "test" ] && [ "${platform}" = "macos" ]; then
+      print_answer "Mac tests stay on ./scripts/test" red
+      exit 1
+    fi
+    if [ "${command}" = "archive" ] && [ "${platform}" = "ios" ]; then
+      print_answer "archive is macOS-only" red
+      exit 1
+    fi
     if ! valid_platform "${platform}"; then
-      print_answer "Unsupported platform: ${platform} (only macos)" red
+      print_answer "Unsupported platform: ${platform} (only macos or ios)" red
       exit 1
     fi
     require_tools
     if [ -n "${bump_kind}" ]; then
-      bump_version "${bump_kind}"
+      bump_version "${platform}" "${bump_kind}"
     fi
     case "${command}" in
       run)
-        run_app
+        if [ "${platform}" = "ios" ]; then
+          run_ios
+        else
+          run_app
+        fi
         ;;
       build)
-        load_version
+        load_version "${platform}"
         generate_project
-        build_app Debug CODE_SIGNING_ALLOWED=NO
+        if [ "${platform}" = "ios" ]; then
+          build_app Debug TabToolIOS "generic/platform=iOS Simulator" CODE_SIGNING_ALLOWED=NO
+        else
+          build_app Debug TabTool "platform=macOS" CODE_SIGNING_ALLOWED=NO
+        fi
+        ;;
+      test)
+        test_ios
         ;;
       archive)
         archive_app
