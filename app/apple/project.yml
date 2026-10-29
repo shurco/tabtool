@@ -24,6 +24,11 @@ targets:
     platform: macOS
     sources:
       - path: Shared
+      - path: macOS
+        excludes:
+          - App/Info.plist
+          - App/TabTool.entitlements
+          - App/PrivacyInfo.xcprivacy
       - path: macOS/App/PrivacyInfo.xcprivacy
         buildPhase: resources
       - path: ../../LICENSE
