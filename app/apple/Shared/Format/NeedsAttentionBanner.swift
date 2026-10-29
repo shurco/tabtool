@@ -95,13 +95,15 @@ struct NeedsAttentionBanner: View {
     }
 
     private var undoButton: some View {
-        Button("Undo Last Edit", action: onUndo)
+        Button("Undo Last Edit", systemImage: "arrow.uturn.backward", action: onUndo)
+            .labelStyle(.iconOnly)
             .disabled(!canUndo)
             .accessibilityIdentifier("undo-last-edit")
     }
 
     private var formatControlsButton: some View {
-        Button("Show Format Controls", action: onShowFormatControls)
+        Button("Show Format Controls", systemImage: "slider.horizontal.3", action: onShowFormatControls)
+            .labelStyle(.iconOnly)
             .accessibilityIdentifier("show-format-controls")
     }
 

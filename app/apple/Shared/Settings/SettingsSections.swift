@@ -7,8 +7,6 @@ struct GeneralSettings: View {
     #if os(macOS)
     @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
     #endif
-    @State private var needsRestart = false
-
     var body: some View {
         Picker("Language", selection: $language) {
             ForEach(AppLanguage.allCases) { option in
@@ -22,28 +20,7 @@ struct GeneralSettings: View {
         .accessibilityIdentifier("settings-language")
         .onChange(of: language) { _, new in
             new.applyOverride()
-            needsRestart = true
         }
-        #if os(macOS)
-        HStack {
-            caption("Takes effect after restart.")
-            if needsRestart {
-                Spacer()
-                Button { AppRelaunch.request() } label: {
-                    Label("Restart Now", systemImage: "arrow.clockwise")
-                }
-                .labelStyle(.iconOnly)
-                .buttonStyle(.borderless)
-                .help("Restart Now")
-                .accessibilityIdentifier("settings-restart")
-            }
-        }
-        #else
-        if needsRestart {
-            caption("Open TabTool again to apply it.")
-        }
-        #endif
-
         #if os(macOS)
         Toggle("Show Format Bar", isOn: $showFormatBar)
             .accessibilityIdentifier("settings-show-format-bar")

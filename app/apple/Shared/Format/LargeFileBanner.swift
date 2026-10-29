@@ -85,7 +85,8 @@ struct LargeFileStaleBanner: View {
     }
 
     private var reloadButton: some View {
-        Button("Reload", action: onReload)
+        Button("Reload", systemImage: "arrow.clockwise", action: onReload)
+                .labelStyle(.iconOnly)
             .accessibilityIdentifier("large-file-reload")
     }
 }

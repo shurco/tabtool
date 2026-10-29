@@ -29,7 +29,7 @@ struct FilterSheet: View {
             .navigationTitle("Filters")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { model.isBarVisible = false }
+                    Button("Close", systemImage: "xmark") { model.isBarVisible = false }
                         .accessibilityIdentifier("filter-hide")
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -58,7 +58,8 @@ struct FilterSheet: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Button("Clear") { document.clearFilter() }
+            Button("Clear", systemImage: "xmark.circle") { document.clearFilter() }
+                .labelStyle(.iconOnly)
                 .accessibilityIdentifier("filter-clear")
 
             Spacer(minLength: 0)
@@ -69,7 +70,9 @@ struct FilterSheet: View {
 
             Spacer(minLength: 0)
 
-            Button("Apply") { document.applyAllFilters() }
+            Button("Apply", systemImage: "checkmark") { document.applyAllFilters() }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(model.criteria.contains { $0.isEnabled && !$0.isValid })
                 .accessibilityIdentifier("filter-apply-all")

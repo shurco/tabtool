@@ -44,6 +44,11 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         languages.first?.lowercased().hasPrefix("zh") == true
     }
 
+    /// The locale for live SwiftUI string lookup; `nil` follows the system.
+    var locale: Locale? {
+        self == .system ? nil : Locale(identifier: rawValue)
+    }
+
     /// Writes the per-app language override read at the next launch.
     func applyOverride(to defaults: UserDefaults = .standard) {
         if self == .system {

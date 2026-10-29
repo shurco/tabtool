@@ -39,6 +39,8 @@ On macOS, `TabTool > Settings…` (`⌘,`) opens one window with four tabs: Gene
 
 On iOS, Settings is a sheet opened from the gear on the Documents screen or from the document's overflow menu: one form with sections for General, New Document, Grid, Large Files, and About. It writes the same defaults at once, and the row height options are the iOS ones in the table.
 
+The interface language applies as soon as it is picked on both platforms: every window and sheet re-renders in the new language without a relaunch. The choice is also written to `AppleLanguages`, so system-provided text such as file dialogs follows the same language at the next launch.
+
 | Tab | Setting | Key | Default |
 | --- | --- | --- | --- |
 | General | Language | `appLanguage` | System |

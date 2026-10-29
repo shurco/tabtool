@@ -9,10 +9,10 @@ extension DocumentView {
     var documentToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarLeading) {
             if document.isLargeMode {
-                Button("Save") { LargeSaveCoordinator.shared.save(document) }
+                Button("Save", systemImage: "square.and.arrow.down") { LargeSaveCoordinator.shared.save(document) }
                     .disabled(!document.hasUnsavedLargeEdits || document.largeStatus != .ready)
                     .accessibilityIdentifier("save")
-                Button("Save As") { LargeSaveCoordinator.shared.saveAs(document) }
+                Button("Save As", systemImage: "square.and.arrow.down.on.square") { LargeSaveCoordinator.shared.saveAs(document) }
                     .disabled(document.largeStatus != .ready)
                     .accessibilityIdentifier("save-as")
             }
