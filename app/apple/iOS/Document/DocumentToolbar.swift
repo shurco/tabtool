@@ -69,10 +69,12 @@ extension DocumentView {
             Button("Settings…") { showsSettings = true }
                 .accessibilityIdentifier("settings")
             Button("About") { showsAbout = true }
-            Divider()
-            Button("Save As…") { LargeSaveCoordinator.shared.saveAs(document) }
-                .disabled(document.largeStatus != .ready)
-                .accessibilityIdentifier("save-as")
+            if document.isLargeMode {
+                Divider()
+                Button("Save As…") { LargeSaveCoordinator.shared.saveAs(document) }
+                    .disabled(document.largeStatus != .ready)
+                    .accessibilityIdentifier("save-as")
+            }
         } label: {
             Image(systemName: "ellipsis.circle")
         }
