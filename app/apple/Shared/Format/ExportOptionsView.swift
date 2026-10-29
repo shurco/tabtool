@@ -86,7 +86,11 @@ struct ExportOptionsView: View {
         }
         .controlSize(.small)
         .padding(16)
+        #if os(macOS)
         .frame(width: 340, alignment: .leading)
+        #else
+        .frame(maxWidth: .infinity, alignment: .leading)
+        #endif
     }
 
     private func row<Content: View>(

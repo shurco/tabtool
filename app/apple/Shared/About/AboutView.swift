@@ -19,12 +19,22 @@ struct AboutView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text("A simple CSV editor for macOS.")
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 360)
+            Group {
+                #if os(macOS)
+                Text("A simple CSV editor for macOS.")
+                #else
+                Text("A simple CSV editor for iPhone and iPad.")
+                #endif
+            }
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: 360)
         }
         .padding(24)
+        #if os(macOS)
         .frame(width: 420)
+        #else
+        .frame(maxWidth: 420)
+        #endif
     }
 
     private var version: String {

@@ -10,6 +10,7 @@ struct DocumentView: View {
     @Environment(\.undoManager) private var undoManager
     #if os(iOS)
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
     @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
 
@@ -49,14 +50,16 @@ struct DocumentView: View {
 
             if showFormatBar {
                 Divider()
-                FormatBar(
-                    document: document,
-                    isBusy: isReparsing || document.phase == .loading || document.isIndexing
-                        || document.isSaving,
-                    isDetectAvailable: document.fileURL != nil,
-                    onConfigurationChange: applyConfiguration,
-                    onDetectAutomatically: detectAutomatically
-                )
+                scrollingOnCompact {
+                    FormatBar(
+                        document: document,
+                        isBusy: isReparsing || document.phase == .loading || document.isIndexing
+                            || document.isSaving,
+                        isDetectAvailable: document.fileURL != nil,
+                        onConfigurationChange: applyConfiguration,
+                        onDetectAutomatically: detectAutomatically
+                    )
+                }
             }
 
             if let source = document.rowSource {
@@ -66,8 +69,8 @@ struct DocumentView: View {
                                   status: document.largeStatus, onCancelSave: document.cancelLargeSave)
             }
         }
-        .frame(minWidth: 640, minHeight: 400)
         #if os(macOS)
+        .frame(minWidth: 640, minHeight: 400)
         .opensDroppedTableFiles()
         #endif
         .focusedSceneObject(document)
@@ -187,6 +190,20 @@ struct DocumentView: View {
         #endif
     }
 
+    /// Lets a wide format or filter bar slide sideways on a narrow phone.
+    @ViewBuilder
+    private func scrollingOnCompact<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        #if os(iOS)
+        if horizontalSizeClass == .compact {
+            ScrollView(.horizontal, showsIndicators: false) { content() }
+        } else {
+            content()
+        }
+        #else
+        content()
+        #endif
+    }
+
     private static func message(for notice: DocumentNotice) -> String {
         switch notice {
         case .editRejected(let error):
@@ -208,7 +225,9 @@ struct DocumentView: View {
                     GridToolbar(document: document)
                     Divider()
                     if document.canFilter, document.rowFilter.isBarVisible {
-                        RowFilterBar(document: document)
+                        scrollingOnCompact {
+                            RowFilterBar(document: document)
+                        }
                         Divider()
                     }
                     CSVGrid(document: document, isEditable: cellsAreEditable,
