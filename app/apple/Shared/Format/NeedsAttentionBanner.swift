@@ -13,6 +13,10 @@ struct NeedsAttentionBanner: View {
     let onUndo: () -> Void
     let onShowFormatControls: () -> Void
 
+    #if os(iOS)
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    #endif
+
     var body: some View {
         layout
             .controlSize(controlSize)
@@ -27,7 +31,8 @@ struct NeedsAttentionBanner: View {
     }
 
     /// The window-shaped strip on macOS; a stack on a phone, where the two
-    /// buttons and the text do not fit side by side.
+    /// buttons and the text do not fit side by side. At accessibility text
+    /// sizes the actions stack vertically so their labels stay readable.
     private var layout: some View {
         #if os(iOS)
         VStack(alignment: .leading, spacing: 8) {
@@ -36,21 +41,18 @@ struct NeedsAttentionBanner: View {
                 titleText
             }
             detailText
-            HStack(spacing: 12) {
-                Spacer(minLength: 0)
-                Button(action: onUndo) {
-                    Text("Undo Last Edit")
-                        .lineLimit(nil)
-                        .multilineTextAlignment(.center)
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .trailing, spacing: 8) {
+                    undoButton
+                    formatControlsButton
                 }
-                .disabled(!canUndo)
-                .accessibilityIdentifier("undo-last-edit")
-                Button(action: onShowFormatControls) {
-                    Text("Show Format Controls")
-                        .lineLimit(nil)
-                        .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            } else {
+                HStack(spacing: 12) {
+                    Spacer(minLength: 0)
+                    undoButton
+                    formatControlsButton
                 }
-                .accessibilityIdentifier("show-format-controls")
             }
         }
         #else
@@ -61,11 +63,8 @@ struct NeedsAttentionBanner: View {
                 detailText
             }
             Spacer(minLength: 12)
-            Button("Undo Last Edit", action: onUndo)
-                .disabled(!canUndo)
-                .accessibilityIdentifier("undo-last-edit")
-            Button("Show Format Controls", action: onShowFormatControls)
-                .accessibilityIdentifier("show-format-controls")
+            undoButton
+            formatControlsButton
         }
         #endif
     }
@@ -93,6 +92,17 @@ struct NeedsAttentionBanner: View {
         Text(verbatim: detail)
             .font(.callout)
             .foregroundStyle(.secondary)
+    }
+
+    private var undoButton: some View {
+        Button("Undo Last Edit", action: onUndo)
+            .disabled(!canUndo)
+            .accessibilityIdentifier("undo-last-edit")
+    }
+
+    private var formatControlsButton: some View {
+        Button("Show Format Controls", action: onShowFormatControls)
+            .accessibilityIdentifier("show-format-controls")
     }
 
     private var title: String {
