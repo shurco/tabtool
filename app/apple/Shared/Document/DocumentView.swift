@@ -21,6 +21,8 @@ struct DocumentView: View {
     #if os(iOS)
     @State private var showsSettings = false
     @State private var showsAbout = false
+    @State private var renamingColumn: RenamingColumn?
+    @State private var renameText = ""
     #endif
 
     var body: some View {
@@ -31,7 +33,11 @@ struct DocumentView: View {
             let actions = ContextualActions.actions(for: document)
             if !actions.isEmpty {
                 ContextualActionBar(actions: actions) { action in
-                    ContextualActions.run(action, on: document)
+                    if action == .renameColumn {
+                        beginRenamingSelectedColumn()
+                    } else {
+                        ContextualActions.run(action, on: document)
+                    }
                 }
             }
             #endif
@@ -155,6 +161,11 @@ struct DocumentView: View {
             Text(verbatim: alert.message)
         }
         #if os(iOS)
+        .alert("Rename Column", isPresented: isRenamingColumn, presenting: renamingColumn) { column in
+            TextField("Name", text: $renameText)
+            Button("Cancel", role: .cancel) {}
+            Button("Rename") { commitRename(column.column) }
+        }
         .toolbar {
             ToolbarItemGroup(placement: .topBarLeading) {
                 if document.isLargeMode {
@@ -362,3 +373,35 @@ private struct FormatAlert: Identifiable {
     let title: LocalizedStringKey
     let message: String
 }
+
+#if os(iOS)
+/// The column the contextual bar's rename alert edits.
+private struct RenamingColumn: Identifiable {
+    let column: Int
+    var id: Int { column }
+}
+
+private extension DocumentView {
+    var isRenamingColumn: Binding<Bool> {
+        Binding(get: { renamingColumn != nil },
+                set: { if !$0 { renamingColumn = nil } })
+    }
+
+    /// Opens the rename alert on the selected column. The iOS grid has no
+    /// inline header editor, so the bar renames through this alert.
+    func beginRenamingSelectedColumn() {
+        guard document.canRenameSelectedColumn,
+              let column = document.selection.columns.first else { return }
+        renameText = document.table?.headers?[column] ?? ""
+        renamingColumn = RenamingColumn(column: column)
+    }
+
+    func commitRename(_ column: Int) {
+        renamingColumn = nil
+        let name = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let current = document.table?.headers?[column] ?? ""
+        guard !name.isEmpty, name != current else { return }
+        document.renameColumn(at: column, to: name)
+    }
+}
+#endif

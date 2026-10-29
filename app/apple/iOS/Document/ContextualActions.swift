@@ -11,7 +11,8 @@ enum ContextualActionID: String, CaseIterable {
     case addRowAbove = "add-row-above", addRowBelow = "add-row"
     case addColumnLeft = "add-column-left", addColumnRight = "add-column"
     case delete = "delete-selection"
-    case sortAscending, sortDescending, removeSort, renameColumn
+    case sortAscending, sortDescending, removeSort
+    case renameColumn = "rename-column"
 }
 
 /// Derives the contextual action bar's contents from the grid selection.
