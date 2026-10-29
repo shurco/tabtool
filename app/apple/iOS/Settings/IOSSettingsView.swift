@@ -12,7 +12,10 @@ struct IOSSettingsView: View {
                 Section("Grid") { GridSettings() }
                 Section("Large Files") { LargeFileSettings() }
                 Section {
-                    NavigationLink("About") { AboutView() }
+                    NavigationLink("About") {
+                        AboutView()
+                            .navigationTitle("About")
+                    }
                 }
             }
             .navigationTitle("Settings")

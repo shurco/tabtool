@@ -4,7 +4,9 @@ import TabToolKit
 /// The rows of the General settings section.
 struct GeneralSettings: View {
     @AppStorage(Preferences.Key.appLanguage) private var language = Preferences.Default.appLanguage
+    #if os(macOS)
     @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
+    #endif
     @State private var needsRestart = false
 
     var body: some View {
