@@ -47,7 +47,8 @@
 				<p class="card__status mono">Status: in development</p>
 				<p>
 					The full editor: format detection, structural editing, sorting, large-file mode, export.
-					Requires Xcode 27.1 to build. An App Store listing will follow the 1.0 release checklist.
+					The release build is 2.7 MB, written in pure Swift. An App Store listing will follow the
+					1.0 release checklist.
 				</p>
 				<a class="btn btn--primary" href={site.github} rel="noopener">Build from source →</a>
 			</article>
@@ -58,7 +59,8 @@
 				<p class="card__status mono">Status: in development</p>
 				<p>
 					A touch-first editor with contextual row and column actions, filter cards, and the same
-					CSV core. Run it in the simulator with a single script command.
+					CSV core. The release build is 2.5 MB. Run it in the simulator with a single script
+					command.
 				</p>
 				<a class="btn btn--ghost" href={`${site.github}#build`} rel="noopener">Build instructions →</a>
 			</article>

@@ -19,7 +19,7 @@ export default defineConfig({
 				handleHttpError: 'fail'
 			},
 			paths: {
-				origin: 'https://tabtool.app'
+				origin: 'https://tabtool.shurco.app'
 			}
 		})
 	]

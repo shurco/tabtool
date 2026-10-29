@@ -4,7 +4,7 @@
 
 <ul class="features">
 	{#each features as feature (feature.index)}
-		<li class="feature">
+		<li class="feature" class:feature--wide={feature.wide}>
 			<span class="feature__index" aria-hidden="true">{feature.index}</span>
 			<h3>{feature.title}</h3>
 			<p class="feature__body">{feature.body}</p>
@@ -92,9 +92,25 @@
 		border-color: color-mix(in srgb, var(--paper) 26%, transparent);
 	}
 
+	.feature--wide {
+		grid-column: 1 / -1;
+	}
+
+	.feature--wide .feature__body {
+		max-width: 92ch;
+	}
+
+	.feature--wide h3 {
+		max-width: none;
+		font-size: clamp(1.3rem, 2.2vw, 1.7rem);
+	}
+
 	@media (max-width: 760px) {
 		.features {
 			grid-template-columns: 1fr;
+		}
+		.feature--wide {
+			grid-column: auto;
 		}
 	}
 </style>

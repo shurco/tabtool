@@ -1,6 +1,6 @@
 export const site = {
 	name: 'TabTool',
-	url: 'https://tabtool.app',
+	url: 'https://tabtool.shurco.app',
 	title: 'TabTool — a native CSV editor for macOS and iOS',
 	description:
 		'A native, open-source CSV editor for macOS and iOS. Opens multi-gigabyte files in seconds, edits cells with undo, and never sends your data anywhere.',

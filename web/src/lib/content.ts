@@ -2,11 +2,19 @@
 	{ value: '5 GiB', label: 'Largest tested file', note: '68.2M rows × 8 columns' },
 	{ value: '77.7M', label: 'Rows in the release app', note: 'indexed 2.7 s after launch' },
 	{ value: '~91 MB', label: 'Memory after indexing', note: 'Apple M4 Pro, 24 GB' },
-	{ value: '6.3 s', label: 'Save with one edit', note: 'streamed, progress shown' },
+	{ value: '2.7 MB', label: 'macOS release build', note: 'iOS build: 2.5 MB · no Electron' },
 	{ value: '0', label: 'Network requests', note: 'no analytics, no SDKs' }
 ];
 
-export const features = [
+export type Feature = {
+	index: string;
+	title: string;
+	body: string;
+	tags: string[];
+	wide?: boolean;
+};
+
+export const features: Feature[] = [
 	{
 		index: '01',
 		title: 'Format detection that reads the file',
@@ -42,8 +50,7 @@ export const features = [
 		title: 'Nothing leaves the machine',
 		body: 'The app is sandboxed with no network entitlement, no analytics, and no third-party SDKs. The App Store privacy label will read Data Not Collected. Your CSV stays a file on your disk.',
 		tags: ['Sandbox', 'No telemetry', 'Offline']
-	},
-	{
+	},	{
 		index: '07',
 		title: 'The same editor on iPhone and iPad',
 		body: 'A touch-first grid with a keyboard accessory, contextual actions for rows and columns, format and filter sheets, and the same detection and encodings as the Mac.',
@@ -54,6 +61,13 @@ export const features = [
 		title: 'Eleven interface languages',
 		body: 'English, French, Spanish, German, Italian, Polish, Belarusian, Ukrainian, Simplified Chinese, Japanese, and Korean, chosen in Settings or following the system.',
 		tags: ['String Catalog', 'System language']
+	},
+	{
+		index: '09',
+		wide: true,
+		title: 'Native code, not a browser in a window',
+		body: 'macOS and iOS are pure Swift: a SwiftUI shell, an AppKit grid on the Mac, no Electron and no bundled web runtime. The release build is 2.7 MB on macOS and 2.5 MB on iOS, launches at once, and scrolls at native speed. The Windows and Linux ports are planned in Rust.',
+		tags: ['Swift 6', 'AppKit + SwiftUI', 'No Electron', 'Rust ports planned']
 	}
 ];
 
@@ -106,35 +120,35 @@ export const platforms = [
 		requirement: 'macOS 14 or later',
 		status: 'In development',
 		tone: 'active',
-		note: '1.0 release checklist in progress.'
+		note: '1.0 release checklist in progress. Pure Swift.'
 	},
 	{
 		name: 'iOS and iPadOS',
 		requirement: 'iOS 17 or later',
 		status: 'In development',
 		tone: 'active',
-		note: 'Same CSV core, touch-first editor.'
+		note: 'Same CSV core, touch-first editor. Pure Swift.'
 	},
 	{
 		name: 'Windows',
 		requirement: 'Not started',
 		status: 'Planned',
 		tone: 'planned',
-		note: 'Wait for an announcement. No date yet.'
+		note: 'Planned in Rust. No date yet.'
 	},
 	{
 		name: 'Linux',
 		requirement: 'Not started',
 		status: 'Planned',
 		tone: 'planned',
-		note: 'Wait for an announcement. No date yet.'
+		note: 'Planned in Rust. No date yet.'
 	},
 	{
 		name: 'Android',
 		requirement: 'Not started',
 		status: 'Planned',
 		tone: 'planned',
-		note: 'Wait for an announcement. No date yet.'
+		note: 'Language not chosen yet. No date.'
 	}
 ];
 
@@ -169,7 +183,7 @@ export const faqs = [
 	},
 	{
 		q: 'What about Windows, Linux, and Android?',
-		a: 'They are planned. The core is portable Swift, but each platform needs its own editor UI, file handling, and tests. No dates are promised until a build exists; follow the repository for announcements.'
+		a: 'Windows and Linux will be written in Rust. Android is planned with no language chosen yet. Each platform needs its own editor UI, file handling, and tests, so no dates are promised until a build exists; follow the repository for announcements.'
 	},
 	{
 		q: 'Is the iOS app a companion or a full editor?',

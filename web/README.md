@@ -51,7 +51,7 @@ No Worker is required: the site is fully prerendered, so Pages serves `build/` a
 Two placeholders must be replaced:
 
 1. **GitHub URL** — `src/lib/site.ts`, the `github` field. It currently points to `https://github.com/shurco/tabtool`.
-2. **Site origin** — `src/lib/site.ts` (`url`) and `vite.config.ts` (`paths.origin`). It currently uses `https://tabtool.app`; use the real domain before submitting the sitemap.
+2. **Site origin** — `src/lib/site.ts` (`url`) and `vite.config.ts` (`paths.origin`). It currently uses `https://tabtool.shurco.app`; use the real domain before submitting the sitemap.
 
 Everything else (comparison facts, FAQ, legal text, screenshots) lives in `src/lib/`:
 
