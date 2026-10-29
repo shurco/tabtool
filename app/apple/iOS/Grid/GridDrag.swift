@@ -68,12 +68,19 @@ extension GridController: UICollectionViewDelegate, UICollectionViewDragDelegate
             draggedColumn = column(at: point, in: view)
         case .ended:
             if let draggedColumn, let target = column(at: point, in: view) {
-                moveColumn(from: draggedColumn, before: target)
+                moveColumn(from: draggedColumn,
+                           before: Self.dropDestination(from: draggedColumn, onto: target))
             }
             draggedColumn = nil
         default:
             break
         }
+    }
+
+    /// The pre-move index that lands `source` after `target` when the finger
+    /// is on a column to the right. Dropping on the column itself is a no-op.
+    static func dropDestination(from source: Int, onto target: Int) -> Int {
+        target > source ? target + 1 : target
     }
 
     func moveRow(modelRow: Int, beforeDisplayRow: Int) {

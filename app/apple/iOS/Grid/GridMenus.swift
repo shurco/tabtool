@@ -25,7 +25,8 @@ extension GridController {
 
     @discardableResult
     func paste() -> Bool {
-        guard allowsStructuralEdits, let text = UIPasteboard.general.string else { return false }
+        guard allowsStructuralEdits, document?.canEditRowStructure == true,
+              let text = UIPasteboard.general.string, !text.isEmpty else { return false }
         document?.pasteTSV(text)
         return true
     }
@@ -86,7 +87,7 @@ extension GridController {
             action("Add Column Left", enabled: allowsStructuralEdits) { $0.addColumnLeft() },
             action("Add Column Right", enabled: allowsStructuralEdits) { $0.addColumnRight() },
             action("Delete", enabled: allowsStructuralEdits) { $0.deleteGridSelection() },
-            action("Copy", enabled: document?.copySelection() != nil) { $0.copySelection() },
+            action("Copy", enabled: hasCopyableSelection) { $0.copySelection() },
             action("Paste", enabled: allowsStructuralEdits && UIPasteboard.general.hasStrings) { $0.paste() },
             action("Select All", enabled: (presenter?.numberOfRows ?? 0) > 0) { $0.selectAll() }
         ])
@@ -99,6 +100,11 @@ extension GridController {
             action("Remove Sort", enabled: document?.canRemoveSort == true) { $0.removeSort() },
             action("Rename Column", enabled: allowsStructuralEdits && focusedColumn != nil) { $0.beginRenamingFocusedColumn() }
         ])
+    }
+
+    private var hasCopyableSelection: Bool {
+        guard let document else { return false }
+        return !document.selection.rows.isEmpty || !document.selection.columns.isEmpty
     }
 
     private func insertColumn(offset: Int) {

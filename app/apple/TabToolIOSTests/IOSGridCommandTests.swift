@@ -79,4 +79,10 @@ import TabToolKit
         #expect(document.table?.cell(row: 0, column: 0) == "2")
         #expect(document.table?.cell(row: 0, column: 1) == "b")
     }
+
+    @Test func aRightwardColumnDropLandsAfterTheTarget() {
+        #expect(GridController.dropDestination(from: 0, onto: 1) == 2)
+        #expect(GridController.dropDestination(from: 1, onto: 0) == 0)
+        #expect(GridController.dropDestination(from: 1, onto: 1) == 1)
+    }
 }
