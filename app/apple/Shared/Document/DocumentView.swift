@@ -238,6 +238,10 @@ struct DocumentView: View {
                 onDetectAutomatically: detectAutomatically
             )
         }
+        .sheet(isPresented: Binding(
+            get: { document.rowFilter.isBarVisible },
+            set: { document.rowFilter.isBarVisible = $0 }
+        )) { FilterSheet(document: document) }
         #endif
     }
 
@@ -277,12 +281,14 @@ struct DocumentView: View {
                     GridToolbar(document: document)
                     Divider()
                     #endif
+                    #if os(macOS)
                     if document.canFilter, document.rowFilter.isBarVisible {
                         scrollingOnCompact {
                             RowFilterBar(document: document)
                         }
                         Divider()
                     }
+                    #endif
                     CSVGrid(document: document, isEditable: document.canEditCells,
                             allowsStructuralEdits: !document.isLargeMode)
                 }
