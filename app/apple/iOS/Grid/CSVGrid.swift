@@ -18,7 +18,7 @@ struct CSVGrid: UIViewRepresentable {
         view.controller = context.coordinator
         view.accessibilityIdentifier = "grid"
         view.accessibilityLabel = String(localized: "CSV Table")
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .systemGroupedBackground
         view.dataSource = context.coordinator
         context.coordinator.collectionView = view
         context.coordinator.installGestures(on: view)

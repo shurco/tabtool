@@ -3,7 +3,7 @@ import CoreGraphics
 /// Cell frames for the iOS grid. The header row and the row-number column
 /// stay pinned to the visible rect while the cells scroll underneath.
 struct GridGeometry: Equatable {
-    static let columnWidth: CGFloat = 120
+    static let columnWidth: CGFloat = 160
     static let headerHeight: CGFloat = 28
     static let gutterWidth: CGFloat = 40
 

@@ -53,6 +53,6 @@ import TabToolKit
         cell.configure(text: "2", alignment: .left, row: 0, alternating: false,
                        rowHeight: 44, highlight: .selected)
         #expect(cell.contentView.layer.borderWidth == 0)
-        #expect(cell.contentView.backgroundColor == UIColor.tintColor.withAlphaComponent(0.10))
+        #expect(cell.contentView.backgroundColor == UIColor.tintColor.withAlphaComponent(0.12))
     }
 }

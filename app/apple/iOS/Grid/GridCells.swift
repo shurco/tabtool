@@ -7,13 +7,12 @@ enum GridCellHighlight: Equatable {
     case selected
 }
 
-/// A data cell. Vertical borders always show. Horizontal borders show when
-/// alternating row colors are off, matching the Mac grid.
+/// A data cell. Only a hairline row separator shows, so the table reads as a
+/// sheet of rows instead of a boxed grid.
 final class GridDataCell: UICollectionViewCell {
     static let reuseID = "data"
 
     private let label = UILabel()
-    private let rightBorder = UIView()
     private let bottomBorder = UIView()
 
     override init(frame: CGRect) {
@@ -21,26 +20,18 @@ final class GridDataCell: UICollectionViewCell {
         label.translatesAutoresizingMaskIntoConstraints = false
         label.lineBreakMode = .byTruncatingTail
         contentView.addSubview(label)
-        rightBorder.translatesAutoresizingMaskIntoConstraints = false
         bottomBorder.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(rightBorder)
+        bottomBorder.backgroundColor = UIColor.separator.withAlphaComponent(0.35)
         contentView.addSubview(bottomBorder)
-        let border = UIColor.separator
-        rightBorder.backgroundColor = border
-        bottomBorder.backgroundColor = border
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 6),
-            label.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -6),
+            label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 10),
+            label.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -10),
             label.topAnchor.constraint(equalTo: contentView.topAnchor),
             label.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            rightBorder.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            rightBorder.topAnchor.constraint(equalTo: contentView.topAnchor),
-            rightBorder.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            rightBorder.widthAnchor.constraint(equalToConstant: 1),
-            bottomBorder.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            bottomBorder.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 10),
             bottomBorder.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             bottomBorder.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            bottomBorder.heightAnchor.constraint(equalToConstant: 1)
+            bottomBorder.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale)
         ])
     }
 
@@ -55,17 +46,19 @@ final class GridDataCell: UICollectionViewCell {
             .scaledFont(for: .systemFont(ofSize: 15), maximumPointSize: rowHeight - 8)
         label.textColor = .label
         bottomBorder.isHidden = alternating
+        contentView.layer.cornerRadius = 0
         contentView.layer.borderWidth = 0
         switch highlight {
         case .focused:
             contentView.backgroundColor = .systemBackground
+            contentView.layer.cornerRadius = 4
             contentView.layer.borderWidth = 2
-            contentView.layer.borderColor = tintColor.cgColor
+            contentView.layer.borderColor = UIColor.tintColor.cgColor
         case .selected:
-            contentView.backgroundColor = UIColor.tintColor.withAlphaComponent(0.10)
+            contentView.backgroundColor = UIColor.tintColor.withAlphaComponent(0.12)
         case .none:
             if alternating, row % 2 == 1 {
-                contentView.backgroundColor = .secondarySystemFill
+                contentView.backgroundColor = .secondarySystemBackground
             } else {
                 contentView.backgroundColor = .systemBackground
             }
@@ -86,8 +79,8 @@ final class GridChromeCell: UICollectionReusableView {
         addSubview(label)
         backgroundColor = .secondarySystemBackground
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6),
-            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6),
             label.topAnchor.constraint(equalTo: topAnchor),
             label.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
@@ -98,12 +91,15 @@ final class GridChromeCell: UICollectionReusableView {
     func configure(text: String, centered: Bool, highlighted: Bool = false) {
         label.text = text
         label.textAlignment = centered ? .center : .left
-        label.font = centered
-            ? .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
-            : .systemFont(ofSize: 12, weight: .semibold)
-        label.textColor = .secondaryLabel
+        if centered {
+            label.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+            label.textColor = .tertiaryLabel
+        } else {
+            label.font = .systemFont(ofSize: 13, weight: .semibold)
+            label.textColor = .label
+        }
         backgroundColor = highlighted
-            ? UIColor.tintColor.withAlphaComponent(0.10)
+            ? UIColor.tintColor.withAlphaComponent(0.12)
             : .secondarySystemBackground
     }
 }
