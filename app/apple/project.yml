@@ -109,6 +109,7 @@ targets:
       - path: TabToolTests/CSVDocumentRenamingTests.swift
       - path: TabToolTests/CSVDocumentSortingTests.swift
       - path: TabToolTests/FormatChangePlannerTests.swift
+      - path: TabToolTests/FormatControlBindingsTests.swift
       - path: TabToolTests/ExportPlanTests.swift
       - path: TabToolTests/PreferencesTests.swift
       - path: TabToolTests/LocalizationTests.swift

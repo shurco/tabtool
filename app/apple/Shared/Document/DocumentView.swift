@@ -12,7 +12,9 @@ struct DocumentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
+    #if os(macOS)
     @AppStorage(Preferences.Key.showFormatBar) private var showFormatBar = Preferences.Default.showFormatBar
+    #endif
 
     @State private var pendingReparse: CSVConfiguration?
     @State private var isConfirmingReparse = false
@@ -21,6 +23,7 @@ struct DocumentView: View {
     #if os(iOS)
     @State private var showsSettings = false
     @State private var showsAbout = false
+    @State private var showsFormatSheet = false
     @State private var renamingColumn: RenamingColumn?
     @State private var renameText = ""
     #endif
@@ -57,10 +60,17 @@ struct DocumentView: View {
                     issue: issue,
                     canUndo: undoManager?.canUndo == true,
                     onUndo: { undoManager?.undo() },
-                    onShowFormatControls: { showFormatBar = true }
+                    onShowFormatControls: {
+                        #if os(iOS)
+                        showsFormatSheet = true
+                        #else
+                        showFormatBar = true
+                        #endif
+                    }
                 )
             }
 
+            #if os(macOS)
             if showFormatBar {
                 Divider()
                 scrollingOnCompact {
@@ -74,12 +84,20 @@ struct DocumentView: View {
                     )
                 }
             }
+            #endif
 
             if let source = document.rowSource {
                 Divider()
+                #if os(iOS)
+                DocumentStatusBar(table: source, configuration: document.configuration,
+                                  visibleRowCount: document.rowFilter.visibleRows?.count,
+                                  status: document.largeStatus, onCancelSave: document.cancelLargeSave,
+                                  onOpenFormat: { showsFormatSheet = true })
+                #else
                 DocumentStatusBar(table: source, configuration: document.configuration,
                                   visibleRowCount: document.rowFilter.visibleRows?.count,
                                   status: document.largeStatus, onCancelSave: document.cancelLargeSave)
+                #endif
             }
         }
         #if os(macOS)
@@ -209,6 +227,17 @@ struct DocumentView: View {
                     }
             }
         }
+        .sheet(isPresented: $showsFormatSheet,
+               onDismiss: presentPendingReparseConfirmation) {
+            FormatSheet(
+                document: document,
+                isBusy: isReparsing || document.phase == .loading || document.isIndexing
+                    || document.isSaving,
+                isDetectAvailable: document.fileURL != nil,
+                onConfigurationChange: applyConfiguration,
+                onDetectAutomatically: detectAutomatically
+            )
+        }
         #endif
     }
 
@@ -314,8 +343,20 @@ struct DocumentView: View {
             return
         }
         if await document.hasUnsavedChangesAsync() {
+            #if os(iOS)
+            // Dismiss the format sheet first: its `onDismiss` then shows the
+            // discard confirmation, so the two presentations never overlap.
+            let wasShowingFormatSheet = showsFormatSheet
+            showsFormatSheet = false
+            #endif
             pendingReparse = configuration
+            #if os(macOS)
             isConfirmingReparse = true
+            #else
+            if !wasShowingFormatSheet {
+                isConfirmingReparse = true
+            }
+            #endif
             return
         }
         await applyReparse(to: configuration)
@@ -392,6 +433,12 @@ private extension DocumentView {
               let column = document.selection.columns.first else { return }
         renameText = document.table?.headers?[column] ?? ""
         renamingColumn = RenamingColumn(column: column)
+    }
+
+    /// Presents the discard confirmation once the format sheet is gone.
+    func presentPendingReparseConfirmation() {
+        guard pendingReparse != nil else { return }
+        isConfirmingReparse = true
     }
 
     func commitRename(_ column: Int) {

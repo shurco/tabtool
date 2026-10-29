@@ -16,7 +16,7 @@ struct FormatBar: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 10) {
             control("Encoding") {
-                Picker("Encoding", selection: binding(\.encoding)) {
+                Picker("Encoding", selection: bindings.binding(\.encoding)) {
                     ForEach(SupportedEncodings.all) { supported in
                         Text(LocalizedStringKey(supported.name)).tag(supported.encoding)
                     }
@@ -27,7 +27,7 @@ struct FormatBar: View {
             }
 
             control("Separator") {
-                Picker("Separator", selection: binding(\.columnSeparator)) {
+                Picker("Separator", selection: bindings.binding(\.columnSeparator)) {
                     ForEach(SeparatorOption.allCases) { option in
                         Text(LocalizedStringKey(option.title)).tag(option.rawValue)
                     }
@@ -38,7 +38,7 @@ struct FormatBar: View {
             }
 
             control("Quote") {
-                Picker("Quote", selection: quoteStyleBinding) {
+                Picker("Quote", selection: bindings.quoteStyle) {
                     ForEach(QuoteStyle.allCases) { style in
                         Text(LocalizedStringKey(style.title)).tag(style)
                     }
@@ -49,7 +49,7 @@ struct FormatBar: View {
             }
 
             control("Decimal") {
-                Picker("Decimal Mark", selection: binding(\.decimalMark)) {
+                Picker("Decimal Mark", selection: bindings.binding(\.decimalMark)) {
                     ForEach(DecimalOption.allCases) { option in
                         Text(LocalizedStringKey(option.title)).tag(option.rawValue)
                     }
@@ -62,7 +62,7 @@ struct FormatBar: View {
             }
 
             control("Header") {
-                Toggle("Header", isOn: binding(\.firstRowAsHeader))
+                Toggle("Header", isOn: bindings.binding(\.firstRowAsHeader))
                     .checkboxToggleStyle()
                     .labelsHidden()
                     .accessibilityLabel("Header")
@@ -102,84 +102,9 @@ struct FormatBar: View {
         }
     }
 
-    private func binding<Value>(
-        _ keyPath: WritableKeyPath<CSVConfiguration, Value>
-    ) -> Binding<Value> {
-        Binding(
-            get: { document.configuration[keyPath: keyPath] },
-            set: { newValue in
-                var configuration = document.configuration
-                configuration[keyPath: keyPath] = newValue
-                onConfigurationChange(configuration)
-            }
-        )
-    }
-
-    private var quoteStyleBinding: Binding<QuoteStyle> {
-        Binding(
-            get: { QuoteStyle(configuration: document.configuration) },
-            set: { style in
-                var configuration = document.configuration
-                configuration.quoteCharacter = style.quoteCharacter
-                configuration.escapeCharacter = style.escapeCharacter
-                onConfigurationChange(configuration)
-            }
-        )
-    }
-}
-
-/// A one-line summary of the table size and its format.
-struct DocumentStatusBar: View {
-    let table: any RowSource
-    let configuration: CSVConfiguration
-    /// The number of rows a row filter lets through, or `nil` without one.
-    var visibleRowCount: Int?
-    var status = LargeStatus.none
-    var onCancelSave: () -> Void = {}
-
-    var body: some View {
-        HStack {
-            Text(summary)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier("status-text")
-            if case .saving = status {
-                Button("Cancel", action: onCancelSave)
-                    .controlSize(.small)
-                    .accessibilityIdentifier("cancel-save")
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 4)
-    }
-
-    private var summary: String {
-        switch status {
-        case .indexing(let fraction):
-            return LargeStatusText.indexing(fraction: fraction, rows: table.rowCount)
-        case .saving(let fraction):
-            return LargeStatusText.saving(fraction: fraction)
-        case .none, .ready, .stale:
-            break
-        }
-        let rows = table.rowCount
-        let columns = table.columnCount
-        let rowsText = Self.rowsText(total: rows, visible: visibleRowCount)
-        let columnsText = columns == 1
-            ? String(localized: "1 column")
-            : String(localized: "\(columns) columns")
-        return "\(rowsText) × \(columnsText) · "
-            + "\(FormatDisplay.encodingName(for: configuration.encoding)) · "
-            + FormatDisplay.separatorName(for: configuration.columnSeparator)
-    }
-
-    /// "N rows", or "N of M rows" while a row filter is applied.
-    static func rowsText(total: Int, visible: Int?) -> String {
-        if let visible {
-            return String(localized: "\(visible) of \(total) rows")
-        }
-        return total == 1 ? String(localized: "1 row") : String(localized: "\(total) rows")
+    private var bindings: FormatControlBindings {
+        FormatControlBindings(configuration: document.configuration,
+                              onChange: onConfigurationChange)
     }
 }
 
