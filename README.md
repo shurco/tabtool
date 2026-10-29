@@ -89,6 +89,7 @@ The repository follows these conventions:
 - `app/apple/TabToolTests`, `app/apple/TabToolIOSTests`, and `app/apple/TabToolUITests` — app unit, iOS unit, and UI tests.
 - `scripts` — `app` (XcodeGen + xcodebuild), `test`, `bench-large` (large file benchmark), `lib/version`.
 - `docs` — architecture, build, App Store, CSV format.
+- `web` — the promotional site: SvelteKit, prerendered static output for Cloudflare Pages (see [web/README.md](web/README.md)).
 - `.superpowers/sdd` — working spec/plan artifacts, not tracked by git.
 - `TabTool.xcodeproj` is generated and not committed.
 
