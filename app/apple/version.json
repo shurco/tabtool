@@ -1,6 +1,10 @@
 {
-  "_comment": "Store version for macOS. name — MARKETING_VERSION, build — CURRENT_PROJECT_VERSION. After uploading to App Store Connect, the number is pinned in version.lock.json and must increase.",
+  "_comment": "Store version. name — MARKETING_VERSION, build — CURRENT_PROJECT_VERSION. After uploading to App Store Connect, the number is pinned in version.lock.json and must increase.",
   "macos": {
+    "name": "1.0.0",
+    "build": "1"
+  },
+  "ios": {
     "name": "1.0.0",
     "build": "1"
   }

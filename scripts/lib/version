@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Store versions for macOS. The source is app/apple/version.json:
-# {"macos": {"name": "1.0.0", "build": "1"}}.
+# Store versions for macOS and iOS. The source is app/apple/version.json:
+# {"macos": {"name": "1.0.0", "build": "1"}, "ios": {"name": "1.0.0", "build": "1"}}.
 #
 # Sourced by scripts/app; sets APP_VERSION_NAME and APP_VERSION_BUILD.
 # Run directly to execute the self-test: bash scripts/lib/version
@@ -16,10 +16,12 @@ valid_bump_kind() {
   esac
 }
 
-# The project is macOS-only for now, but the platform stays in the API so
-# scripts/app can call version functions uniformly.
+# scripts/app calls version functions with the selected platform.
 valid_platform() {
-  [ "$1" = "macos" ]
+  case "$1" in
+    macos | ios) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 _version_app_dir() {
@@ -96,7 +98,7 @@ version_configure() {
   local app_dir config
 
   if ! valid_platform "$platform"; then
-    print_answer "Unsupported platform: ${platform} (only macos)" red
+    print_answer "Unsupported platform: ${platform} (only macos or ios)" red
     return 1
   fi
 
@@ -137,7 +139,7 @@ version_bump() {
   local app_dir config
 
   if ! valid_platform "$platform"; then
-    print_answer "Unsupported platform: ${platform} (only macos)" red
+    print_answer "Unsupported platform: ${platform} (only macos or ios)" red
     return 1
   fi
   if ! valid_bump_kind "$kind"; then
@@ -248,15 +250,24 @@ PY
   version_configure macos || exit 1
   [ "$APP_VERSION_NAME" = "2.0.0" ] && [ "$APP_VERSION_BUILD" = "5" ] || exit 1
 
-  if version_bump ios build >/dev/null 2>&1; then
-    echo "non-macOS platforms must be rejected" >&2
+  version_bump ios build || exit 1
+  python3 - "$tmp/version.json" <<'PY' || exit 1
+import json, sys
+data = json.loads(open(sys.argv[1]).read())
+assert data["ios"] == {"name": "9.9.9", "build": "43"}, data["ios"]
+assert data["macos"] == {"name": "2.0.0", "build": "5"}, data["macos"]
+PY
+  version_configure ios || exit 1
+  [ "$APP_VERSION_NAME" = "9.9.9" ] && [ "$APP_VERSION_BUILD" = "43" ] || exit 1
+  if version_bump watchos build >/dev/null 2>&1; then
+    echo "unknown platforms must be rejected" >&2
     exit 1
   fi
   if version_bump macos nope >/dev/null 2>&1; then
     echo "an invalid bump kind must be rejected" >&2
     exit 1
   fi
-  if version_configure ios >/dev/null 2>&1; then
+  if version_configure watchos >/dev/null 2>&1; then
     echo "an unsupported platform must be rejected" >&2
     exit 1
   fi
