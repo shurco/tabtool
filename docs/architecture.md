@@ -3,7 +3,7 @@
 Date: 2026-10-26
 Status: implemented through Task 15 and the final review fix wave (column identity, editing session, Revert to Saved, typed errors, export URL, 100k rows, save/reopen); release identity, final icon, and manual VoiceOver/panel checks remain release tasks
 Name: TabTool, bundle ID `app.shurco.tabtool` (signing team for the App Store not yet chosen)
-Repository structure and build: `app/apple` with XcodeGen `project.yml`, the `TabToolKit` package, a thin `Shared` shell, `scripts/app` and `scripts/test` scripts.
+Repository structure and build: `app/apple` with XcodeGen `project.yml`, the `TabToolKit` package, a thin `Shared` shell, macOS and iOS targets, `scripts/app` and `scripts/test` scripts.
 
 ## 1. Why
 
@@ -32,7 +32,7 @@ The UI and architecture are implemented in modern Swift.
 ### v1 non-goals
 
 - Formulas, styles, charts, pivot tables — the editor is not about that.
-- iOS/iPadOS and cross-platform.
+- iOS/iPadOS beyond the TabTool iOS app, and platforms other than Apple.
 - Import of XLSX/ODS/JSON.
 - Cloud sync and iCloud.
 - Plugins, scripts, automation.
@@ -191,7 +191,7 @@ The UI shows a localized message and a recovery suggestion. Internal codes can b
 
 ### 6.1 Repository structure
 
-The repository follows these conventions: XcodeGen, a shared core package, a thin `Shared` shell, platform files in `macOS/App`, build scripts in `scripts`, documentation in `docs`.
+The repository follows these conventions: XcodeGen, a shared core package, a thin `Shared` shell, platform files in `macOS/` and `iOS/`, build scripts in `scripts`, documentation in `docs`.
 
 ```
 TabTool/
@@ -204,19 +204,20 @@ TabTool/
 │       │   ├── Sources/TabToolKit/
 │       │   └── Tests/TabToolKitTests/
 │       │       └── Fixtures/            # synthetic CSV + new ones
-│       ├── Shared/                      # SwiftUI shell and shared resources
-│       │   ├── TabToolApp.swift
+│       ├── Shared/                      # SwiftUI shell shared by both apps
 │       │   ├── Document/
-│       │   ├── Grid/
+│       │   ├── Grid/                    # presenter and selection, no AppKit
 │       │   ├── Format/
-│       │   ├── Settings/                # Preferences, AppLanguage, SettingsView
+│       │   ├── Settings/
 │       │   ├── About/
 │       │   ├── Assets.xcassets
 │       │   └── Localizable.xcstrings
-│       ├── macOS/App/                   # Info.plist, entitlements, privacy
-│       ├── TabToolTests/              # document unit tests
-│       ├── TabToolUITests/            # XCUITest
-│       └── version.json                 # store version
+│       ├── macOS/                       # AppKit grid, save panel, app delegate
+│       ├── iOS/                         # UICollectionView grid, document picker
+│       ├── TabToolTests/              # Mac document unit tests
+│       ├── TabToolIOSTests/           # iOS unit tests
+│       ├── TabToolUITests/            # Mac XCUITest
+│       └── version.json                 # store version, macos and ios
 ├── scripts/
 │   ├── _helper
 │   ├── app                              # run/build/archive/clean/version
@@ -304,6 +305,8 @@ The parser builds the table from rows: `max(fields)` columns, short rows are pad
 
 ### 6.5 Grid
 
+The macOS grid is `NSTableView`. The iOS grid is a `UICollectionView` with the same `CSVGrid` initializer; see §6.11.
+
 - `CSVGridRepresentable: NSViewRepresentable` creates `NSScrollView` + `NSTableView`.
 - View-based cells (`NSTableCellView` + `NSTextField`), alignment by numeric predicate.
 - The coordinator is `NSTableViewDataSource`/`NSTableViewDelegate`; it updates the model via closures/`@MainActor` document methods.
@@ -341,7 +344,8 @@ The parser builds the table from rows: `max(fields)` columns, short rows are pad
 - `PrivacyInfo.xcprivacy` is copied into the app resources by the `TabTool` target in `project.yml`; `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon` points at `Shared/Assets.xcassets`.
 - `Shared/Localizable.xcstrings` holds the UI strings in English plus 10 translations (6.10); user-facing controls use localizable SwiftUI initializers. Accessibility identifiers from earlier tasks are preserved, and the banner/error overlay announce through `AccessibilityNotification`.
 - `ENABLE_TESTABILITY=YES` is Debug-only; the Release archive is hardened but unsigned in development (`CODE_SIGNING_ALLOWED=NO` in `scripts/app archive`). `project.yml` sets `CODE_SIGN_IDENTITY=-` for local builds; a release build overrides the identity/team in Xcode or on the archive command line instead of committing signing material.
-- Store version — `app/apple/version.json`; the build substitutes it into `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` via `scripts/app`.
+- Store version — `app/apple/version.json`; the build substitutes it into `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` via `scripts/app`. The `ios` entry is separate from `macos` and starts at 1.0.0 (1).
+- The iOS app uses the same display name and bundle ID. Its privacy manifest is `app/apple/iOS/App/PrivacyInfo.xcprivacy` and declares the same three required-reason APIs, because `@AppStorage` and the linked core call them. Its entitlements file is empty: there is no App Sandbox entitlement on iOS. `./scripts/app archive` stays macOS-only.
 - New public name, bundle ID, team ID, icon — before release; placeholders are used during development. Choose a unique name and icon.
 - The MIT notice is kept in `LICENSE` and bundled with the app; `docs/app-store-compliance.md` records the release requirement.
 - Build/test evidence after the final fix wave: 115 core Swift Testing tests plus 4 XCTest performance tests, 126 app unit tests, and 14 UI tests; `scripts/app build macos` and `scripts/app archive macos` succeed; the archive contains the three document types, the privacy manifest with the User defaults entry, and the placeholder `AppIcon.icns`.
@@ -382,6 +386,18 @@ All of it is in the app shell (`Shared/Settings`); `TabToolKit` has no preferenc
 - `Localizable.xcstrings` translates every key into all 11 languages; `LocalizationTests` checks that every key has every translation and keeps its format specifiers. Strings that are not SwiftUI literals (the status line with its encoding and separator names, undo action names) go through `Bundle.localized(_:)` (`Shared/App/Bundle+Localized.swift`).
 - Not localized: `Info.plist` strings. The translations are machine-generated and need native review.
 - `AppLanguage.systemPrefersChinese()` (the encoding preference for opened files) is independent of the interface language: it reads the first entry of `AppleLanguages` from the global defaults domain (`AppLanguage.systemLanguages()`), not `Locale.preferredLanguages`, which follows the per-app override the picker writes. A Chinese system keeps GBK first when English is picked, and a European system keeps CP1252 first when 简体中文 is picked.
+
+### 6.11 iOS
+
+The iOS target compiles `Shared` and `app/apple/iOS`. It does not compile the AppKit grid, the save panel, or `AppDelegate`. `TabToolKit` is the same package, with an iOS 17 platform. The app module name is `TabTool` on both platforms, so portable tests use `@testable import TabTool`. Deployment is iOS 17, `TARGETED_DEVICE_FAMILY` 1 and 2.
+
+- The grid is `CSVGrid` (`UIViewRepresentable` over `UICollectionView`). The header row and the row-number column stay pinned. Selection is a single row or a single column. Cell editing, context menus, copy and paste, sort, rename, and drag reordering call the same document methods as the Mac grid. A filter still blocks row moves.
+- Undo is the document's `undoManager` from `DocumentGroup`, plus Undo and Redo toolbar buttons.
+- Export presents `ExportOptionsView`, then `UIDocumentPickerViewController` to copy the written file. An ambiguous no-quote export asks before writing.
+- Settings and About open in a sheet from the toolbar. iOS cannot relaunch the app, so the language picker stays and the Restart button is the hint "Open TabTool again to apply it."
+- The system document browser opens and creates files. Dropping a file onto a window and creating an untitled document at launch stay macOS-only.
+- A large file opens read-only. The snapshot cache stays not ready, so the system cannot rewrite the file as an empty table. Saving a large file is a later step.
+- Build and test: `./scripts/app build ios`, `./scripts/app test ios`. `./scripts/app run ios` launches the first available iPhone simulator.
 
 ## 7. Behavior and deliberate differences
 
@@ -460,7 +476,7 @@ All of it is in the app shell (`Shared/Settings`); `TabToolKit` has no preferenc
 
 ## 11. Decisions left to me (to verify on reading)
 
-- Repository structure: `app/apple` with XcodeGen `project.yml`, `TabToolKit` package, `Shared`/`macOS/App`, `scripts/app`/`scripts/test`/`scripts/lib/version`, `docs/`, and `CLAUDE.md`. `TabTool.xcodeproj` is generated and not committed.
+- Repository structure: `app/apple` with XcodeGen `project.yml`, `TabToolKit` package, `Shared`, `macOS/`, `iOS/`, `scripts/app`/`scripts/test`/`scripts/lib/version`, `docs/`, and `CLAUDE.md`. `TabTool.xcodeproj` is generated and not committed.
 - SDD artifacts (spec/plan) — in `.superpowers/sdd/` and do not go into git; user documentation — in `docs/`.
 - macOS 14 minimum, not 15/26 — wider reach, the API is sufficient. We do not use the new macOS 27 `Document` protocol; `ReferenceFileDocument` remains.
 - The core is column-oriented; cells are strings, without `Decimal` in the model.

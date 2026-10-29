@@ -4,7 +4,7 @@ This document describes what is needed to publish TabTool in the App Store. It d
 
 ## What the app does
 
-TabTool is a simple CSV editor for macOS. It opens CSV/TSV/text files, detects the format, shows a table, lets the user edit cells/rows/columns, and save or export the file in the selected encoding and with the selected delimiter. There are no formulas, macros, network, accounts, or purchases.
+TabTool is a simple CSV editor for macOS, iPhone, and iPad. It opens CSV/TSV/text files, detects the format, shows a table, lets the user edit cells/rows/columns, and save or export the file in the selected encoding and with the selected delimiter. There are no formulas, macros, network, accounts, or purchases. The iOS app uses the same display name and bundle ID.
 
 ## Sandbox and file access
 
@@ -34,6 +34,17 @@ Large file mode (files at or above the large file threshold, 100 MiB by default)
 - `PrivacyInfo.xcprivacy` is copied into the app's resources.
 
 `Info.plist` also carries `LSApplicationCategoryType=public.app-category.utilities`, `ITSAppUsesNonExemptEncryption=false`, `LSMinimumSystemVersion=$(MACOSX_DEPLOYMENT_TARGET)`, `NSPrincipalClass=NSApplication`, `CFBundleDevelopmentRegion=en`, and `CFBundleLocalizations` with the 11 interface language codes (`en`, `fr`, `es`, `de`, `it`, `pl`, `be`, `uk`, `zh-Hans`, `ja`, `ko`). The required MIT notice is bundled from the repository `LICENSE` file.
+
+## iOS
+
+The iOS target is `TabToolIOS` in `app/apple/project.yml`. The product and the module are both `TabTool`, bundle ID `app.shurco.tabtool`, deployment target iOS 17, `TARGETED_DEVICE_FAMILY` 1 and 2.
+
+- `INFOPLIST_FILE=iOS/App/Info.plist`. Document types match the Mac plist. `LSSupportsOpeningDocumentsInPlace` and `UISupportsDocumentBrowser` are set. There is no `NSPrincipalClass` and no `LSMinimumSystemVersion`.
+- `CODE_SIGN_ENTITLEMENTS=iOS/App/TabTool.entitlements`. The file is an empty dictionary. iOS does not use the Mac sandbox entitlements (`com.apple.security.*`).
+- `iOS/App/PrivacyInfo.xcprivacy` declares the same three accessed APIs as the Mac manifest: User defaults `CA92.1` (`@AppStorage` preferences), File timestamp `3B52.1`, and Disk space `E174.1`. The linked core calls the file and disk APIs. Tracking stays off and no data is collected.
+- The app icon is the `ios` / `universal` 1024 entry in `Shared/Assets.xcassets/AppIcon.appiconset`, reusing `icon_512x512@2x.png`.
+- `./scripts/app build ios` and `./scripts/app test ios` build and test the iOS Simulator. `./scripts/app archive ios` exits with an error; archive stays macOS-only.
+- Platform differences: files open through the system document browser, not by dropping a file onto a window. Settings and About are a sheet. The language change asks the user to open TabTool again, because the app cannot relaunch itself. The grid selects one row or one column. Until a large file can be saved, it opens read-only.
 
 ## Privacy
 

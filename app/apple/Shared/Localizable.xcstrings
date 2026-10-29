@@ -13300,6 +13300,216 @@
           }
         }
       }
+    },
+    "A simple CSV editor for iPhone and iPad.": {
+      "localizations": {
+        "be": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Просты рэдактар CSV для iPhone і iPad."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein einfacher CSV-Editor für iPhone und iPad."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A simple CSV editor for iPhone and iPad."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un editor de CSV sencillo para iPhone y iPad."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un éditeur CSV simple pour iPhone et iPad."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un semplice editor CSV per iPhone e iPad."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhoneとiPad用のシンプルなCSVエディタ。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone 및 iPad용 간단한 CSV 편집기."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prosty edytor plików CSV dla iPhone'a i iPada."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Простий редактор CSV для iPhone і iPad."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "适用于 iPhone 和 iPad 的简易 CSV 编辑器。"
+          }
+        }
+      }
+    },
+    "Open TabTool again to apply it.": {
+      "localizations": {
+        "be": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Адкрыйце TabTool зноў, каб ужыць змену."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnen Sie TabTool erneut, damit die Änderung wirksam wird."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open TabTool again to apply it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuelve a abrir TabTool para aplicarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rouvrez TabTool pour l'appliquer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riapri TabTool per applicarla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "適用するにはTabToolを開き直してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "적용하려면 TabTool을 다시 여세요."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz TabTool ponownie, aby zastosować zmianę."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відкрийте TabTool знову, щоб застосувати зміну."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请重新打开 TabTool 以使其生效。"
+          }
+        }
+      }
+    },
+    "This file is too large to edit on this device. You can browse it. Saving is not available.": {
+      "localizations": {
+        "be": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Гэты файл занадта вялікі, каб яго рэдагаваць на гэтай прыладзе. Яго можна праглядаць. Захаванне недаступнае."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Datei ist zu groß, um sie auf diesem Gerät zu bearbeiten. Sie können sie ansehen. Sichern ist nicht verfügbar."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This file is too large to edit on this device. You can browse it. Saving is not available."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este archivo es demasiado grande para editarlo en este dispositivo. Puedes consultarlo. No se puede guardar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce fichier est trop grand pour être modifié sur cet appareil. Vous pouvez le consulter. L'enregistrement n'est pas disponible."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo file è troppo grande per essere modificato su questo dispositivo. Puoi consultarlo. Il salvataggio non è disponibile."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このファイルは大きすぎるため、このデバイスでは編集できません。閲覧はできます。保存はできません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 파일은 너무 커서 이 기기에서 편집할 수 없습니다. 찾아볼 수는 있습니다. 저장은 사용할 수 없습니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ten plik jest zbyt duży, aby edytować go na tym urządzeniu. Można go przeglądać. Zapisywanie jest niedostępne."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Цей файл завеликий, щоб редагувати його на цьому пристрої. Його можна переглядати. Збереження недоступне."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件太大，无法在此设备上编辑。可以浏览。无法存储。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
