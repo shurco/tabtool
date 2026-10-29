@@ -396,7 +396,7 @@ The iOS target compiles `Shared` and `app/apple/iOS`. It does not compile the Ap
 - Export presents `ExportOptionsView`, then `UIDocumentPickerViewController` to copy the written file. An ambiguous no-quote export asks before writing.
 - Settings and About open in a sheet from the toolbar. iOS cannot relaunch the app, so the language picker stays and the Restart button is the hint "Open TabTool again to apply it."
 - The system document browser opens and creates files. Dropping a file onto a window and creating an untitled document at launch stay macOS-only.
-- A large file opens read-only. The snapshot cache stays not ready, so the system cannot rewrite the file as an empty table. Saving a large file is a later step.
+- A large file maps and indexes the same way as on macOS. Cells can be edited when the index is ready. Save writes the file in place. Save As asks for a folder and writes the current file name there. Going to the background, or closing the document, asks before discarding edits. Sorting, structure changes, and export stay unavailable. The Large Files settings tab is shown.
 - Build and test: `./scripts/app build ios`, `./scripts/app test ios`. `./scripts/app run ios` launches the first available iPhone simulator.
 
 ## 7. Behavior and deliberate differences

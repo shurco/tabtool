@@ -20,11 +20,7 @@ struct LargeFileBanner: View {
     }
 
     private var bannerText: Text {
-        #if os(iOS)
-        Text("This file is too large to edit on this device. You can browse it. Saving is not available.")
-        #else
         Text("Large file mode. You can browse and edit cells. Sorting, adding, deleting or moving rows and columns, renaming columns, changing the decimal mark and exporting are not available for files this size.")
-        #endif
     }
 }
 

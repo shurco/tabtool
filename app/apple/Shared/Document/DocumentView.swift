@@ -83,6 +83,9 @@ struct DocumentView: View {
         }
         .onDisappear {
             document.cancelLoading()
+            #if os(iOS)
+            LargeSaveCoordinator.shared.presentUnsavedChanges(for: document, canCancel: false)
+            #endif
         }
         #if os(macOS)
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
@@ -92,6 +95,8 @@ struct DocumentView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 document.refreshLargeStaleness()
+            } else if phase == .background {
+                LargeSaveCoordinator.shared.presentUnsavedChanges(for: document, canCancel: true)
             }
         }
         #endif
@@ -143,15 +148,23 @@ struct DocumentView: View {
         #if os(iOS)
         .toolbar {
             ToolbarItemGroup(placement: .topBarLeading) {
-                Button("Undo", systemImage: "arrow.uturn.backward") {
-                    undoManager?.undo()
+                if document.isLargeMode {
+                    Button("Save") { LargeSaveCoordinator.shared.save(document) }
+                        .disabled(!document.hasUnsavedLargeEdits || document.largeStatus != .ready)
+                        .accessibilityIdentifier("save")
+                    Button("Save As") { LargeSaveCoordinator.shared.saveAs(document) }
+                        .disabled(document.largeStatus != .ready)
+                        .accessibilityIdentifier("save-as")
                 }
-                .disabled(!(undoManager?.canUndo ?? false))
+                Button("Undo", systemImage: "arrow.uturn.backward") {
+                    document.undoManager?.undo()
+                }
+                .disabled(!(document.undoManager?.canUndo ?? false))
                 .accessibilityIdentifier("undo")
                 Button("Redo", systemImage: "arrow.uturn.forward") {
-                    undoManager?.redo()
+                    document.undoManager?.redo()
                 }
-                .disabled(!(undoManager?.canRedo ?? false))
+                .disabled(!(document.undoManager?.canRedo ?? false))
                 .accessibilityIdentifier("redo")
             }
             ToolbarItem(placement: .primaryAction) {
@@ -178,15 +191,6 @@ struct DocumentView: View {
                     }
             }
         }
-        #endif
-    }
-
-    /// Large files stay read-only on iOS until they can be saved.
-    private var cellsAreEditable: Bool {
-        #if os(iOS)
-        document.canEditCells && !document.isLargeMode
-        #else
-        document.canEditCells
         #endif
     }
 
@@ -230,7 +234,7 @@ struct DocumentView: View {
                         }
                         Divider()
                     }
-                    CSVGrid(document: document, isEditable: cellsAreEditable,
+                    CSVGrid(document: document, isEditable: document.canEditCells,
                             allowsStructuralEdits: !document.isLargeMode)
                 }
             } else {

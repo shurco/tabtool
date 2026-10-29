@@ -1,7 +1,9 @@
-import AppKit
 import Foundation
 import Testing
 import TabToolKit
+#if os(macOS)
+import AppKit
+#endif
 @testable import TabTool
 
 /// A temporary directory removed with the test.
@@ -102,6 +104,7 @@ func waitForIndexing(of document: CSVDocument) async throws {
         #expect(document.phase == .unreadableFile)
     }
 
+    #if os(macOS)
     @Test func gridShowsIndexedRowsBeforeIndexingFinishes() async throws {
         let dir = LargeTestDirectory()
         let file = try MappedFile(url: dir.csv(rows: 20_000))
@@ -123,8 +126,10 @@ func waitForIndexing(of document: CSVDocument) async throws {
             #expect(!tableView.allowsColumnReordering)
         }
     }
+    #endif
 
     /// Rows arriving from the indexer keep the scroll position and the selection.
+    #if os(macOS)
     @Test func growingRowCountKeepsScrollAndSelection() async throws {
         let dir = LargeTestDirectory()
         let file = try MappedFile(url: dir.csv(rows: 20_000))
@@ -160,6 +165,7 @@ func waitForIndexing(of document: CSVDocument) async throws {
             #expect(tableView.selectedRowIndexes == selected)
         }
     }
+    #endif
 
     @Test func statusTextShowsIndexingProgress() {
         let text = LargeStatusText.indexing(fraction: 0.376, rows: 12_345_678)

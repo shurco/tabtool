@@ -44,7 +44,7 @@ The iOS target is `TabToolIOS` in `app/apple/project.yml`. The product and the m
 - `iOS/App/PrivacyInfo.xcprivacy` declares the same three accessed APIs as the Mac manifest: User defaults `CA92.1` (`@AppStorage` preferences), File timestamp `3B52.1`, and Disk space `E174.1`. The linked core calls the file and disk APIs. Tracking stays off and no data is collected.
 - The app icon is the `ios` / `universal` 1024 entry in `Shared/Assets.xcassets/AppIcon.appiconset`, reusing `icon_512x512@2x.png`.
 - `./scripts/app build ios` and `./scripts/app test ios` build and test the iOS Simulator. `./scripts/app archive ios` exits with an error; archive stays macOS-only.
-- Platform differences: files open through the system document browser, not by dropping a file onto a window. Settings and About are a sheet. The language change asks the user to open TabTool again, because the app cannot relaunch itself. The grid selects one row or one column. Until a large file can be saved, it opens read-only.
+- Platform differences: files open through the system document browser, not by dropping a file onto a window. Settings and About are a sheet. The language change asks the user to open TabTool again, because the app cannot relaunch itself. The grid selects one row or one column. A large file can be edited and saved; Save As asks for a folder. The system does not autosave it.
 
 ## Privacy
 

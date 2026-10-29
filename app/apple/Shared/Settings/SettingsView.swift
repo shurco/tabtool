@@ -15,10 +15,8 @@ struct SettingsView: View {
                 .tabItem { Label("New Document", systemImage: "doc") }
             GridSettings()
                 .tabItem { Label("Grid", systemImage: "tablecells") }
-            #if os(macOS)
             LargeFileSettings()
                 .tabItem { Label("Large Files", systemImage: "externaldrive") }
-            #endif
         }
         .formStyle(.grouped)
         #if os(macOS)

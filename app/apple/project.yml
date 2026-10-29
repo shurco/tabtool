@@ -114,6 +114,9 @@ targets:
       - path: TabToolTests/LocalizationTests.swift
       - path: TabToolTests/AppLanguageTests.swift
       - path: TabToolTests/TestDefaults.swift
+      - path: TabToolTests/CSVDocumentLargeTests.swift
+      - path: TabToolTests/CSVDocumentLargeEditingTests.swift
+      - path: TabToolTests/CSVDocumentLargeSavingTests.swift
     dependencies:
       - target: TabToolIOS
       - package: TabToolKit

@@ -1,7 +1,9 @@
-import AppKit
 import Foundation
 import Testing
 import TabToolKit
+#if os(macOS)
+import AppKit
+#endif
 @testable import TabTool
 
 @Suite @MainActor struct CSVDocumentLargeEditingTests {
@@ -141,6 +143,7 @@ import TabToolKit
         #expect(document.notice == .copyLimitExceeded)
     }
 
+    #if os(macOS)
     @Test func structuralActionsAreInertButCellsStayEditable() async throws {
         let dir = LargeTestDirectory()
         let document = try await open(in: dir)
@@ -180,4 +183,5 @@ import TabToolKit
             }
         }
     }
+    #endif
 }
