@@ -6,6 +6,7 @@ xcuserdata/
 DerivedData/
 app/apple/build/
 .superpowers/
+docs/store/
 *.p8
 *.p12
 *.cer
