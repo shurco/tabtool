@@ -32,6 +32,12 @@ struct CSVGrid: UIViewRepresentable {
         return view
     }
 
+    /// Commits a field editor that is still open when the grid goes away, so
+    /// leaving the screen does not drop the text being typed.
+    static func dismantleUIView(_ view: UICollectionView, coordinator: GridController) {
+        coordinator.editor.dismiss(commit: true)
+    }
+
     func updateUIView(_ view: UICollectionView, context: Context) {
         apply(context.coordinator, to: view)
     }
