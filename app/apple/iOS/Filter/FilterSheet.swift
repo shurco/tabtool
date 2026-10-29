@@ -49,6 +49,10 @@ struct FilterSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+        .onChange(of: missingColumnFill, initial: true) { _, id in
+            if let id { model.fillMissingColumns(with: id) }
+        }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("filter-bar")
     }
 
@@ -81,5 +85,11 @@ struct FilterSheet: View {
 
     private var totalRows: Int {
         document.rowSource?.rowCount ?? 0
+    }
+
+    /// The column to give to criteria that have none; `nil` when no criterion
+    /// needs one. A change re-runs the fill, e.g. after adding or clearing.
+    private var missingColumnFill: UUID? {
+        model.criteria.contains { $0.columnID == nil } ? columns.first?.id : nil
     }
 }
