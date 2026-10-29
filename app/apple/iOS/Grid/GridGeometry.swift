@@ -5,7 +5,7 @@ import CoreGraphics
 struct GridGeometry: Equatable {
     static let columnWidth: CGFloat = 120
     static let headerHeight: CGFloat = 28
-    static let gutterWidth: CGFloat = 48
+    static let gutterWidth: CGFloat = 40
 
     let rowHeight: CGFloat
     let showsRowNumbers: Bool

@@ -7,8 +7,8 @@ import TabToolKit
     @Test func firstCellSitsBelowTheHeaderAndBesideTheGutter() {
         let geometry = GridGeometry(rowHeight: 24, showsRowNumbers: true, rowCount: 2, columnCount: 3)
         #expect(geometry.cellFrame(row: 0, column: 0)
-            == CGRect(x: 48, y: 28, width: 120, height: 24))
-        #expect(geometry.contentSize == CGSize(width: 48 + 360, height: 28 + 48))
+            == CGRect(x: 40, y: 28, width: 120, height: 24))
+        #expect(geometry.contentSize == CGSize(width: 40 + 360, height: 28 + 48))
     }
 
     @Test func hidingRowNumbersRemovesTheGutter() {
