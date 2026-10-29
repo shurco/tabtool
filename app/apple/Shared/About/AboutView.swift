@@ -8,9 +8,9 @@ struct AboutView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Image(systemName: "tablecells")
-                .font(.system(size: 52, weight: .light))
-                .foregroundStyle(.tint)
+            Image("AppMark")
+                .resizable()
+                .frame(width: 72, height: 72)
                 .accessibilityHidden(true)
 
             VStack(spacing: 2) {
