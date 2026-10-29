@@ -39,6 +39,7 @@ struct CSVGrid: UIViewRepresentable {
     private func apply(_ controller: GridController, to view: UICollectionView) {
         controller.document = document
         controller.isEditable = isEditable
+        controller.allowsStructuralEdits = allowsStructuralEdits
         controller.collectionView = view
         (view as? GridCollectionView)?.controller = controller
         controller.alternatingRows = alternatingRows

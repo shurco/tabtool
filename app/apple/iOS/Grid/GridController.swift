@@ -9,8 +9,10 @@ final class GridController: NSObject, UICollectionViewDataSource {
     var showsRowNumbers = true
     var rowHeight: CGFloat = 24
     var isEditable = false
+    var allowsStructuralEdits = false
     var focus: GridFocus?
     let editor = GridEditor()
+    var draggedColumn: Int?
     weak var collectionView: UICollectionView?
 
     func apply(to collectionView: UICollectionView) {

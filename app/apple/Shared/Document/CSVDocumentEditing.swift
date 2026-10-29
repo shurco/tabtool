@@ -153,6 +153,39 @@ extension CSVDocument {
                     includesUTF8BOM: hadUTF8BOM, actionName: "Move Rows")
     }
 
+    /// Moves the columns at `indexes` so they end up before `destination`.
+    func moveColumns(at indexes: IndexSet, to destination: Int) {
+        guard let table = tableAfterEndingEditing() else { return }
+        let count = table.columns.count
+        let selected = indexes.intersection(IndexSet(integersIn: 0..<count))
+        guard !selected.isEmpty, let order = Self.columnOrder(moving: selected, to: destination, count: count) else {
+            return
+        }
+        var updated = table
+        updated.reorderColumns(order)
+        applyChange(table: updated, configuration: configuration,
+                    includesUTF8BOM: hadUTF8BOM, actionName: "Move Columns",
+                    sort: activeSort)
+    }
+
+    /// The column permutation `moveRows` uses, applied to columns.
+    private static func columnOrder(moving selected: IndexSet, to destination: Int, count: Int) -> [Int]? {
+        let destination = min(max(destination, 0), count)
+        let insertion = destination - selected.filter { $0 < destination }.count
+        var remaining: [Int] = []
+        var moving: [Int] = []
+        for column in 0..<count {
+            if selected.contains(column) {
+                moving.append(column)
+            } else {
+                remaining.append(column)
+            }
+        }
+        let target = min(max(insertion, 0), remaining.count)
+        remaining.insert(contentsOf: moving, at: target)
+        return remaining
+    }
+
     /// Inserts a blank column, clamped by the table model.
     ///
     /// The new column gets an empty header only when header mode is enabled.

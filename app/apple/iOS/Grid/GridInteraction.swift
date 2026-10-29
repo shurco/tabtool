@@ -67,6 +67,7 @@ extension GridController {
         view.addGestureRecognizer(single)
         view.addGestureRecognizer(double)
         view.allowsSelection = false
+        installDrag(on: view)
     }
 
     func beginEditing() {
