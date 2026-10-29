@@ -139,6 +139,18 @@ struct DocumentView: View {
         }
         #if os(iOS)
         .toolbar {
+            ToolbarItemGroup(placement: .topBarLeading) {
+                Button("Undo", systemImage: "arrow.uturn.backward") {
+                    undoManager?.undo()
+                }
+                .disabled(!(undoManager?.canUndo ?? false))
+                .accessibilityIdentifier("undo")
+                Button("Redo", systemImage: "arrow.uturn.forward") {
+                    undoManager?.redo()
+                }
+                .disabled(!(undoManager?.canRedo ?? false))
+                .accessibilityIdentifier("redo")
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("Settings", systemImage: "gearshape") {
                     showsSettings = true
