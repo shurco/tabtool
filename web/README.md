@@ -64,6 +64,10 @@ Everything else (comparison facts, FAQ, legal text, screenshots) lives in `src/l
 - `content.ts` — stats, features, screenshots, platforms, FAQ.
 - `comparisons.ts` — one object per comparison page.
 
+## Analytics
+
+- Google Analytics 4 (`G-G8JX3V6FNB`) is loaded via `gtag.js` in `src/app.html`. The privacy page discloses it; keep both in sync.
+
 ## SEO
 
 - Every page sets a unique title, description, canonical URL, Open Graph, and Twitter card.
