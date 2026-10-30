@@ -4,7 +4,7 @@
 
 	const title = 'Privacy Policy — TabTool';
 	const description =
-		'TabTool collects nothing: no cookies, no analytics, no accounts, no network entitlement in the app. How the website and the app handle data.';
+		'The TabTool app collects nothing: no analytics, no accounts, no network entitlement. The website uses Google Analytics. How the website and the app handle data.';
 </script>
 
 <Seo {title} {description} path="/privacy/" />
@@ -22,8 +22,8 @@
 		<div class="legal">
 			<p>
 				This policy covers two things: this website and the TabTool application. They are handled
-				differently, because they are built differently. The short version: the website sets no
-				cookies and runs no analytics, and the app has no network access at all.
+				differently, because they are built differently. The short version: the website uses Google
+				Analytics to count visits, and the app has no network access and no analytics at all.
 			</p>
 
 			<h2>1. Who is responsible</h2>
@@ -36,7 +36,7 @@
 			<h2>2. The website</h2>
 			<h3>What we do not do</h3>
 			<ul>
-				<li>No analytics, session recording, heat maps, or A/B testing scripts.</li>
+				<li>No session recording, heat maps, or A/B testing scripts.</li>
 				<li>No advertising pixels or social embeds.</li>
 				<li>No third-party fonts or video host. Fonts and the demo video are served from this domain.</li>
 				<li>No accounts, newsletters, or forms that ask for an email address.</li>
@@ -45,6 +45,14 @@
 					host’s bot protection may set a security cookie when it challenges automated traffic.
 				</li>
 			</ul>
+
+			<h3>Analytics</h3>
+			<p>
+				The website uses Google Analytics (measurement ID G-G8JX3V6FNB) to count visits and see which
+				pages are read. Google may set cookies and receives your IP address and basic browser
+				details. See <a href="https://policies.google.com/privacy" rel="noopener">Google’s privacy policy</a>.
+				The TabTool app itself contains no analytics.
+			</p>
 
 			<h3>What the host sees</h3>
 			<p>
