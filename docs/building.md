@@ -11,7 +11,7 @@ cd app/apple
 xcodegen generate
 ```
 
-`project.yml` defines three targets — the `TabTool` app, the `TabToolTests` unit tests, and the `TabToolUITests` UI tests — plus the `TabTool` scheme. The local `app/apple/TabToolKit` package is wired in as a Swift Package; the Xcode project contains no core sources. The `1.0.0` / `1` version in `project.yml` is a fallback in case `version.json` is unavailable.
+`project.yml` defines the `TabTool` macOS app and the `TabToolIOS` iOS app, their unit and UI test targets, and the `TabTool` and `TabToolIOS` schemes. The local `app/apple/TabToolKit` package is wired in as a Swift Package; the Xcode project contains no core sources. The `1.0.0` / `1` version in `project.yml` is a fallback in case `version.json` is unavailable.
 
 The bundle ID is `app.shurco.tabtool`. The signing team is chosen before the App Store; if the name or bundle ID changes, update `project.yml`, `Info.plist`, `docs/app-store-compliance.md`, and `version.json`. `project.yml` keeps `CODE_SIGN_IDENTITY=-` so local Debug builds and the verification archive need no team; a release build overrides the identity, team, and provisioning in Xcode or on the archive command line rather than committing signing material.
 
@@ -92,6 +92,14 @@ UI smoke suite:
 cd app/apple
 xcodebuild -project TabTool.xcodeproj -scheme TabTool \
   -destination 'platform=macOS' -only-testing:TabToolUITests test
+```
+
+iOS unit and UI tests, including the iPhone Duo simulator:
+
+```sh
+cd app/apple
+xcodebuild -project TabTool.xcodeproj -scheme TabToolIOS \
+  -destination 'platform=iOS Simulator,name=iPhone Duo' test
 ```
 
 Test fixtures are in `app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures`. These are synthetic CSVs plus new round-trip/edge-case files. The current counts are 230 core Swift Testing tests plus the opt-in large file benchmark and 10 XCTest performance tests, 243 app unit tests, and 17 UI tests. The UI suite opens a fixture through Launch Services and checks the grid and status line; the system open panel itself stays manual. The scheme's test action passes `-AppleLanguages (en)` (`project.yml`) so the unit tests, which match English texts, do not depend on the machine language or the app's saved language. The UI tests launch the app with the same argument and with explicit factory values for the new document and large file preferences, so saved settings do not change what they see. The UI test resolves the app by the development bundle ID `app.shurco.tabtool`; update it together with the release bundle ID.

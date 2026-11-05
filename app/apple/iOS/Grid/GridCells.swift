@@ -14,6 +14,7 @@ final class GridDataCell: UICollectionViewCell {
 
     private let label = UILabel()
     private let bottomBorder = UIView()
+    private var hairlineHeight: NSLayoutConstraint!
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -23,6 +24,7 @@ final class GridDataCell: UICollectionViewCell {
         bottomBorder.translatesAutoresizingMaskIntoConstraints = false
         bottomBorder.backgroundColor = UIColor.separator.withAlphaComponent(0.35)
         contentView.addSubview(bottomBorder)
+        hairlineHeight = bottomBorder.heightAnchor.constraint(equalToConstant: 1)
         NSLayoutConstraint.activate([
             label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 10),
             label.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -10),
@@ -31,8 +33,16 @@ final class GridDataCell: UICollectionViewCell {
             bottomBorder.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 10),
             bottomBorder.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             bottomBorder.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            bottomBorder.heightAnchor.constraint(equalToConstant: 1 / UIScreen.main.scale)
+            hairlineHeight
         ])
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let height = 1 / traitCollection.displayScale
+        if hairlineHeight.constant != height {
+            hairlineHeight.constant = height
+        }
     }
 
     required init?(coder: NSCoder) { nil }

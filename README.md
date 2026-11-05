@@ -48,6 +48,16 @@ The iOS app opens with a Documents screen and then a touch-first editor on iPhon
 - About shows the version, what the app does, the website [tabtool.shurco.app](https://tabtool.shurco.app), and the MIT license notice; the text is translated into all eleven interface languages.
 - Grid rows are touch-sized: Compact 32 pt, Default 44 pt, Comfortable 56 pt, against Compact 20 pt, Default 24 pt, Comfortable 32 pt on macOS. Cell text scales with Dynamic Type, capped by the row height.
 
+### iPhone Duo
+
+TabTool runs on both iPhone Duo displays and follows the system pose rules:
+
+- It builds against the iOS 27.2 SDK, so the app fills the inner display and the system moves the NavigationStack toolbar and its items to a vertical bar on the side. Horizontal bars return only on the inner display in portrait.
+- The editor is sized from the space it is given, not from a device or orientation check. Closing the device, opening it, rotating it, or putting it in Split View resizes the same screen and keeps the open document, its selection, and unsaved edits.
+- The grid, status line, and selection action bar stay inside the safe area, including the asymmetric inset a vertical bar adds on one edge.
+- When a partially folded inner display reports an active division region down the middle, the selection action bar keeps its buttons on either side of the fold instead of putting one in the curve.
+- The iOS smoke test in `TabToolIOSUITests` runs on the iPhone Duo simulator. See [docs/iphone-duo.md](docs/iphone-duo.md) for the pose checklist and the App Store steps.
+
 ## Settings
 
 On macOS, `TabTool > Settings…` (`⌘,`) opens one window with four tabs: General, New Document, Grid, and Large Files. The window fits the selected tab and reopens on the tab used last. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the language the next launch. A stored value that is not one of the offered options falls back to the default.

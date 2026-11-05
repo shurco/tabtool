@@ -55,29 +55,84 @@ struct ContextualActionBar: View {
     var body: some View {
         VStack(spacing: 0) {
             Divider()
-            HStack(spacing: 0) {
-                ForEach(actions) { action in
-                    Button(role: action.id == .delete ? .destructive : nil) {
-                        perform(action.id)
-                    } label: {
-                        Image(systemName: action.systemImage)
-                            .font(.system(size: 17))
-                            .frame(minWidth: 44, minHeight: 44)
-                            .frame(maxWidth: .infinity)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.borderless)
-                    .tint(action.id == .delete ? .red : .accentColor)
-                    .disabled(!action.isEnabled)
-                    .accessibilityLabel(action.title)
-                    .accessibilityIdentifier(action.id.rawValue)
-                }
-            }
-            .padding(.horizontal, 4)
-            .frame(height: 44)
+            bar
+                .padding(.horizontal, 4)
+                .frame(height: 44)
         }
         .background(.regularMaterial)
         .accessibilityElement(children: .contain)
+    }
+
+    /// A partially folded inner display puts the fold through the middle of a
+    /// full-width bar. Keep the buttons on either side of it instead of letting
+    /// the curve land on one.
+    @ViewBuilder
+    private var bar: some View {
+        if #available(iOS 27.1, *) {
+            GeometryReader { proxy in
+                if let fold = FoldGap.in(proxy, actionCount: actions.count) {
+                    HStack(spacing: 0) {
+                        buttons(Array(actions.prefix(fold.split)))
+                            .frame(width: fold.leading)
+                        Color.clear.frame(width: fold.width)
+                        buttons(Array(actions.dropFirst(fold.split)))
+                            .frame(width: fold.trailing)
+                    }
+                } else {
+                    buttons(actions)
+                }
+            }
+        } else {
+            buttons(actions)
+        }
+    }
+
+    private func buttons(_ actions: [ContextualAction]) -> some View {
+        HStack(spacing: 0) {
+            ForEach(actions) { action in
+                Button(role: action.id == .delete ? .destructive : nil) {
+                    perform(action.id)
+                } label: {
+                    Image(systemName: action.systemImage)
+                        .font(.system(size: 17))
+                        .frame(minWidth: 44, minHeight: 44)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .tint(action.id == .delete ? .red : .accentColor)
+                .disabled(!action.isEnabled)
+                .accessibilityLabel(action.title)
+                .accessibilityIdentifier(action.id.rawValue)
+            }
+        }
+    }
+}
+
+/// The space a book-fold takes out of the bar, in the bar's own coordinates.
+struct FoldGap {
+    let leading: CGFloat
+    let width: CGFloat
+    let trailing: CGFloat
+    let split: Int
+
+    @available(iOS 27.1, *)
+    static func `in`(_ proxy: GeometryProxy, actionCount: Int) -> FoldGap? {
+        guard let fold = proxy.reservedRegions(kind: .division).first(where: {
+            $0.frame.height > $0.frame.width
+        }) else { return nil }
+        return make(fold: fold.frame, totalWidth: proxy.size.width, actionCount: actionCount)
+    }
+
+    /// The bar only splits when the fold is active, vertical, and clear of both
+    /// edges. A fold at an edge would leave no room for one of the groups.
+    static func make(fold: CGRect, totalWidth: CGFloat, actionCount: Int) -> FoldGap? {
+        guard actionCount > 1, fold.width > 0,
+              fold.minX > 0, fold.maxX < totalWidth else { return nil }
+        return FoldGap(leading: fold.minX,
+                       width: fold.width,
+                       trailing: totalWidth - fold.maxX,
+                       split: (actionCount + 1) / 2)
     }
 }
 

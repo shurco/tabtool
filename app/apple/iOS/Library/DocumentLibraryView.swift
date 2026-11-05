@@ -27,13 +27,14 @@ struct DocumentLibraryView: View {
                             Button("New Document", systemImage: "doc.badge.plus") {
                                 createDocument()
                             }
+                            .accessibilityIdentifier("new-document")
                             Button("Import…", systemImage: "square.and.arrow.down") {
                                 isImporting = true
                             }
+                            .accessibilityIdentifier("import-document")
                         } label: {
-                            Image(systemName: "plus")
+                            Label("Add Document", systemImage: "plus")
                         }
-                        .accessibilityLabel("Add Document")
                         .accessibilityIdentifier("add-document")
                     }
                 }
