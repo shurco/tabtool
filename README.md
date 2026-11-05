@@ -197,7 +197,7 @@ The code is feature-complete for a 1.0 release, but the release identity is deli
 - [ ] Run `./scripts/test`, `./scripts/test --ui`, and the manual QA matrix in `docs/building.md`.
 - [ ] Fill in App Privacy as **Data Not Collected**; confirm `ITSAppUsesNonExemptEncryption=false` with the account owner.
 - [ ] Have native speakers review the machine-generated translations in `app/apple/Shared/Localizable.xcstrings`.
-- [ ] Prepare screenshots, description, keywords, and reviewer notes without promising formulas, databases, or "any tables"; include the required MIT notice.
+- [ ] Prepare screenshots, description, keywords, and reviewer notes without promising formulas, databases, or "any tables"; include the required MIT notice. For a Guideline 2.1 "Information Needed" rejection, paste the notes from [docs/app-store-compliance.md](docs/app-store-compliance.md#notes-for-review) and attach a physical-device screen recording.
 - [ ] After upload, pin the uploaded build in `app/apple/version.lock.json` and never reuse a build number.
 
 ## License
