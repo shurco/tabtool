@@ -54,6 +54,20 @@ so verify the partial-fold layout in Device Hub before release.
 
 ## App Store
 
+### Screenshot sets
+
+The store kit has two seven-frame sets captured from the simulator:
+
+| Folder | Pose | Size |
+| --- | --- | --- |
+| `docs/store/screenshots/iphone-duo-outer/` | closed | 1398×2034 |
+| `docs/store/screenshots/iphone-duo-inner/` | open | 2853×2007 |
+
+Both are RGB PNG with no alpha. The capture harness and exporter are in
+`.superpowers/sdd/store-listing/` (ignored by git). Boot the simulator before
+folding; `orca emulator exec --command "fold 0"` closes it and `"fold 180"`
+opens it.
+
 - Capture screenshots in the closed, open, and tabletop poses before publishing.
   Use the current App Store Connect specifications for the required sizes.
 - Uploading iPhone Duo screenshots adds the optimized-for-iPhone-Duo badge to the
