@@ -91,11 +91,25 @@ Choose a unique name and icon. The required MIT copyright and permission notice 
 
 ## Notes for Review
 
-Briefly for the reviewer:
+Paste this into App Store Connect > App Review Information > Notes (answers Guideline 2.1 "Information Needed"). Also attach a screen recording from a physical iPhone/iPad on the latest iOS: launch the app, create a new document, edit cells, add/delete a row and a column, sort, filter, Format sheet, export, Settings > About. There is no login, account deletion, user-generated content sharing, or paid content to show.
 
-> TabTool is a local CSV/TSV/text editor. It reads a user-selected file, detects the delimiter/encoding/quote style, lets the user edit a grid, and saves or exports the result. It has no network access, no account, no in-app purchases, and collects no data. App Sandbox is enabled with user-selected read-write access only. Test files are included in the review notes/attachment.
+> 1. Purpose and audience. TabTool is a simple, local CSV/TSV/text table editor for iPhone and iPad (also on Mac). It solves the problem of opening and fixing delimited text files whose encoding, delimiter, or quoting is unknown or wrong: the app detects them automatically, shows a grid, lets the user edit cells, rows and columns, and saves or exports the file with a chosen delimiter and encoding. Audience: people who work with CSV exports (analysts, developers, accountants, data hobbyists). No formulas, macros, or charts.
+>
+> 2. How to use. No account or login is needed. Open the app, tap "+" > "New Document" (or "Import" to pick a file from Files). Tap a cell to select it, tap again to edit. Use the toolbar for Undo/Redo, Filters, Export, and the overflow menu for Format, Settings, About. Files are saved automatically in the app's Documents folder. A sample file is not required, but any small .csv with a header row, commas, and quoted fields works; the format is detected on open.
+>
+> 3. External services. None. The app makes no network requests and uses no third-party SDKs, analytics, ads, authentication, payment, or AI services. All processing is on the device. App Privacy: Data Not Collected.
+>
+> 4. Regions. The app works identically in all regions. The interface is localized into 11 languages (English, French, Spanish, German, Italian, Polish, Belarusian, Ukrainian, Simplified Chinese, Japanese, Korean) with no regional differences in features or content.
+>
+> 5. Regulated industry / third-party material. None. No in-app purchases, no user accounts, no user-generated content shared between users, no protected third-party material.
+>
+> Website and support: https://tabtool.shurco.app
 
-If the reviewer needs a test file, attach a small CSV with commas, quotes, and a header; the format is detected automatically.
+Reply for the Resolution Center (post it with the resubmission):
+
+> Hello, thank you for the review. I have added the requested information to the App Review Information Notes: the app's purpose and audience, setup instructions, the list of external services (none), regional behavior (identical in all regions), and confirmation that no regulated or protected third-party material is involved. A screen recording from a physical iPhone running the latest iOS, starting from app launch and showing the typical user flow, is attached. The app has no accounts, user-generated content, or paid features, so no login, account deletion, reporting, or purchase flows exist. Please let me know if anything else is needed.
+
+Recording steps (iPhone, Control Center > Screen Recording): start the recording, open TabTool from the Home Screen, tap "+" > New Document, edit a few cells, add and delete a row and a column, sort a column, open Filters and Format, tap Export, open the overflow menu > Settings > About, stop the recording. Upload the video in App Store Connect with the submission.
 
 ## Export encryption
 
