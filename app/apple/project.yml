@@ -130,6 +130,20 @@ targets:
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/TabTool.app/TabTool
         BUNDLE_LOADER: $(TEST_HOST)
 
+  TabToolIOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: TabToolIOSUITests
+    dependencies:
+      - target: TabToolIOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.shurco.tabtool.ios.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: TabToolIOS
+        CODE_SIGN_IDENTITY: "-"
+
   TabToolUITests:
     type: bundle.ui-testing
     platform: macOS
@@ -175,5 +189,8 @@ schemes:
     test:
       config: Debug
       gatherCoverageData: false
+      commandLineArguments:
+        "-AppleLanguages (en)": true
       targets:
         - TabToolIOSTests
+        - TabToolIOSUITests

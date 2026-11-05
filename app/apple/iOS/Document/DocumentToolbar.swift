@@ -35,7 +35,7 @@ extension DocumentView {
         Button {
             document.toggleFilterBar()
         } label: {
-            Image(systemName: "magnifyingglass")
+            Label("Filter", systemImage: "magnifyingglass")
                 .overlay(alignment: .topTrailing) {
                     if document.rowFilter.isFiltering {
                         Text(verbatim: "\(enabledCriteriaCount)")
@@ -56,9 +56,8 @@ extension DocumentView {
         Button {
             ExportCoordinator.present(for: document)
         } label: {
-            Image(systemName: "square.and.arrow.up")
+            Label("Export…", systemImage: "square.and.arrow.up")
         }
-        .accessibilityLabel("Export…")
         .accessibilityIdentifier("export")
         .disabled(!document.isEditableContent)
     }
@@ -76,9 +75,8 @@ extension DocumentView {
                     .accessibilityIdentifier("save-as")
             }
         } label: {
-            Image(systemName: "ellipsis.circle")
+            Label("More", systemImage: "ellipsis.circle")
         }
-        .accessibilityLabel("More")
     }
 
     private var enabledCriteriaCount: Int {
