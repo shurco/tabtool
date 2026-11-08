@@ -66,6 +66,7 @@ struct FormatSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", systemImage: "checkmark") { dismiss() }
+                        .accessibilityIdentifier("format-done")
                 }
             }
         }
