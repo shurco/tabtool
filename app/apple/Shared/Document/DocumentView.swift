@@ -113,6 +113,9 @@ struct DocumentView: View {
         .task {
             document.setFileURL(fileURL)
             await document.load()
+            if document.hasContent {
+                ReviewPrompt.recordEngagement()
+            }
         }
         .onDisappear {
             document.cancelLoading()
