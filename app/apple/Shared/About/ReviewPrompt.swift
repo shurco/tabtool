@@ -1,4 +1,10 @@
 import Foundation
+import StoreKit
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 /// Decides when the app may ask for a rating.
 ///
@@ -115,6 +121,24 @@ enum ReviewPrompt {
     static func markPrompted(now: Date = .now, defaults: UserDefaults = .standard,
                              calendar: Calendar = .current) {
         policy(now: now, defaults: defaults, calendar: calendar).markPrompted()
+    }
+
+    /// Asks the system to show its review sheet. The system decides whether
+    /// the sheet appears; the policy has already recorded this version.
+    static func requestSystemReview() {
+        #if os(macOS)
+        if let controller = NSApp.keyWindow?.contentViewController
+            ?? NSApp.windows.first?.contentViewController {
+            AppStore.requestReview(in: controller)
+        }
+        #else
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }
+        if let scene {
+            AppStore.requestReview(in: scene)
+        }
+        #endif
     }
 
     private static func policy(now: Date, defaults: UserDefaults,

@@ -6,6 +6,8 @@ struct AboutView: View {
     static let windowID = "about"
     static let websiteURL = URL(string: "https://tabtool.shurco.app")!
 
+    @Environment(\.openURL) private var openURL
+
     var body: some View {
         VStack(spacing: 14) {
             Image("AppMark")
@@ -39,6 +41,24 @@ struct AboutView: View {
                     .font(.callout)
             }
             .accessibilityIdentifier("about-website")
+
+            HStack(spacing: 12) {
+                Button("Rate TabTool") {
+                    ReviewPrompt.markPrompted()
+                    openURL(ReviewPrompt.writeReviewURL)
+                }
+                .accessibilityIdentifier("about-rate")
+
+                ShareLink(
+                    item: ReviewPrompt.shareURL,
+                    subject: Text("TabTool"),
+                    message: Text("Edit CSV, TSV, and text files on Mac, iPhone, and iPad with TabTool.")
+                ) {
+                    Text("Share TabTool")
+                }
+                .accessibilityIdentifier("about-share")
+            }
+            .buttonStyle(.bordered)
 
             Divider()
                 .frame(maxWidth: 320)

@@ -103,6 +103,7 @@ struct DocumentView: View {
         #endif
         .focusedSceneObject(document)
         .onAppear {
+            ReviewPrompt.recordLaunch()
             // A grouped document supplies the manager; the iOS library installs
             // its own before this view appears.
             if let undoManager {
@@ -135,6 +136,12 @@ struct DocumentView: View {
         .onChange(of: fileURL) { _, newValue in
             // Save As changes the URL without recreating this view.
             document.setFileURL(newValue)
+        }
+        .onChange(of: document.mutationRevision) { _, _ in
+            ReviewPrompt.recordEngagement()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: ReviewPrompt.requestedNotification)) { _ in
+            ReviewPrompt.requestSystemReview()
         }
         .onChange(of: document.notice) { _, notice in
             guard let notice else { return }

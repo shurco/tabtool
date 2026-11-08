@@ -33,6 +33,7 @@ extension CSVDocument {
         largeSave = save
         defer { largeSave = nil }
         try await save.value
+        ReviewPrompt.recordEngagement()
     }
 
     /// Stops the save in flight. Once the file is replaced the save completes.
