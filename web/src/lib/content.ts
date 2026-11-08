@@ -48,7 +48,7 @@ export const features: Feature[] = [
 	{
 		index: '06',
 		title: 'Nothing leaves the machine',
-		body: 'The app is sandboxed with no network entitlement, no analytics, and no third-party SDKs. The App Store privacy label will read Data Not Collected. Your CSV stays a file on your disk.',
+		body: 'The app is sandboxed with no network entitlement, no analytics, and no third-party SDKs. The App Store privacy label reads Data Not Collected. Your CSV stays a file on your disk.',
 		tags: ['Sandbox', 'No telemetry', 'Offline']
 	},	{
 		index: '07',
@@ -118,16 +118,16 @@ export const platforms = [
 	{
 		name: 'macOS',
 		requirement: 'macOS 14 or later',
-		status: 'In development',
+		status: 'Available',
 		tone: 'active',
-		note: '1.0 release checklist in progress. Pure Swift.'
+		note: '1.0 on the Mac App Store. Pure Swift.'
 	},
 	{
 		name: 'iOS and iPadOS',
 		requirement: 'iOS 17 or later',
-		status: 'In development',
+		status: 'Available',
 		tone: 'active',
-		note: 'Same CSV core, touch-first editor. Pure Swift.'
+		note: '1.0 on the App Store. Same CSV core, touch-first editor.'
 	},
 	{
 		name: 'Windows',
@@ -155,11 +155,11 @@ export const platforms = [
 export const faqs = [
 	{
 		q: 'Is TabTool free?',
-		a: 'The source code is MIT-licensed, so you can read it, build it, and change it at no cost. Pricing for the signed App Store build will be published with the 1.0 release.'
+		a: 'Yes. TabTool is free on the App Store for macOS and iOS, and the source code is MIT-licensed, so you can read it, build it, and change it at no cost.'
 	},
 	{
-		q: 'When can I download it?',
-		a: 'TabTool 1.0 for macOS 14+ and iOS 17+ is in development. Watch the GitHub repository for the first build and the App Store listing. There is no public download yet.'
+		q: 'Where can I download it?',
+		a: 'TabTool 1.0 is on the App Store for macOS 14+ and iOS 17+. One listing covers the Mac, iPhone, and iPad. You can also build it from the source on GitHub.'
 	},
 	{
 		q: 'How large a file can it open?',

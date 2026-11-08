@@ -10,6 +10,7 @@
 	import CompareTeaser from '#lib/components/CompareTeaser.svelte';
 	import FaqList from '#lib/components/FaqList.svelte';
 	import Cta from '#lib/components/Cta.svelte';
+	import StoreBadges from '#lib/components/StoreBadges.svelte';
 	import { site } from '#lib/site';
 	import { faqs } from '#lib/content';
 
@@ -24,16 +25,18 @@
 			description: site.description,
 			url: `${site.url}/`,
 			license: 'https://opensource.org/license/mit',
-			downloadUrl: site.github,
-			softwareVersion: '1.0 (in development)',
+			downloadUrl: site.appStore.ios,
+			installUrl: site.appStore.ios,
+			softwareVersion: '1.0',
 			fileFormat: ['text/csv', 'text/tab-separated-values', 'text/plain'],
 			screenshot: `${site.url}/img/mac-grid.webp`,
-			sameAs: [site.github],
+			sameAs: [site.github, site.appStore.ios],
 			offers: {
 				'@type': 'Offer',
 				price: '0',
 				priceCurrency: 'USD',
-				description: 'Source code is free under the MIT license'
+				url: site.appStore.ios,
+				description: 'Free on the App Store for macOS and iOS; source code under the MIT license'
 			},
 			author: { '@type': 'Organization', name: 'TabTool contributors', url: site.github }
 		},
@@ -68,6 +71,7 @@
 				Open a 5 GiB file, fix a cell, write it back. TabTool indexes 77.7 million rows in 2.7
 				seconds, keeps them in about 90 MB of memory, and never sends your data anywhere.
 			</p>
+			<StoreBadges />
 			<div class="hero__actions">
 				<a class="btn btn--primary" href={site.github} rel="noopener">
 					Star on GitHub <span class="btn__arrow" aria-hidden="true">↗</span>
@@ -75,7 +79,7 @@
 				<a class="btn btn--ghost" href="#performance">Watch it run</a>
 			</div>
 			<p class="hero__meta mono">
-				1.0 in development · free to build from source · no account
+				1.0 · free on the App Store · open source · no account
 			</p>
 		</div>
 
@@ -231,7 +235,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 10px;
-		margin-top: 28px;
+		margin-top: 16px;
 	}
 
 	.hero__meta {

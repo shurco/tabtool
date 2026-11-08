@@ -1,15 +1,17 @@
 <script lang="ts">
 	import { site } from '#lib/site';
+	import StoreBadges from '#lib/components/StoreBadges.svelte';
 </script>
 
 <section class="cta">
 	<div class="shell cta__inner">
 		<p class="eyebrow">Status</p>
-		<h2>The source is ready.<br />The store builds are next.</h2>
+		<h2>TabTool 1.0 is out.<br />Free on the App Store.</h2>
 		<p class="lede cta__lede">
-			TabTool 1.0 is in development for macOS 14+ and iOS 17+. Follow the repository for the first
-			build, the release notes, and the Windows, Linux, and Android plans.
+			One download for macOS 14+ and iOS 17+. Follow the repository for the release notes and the
+			Windows, Linux, and Android plans.
 		</p>
+		<StoreBadges />
 		<div class="cta__actions">
 			<a class="btn btn--primary" href={site.github} rel="noopener">
 				Star on GitHub <span class="btn__arrow" aria-hidden="true">↗</span>
@@ -41,6 +43,10 @@
 
 	.cta__lede {
 		max-width: 56ch;
+	}
+
+	.cta__inner :global(.badges) {
+		margin-top: 10px;
 	}
 
 	.cta__actions {
