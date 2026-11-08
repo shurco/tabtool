@@ -101,6 +101,10 @@ enum ReviewPrompt {
     /// The public product page, used for sharing.
     static let shareURL = URL(string: "https://apps.apple.com/app/tabtool-csv-editor/id6827919069")!
 
+    /// Several document windows can observe the same notification. Only one
+    /// of them may ask the system for the sheet.
+    private static var isPresenting = false
+
     static func currentVersion(bundle: Bundle = .main) -> String {
         bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.1"
     }
@@ -126,6 +130,13 @@ enum ReviewPrompt {
     /// Asks the system to show its review sheet. The system decides whether
     /// the sheet appears; the policy has already recorded this version.
     static func requestSystemReview() {
+        guard !isPresenting else { return }
+        isPresenting = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            isPresenting = false
+        }
+
         #if os(macOS)
         if let controller = NSApp.keyWindow?.contentViewController
             ?? NSApp.windows.first?.contentViewController {
