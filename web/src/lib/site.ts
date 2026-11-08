@@ -7,7 +7,9 @@ export const site = {
 	github: 'https://github.com/shurco/tabtool',
 	appStore: {
 		ios: 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069',
-		mac: 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069?platform=mac'
+		mac: 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069?platform=mac',
+		providerToken: '',
+		campaign: 'website'
 	},
 	updated: '2026-10-29'
 };

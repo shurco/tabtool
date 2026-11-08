@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { site } from '#lib/site';
 	import StoreBadges from '#lib/components/StoreBadges.svelte';
+	import { appStoreURL, trackStoreClick } from '#lib/track';
 </script>
 
 <section class="cta">
@@ -11,11 +12,16 @@
 			One download for macOS 14+ and iOS 17+. Follow the repository for the release notes and the
 			Windows, Linux, and Android plans.
 		</p>
-		<StoreBadges />
+		<StoreBadges placement="cta" />
 		<div class="cta__actions">
-			<a class="btn btn--primary" href={site.github} rel="noopener">
-				Star on GitHub <span class="btn__arrow" aria-hidden="true">↗</span>
+			<a
+				class="btn btn--primary"
+				href={appStoreURL('ios', 'cta')}
+				onclick={() => trackStoreClick('ios', 'cta')}
+			>
+				Download free <span class="btn__arrow" aria-hidden="true">↗</span>
 			</a>
+			<a class="btn btn--ghost" href={site.github} rel="noopener">Star on GitHub</a>
 			<a class="btn btn--ghost" href="/download/">Platforms and status</a>
 		</div>
 	</div>

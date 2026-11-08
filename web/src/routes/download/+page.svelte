@@ -6,7 +6,7 @@
 	import StoreBadges from '#lib/components/StoreBadges.svelte';
 	import { site } from '#lib/site';
 
-	const title = 'Download TabTool — macOS, iOS, Windows, Linux, Android';
+	const title = 'Download TabTool — free CSV editor for macOS and iOS';
 	const description =
 		'TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. Windows, Linux, and Android are planned. Download it, or build it from source.';
 
@@ -41,6 +41,9 @@
 
 <section class="section section--tight">
 	<div class="shell">
+		<p class="mono download__micro">
+			Free · no account · no tracking · 2.5 MB on iOS, 2.7 MB on macOS
+		</p>
 		<div class="download">
 			<article class="card">
 				<p class="eyebrow">macOS</p>
@@ -50,7 +53,7 @@
 					The full editor: format detection, structural editing, sorting, large-file mode, export.
 					The release build is 2.7 MB, written in pure Swift.
 				</p>
-				<StoreBadges platforms={['mac']} />
+				<StoreBadges platforms={['mac']} placement="download" />
 				<a class="btn btn--ghost" href={site.github} rel="noopener">Build from source →</a>
 			</article>
 
@@ -63,7 +66,7 @@
 					CSV core. The release build is 2.5 MB. Run it in the simulator with a single script
 					command.
 				</p>
-				<StoreBadges platforms={['ios']} />
+				<StoreBadges platforms={['ios']} placement="download" />
 				<a class="btn btn--ghost" href={`${site.github}#build`} rel="noopener">Build instructions →</a>
 			</article>
 		</div>
@@ -127,6 +130,11 @@
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: clamp(18px, 2.4vw, 32px);
+	}
+
+	.download__micro {
+		margin-bottom: 20px;
+		color: var(--muted);
 	}
 
 	.card {

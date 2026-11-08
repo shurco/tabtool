@@ -13,6 +13,7 @@
 	import StoreBadges from '#lib/components/StoreBadges.svelte';
 	import { site } from '#lib/site';
 	import { faqs } from '#lib/content';
+	import { appStoreURL, trackStoreClick } from '#lib/track';
 
 	const jsonLd = [
 		{
@@ -71,16 +72,19 @@
 				Open a 5 GiB file, fix a cell, write it back. TabTool indexes 77.7 million rows in 2.7
 				seconds, keeps them in about 90 MB of memory, and never sends your data anywhere.
 			</p>
-			<StoreBadges />
+			<StoreBadges placement="hero" />
 			<div class="hero__actions">
-				<a class="btn btn--primary" href={site.github} rel="noopener">
-					Star on GitHub <span class="btn__arrow" aria-hidden="true">↗</span>
+				<a
+					class="btn btn--primary"
+					href={appStoreURL('ios', 'hero')}
+					onclick={() => trackStoreClick('ios', 'hero')}
+				>
+					Download free <span class="btn__arrow" aria-hidden="true">↗</span>
 				</a>
+				<a class="btn btn--ghost" href={site.github} rel="noopener">Star on GitHub</a>
 				<a class="btn btn--ghost" href="#performance">Watch it run</a>
 			</div>
-			<p class="hero__meta mono">
-				1.0 · free on the App Store · open source · no account
-			</p>
+			<p class="hero__micro mono">Free · 2.5 MB · no account · no tracking</p>
 		</div>
 
 		<figure class="hero__shot">
@@ -238,7 +242,7 @@
 		margin-top: 16px;
 	}
 
-	.hero__meta {
+	.hero__micro {
 		margin-top: 18px;
 		color: var(--muted);
 	}
