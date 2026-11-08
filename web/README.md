@@ -15,7 +15,7 @@ The marketing site for [TabTool](../README.md), built with SvelteKit and prerend
 - `/sitemap.xml`, `/robots.txt` — generated at build time.
 - `/404.html` — static not-found page.
 
-Screenshots and the demo video are real captures of the development build, taken 29 October 2026. No composited UI.
+Screenshots are real captures of the macOS development build with the emoji sample, taken 8 November 2026. The demo video is the iPhone build in large-file mode. No composited UI.
 
 ## Local development
 

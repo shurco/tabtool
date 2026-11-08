@@ -92,24 +92,24 @@
 				<span class="mono">1200 × 630 PNG</span>
 			</li>
 			<li>
-				<a href="/img/mac-grid.webp">macOS grid</a>
-				<span class="mono">2400 × 1502 WebP</span>
+				<a href="/img/app-grid.webp">macOS grid with emoji</a>
+				<span class="mono">2400 × 1500 WebP</span>
 			</li>
 			<li>
-				<a href="/img/mac-large.webp">macOS large-file mode</a>
-				<span class="mono">2400 × 1543 WebP</span>
+				<a href="/img/app-columns.webp">macOS column actions</a>
+				<span class="mono">2400 × 1500 WebP</span>
 			</li>
 			<li>
-				<a href="/img/ios-grid.webp">iPhone grid</a>
-				<span class="mono">1000 × 460 WebP</span>
+				<a href="/img/app-large.webp">macOS large-file mode</a>
+				<span class="mono">2400 × 1500 WebP</span>
 			</li>
 			<li>
 				<a href="/media/tabtool-demo.mp4">Demo video</a>
-				<span class="mono">13.4 s MP4, 1400 × 860</span>
+				<span class="mono">MP4, 1400 × 644</span>
 			</li>
 		</ul>
 		<p class="note mono">
-			All screenshots are real captures of the app with synthetic data. No composited UI. The MIT
+			All screenshots are real captures of the app with the public emoji data set. No composited UI. The MIT
 			notice is bundled with the app.
 		</p>
 	</div>

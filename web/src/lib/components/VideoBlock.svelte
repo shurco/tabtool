@@ -9,9 +9,9 @@
 			preload="none"
 			poster={poster}
 			width="1400"
-			height="860"
+			height="644"
 			playsinline
-			aria-label="Screen recording of TabTool opening and scrolling a 2.1-million-row CSV"
+			aria-label="Screen recording of TabTool on iPhone opening and scrolling an emoji CSV"
 		>
 			<source {src} type="video/mp4" />
 			<p>
@@ -22,7 +22,7 @@
 	<figcaption class="demo__caption">
 		<span class="demo__dot" aria-hidden="true"></span>
 		<span class="mono"
-			>Unedited capture · macOS build · 2,100,000 rows × 7 columns · 109 MB · 2026-10-29</span
+			>Unedited capture · iPhone build · large-file mode · 1,000,000 rows × 12 columns · 2026-11-08</span
 		>
 	</figcaption>
 </figure>

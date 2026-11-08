@@ -22,13 +22,13 @@ and it is the signal the store uses to show the app to more people.
 
 ## Screenshots
 
-| Grid | Columns |
+| Emoji grid | Column actions |
 | --- | --- |
-| ![TabTool grid on macOS](web/static/img/mac-grid-1200.webp) | ![TabTool columns on macOS](web/static/img/mac-columns-1200.webp) |
+| ![TabTool for macOS with an emoji CSV open](web/static/img/app-grid-1200.webp) | ![A selected column in TabTool for macOS](web/static/img/app-columns-1200.webp) |
 
-| Large file mode | iOS |
-| --- | --- |
-| ![TabTool large file mode on macOS](web/static/img/mac-large-1200.webp) | ![TabTool on iOS](web/static/img/ios-grid.webp) |
+| Large file mode |
+| --- |
+| ![TabTool in large-file mode with 1,000,000 emoji rows](web/static/img/app-large-1200.webp) |
 
 ## Features
 
