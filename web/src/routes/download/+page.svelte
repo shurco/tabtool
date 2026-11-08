@@ -3,11 +3,12 @@
 	import SectionHeader from '#lib/components/SectionHeader.svelte';
 	import Roadmap from '#lib/components/Roadmap.svelte';
 	import OpenSource from '#lib/components/OpenSource.svelte';
+	import StoreBadges from '#lib/components/StoreBadges.svelte';
 	import { site } from '#lib/site';
 
 	const title = 'Download TabTool — macOS, iOS, Windows, Linux, Android';
 	const description =
-		'TabTool 1.0 for macOS 14+ and iOS 17+ is in development. Windows, Linux, and Android are planned. See what is available, what is not, and how to build from source.';
+		'TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. Windows, Linux, and Android are planned. Download it, or build it from source.';
 
 	const jsonLd = [
 		{
@@ -32,8 +33,8 @@
 			as="h1"
 			index="DL"
 			kicker="Availability"
-			title="Nothing to install yet. Here is the honest status."
-			lede="The macOS and iOS apps are feature-complete for 1.0, but the release checklist, signing identity, and store listings are still open. The source builds today."
+			title="Get TabTool 1.0 from the App Store."
+			lede="One free download covers the Mac, iPhone, and iPad. The source on GitHub builds the same app."
 		/>
 	</div>
 </section>
@@ -44,24 +45,25 @@
 			<article class="card">
 				<p class="eyebrow">macOS</p>
 				<h2>macOS 14 or later</h2>
-				<p class="card__status mono">Status: in development</p>
+				<p class="card__status mono">Status: available</p>
 				<p>
 					The full editor: format detection, structural editing, sorting, large-file mode, export.
-					The release build is 2.7 MB, written in pure Swift. An App Store listing will follow the
-					1.0 release checklist.
+					The release build is 2.7 MB, written in pure Swift.
 				</p>
-				<a class="btn btn--primary" href={site.github} rel="noopener">Build from source →</a>
+				<StoreBadges platforms={['mac']} />
+				<a class="btn btn--ghost" href={site.github} rel="noopener">Build from source →</a>
 			</article>
 
 			<article class="card">
 				<p class="eyebrow">iOS and iPadOS</p>
 				<h2>iOS 17 or later</h2>
-				<p class="card__status mono">Status: in development</p>
+				<p class="card__status mono">Status: available</p>
 				<p>
 					A touch-first editor with contextual row and column actions, filter cards, and the same
 					CSV core. The release build is 2.5 MB. Run it in the simulator with a single script
 					command.
 				</p>
+				<StoreBadges platforms={['ios']} />
 				<a class="btn btn--ghost" href={`${site.github}#build`} rel="noopener">Build instructions →</a>
 			</article>
 		</div>
@@ -141,7 +143,7 @@
 	}
 
 	.card__status {
-		color: var(--warn);
+		color: var(--accent);
 	}
 
 	.card p {
@@ -151,8 +153,11 @@
 		max-width: 46ch;
 	}
 
-	.card .btn {
+	.card :global(.badges) {
 		margin-top: auto;
+	}
+
+	.card .btn {
 		align-self: flex-start;
 	}
 

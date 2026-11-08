@@ -5,6 +5,10 @@ export const site = {
 	description:
 		'A native, open-source CSV editor for macOS and iOS. Opens multi-gigabyte files in seconds, edits cells with undo, and never sends your data anywhere.',
 	github: 'https://github.com/shurco/tabtool',
+	appStore: {
+		ios: 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069',
+		mac: 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069?platform=mac'
+	},
 	updated: '2026-10-29'
 };
 

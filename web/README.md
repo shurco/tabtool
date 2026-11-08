@@ -5,7 +5,7 @@ The marketing site for [TabTool](../README.md), built with SvelteKit and prerend
 ## What is here
 
 - `/` — overview: hero, measured numbers, features, demo video, real screenshots, open-source ask, platform roadmap, comparison index, FAQ.
-- `/download/` — availability and requirements, with an honest "in development" status per platform.
+- `/download/` — App Store links per platform, requirements, and build-from-source instructions.
 - `/vs/` and `/vs/<slug>/` — five comparison pages: TableTool (TablePlus), the original open-source TableTool, Modern CSV, CSViewer, Tablecruncher.
 - `/faq/` — the full FAQ, also emitted as `FAQPage` structured data.
 - `/feedback/` — how to send feedback: GitHub issues link and what to include (no email or form, the site collects nothing).
@@ -60,9 +60,14 @@ Two placeholders must be replaced:
 
 Everything else (comparison facts, FAQ, legal text, screenshots) lives in `src/lib/`:
 
-- `site.ts` — name, description, links, navigation.
+- `site.ts` — name, description, links (GitHub, App Store `appStore.mac`/`appStore.ios`), navigation.
 - `content.ts` — stats, features, screenshots, platforms, FAQ.
 - `comparisons.ts` — one object per comparison page.
+
+## App Store badges
+
+- `static/img/badges/mac-app-store.svg` and `app-store.svg` are Apple's official black US-English badges from the [App Store marketing guidelines](https://developer.apple.com/app-store/marketing/guidelines/). Do not edit the artwork.
+- `src/lib/components/StoreBadges.svelte` renders them as links to `site.appStore`; pass `platforms={['mac']}` or `['ios']` to show one. It is used in the home hero, the CTA, and the download page.
 
 ## Analytics
 

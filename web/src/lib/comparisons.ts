@@ -43,7 +43,7 @@ export const comparisons: Comparison[] = [
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT, source available', them: 'Closed source' },
-			{ label: 'Price', tabtool: 'Free to build from source', them: '$29 for 2 Macs, 1 year of updates' },
+			{ label: 'Price', tabtool: 'Free on the App Store', them: '$29 for 2 Macs, 1 year of updates' },
 			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'macOS 10.13+' },
 			{ label: 'iPhone and iPad app', tabtool: 'Yes, same CSV core', them: 'No' },
 			{ label: 'SQL across CSV files', tabtool: 'No', them: 'Yes' },
@@ -91,7 +91,7 @@ export const comparisons: Comparison[] = [
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT', them: 'MIT' },
-			{ label: 'Price', tabtool: 'Free to build from source', them: 'Free' },
+			{ label: 'Price', tabtool: 'Free on the App Store', them: 'Free' },
 			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'macOS 10.8+' },
 			{ label: 'Last release', tabtool: '1.0 in development', them: '1.2.1, July 2017' },
 			{ label: 'Last commit', tabtool: 'Active', them: 'April 2020' },
@@ -138,7 +138,7 @@ export const comparisons: Comparison[] = [
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT', them: 'Closed source' },
-			{ label: 'Price', tabtool: 'Free to build from source', them: 'Free tier; $39/$59 one-time' },
+			{ label: 'Price', tabtool: 'Free on the App Store', them: 'Free tier; $39/$59 one-time' },
 			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'Windows, macOS, Linux' },
 			{ label: 'iPhone and iPad app', tabtool: 'Yes', them: 'No' },
 			{ label: 'Pivot tables and statistics', tabtool: 'No', them: 'Yes' },
@@ -186,7 +186,7 @@ export const comparisons: Comparison[] = [
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT', them: 'Closed source' },
-			{ label: 'Price', tabtool: 'Free to build from source', them: 'Free, including commercial use' },
+			{ label: 'Price', tabtool: 'Free on the App Store', them: 'Free, including commercial use' },
 			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'Windows 64-bit only' },
 			{ label: 'Cell editing', tabtool: 'Yes, with undo', them: 'Positioned as a viewer; editing is not listed' },
 			{ label: 'Column profiling', tabtool: 'No', them: 'Nulls, uniques, min/max, aggregates, charts' },
@@ -232,7 +232,7 @@ export const comparisons: Comparison[] = [
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT', them: 'GPL-3.0' },
-			{ label: 'Price', tabtool: 'Free to build from source', them: 'Free' },
+			{ label: 'Price', tabtool: 'Free on the App Store', them: 'Free' },
 			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'macOS 10.15+, Windows, Linux beta' },
 			{ label: 'Language and UI', tabtool: 'Swift, SwiftUI + AppKit', them: 'C++17, FLTK' },
 			{ label: 'iPhone and iPad app', tabtool: 'Yes', them: 'No' },

@@ -16,7 +16,7 @@
 </ul>
 
 <p class="roadmap__footnote">
-	Platforms are planned, not promised. No dates until a build exists. The repository is the source of
+	macOS and iOS are on the App Store. Other platforms are planned, not promised. No dates until a build exists. The repository is the source of
 	truth.
 </p>
 
