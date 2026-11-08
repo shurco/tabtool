@@ -16,6 +16,10 @@ TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. One listing (uni
 - Mac App Store: <https://apps.apple.com/app/tabtool-csv-editor/id6827919069?platform=mac>
 - App Store (iPhone and iPad): <https://apps.apple.com/app/tabtool-csv-editor/id6827919069>
 
+If TabTool saves you time, a rating on the App Store helps other people find it:
+<https://apps.apple.com/app/id6827919069?action=write-review>. It takes a minute,
+and it is the signal the store uses to show the app to more people.
+
 ## Screenshots
 
 | Grid | Columns |
