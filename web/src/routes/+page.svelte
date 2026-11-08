@@ -84,7 +84,7 @@
 				<a class="btn btn--ghost" href={site.github} rel="noopener">Star on GitHub</a>
 				<a class="btn btn--ghost" href="#performance">Watch it run</a>
 			</div>
-			<p class="hero__micro mono">Free · 2.5 MB · no account · no tracking</p>
+			<p class="hero__micro mono">Free · under 3 MB · no account · no tracking</p>
 		</div>
 
 		<figure class="hero__shot">
