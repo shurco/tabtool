@@ -78,9 +78,9 @@ export const shots = [
 		width: 2400,
 		height: 1502,
 		alt: 'TabTool for macOS showing a 1,200-row orders CSV, with the format bar below the grid.',
-		title: 'The grid',
+		title: 'A real CSV, not a preview',
 		caption:
-			'1,200 rows, 8 columns, UTF-8, comma. The format bar below the grid is the file’s own format, changed in place.'
+			'1,200 rows, 8 columns, UTF-8, comma. The format bar edits the file’s own format in place.'
 	},
 	{
 		src: '/img/mac-columns.webp',
@@ -88,9 +88,9 @@ export const shots = [
 		width: 2400,
 		height: 1543,
 		alt: 'A column selected in TabTool for macOS, with its header menu and the rest of the table dimmed.',
-		title: 'Column selected',
+		title: 'Sort, rename, or move a column in place',
 		caption:
-			'Click a header to select the column. Sort, rename, move, or delete it from the header, the context menu, or the Table menu.'
+			'Click a header to select the column. The rest of the table dims; the menu sorts, renames, moves, or deletes it.'
 	},
 	{
 		src: '/img/mac-large.webp',
@@ -98,9 +98,9 @@ export const shots = [
 		width: 2400,
 		height: 1543,
 		alt: 'TabTool in large-file mode showing a 2.1-million-row CSV with the large-file banner.',
-		title: 'Large-file mode',
+		title: '2.1 million rows, still editable',
 		caption:
-			'2.1 million rows in this capture. Structural edits are off; scrolling, jumping, and cell edits stay on. The banner never hides the row count.'
+			'Memory-mapped and indexed in the background. Structural edits are off; scrolling, jumping, and cell edits stay on.'
 	},
 	{
 		src: '/img/ios-grid.webp',
@@ -108,9 +108,9 @@ export const shots = [
 		width: 1000,
 		height: 460,
 		alt: 'The same CSV open in TabTool for iPhone in landscape, showing the grid and row count.',
-		title: 'The same file on iPhone',
+		title: 'The same file in your pocket',
 		caption:
-			'Row numbers, sticky headers, and a status line with the row count, encoding, and separator. The toolbar holds undo, search, export, and the overflow menu.'
+			'Touch grid, contextual actions, and the same format detection as the Mac. Row numbers, sticky headers, and a status line.'
 	}
 ];
 

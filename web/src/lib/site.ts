@@ -26,7 +26,8 @@ export const footerNav = {
 		{ href: '/download/', label: 'Download' },
 		{ href: '/vs/', label: 'Comparisons' },
 		{ href: '/faq/', label: 'FAQ' },
-		{ href: '/feedback/', label: 'Feedback' }
+		{ href: '/feedback/', label: 'Feedback' },
+		{ href: '/press/', label: 'Press kit' }
 	],
 	legal: [
 		{ href: '/privacy/', label: 'Privacy Policy' },
