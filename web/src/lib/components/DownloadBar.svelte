@@ -9,7 +9,11 @@
 	const hiddenHere = $derived(page.url.pathname === '/privacy/' || page.url.pathname === '/terms/');
 
 	onMount(() => {
-		if (sessionStorage.getItem(storageKey) === '1') return;
+		try {
+			if (sessionStorage.getItem(storageKey) === '1') return;
+		} catch {
+			// Private browsing can block storage; the bar still works.
+		}
 		const media = window.matchMedia('(max-width: 760px)');
 		const update = () => {
 			visible = media.matches;
@@ -21,7 +25,11 @@
 
 	function dismiss() {
 		visible = false;
-		sessionStorage.setItem(storageKey, '1');
+		try {
+			sessionStorage.setItem(storageKey, '1');
+		} catch {
+			// Private browsing can block storage; dismissing still hides the bar.
+		}
 	}
 </script>
 
