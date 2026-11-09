@@ -8,7 +8,7 @@ export const site = {
 	appStore: {
 		ios: 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069',
 		mac: 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069?platform=mac',
-		providerToken: '',
+		providerToken: '128327050',
 		campaign: 'website'
 	},
 	updated: '2026-11-09'
