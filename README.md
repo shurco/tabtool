@@ -204,20 +204,6 @@ Known limits: an accessibility client (VoiceOver, automation tools) reading the 
 
 The local working spec/plan and execution log live in `.superpowers/sdd/` and are not part of git.
 
-## Release checklist
-
-The code is feature-complete for a 1.0 release, but the release identity is deliberately not chosen in the repository:
-
-- [ ] Choose the signing team and check that the name TabTool and bundle ID `app.shurco.tabtool` do not conflict with an existing App Store listing.
-- [ ] Replace the placeholder icon in `app/apple/Shared/Assets.xcassets/AppIcon.appiconset` with final 1024 px macOS artwork.
-- [ ] Set `app/apple/version.json` (`name`, `build`) and sign with the team. Put `APPLE_TEAM_ID=...` in `.env`, then archive and upload with `./scripts/app build macos --upload` or `build ios --upload` (or Xcode Organizer); plain `./scripts/app archive macos` is an unsigned verification build.
-- [ ] Inspect the archive: three document types in `Info.plist`, sandbox and user-selected read-write entitlements, `PrivacyInfo.xcprivacy` in `Contents/Resources`, and the app icon.
-- [ ] Run `./scripts/test`, `./scripts/test --ui`, and the manual QA matrix in `docs/building.md`.
-- [ ] Fill in App Privacy as **Data Not Collected**; confirm `ITSAppUsesNonExemptEncryption=false` with the account owner.
-- [ ] Have native speakers review the machine-generated translations in `app/apple/Shared/Localizable.xcstrings`.
-- [ ] Prepare screenshots, description, keywords, and reviewer notes without promising formulas, databases, or "any tables"; include the required MIT notice. For a Guideline 2.1 "Information Needed" rejection, paste the notes from [docs/app-store-compliance.md](docs/app-store-compliance.md#notes-for-review) and attach a physical-device screen recording.
-- [ ] After upload, pin the uploaded build in `app/apple/version.lock.json` and never reuse a build number.
-
 ## License
 
 [MIT](LICENSE). The required copyright and permission notice is kept in the LICENSE file and bundled with the app. The About screen shows the same notice, and the project website is [tabtool.shurco.app](https://tabtool.shurco.app).
