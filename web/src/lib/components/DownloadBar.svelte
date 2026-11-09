@@ -41,7 +41,7 @@
 		</div>
 		<a
 			class="download-bar__cta"
-			href={appStoreURL('ios', 'header-bar')}
+			href={appStoreURL('ios')}
 			onclick={() => trackStoreClick('ios', 'header-bar')}
 		>
 			Download free

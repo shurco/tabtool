@@ -162,7 +162,7 @@
 		<div class="vs-cta">
 			<a
 				class="btn btn--primary"
-				href={appStoreURL('ios', 'compare')}
+				href={appStoreURL('ios')}
 				onclick={() => trackStoreClick('ios', 'compare')}
 			>
 				Download free <span class="btn__arrow" aria-hidden="true">↗</span>

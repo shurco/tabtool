@@ -16,7 +16,7 @@
 		<div class="cta__actions">
 			<a
 				class="btn btn--primary"
-				href={appStoreURL('ios', 'cta')}
+				href={appStoreURL('ios')}
 				onclick={() => trackStoreClick('ios', 'cta')}
 			>
 				Download free <span class="btn__arrow" aria-hidden="true">↗</span>

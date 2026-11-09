@@ -25,7 +25,7 @@
 	{#each platforms as platform (platform)}
 		{@const badge = badges[platform]}
 		<a
-			href={appStoreURL(platform, placement)}
+			href={appStoreURL(platform)}
 			rel="noopener"
 			onclick={() => trackStoreClick(platform, placement)}
 		>

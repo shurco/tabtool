@@ -8,12 +8,19 @@ export type StorePlacement = 'hero' | 'cta' | 'download' | 'header-bar' | 'compa
 /// `pt` is the App Store Connect provider token; when it is empty the link
 /// still works and still carries `ct` and `mt`, but Apple cannot attribute
 /// the install. Fill `providerToken` in `site.ts` before a campaign launch.
-export function appStoreURL(platform: StorePlatform, placement: StorePlacement): string {
+///
+/// Keep one `ct` per channel, not per placement: App Store Connect hides
+/// campaigns with fewer than five first-time downloads in the selected range.
+/// The placement is still recorded in GA4 by `trackStoreClick`.
+export function appStoreURL(
+	platform: StorePlatform,
+	campaign = site.appStore.campaign
+): string {
 	const base = site.appStore[platform];
 	const mediaType = platform === 'mac' ? '12' : '8';
 	const params = new URLSearchParams();
 	if (site.appStore.providerToken) params.set('pt', site.appStore.providerToken);
-	params.set('ct', `${site.appStore.campaign}-${placement}`);
+	params.set('ct', campaign);
 	params.set('mt', mediaType);
 	return `${base}${base.includes('?') ? '&' : '?'}${params.toString()}`;
 }
