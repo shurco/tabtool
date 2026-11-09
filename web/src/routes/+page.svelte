@@ -28,7 +28,7 @@
 			license: 'https://opensource.org/license/mit',
 			downloadUrl: site.appStore.ios,
 			installUrl: site.appStore.ios,
-			softwareVersion: '1.0.1',
+			softwareVersion: '1.0.0',
 			fileFormat: ['text/csv', 'text/tab-separated-values', 'text/plain'],
 			screenshot: `${site.url}/img/app-grid.webp`,
 			sameAs: [site.github, site.appStore.ios],
@@ -139,7 +139,7 @@
 		<ul class="notes">
 			<li>
 				<span class="notes__value mono">2.7 s</span>
-				<span>to index a 5 GiB file with 68.2 million rows on an Apple M4 Pro.</span>
+				<span>to index a 5 GiB file with 77.7 million rows in the release app on an Apple M4 Pro.</span>
 			</li>
 			<li>
 				<span class="notes__value mono">~91 MB</span>

@@ -1,5 +1,5 @@
  export const stats = [
-	{ value: '5 GiB', label: 'Largest tested file', note: '68.2M rows × 8 columns' },
+	{ value: '5 GiB', label: 'Benchmark file', note: '68.2M rows × 8 columns' },
 	{ value: '77.7M', label: 'Rows in the release app', note: 'indexed 2.7 s after launch' },
 	{ value: '~91 MB', label: 'Memory after indexing', note: 'Apple M4 Pro, 24 GB' },
 	{ value: '2.7 MB', label: 'macOS release build', note: 'iOS build: 2.5 MB · no Electron' },
@@ -153,7 +153,7 @@ export const faqs = [
 	},
 	{
 		q: 'How large a file can it open?',
-		a: 'The tested ceiling is a 5 GiB file with 68.2 million rows and 8 columns. It was fully indexed 2.7 seconds after launch, using about 91 MB of memory. Files at or above the large-file threshold open in a read-only structure mode with background indexing; the threshold is a setting, 100 MiB by default.'
+		a: 'The tested ceiling is a 5 GiB file with 77.7 million rows. It was fully indexed 2.7 seconds after launch in the release app, using about 91 MB of memory. Files at or above the large-file threshold open in a read-only structure mode with background indexing; the threshold is a setting, 100 MiB by default.'
 	},
 	{
 		q: 'Does TabTool upload my data?',

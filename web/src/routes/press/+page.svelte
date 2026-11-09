@@ -14,7 +14,7 @@
 		['Price', 'Free on the App Store'],
 		['License', 'MIT, source on GitHub'],
 		['Platforms', 'macOS 14+, iOS 17+ (iPhone and iPad)'],
-		['Largest tested file', '5 GiB, 68.2 million rows, indexed in 2.7 seconds'],
+		['Largest tested file', '5 GiB, 77.7 million rows, indexed in 2.7 seconds in the release app'],
 		['Memory after indexing', 'About 91 MB'],
 		['Privacy', 'Sandboxed, no network entitlement, no analytics, no account'],
 		['Languages', '11 interface languages'],
@@ -48,8 +48,8 @@
 				TabTool is a free, open-source CSV editor for macOS 14+ and iOS 17+. It opens CSV, TSV,
 				and plain text files, detects the encoding, separator, quote style, decimal mark, and
 				header row from the bytes, and lets you edit cells, rows, and columns. Large files are
-				memory-mapped and indexed in the background: a tested 5 GiB file with 68.2 million rows
-				was fully indexed 2.7 seconds after opening. The app is sandboxed with no network
+				memory-mapped and indexed in the background: a tested 5 GiB file with 77.7 million rows
+				was fully indexed 2.7 seconds after opening in the release app. The app is sandboxed with no network
 				entitlement, no analytics, and no account.
 			</p>
 		</div>
@@ -104,6 +104,14 @@
 				<span class="mono">2400 × 1500 WebP</span>
 			</li>
 			<li>
+				<a href="/img/app-ios-grid.png">iPhone grid</a>
+				<span class="mono">1320 × 2868 PNG</span>
+			</li>
+			<li>
+				<a href="/img/app-ipad-grid.png">iPad grid</a>
+				<span class="mono">2064 × 2752 PNG</span>
+			</li>
+			<li>
 				<a href="/media/tabtool-demo.mp4">Demo video</a>
 				<span class="mono">MP4, 1400 × 644</span>
 			</li>
@@ -120,10 +128,9 @@
 		<div>
 			<p class="eyebrow">Contact</p>
 			<p class="prose">
-				For review builds, questions, or corrections, open an issue at
-				<a href={site.github} rel="noopener">github.com/shurco/tabtool</a>. There is no press
-				email; GitHub is the published support channel and the fastest way to reach the
-				maintainer.
+				For press inquiries, review assets, or corrections, email
+				<a href="mailto:press@shurco.app">press@shurco.app</a>. For bugs and feature requests,
+				open an issue at <a href={site.github} rel="noopener">github.com/shurco/tabtool</a>.
 			</p>
 		</div>
 		<div>

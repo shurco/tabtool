@@ -93,12 +93,12 @@ export const comparisons: Comparison[] = [
 			{ label: 'License', tabtool: 'MIT', them: 'MIT' },
 			{ label: 'Price', tabtool: 'Free on the App Store', them: 'Free' },
 			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'macOS 10.8+' },
-			{ label: 'Last release', tabtool: '1.0 in development', them: '1.2.1, July 2017' },
+			{ label: 'Last release', tabtool: '1.0, November 2026', them: '1.2.1, July 2017' },
 			{ label: 'Last commit', tabtool: 'Active', them: 'April 2020' },
 			{ label: 'Large-file mode', tabtool: 'Memory-mapped, background index, streamed save', them: 'Not documented' },
 			{ label: 'Filters and sorting', tabtool: 'Sort on both platforms, filters on iOS', them: 'Not documented' },
 			{ label: 'iPhone and iPad app', tabtool: 'Yes', them: 'No' },
-			{ label: 'Binary size', tabtool: 'Not published yet', them: '837.8 KB on the App Store' },
+			{ label: 'Binary size', tabtool: '2.7 MB on the Mac App Store', them: '837.8 KB on the App Store' },
 			{ label: 'Privacy', tabtool: 'No network entitlement, no analytics', them: 'No account or network features listed' }
 		],
 		stronger: [

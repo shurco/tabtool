@@ -29,9 +29,8 @@ are no formulas, styles, charts, or pivot tables.
 
 - Price: free.
 - Platforms: macOS 14 or later; iOS 17 or later on iPhone and iPad.
-- Largest tested file: 5 GiB, 68.2 million rows, 8 columns.
-- Full index time: 2.7 seconds on an Apple M4 Pro.
-- Memory after indexing: about 91 MB.
+- Benchmark file: 5 GiB, 68.2 million rows, 8 columns; full index 1.97 seconds, 43 MiB.
+- Release app: 5 GiB, 77.7 million rows; full index 2.7 seconds, about 91 MB.
 - Save with one edit: 6.3 seconds for the 5 GiB file, streamed with progress and cancel.
 - Formats: CSV, TSV, plain text.
 - Encodings: UTF-8/16/32, MacRoman, Windows Latin 1 and 2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, Japanese.
