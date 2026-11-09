@@ -130,6 +130,7 @@ final class ExportCoordinator {
                 to: url,
                 allowAmbiguousOutput: allowAmbiguousOutput
             )
+            ReviewPrompt.recordEngagement()
         } catch let error as CSVError where error == .ambiguousOutput
             && !allowAmbiguousOutput {
             // Preflight and writer share the same input, so this only happens

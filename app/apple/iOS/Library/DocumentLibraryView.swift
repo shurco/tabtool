@@ -42,6 +42,7 @@ struct DocumentLibraryView: View {
                     DocumentEditorScreen(file: file)
                 }
         }
+        .onAppear { ReviewPrompt.recordLaunch() }
         .sheet(isPresented: $showsSettings) { IOSSettingsView() }
         .fileImporter(isPresented: $isImporting,
                       allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText],

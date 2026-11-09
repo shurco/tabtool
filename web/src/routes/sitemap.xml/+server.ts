@@ -9,6 +9,8 @@ export function GET() {
 		'/download/',
 		'/faq/',
 		'/feedback/',
+		'/press/',
+		'/llms.txt',
 		'/vs/',
 		...comparisons.map((item) => `/vs/${item.slug}/`),
 		'/privacy/',

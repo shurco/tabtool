@@ -20,6 +20,12 @@ enum Preferences {
         static let gridRowHeight = "gridRowHeight"
         static let gridShowsRowNumbers = "gridShowsRowNumbers"
         static let largeFileThresholdMiB = "largeFileThresholdMiB"
+        static let reviewFirstLaunch = "reviewFirstLaunch"
+        static let reviewActiveDays = "reviewActiveDays"
+        static let reviewLastActiveDay = "reviewLastActiveDay"
+        static let reviewEngagements = "reviewEngagements"
+        static let reviewLastPromptedVersion = "reviewLastPromptedVersion"
+        static let reviewLastPromptedAt = "reviewLastPromptedAt"
     }
 
     enum Default {

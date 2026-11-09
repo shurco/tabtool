@@ -10,6 +10,7 @@ struct DocumentEditorScreen: View {
     @State private var undoManager = UndoManager()
     @State private var saveTask: Task<Void, Never>?
     @State private var saveError: String?
+    @State private var lastSavedRevision: UInt64 = 0
     @Environment(\.scenePhase) private var scenePhase
 
     init(file: DocumentFile) {
@@ -54,8 +55,13 @@ struct DocumentEditorScreen: View {
         saveTask = nil
         guard !document.isLargeMode, document.hasContent,
               let url = document.fileURL, document.writeIssue == nil else { return }
+        let revision = document.mutationRevision
         do {
             try document.encodedData().write(to: url, options: .atomic)
+            if revision != lastSavedRevision {
+                lastSavedRevision = revision
+                ReviewPrompt.recordEngagement()
+            }
         } catch {
             saveError = error.localizedDescription
         }

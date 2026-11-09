@@ -8,12 +8,14 @@ The marketing site for [TabTool](../README.md), built with SvelteKit and prerend
 - `/download/` — App Store links per platform, requirements, and build-from-source instructions.
 - `/vs/` and `/vs/<slug>/` — five comparison pages: TableTool (TablePlus), the original open-source TableTool, Modern CSV, CSViewer, Tablecruncher.
 - `/faq/` — the full FAQ, also emitted as `FAQPage` structured data.
+- `/press/` — press kit: boilerplate, fast facts, asset links, and contact.
+- `/llms.txt` — factual product summary for AI assistants and agents.
 - `/feedback/` — how to send feedback: GitHub issues link and what to include (no email or form, the site collects nothing).
 - `/privacy/`, `/terms/` — Privacy Policy and User Agreement.
 - `/sitemap.xml`, `/robots.txt` — generated at build time.
 - `/404.html` — static not-found page.
 
-Screenshots and the demo video are real captures of the development build, taken 29 October 2026. No composited UI.
+Screenshots are real captures of the macOS development build with the emoji sample, taken 8 November 2026. The demo video is the iPhone build in large-file mode. No composited UI.
 
 ## Local development
 
@@ -53,10 +55,11 @@ For Pages, the site is fully prerendered, so Pages serves `build/` as static ass
 
 ## Edit before launch
 
-Two placeholders must be replaced:
+Three placeholders must be replaced:
 
 1. **GitHub URL** — `src/lib/site.ts`, the `github` field. It currently points to `https://github.com/shurco/tabtool`.
 2. **Site origin** — `src/lib/site.ts` (`url`) and `vite.config.ts` (`paths.origin`). It currently uses `https://tabtool.shurco.app`; use the real domain before submitting the sitemap.
+3. **App Store provider token** — `src/lib/site.ts`, `appStore.providerToken`. Fill the nine-digit token from App Store Connect to attribute installs to site placements. Without it, the links still work but Apple cannot attribute the install.
 
 Everything else (comparison facts, FAQ, legal text, screenshots) lives in `src/lib/`:
 
@@ -72,12 +75,15 @@ Everything else (comparison facts, FAQ, legal text, screenshots) lives in `src/l
 ## Analytics
 
 - Google Analytics 4 (`G-G8JX3V6FNB`) is loaded via `gtag.js` in `src/app.html`. The privacy page discloses it; keep both in sync.
+- Every App Store link goes through `appStoreURL()` in `src/lib/track.ts` and fires GA4 `app_store_click` with `platform` (`mac`/`ios`) and `placement` (`hero`, `cta`, `download`, `header-bar`, `compare`, `about`). The link also carries Apple's `pt`, `ct`, and `mt` campaign parameters.
+- The sticky mobile download bar is dismissible; the choice is stored in `sessionStorage` for the session.
 
 ## SEO
 
 - Every page sets a unique title, description, canonical URL, Open Graph, and Twitter card.
 - `SoftwareApplication`, `WebSite`, `FAQPage`, `BreadcrumbList`, and `CollectionPage` JSON-LD are generated from the same content as the pages.
 - `sitemap.xml` and `robots.txt` are prerendered endpoints; both use the `url` constant.
+- `llms.txt` is a prerendered plain-text summary for AI assistants and agents. Keep its facts identical to the README.
 - Internal links use trailing slashes consistently, matching `trailingSlash = 'always'`.
 - Fonts and media are self-hosted; images are WebP with `srcset`, dimensions, and lazy loading below the fold.
 
