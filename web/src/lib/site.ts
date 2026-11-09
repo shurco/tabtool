@@ -11,7 +11,7 @@ export const site = {
 		providerToken: '',
 		campaign: 'website'
 	},
-	updated: '2026-11-08'
+	updated: '2026-11-09'
 };
 
 export const nav = [

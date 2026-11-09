@@ -50,7 +50,7 @@
 		</nav>
 
 		<header class="vs-head">
-			<p class="eyebrow">Comparison · checked October 2026</p>
+			<p class="eyebrow">Comparison · checked 9 November 2026</p>
 			<h1>TabTool vs <span class="vs-head__name">{item.name}</span></h1>
 			<p class="lede vs-head__lede">{item.summary}</p>
 		</header>
@@ -83,7 +83,7 @@
 		<div class="table-wrap">
 			<table>
 				<caption class="mono"
-					>Vendor facts checked October 2026. Prices and features change; verify on
+					>Vendor facts checked 9 November 2026. Prices and features change; verify on
 					<a href={item.site} rel="noopener">{item.site.replace('https://', '')}</a>.</caption
 				>
 				<thead>
