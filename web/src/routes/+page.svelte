@@ -13,6 +13,7 @@
 	import StoreBadges from '#lib/components/StoreBadges.svelte';
 	import { site } from '#lib/site';
 	import { faqs } from '#lib/content';
+	import { appStoreURL, trackStoreClick } from '#lib/track';
 
 	const jsonLd = [
 		{
@@ -27,9 +28,9 @@
 			license: 'https://opensource.org/license/mit',
 			downloadUrl: site.appStore.ios,
 			installUrl: site.appStore.ios,
-			softwareVersion: '1.0',
+			softwareVersion: '1.0.1',
 			fileFormat: ['text/csv', 'text/tab-separated-values', 'text/plain'],
-			screenshot: `${site.url}/img/mac-grid.webp`,
+			screenshot: `${site.url}/img/app-grid.webp`,
 			sameAs: [site.github, site.appStore.ios],
 			offers: {
 				'@type': 'Offer',
@@ -71,35 +72,38 @@
 				Open a 5 GiB file, fix a cell, write it back. TabTool indexes 77.7 million rows in 2.7
 				seconds, keeps them in about 90 MB of memory, and never sends your data anywhere.
 			</p>
-			<StoreBadges />
+			<StoreBadges placement="hero" />
 			<div class="hero__actions">
-				<a class="btn btn--primary" href={site.github} rel="noopener">
-					Star on GitHub <span class="btn__arrow" aria-hidden="true">↗</span>
+				<a
+					class="btn btn--primary"
+					href={appStoreURL('ios', 'hero')}
+					onclick={() => trackStoreClick('ios', 'hero')}
+				>
+					Download free <span class="btn__arrow" aria-hidden="true">↗</span>
 				</a>
+				<a class="btn btn--ghost" href={site.github} rel="noopener">Star on GitHub</a>
 				<a class="btn btn--ghost" href="#performance">Watch it run</a>
 			</div>
-			<p class="hero__meta mono">
-				1.0 · free on the App Store · open source · no account
-			</p>
+			<p class="hero__micro mono">Free · under 3 MB · no account · no tracking</p>
 		</div>
 
 		<figure class="hero__shot">
 			<div class="hero__bar">
 				<span class="mono">real capture</span>
-				<span class="mono">macOS · orders.csv</span>
+				<span class="mono">macOS · emoji.csv</span>
 			</div>
 			<img
-				src="/img/mac-grid.webp"
-				srcset="/img/mac-grid-1200.webp 1200w, /img/mac-grid.webp 2400w"
+				src="/img/app-grid.webp"
+				srcset="/img/app-grid-1200.webp 1200w, /img/app-grid.webp 2400w"
 				sizes="(max-width: 960px) 100vw, 640px"
 				width="2400"
-				height="1502"
-				alt="TabTool for macOS with a CSV of 1,200 orders open, showing the grid and the format bar."
+				height="1500"
+				alt="TabTool for macOS with an emoji CSV open, showing the grid and the format bar."
 				fetchpriority="high"
 				decoding="async"
 			/>
 			<figcaption class="hero__caption mono">
-				1,200 rows × 8 columns · UTF-8 · comma · detected on open
+				1,799 rows × 12 columns · emoji · UTF-8 · comma · detected on open
 			</figcaption>
 		</figure>
 	</div>
@@ -129,7 +133,7 @@
 			index="03"
 			kicker="Performance"
 			title="Two million rows, no spinner."
-			lede="Large files are memory-mapped and indexed in the background, so the first rows appear immediately. This is an unedited capture of the current build scrolling a 109 MB file."
+			lede="Large files are memory-mapped and indexed in the background, so the first rows appear immediately. This is an unedited capture of the current build scrolling a 1,000,000-row emoji CSV."
 		/>
 		<VideoBlock />
 		<ul class="notes">
@@ -155,7 +159,7 @@
 			index="04"
 			kicker="Screens"
 			title="Every state is the real app."
-			lede="The screenshots below come from the development build on 29 October 2026. No mockups, no composited UI."
+			lede="The screenshots below come from the development build on 8 November 2026. No mockups, no composited UI."
 		/>
 		<Shots />
 	</div>
@@ -238,7 +242,7 @@
 		margin-top: 16px;
 	}
 
-	.hero__meta {
+	.hero__micro {
 		margin-top: 18px;
 		color: var(--muted);
 	}

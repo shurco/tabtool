@@ -2,6 +2,7 @@
 	import '../app.css';
 	import Header from '#lib/components/Header.svelte';
 	import Footer from '#lib/components/Footer.svelte';
+	import DownloadBar from '#lib/components/DownloadBar.svelte';
 
 	let { children } = $props();
 </script>
@@ -12,3 +13,4 @@
 	{@render children()}
 </main>
 <Footer />
+<DownloadBar />

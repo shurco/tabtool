@@ -1,7 +1,9 @@
 <script lang="ts">
 	import Seo from '#lib/components/Seo.svelte';
+	import StoreBadges from '#lib/components/StoreBadges.svelte';
 	import { comparisons } from '#lib/comparisons';
 	import { site } from '#lib/site';
+	import { appStoreURL, trackStoreClick } from '#lib/track';
 
 	let { data } = $props();
 	const item = $derived(data.comparison);
@@ -48,7 +50,7 @@
 		</nav>
 
 		<header class="vs-head">
-			<p class="eyebrow">Comparison · checked October 2026</p>
+			<p class="eyebrow">Comparison · checked 9 November 2026</p>
 			<h1>TabTool vs <span class="vs-head__name">{item.name}</span></h1>
 			<p class="lede vs-head__lede">{item.summary}</p>
 		</header>
@@ -81,7 +83,7 @@
 		<div class="table-wrap">
 			<table>
 				<caption class="mono"
-					>Vendor facts checked October 2026. Prices and features change; verify on
+					>Vendor facts checked 9 November 2026. Prices and features change; verify on
 					<a href={item.site} rel="noopener">{item.site.replace('https://', '')}</a>.</caption
 				>
 				<thead>
@@ -156,11 +158,16 @@
 				<li><a href={`/vs/${other.slug}/`}>vs {other.name} →</a></li>
 			{/each}
 		</ul>
+		<StoreBadges placement="compare" />
 		<div class="vs-cta">
-			<a class="btn btn--primary" href={site.github} rel="noopener">
-				Star on GitHub <span class="btn__arrow" aria-hidden="true">↗</span>
+			<a
+				class="btn btn--primary"
+				href={appStoreURL('ios', 'compare')}
+				onclick={() => trackStoreClick('ios', 'compare')}
+			>
+				Download free <span class="btn__arrow" aria-hidden="true">↗</span>
 			</a>
-			<a class="btn btn--ghost" href="/download/">Platforms and status</a>
+			<a class="btn btn--ghost" href={site.github} rel="noopener">Star on GitHub</a>
 		</div>
 	</div>
 </section>

@@ -1,20 +1,19 @@
 <script lang="ts">
-	import { site } from '#lib/site';
+	import { appStoreURL, trackStoreClick, type StorePlacement, type StorePlatform } from '#lib/track';
 
-	type Platform = 'mac' | 'ios';
-
-	let { platforms = ['mac', 'ios'] }: { platforms?: Platform[] } = $props();
+	let {
+		platforms = ['mac', 'ios'],
+		placement = 'download'
+	}: { platforms?: StorePlatform[]; placement?: StorePlacement } = $props();
 
 	// Official Apple badges, unmodified, from developer.apple.com/app-store/marketing/guidelines.
 	const badges = {
 		mac: {
-			href: site.appStore.mac,
 			src: '/img/badges/mac-app-store.svg',
 			alt: 'Download on the Mac App Store',
 			width: 156
 		},
 		ios: {
-			href: site.appStore.ios,
 			src: '/img/badges/app-store.svg',
 			alt: 'Download on the App Store',
 			width: 120
@@ -25,7 +24,11 @@
 <div class="badges">
 	{#each platforms as platform (platform)}
 		{@const badge = badges[platform]}
-		<a href={badge.href} rel="noopener">
+		<a
+			href={appStoreURL(platform, placement)}
+			rel="noopener"
+			onclick={() => trackStoreClick(platform, placement)}
+		>
 			<img src={badge.src} alt={badge.alt} width={badge.width} height="40" />
 		</a>
 	{/each}

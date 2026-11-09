@@ -7,9 +7,11 @@ export const site = {
 	github: 'https://github.com/shurco/tabtool',
 	appStore: {
 		ios: 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069',
-		mac: 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069?platform=mac'
+		mac: 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069?platform=mac',
+		providerToken: '',
+		campaign: 'website'
 	},
-	updated: '2026-10-29'
+	updated: '2026-11-09'
 };
 
 export const nav = [
@@ -24,7 +26,8 @@ export const footerNav = {
 		{ href: '/download/', label: 'Download' },
 		{ href: '/vs/', label: 'Comparisons' },
 		{ href: '/faq/', label: 'FAQ' },
-		{ href: '/feedback/', label: 'Feedback' }
+		{ href: '/feedback/', label: 'Feedback' },
+		{ href: '/press/', label: 'Press kit' }
 	],
 	legal: [
 		{ href: '/privacy/', label: 'Privacy Policy' },

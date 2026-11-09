@@ -16,6 +16,12 @@ import TabToolKit
         #expect(Preferences.Key.gridRowHeight == "gridRowHeight")
         #expect(Preferences.Key.gridShowsRowNumbers == "gridShowsRowNumbers")
         #expect(Preferences.Key.largeFileThresholdMiB == "largeFileThresholdMiB")
+        #expect(Preferences.Key.reviewFirstLaunch == "reviewFirstLaunch")
+        #expect(Preferences.Key.reviewActiveDays == "reviewActiveDays")
+        #expect(Preferences.Key.reviewLastActiveDay == "reviewLastActiveDay")
+        #expect(Preferences.Key.reviewEngagements == "reviewEngagements")
+        #expect(Preferences.Key.reviewLastPromptedVersion == "reviewLastPromptedVersion")
+        #expect(Preferences.Key.reviewLastPromptedAt == "reviewLastPromptedAt")
     }
 
     @Test func emptyDefaultsGiveTheDocumentedDefaults() {

@@ -44,7 +44,7 @@
 			index="VS"
 			kicker="Comparisons"
 			title="Five editors, five honest pages."
-			lede="Each page has the same shape: a feature table, the cases where the other app is better, and the cases where TabTool is. Vendor facts were checked in October 2026."
+			lede="Each page has the same shape: a feature table, the cases where the other app is better, and the cases where TabTool is. Vendor facts were checked on 9 November 2026."
 		/>
 	</div>
 </section>

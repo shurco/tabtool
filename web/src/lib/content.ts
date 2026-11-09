@@ -73,44 +73,34 @@ export const features: Feature[] = [
 
 export const shots = [
 	{
-		src: '/img/mac-grid.webp',
-		srcset: '/img/mac-grid-1200.webp 1200w, /img/mac-grid.webp 2400w',
+		src: '/img/app-grid.webp',
+		srcset: '/img/app-grid-1200.webp 1200w, /img/app-grid.webp 2400w',
 		width: 2400,
-		height: 1502,
-		alt: 'TabTool for macOS showing a 1,200-row orders CSV, with the format bar below the grid.',
-		title: 'The grid',
+		height: 1500,
+		alt: 'TabTool for macOS showing an emoji CSV with the Emoji, Name, and Category columns.',
+		title: 'Emoji, names, and categories in one grid',
 		caption:
-			'1,200 rows, 8 columns, UTF-8, comma. The format bar below the grid is the file’s own format, changed in place.'
+			'1,799 rows, 12 columns, UTF-8, comma. The first column is the real emoji from the file; the status line shows the detected format.'
 	},
 	{
-		src: '/img/mac-columns.webp',
-		srcset: '/img/mac-columns-1200.webp 1200w, /img/mac-columns.webp 2400w',
+		src: '/img/app-columns.webp',
+		srcset: '/img/app-columns-1200.webp 1200w, /img/app-columns.webp 2400w',
 		width: 2400,
-		height: 1543,
-		alt: 'A column selected in TabTool for macOS, with its header menu and the rest of the table dimmed.',
-		title: 'Column selected',
+		height: 1500,
+		alt: 'A column selected in TabTool for macOS, with the header menu.',
+		title: 'Sort, rename, or move a column in place',
 		caption:
-			'Click a header to select the column. Sort, rename, move, or delete it from the header, the context menu, or the Table menu.'
+			'Click a header to select the column. The header menu sorts, renames, moves, or deletes it without leaving the grid.'
 	},
 	{
-		src: '/img/mac-large.webp',
-		srcset: '/img/mac-large-1200.webp 1200w, /img/mac-large.webp 2400w',
+		src: '/img/app-large.webp',
+		srcset: '/img/app-large-1200.webp 1200w, /img/app-large.webp 2400w',
 		width: 2400,
-		height: 1543,
-		alt: 'TabTool in large-file mode showing a 2.1-million-row CSV with the large-file banner.',
-		title: 'Large-file mode',
+		height: 1500,
+		alt: 'TabTool for macOS in large-file mode showing a 1,000,000-row emoji CSV.',
+		title: '1,000,000 rows, still editable',
 		caption:
-			'2.1 million rows in this capture. Structural edits are off; scrolling, jumping, and cell edits stay on. The banner never hides the row count.'
-	},
-	{
-		src: '/img/ios-grid.webp',
-		srcset: '/img/ios-grid-500.webp 500w, /img/ios-grid.webp 1000w',
-		width: 1000,
-		height: 460,
-		alt: 'The same CSV open in TabTool for iPhone in landscape, showing the grid and row count.',
-		title: 'The same file on iPhone',
-		caption:
-			'Row numbers, sticky headers, and a status line with the row count, encoding, and separator. The toolbar holds undo, search, export, and the overflow menu.'
+			'Memory-mapped and indexed in the background. Structural edits are off; scrolling, jumping, and cell edits stay on.'
 	}
 ];
 

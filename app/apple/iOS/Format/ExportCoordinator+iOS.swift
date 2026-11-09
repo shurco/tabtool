@@ -97,7 +97,9 @@ final class ExportCoordinator {
                                   configuration: configuration, baseName: baseName,
                                   allowAmbiguousOutput: allowAmbiguousOutput)
             let picker = UIDocumentPickerViewController(forExporting: [url], asCopy: true)
-            let cleanup = ExportFileCleanup(url.deletingLastPathComponent())
+            let cleanup = ExportFileCleanup(url.deletingLastPathComponent()) {
+                ReviewPrompt.recordEngagement()
+            }
             picker.delegate = cleanup
             cleanups.append(cleanup)
             guard KeyWindow.present(picker) else {
@@ -136,12 +138,15 @@ final class ExportCoordinator {
 
 private final class ExportFileCleanup: NSObject, UIDocumentPickerDelegate {
     let directory: URL
+    let onExported: () -> Void
 
-    init(_ directory: URL) {
+    init(_ directory: URL, onExported: @escaping () -> Void) {
         self.directory = directory
+        self.onExported = onExported
     }
 
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        onExported()
         finish()
     }
 

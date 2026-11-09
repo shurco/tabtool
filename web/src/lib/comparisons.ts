@@ -181,7 +181,7 @@ export const comparisons: Comparison[] = [
 		summary:
 			'A free Windows-only CSV viewer built for profiling. TabTool is a Mac and iOS editor, and open source.',
 		intro: [
-			'CSViewer is free, including for commercial use, and built for looking at data rather than changing it. It loads millions of rows, profiles every column, and draws charts and crosstabs. It runs on 64-bit Windows only; the vendor’s FAQ confirms there is no Mac version.',
+			'CSViewer is free, including for commercial use, and built for looking at data rather than changing it. It loads millions of rows, profiles every column, and draws charts and crosstabs. It runs on 64-bit Windows only; the vendor’s site confirms there is no Mac version.',
 			'That makes the comparison simple. If your data lives on Windows and you need a free profiler, CSViewer is a strong fit. If you need to edit cells on a Mac or an iPhone, it is the wrong tool, and TabTool is built for exactly that.'
 		],
 		rows: [
@@ -209,8 +209,7 @@ export const comparisons: Comparison[] = [
 		verdict:
 			'CSViewer and TabTool barely compete: different operating systems, different jobs. Use CSViewer to profile data on Windows. Use TabTool to edit a CSV on a Mac or iPhone.',
 		sources: [
-			{ label: 'CSViewer', url: 'https://csviewer.com' },
-			{ label: 'CSViewer FAQ', url: 'https://csviewer.com/faq' }
+			{ label: 'CSViewer', url: 'https://csviewer.com' }
 		]
 	},
 	{
@@ -218,20 +217,20 @@ export const comparisons: Comparison[] = [
 		name: 'Tablecruncher',
 		vendor: 'Tablecruncher',
 		site: 'https://tablecruncher.com',
-		license: 'GPL-3.0',
+		license: 'GPL-3.0-or-later',
 		price: 'Free',
 		platforms: 'macOS 10.15+, Windows, Linux (beta)',
 		metaTitle: 'TabTool vs Tablecruncher: two open-source CSV editors',
 		metaDescription:
-			'Tablecruncher is a GPL-3.0 CSV editor with JavaScript macros on macOS, Windows, and Linux. TabTool is MIT-licensed with a native iOS app. Compare performance and scope.',
+			'Tablecruncher is a GPL-3.0-or-later CSV editor with JavaScript macros on macOS, Windows, and Linux. TabTool is MIT-licensed with a native iOS app. Compare performance and scope.',
 		summary:
 			'An open-source CSV editor with JavaScript macros and three desktop platforms. TabTool is MIT-licensed and Apple-only, for now.',
 		intro: [
-			'Tablecruncher became free and open source in April 2025. It is GPL-3.0, written in C++ with FLTK, and runs on macOS, Windows, and Linux (beta). It opens files over 2 GB, offers JavaScript macros, regex find and replace, and JSON export, and its own FAQ admits the interface will never win a design prize.',
+			'Tablecruncher became free and open source in April 2025. It is GPL-3.0-or-later, written in C++ with FLTK, and runs on macOS, Windows, and Linux (beta). It opens files over 2 GB, offers JavaScript macros, regex find and replace, and JSON export, and its own FAQ admits the interface will never win a design prize.',
 			'TabTool is the other open-source option: MIT rather than GPL, Swift rather than C++, native AppKit and SwiftUI rather than FLTK, and macOS plus iOS. Both projects care about large files, which makes this the most direct comparison on the site.'
 		],
 		rows: [
-			{ label: 'License', tabtool: 'MIT', them: 'GPL-3.0' },
+			{ label: 'License', tabtool: 'MIT', them: 'GPL-3.0-or-later' },
 			{ label: 'Price', tabtool: 'Free on the App Store', them: 'Free' },
 			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'macOS 10.15+, Windows, Linux beta' },
 			{ label: 'Language and UI', tabtool: 'Swift, SwiftUI + AppKit', them: 'C++17, FLTK' },

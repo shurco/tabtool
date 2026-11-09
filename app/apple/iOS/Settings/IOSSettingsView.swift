@@ -19,7 +19,7 @@ struct IOSSettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done", systemImage: "checkmark") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done", systemImage: "checkmark") { dismiss() }.accessibilityIdentifier("settings-done") } }
         }
     }
 }
