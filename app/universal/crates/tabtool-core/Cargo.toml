@@ -15,5 +15,6 @@ unicode-normalization = "0.1"
 
 [dev-dependencies]
 base64 = "0.22"
+proptest = "1"
 serde_json.workspace = true
 tabtool-testdata = { path = "../tabtool-testdata" }

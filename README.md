@@ -130,6 +130,19 @@ The repository follows these conventions:
 - `.superpowers/sdd` — working spec/plan artifacts, not tracked by git.
 - `TabTool.xcodeproj` is generated and not committed.
 
+## Universal (Rust)
+
+`app/universal` is the Rust port for Windows, Linux and Android. Plan 1 covers
+the pure CSV core only: `tabtool-core` implements parsing, writing, detection,
+tables, sorting, filters, clipboard and export, with a committed Swift golden
+suite proving parity with the Apple core. The desktop app is a smoke window and
+`tabtool-android` is a validated input spike; large-file mode, the document
+layer and production UI are later plans.
+
+Build and test from `app/universal` with Rust 1.99.1 (`cargo test --workspace`,
+`cargo run -p tabtool-desktop -- --smoke`); the [universal
+docs](app/universal/docs/universal.md) cover the toolchain, goldens and Android host.
+
 ## Build
 
 From the repository root:
