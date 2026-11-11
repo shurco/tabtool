@@ -139,6 +139,7 @@ fn decimal_conversion_only_touches_numeric_cells() {
     // An empty or unchanged mark is a no-op.
     table.convert_decimal_mark(".", ".");
     table.convert_decimal_mark("", ",");
+    table.convert_decimal_mark(".", "");
     assert_eq!(table.columns[0].cells, vec!["1.50", "a,b", "001.00"]);
 }
 

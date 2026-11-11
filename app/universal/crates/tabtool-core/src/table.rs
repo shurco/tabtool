@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::reorder::is_permutation;
-use crate::{column_name, is_numeric};
+use crate::{column_name, convert_decimal_mark, is_numeric};
 
 /// Process-unique identity of a column, stable for the session.
 pub type ColumnId = u64;
@@ -342,15 +342,17 @@ impl CsvTable {
     }
 
     /// Converts the decimal mark in numeric cells from `from` to `to`.
+    ///
+    /// An empty source or target mark and identical marks are no-ops.
     pub fn convert_decimal_mark(&mut self, from: &str, to: &str) {
-        if from.is_empty() || from == to {
+        if from.is_empty() || to.is_empty() || from == to {
             return;
         }
 
         for column in &mut self.columns {
             for cell in &mut column.cells {
                 if is_numeric(cell, from) {
-                    *cell = cell.replace(from, to);
+                    *cell = convert_decimal_mark(cell, from, to);
                 }
             }
         }
