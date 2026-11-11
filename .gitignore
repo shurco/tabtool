@@ -5,7 +5,9 @@
 xcuserdata/
 DerivedData/
 app/apple/build/
-app/universal/target/
+target/
+*.rs.bk
+*.profraw
 .superpowers/
 docs/store/
 *.p8
