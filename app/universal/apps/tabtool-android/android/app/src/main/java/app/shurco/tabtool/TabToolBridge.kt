@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.widget.FrameLayout
 import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
 import kotlin.math.roundToInt
@@ -21,6 +22,9 @@ object TabToolBridge {
     private var activity: Activity? = null
 
     @Volatile
+    private var textEditor: TabToolTextEditor? = null
+
+    @Volatile
     private var pendingDocumentUri: String? = null
 
     @Volatile
@@ -28,6 +32,12 @@ object TabToolBridge {
 
     fun attach(activity: Activity) {
         this.activity = activity
+    }
+
+    fun detach() {
+        textEditor?.dismissWithoutCallback()
+        textEditor = null
+        activity = null
     }
 
     fun updateInsets(insets: WindowInsetsCompat) {
@@ -108,6 +118,58 @@ object TabToolBridge {
 
     @JvmStatic
     fun insets(): IntArray = insetsDp.copyOf()
+
+    @JvmStatic
+    fun showTextEditor(
+        left: Int,
+        top: Int,
+        width: Int,
+        height: Int,
+        text: String,
+        multiline: Boolean,
+    ) {
+        val activity = activity ?: return
+        activity.runOnUiThread {
+            if (width <= 0 || height <= 0) {
+                return@runOnUiThread
+            }
+            val root = activity.findViewById<FrameLayout>(android.R.id.content)
+                ?: return@runOnUiThread
+            val editor = textEditor ?: TabToolTextEditor(activity).also { textEditor = it }
+            val params = FrameLayout.LayoutParams(width, height).apply {
+                leftMargin = left
+                topMargin = top
+            }
+            if (editor.parent == null) {
+                root.addView(editor, params)
+            } else {
+                editor.layoutParams = params
+            }
+            editor.elevation = 24f
+            editor.configure(text, multiline)
+        }
+    }
+
+    @JvmStatic
+    fun hideTextEditor() {
+        val activity = activity ?: return
+        activity.runOnUiThread {
+            textEditor?.dismissWithoutCallback()
+            textEditor = null
+        }
+    }
+
+    /** Returns true when a visible editor was cancelled. Runs on the UI thread. */
+    fun cancelTextEditor(): Boolean {
+        val editor = textEditor ?: return false
+        if (editor.parent == null) {
+            textEditor = null
+            return false
+        }
+        editor.cancelEdit()
+        textEditor = null
+        return true
+    }
 
     /** Spike-only self-test: proves the Rust bridge clears JNI exceptions. */
     @JvmStatic

@@ -31,59 +31,82 @@ fn bridge() -> Option<&'static Bridge> {
 }
 
 unsafe fn init_bridge() -> Option<Bridge> {
-    let context = ndk_context::android_context();
-    let vm = unsafe { JavaVM::from_raw(context.vm().cast()) }.ok()?;
-    let (activity_context, class) = {
-        let mut env = vm.attach_current_thread().ok()?;
-        let context = unsafe { JObject::from_raw(context.context() as jobject) };
-        let context = env.new_global_ref(context).ok()?;
+    let android_context = ndk_context::android_context();
+    // SAFETY: `ndk_context` was initialized by android-activity with the process
+    // `JavaVM` before `android_main`; the pointer is valid for the process lifetime.
+    let vm = match unsafe { JavaVM::from_raw(android_context.vm().cast()) } {
+        Ok(vm) => vm,
+        Err(error) => {
+            error!("Cannot wrap the Android JavaVM: {error}");
+            return None;
+        }
+    };
 
-        let class = bridge_class(&mut env, context.as_obj())?;
-        (context, env.new_global_ref(class).ok()?)
+    let (context, class) = {
+        let mut env = match vm.attach_current_thread() {
+            Ok(env) => env,
+            Err(error) => {
+                error!("Cannot attach the native thread to the JavaVM: {error}");
+                return None;
+            }
+        };
+
+        let refs = (|| -> jni::errors::Result<(GlobalRef, GlobalRef)> {
+            // SAFETY: `ndk_context` holds a live Android context reference. It is
+            // copied into a global reference immediately; the borrowed value is not
+            // used after this scope.
+            let context = unsafe { JObject::from_raw(android_context.context() as jobject) };
+            let context = env.new_global_ref(context)?;
+            let class = bridge_class(&mut env, context.as_obj())?;
+            let class = env.new_global_ref(class)?;
+            Ok((context, class))
+        })();
+
+        match refs {
+            Ok(refs) => refs,
+            Err(error) => {
+                log_jni_error(&mut env, "init_bridge", &error);
+                return None;
+            }
+        }
     };
 
     info!("JNI bridge initialized");
-    Some(Bridge {
-        vm,
-        context: activity_context,
-        class,
-    })
+    Some(Bridge { vm, context, class })
 }
 
 fn bridge_class<'local>(
     env: &mut JNIEnv<'local>,
     context: &JObject<'local>,
-) -> Option<JObject<'local>> {
+) -> jni::errors::Result<JObject<'local>> {
     // `FindClass` on the native thread only sees the boot class path, so load the
     // bridge through the application's class loader instead.
-    let name = env.new_string(BRIDGE_CLASS.replace('/', ".")).ok()?;
+    let name = env.new_string(BRIDGE_CLASS.replace('/', "."))?;
     let loader = env
-        .call_method(context, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])
-        .ok()?
-        .l()
-        .ok()?;
+        .call_method(context, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])?
+        .l()?;
     if loader.is_null() {
-        error!("Android context has no class loader");
-        return None;
+        return Err(jni::errors::Error::NullPtr("bridge class loader"));
     }
 
-    match env.call_method(
+    env.call_method(
         &loader,
         "loadClass",
         "(Ljava/lang/String;)Ljava/lang/Class;",
         &[JValue::from(&name)],
-    ) {
-        Ok(class) => class.l().ok(),
-        Err(error) => {
-            log_jni_error(env, "loadClass", &error);
-            None
-        }
-    }
+    )?
+    .l()
 }
 
 fn call_static_string(method: &str, signature: &str) -> Option<String> {
     let bridge = bridge()?;
-    let mut env = bridge.vm.attach_current_thread().ok()?;
+    let mut env = match bridge.vm.attach_current_thread() {
+        Ok(env) => env,
+        Err(error) => {
+            error!("Cannot attach the native thread for `{method}`: {error}");
+            return None;
+        }
+    };
 
     match env.call_static_method(&bridge.class, method, signature, &[]) {
         Ok(JValueOwned::Object(value)) if !value.is_null() => {
@@ -104,7 +127,29 @@ fn call_static_string(method: &str, signature: &str) -> Option<String> {
     }
 }
 
-fn log_jni_error(env: &mut JNIEnv<'_>, method: &str, error: &jni::errors::Error) -> bool {
+fn call_static_void(method: &str, signature: &str, args: &[JValue<'_, '_>]) {
+    let Some(bridge) = bridge() else {
+        return;
+    };
+    let mut env = match bridge.vm.attach_current_thread() {
+        Ok(env) => env,
+        Err(error) => {
+            error!("Cannot attach the native thread for `{method}`: {error}");
+            return;
+        }
+    };
+
+    if let Err(error) = env.call_static_method(&bridge.class, method, signature, args) {
+        log_jni_error(&mut env, method, &error);
+    }
+}
+
+/// Checks, describes and clears a pending Java exception, then logs the failure.
+pub(crate) fn log_jni_error(
+    env: &mut JNIEnv<'_>,
+    method: &str,
+    error: &jni::errors::Error,
+) -> bool {
     let pending = env.exception_check().unwrap_or(false);
     if pending {
         let _ = env.exception_describe();
@@ -124,11 +169,19 @@ pub fn clipboard_set(text: &str) {
     let Some(bridge) = bridge() else {
         return;
     };
-    let Ok(mut env) = bridge.vm.attach_current_thread() else {
-        return;
+    let mut env = match bridge.vm.attach_current_thread() {
+        Ok(env) => env,
+        Err(error) => {
+            error!("Cannot attach the native thread for `clipboardSet`: {error}");
+            return;
+        }
     };
-    let Ok(text) = env.new_string(text) else {
-        return;
+    let text = match env.new_string(text) {
+        Ok(text) => text,
+        Err(error) => {
+            log_jni_error(&mut env, "clipboardSet", &error);
+            return;
+        }
     };
     let args = [JValue::from(&text)];
 
@@ -147,13 +200,60 @@ pub fn open_document() -> Option<String> {
     call_static_string("openDocument", "()Ljava/lang/String;")
 }
 
+/// Opens the native `EditText` overlay at a physical-pixel rectangle.
+pub fn show_text_editor(left: i32, top: i32, width: i32, height: i32, text: &str, multiline: bool) {
+    let Some(bridge) = bridge() else {
+        return;
+    };
+    let mut env = match bridge.vm.attach_current_thread() {
+        Ok(env) => env,
+        Err(error) => {
+            error!("Cannot attach the native thread for `showTextEditor`: {error}");
+            return;
+        }
+    };
+    let text = match env.new_string(text) {
+        Ok(text) => text,
+        Err(error) => {
+            log_jni_error(&mut env, "showTextEditor", &error);
+            return;
+        }
+    };
+    let args = [
+        JValue::Int(left),
+        JValue::Int(top),
+        JValue::Int(width),
+        JValue::Int(height),
+        JValue::from(&text),
+        JValue::Bool(u8::from(multiline)),
+    ];
+
+    if let Err(error) = env.call_static_method(
+        &bridge.class,
+        "showTextEditor",
+        "(IIIILjava/lang/String;Z)V",
+        &args,
+    ) {
+        log_jni_error(&mut env, "showTextEditor", &error);
+    }
+}
+
+/// Removes the native `EditText` overlay without reporting an outcome.
+pub fn hide_text_editor() {
+    call_static_void("hideTextEditor", "()V", &[]);
+}
+
 /// Reads the current window insets in dp.
 pub fn insets() -> Insets {
     let Some(bridge) = bridge() else {
         return Insets::default();
     };
-    let Ok(mut env) = bridge.vm.attach_current_thread() else {
-        return Insets::default();
+    let mut env = match bridge.vm.attach_current_thread() {
+        Ok(env) => env,
+        Err(error) => {
+            error!("Cannot attach the native thread for `insets`: {error}");
+            return Insets::default();
+        }
     };
 
     let value = match env.call_static_method(&bridge.class, "insets", "()[I", &[]) {
@@ -166,8 +266,12 @@ pub fn insets() -> Insets {
     };
 
     let array = JIntArray::from(value);
-    let Ok(length) = env.get_array_length(&array) else {
-        return Insets::default();
+    let length = match env.get_array_length(&array) {
+        Ok(length) => length,
+        Err(error) => {
+            log_jni_error(&mut env, "insets", &error);
+            return Insets::default();
+        }
     };
     let mut buffer = vec![0i32; length.max(0) as usize];
     if let Err(error) = env.get_int_array_region(&array, 0, &mut buffer) {

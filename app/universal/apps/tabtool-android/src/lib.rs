@@ -6,6 +6,8 @@ pub mod insets;
 mod platform_bridge;
 #[cfg(target_os = "android")]
 mod spike_app;
+#[cfg(target_os = "android")]
+mod text_input;
 
 #[cfg(target_os = "android")]
 #[unsafe(no_mangle)]
