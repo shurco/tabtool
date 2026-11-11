@@ -7,3 +7,4 @@ license.workspace = true
 description = "Pure CSV engine shared by every TabTool app."
 
 [dependencies]
+encoding_rs = "0.8"
