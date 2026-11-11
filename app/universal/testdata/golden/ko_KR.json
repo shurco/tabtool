@@ -1,0 +1,4427 @@
+{
+  "clipboard" : {
+    "make" : [
+      {
+        "decimalMark" : ".",
+        "output" : "1.5\ta b",
+        "rows" : [
+          [
+            "1.5",
+            "a\tb"
+          ]
+        ],
+        "separator" : "."
+      },
+      {
+        "decimalMark" : ".",
+        "output" : "a b\tc d\te f",
+        "rows" : [
+          [
+            "a\nb",
+            "c\r\nd",
+            "e\rf"
+          ]
+        ],
+        "separator" : "."
+      },
+      {
+        "decimalMark" : ",",
+        "output" : "1.5\t2",
+        "rows" : [
+          [
+            "1,5",
+            "2"
+          ]
+        ],
+        "separator" : "."
+      },
+      {
+        "decimalMark" : ".",
+        "output" : "-3.25\t1e2",
+        "rows" : [
+          [
+            "-3.25",
+            "1e2"
+          ]
+        ],
+        "separator" : "."
+      },
+      {
+        "decimalMark" : ".",
+        "output" : "\tx",
+        "rows" : [
+          [
+            "",
+            "x"
+          ]
+        ],
+        "separator" : "."
+      }
+    ],
+    "parse" : [
+      {
+        "input" : "a\tb\n",
+        "rows" : [
+          [
+            "a",
+            "b"
+          ]
+        ]
+      },
+      {
+        "input" : "a\tb\r\nc\td\r\n",
+        "rows" : [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "c",
+            "d"
+          ]
+        ]
+      },
+      {
+        "input" : "a\tb\rc\td",
+        "rows" : [
+          [
+            "a",
+            "b"
+          ],
+          [
+            "c",
+            "d"
+          ]
+        ]
+      },
+      {
+        "input" : "a\n\nb\n",
+        "rows" : [
+          [
+            "a"
+          ],
+          [
+            ""
+          ],
+          [
+            "b"
+          ]
+        ]
+      },
+      {
+        "input" : "a\r\n\r\nb",
+        "rows" : [
+          [
+            "a"
+          ],
+          [
+            ""
+          ],
+          [
+            "b"
+          ]
+        ]
+      },
+      {
+        "input" : "\n",
+        "rows" : [
+          [
+            ""
+          ]
+        ]
+      },
+      {
+        "input" : "",
+        "rows" : [
+          [
+            ""
+          ]
+        ]
+      },
+      {
+        "input" : "a\t\tb\n\n",
+        "rows" : [
+          [
+            "a",
+            "",
+            "b"
+          ],
+          [
+            ""
+          ]
+        ]
+      },
+      {
+        "input" : "\t\n",
+        "rows" : [
+          [
+            "",
+            ""
+          ]
+        ]
+      }
+    ]
+  },
+  "encodings" : [
+    "Unicode (UTF-8)",
+    "Western (Mac OS Roman)",
+    "Western (Windows Latin 1)",
+    "Chinese (GBK)",
+    "Central European (ISO Latin 2)",
+    "Central European (Windows Latin 2)",
+    "Cyrillic (Windows)",
+    "Greek (Windows)",
+    "Turkish (Windows)",
+    "Japanese (EUC)",
+    "Japanese (Shift_JIS)",
+    "Japanese (ISO 2022-JP)",
+    "Unicode (UTF-16)",
+    "Unicode (UTF-16, Big Endian)",
+    "Unicode (UTF-16, Little Endian)",
+    "Unicode (UTF-32)",
+    "Unicode (UTF-32, Big Endian)",
+    "Unicode (UTF-32, Little Endian)"
+  ],
+  "export" : [
+    {
+      "base64" : "Im5hbWUiOyJzY29yZSIKIkFsaWNlIjsiMSw1IgoiQm9iIjsiMiw1Ig==",
+      "document" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "export" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ";"
+      },
+      "headers" : [
+        "name",
+        "score"
+      ],
+      "name" : "documentHeader",
+      "preflight" : null,
+      "rows" : [
+        [
+          "Alice",
+          "1.5"
+        ],
+        [
+          "Bob",
+          "2.5"
+        ]
+      ]
+    },
+    {
+      "base64" : "IkEiLCJCIgoiMS41IiwieCIKIjIuNSIsInki",
+      "document" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "export" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "headers" : null,
+      "name" : "generatedHeader",
+      "preflight" : null,
+      "rows" : [
+        [
+          "1.5",
+          "x"
+        ],
+        [
+          "2.5",
+          "y"
+        ]
+      ]
+    },
+    {
+      "base64" : "IjEiLCIyIg==",
+      "document" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "export" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "headers" : [
+        "name",
+        "score"
+      ],
+      "name" : "headerOff",
+      "preflight" : null,
+      "rows" : [
+        [
+          "1",
+          "2"
+        ]
+      ]
+    },
+    {
+      "base64" : "IjEuNSIsIngi",
+      "document" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "export" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "headers" : null,
+      "name" : "markConversion",
+      "preflight" : null,
+      "rows" : [
+        [
+          "1,5",
+          "x"
+        ]
+      ]
+    },
+    {
+      "base64" : null,
+      "document" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "export" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "",
+        "separator" : ","
+      },
+      "headers" : null,
+      "name" : "ambiguityAfterConversion",
+      "preflight" : "ambiguousOutput",
+      "rows" : [
+        [
+          "1.5",
+          "x"
+        ]
+      ]
+    },
+    {
+      "base64" : null,
+      "document" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "export" : {
+        "decimalMark" : ".",
+        "encoding" : 2,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "headers" : null,
+      "name" : "unencodableText",
+      "preflight" : "unencodableText",
+      "rows" : [
+        [
+          "日本",
+          "x"
+        ]
+      ]
+    },
+    {
+      "base64" : "IngiInkiLCJ6Cnci",
+      "document" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "export" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "headers" : [
+        "a\"b",
+        "c\nd"
+      ],
+      "name" : "escapedFields",
+      "preflight" : null,
+      "rows" : [
+        [
+          "x\"y",
+          "z\nw"
+        ]
+      ]
+    },
+    {
+      "base64" : "//4iADEALgA1ACIALAAiAHgAIgA=",
+      "document" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "export" : {
+        "decimalMark" : ".",
+        "encoding" : 12,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "headers" : null,
+      "name" : "utf16Export",
+      "preflight" : null,
+      "rows" : [
+        [
+          "1.5",
+          "x"
+        ]
+      ]
+    }
+  ],
+  "filters" : [
+    {
+      "criteria" : [
+        {
+          "column" : 1,
+          "enabled" : true,
+          "op" : "equals",
+          "value" : "5"
+        }
+      ],
+      "matching" : [
+        0
+      ],
+      "name" : "equals",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 1,
+          "enabled" : true,
+          "op" : "notEquals",
+          "value" : "5"
+        }
+      ],
+      "matching" : [
+        1,
+        2,
+        3,
+        4
+      ],
+      "name" : "notEquals",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 0,
+          "enabled" : true,
+          "op" : "contains",
+          "value" : "a"
+        }
+      ],
+      "matching" : [
+        0,
+        2,
+        3,
+        4
+      ],
+      "name" : "contains",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 0,
+          "enabled" : true,
+          "op" : "notContains",
+          "value" : "a"
+        }
+      ],
+      "matching" : [
+        1
+      ],
+      "name" : "notContains",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 0,
+          "enabled" : true,
+          "op" : "beginsWith",
+          "value" : "a"
+        }
+      ],
+      "matching" : [
+        0
+      ],
+      "name" : "beginsWith",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 0,
+          "enabled" : true,
+          "op" : "endsWith",
+          "value" : "e"
+        }
+      ],
+      "matching" : [
+        0,
+        3
+      ],
+      "name" : "endsWith",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 1,
+          "enabled" : true,
+          "op" : "greaterThan",
+          "value" : "3"
+        }
+      ],
+      "matching" : [
+        0,
+        1,
+        4
+      ],
+      "name" : "greaterThan",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 1,
+          "enabled" : true,
+          "op" : "lessThan",
+          "value" : "5"
+        }
+      ],
+      "matching" : [
+        3
+      ],
+      "name" : "lessThan",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 1,
+          "enabled" : true,
+          "op" : "greaterOrEqual",
+          "value" : "5"
+        }
+      ],
+      "matching" : [
+        0,
+        1,
+        4
+      ],
+      "name" : "greaterOrEqual",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 1,
+          "enabled" : true,
+          "op" : "lessOrEqual",
+          "value" : "5"
+        }
+      ],
+      "matching" : [
+        0,
+        3
+      ],
+      "name" : "lessOrEqual",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 1,
+          "enabled" : true,
+          "op" : "isEmpty",
+          "value" : ""
+        }
+      ],
+      "matching" : [
+        2
+      ],
+      "name" : "isEmpty",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 1,
+          "enabled" : true,
+          "op" : "isNotEmpty",
+          "value" : ""
+        }
+      ],
+      "matching" : [
+        0,
+        1,
+        3,
+        4
+      ],
+      "name" : "isNotEmpty",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 0,
+          "enabled" : true,
+          "op" : "matchesRegex",
+          "value" : "^[ab]"
+        }
+      ],
+      "matching" : [
+        0,
+        1
+      ],
+      "name" : "matchesRegex",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 0,
+          "enabled" : false,
+          "op" : "contains",
+          "value" : "a"
+        }
+      ],
+      "matching" : [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "name" : "disabled",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 0,
+          "enabled" : true,
+          "op" : "contains",
+          "value" : ""
+        }
+      ],
+      "matching" : [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "name" : "emptyValue",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : -1,
+          "enabled" : true,
+          "op" : "equals",
+          "value" : "x"
+        }
+      ],
+      "matching" : [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "name" : "unknownColumn",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 0,
+          "enabled" : true,
+          "op" : "matchesRegex",
+          "value" : "("
+        }
+      ],
+      "matching" : [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "name" : "invalidRegex",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    },
+    {
+      "criteria" : [
+        {
+          "column" : 0,
+          "enabled" : true,
+          "op" : "contains",
+          "value" : "a"
+        },
+        {
+          "column" : 1,
+          "enabled" : true,
+          "op" : "greaterThan",
+          "value" : "3"
+        }
+      ],
+      "matching" : [
+        0,
+        4
+      ],
+      "name" : "and",
+      "rows" : [
+        [
+          "Alice",
+          "5",
+          "apple"
+        ],
+        [
+          "bob",
+          "10",
+          "Banana"
+        ],
+        [
+          "Carol",
+          "",
+          "cherry"
+        ],
+        [
+          "dave",
+          "2.5",
+          "date"
+        ],
+        [
+          "Éva",
+          "7",
+          "éclair"
+        ]
+      ]
+    }
+  ],
+  "fixtures" : [
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/blank-lines.csv",
+      "rows" : [
+        [
+          "10"
+        ],
+        [
+          "20"
+        ],
+        [
+          ""
+        ],
+        [
+          ""
+        ],
+        [
+          "50"
+        ],
+        [
+          "60"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "IjEwIgoiMjAiCiIiCiIiCiI1MCIKIjYwIg==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "IjEwIgoiMjAiCiIiCiIiCiI1MCIKIjYwIg==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iADEAMAAiAAoAIgAyADAAIgAKACIAIgAKACIAIgAKACIANQAwACIACgAiADYAMAAiAA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/comma-separated-quote.csv",
+      "rows" : [
+        [
+          "alpha",
+          "beta",
+          "gamma"
+        ],
+        [
+          "10",
+          "20",
+          "30"
+        ],
+        [
+          "1,5",
+          "2,5",
+          "3,5"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImFscGhhIiwiYmV0YSIsImdhbW1hIgoiMTAiLCIyMCIsIjMwIgoiMSw1IiwiMiw1IiwiMyw1Ig==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImFscGhhIiwiYmV0YSIsImdhbW1hIgoiMTAiLCIyMCIsIjMwIgoiMSw1IiwiMiw1IiwiMyw1Ig==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGEAbABwAGgAYQAiACwAIgBiAGUAdABhACIALAAiAGcAYQBtAG0AYQAiAAoAIgAxADAAIgAsACIAMgAwACIALAAiADMAMAAiAAoAIgAxACwANQAiACwAIgAyACwANQAiACwAIgAzACwANQAiAA==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/comma-separated.csv",
+      "rows" : [
+        [
+          "alpha",
+          "beta",
+          "gamma"
+        ],
+        [
+          "10",
+          "20",
+          "30"
+        ],
+        [
+          "1.5",
+          "2.5",
+          "3.5"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImFscGhhIiwiYmV0YSIsImdhbW1hIgoiMTAiLCIyMCIsIjMwIgoiMS41IiwiMi41IiwiMy41Ig==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImFscGhhIiwiYmV0YSIsImdhbW1hIgoiMTAiLCIyMCIsIjMwIgoiMS41IiwiMi41IiwiMy41Ig==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGEAbABwAGgAYQAiACwAIgBiAGUAdABhACIALAAiAGcAYQBtAG0AYQAiAAoAIgAxADAAIgAsACIAMgAwACIALAAiADMAMAAiAAoAIgAxAC4ANQAiACwAIgAyAC4ANQAiACwAIgAzAC4ANQAiAA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 2,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/invalid-encoding.csv",
+      "rows" : [
+        [
+          "plain",
+          "café au lait",
+          "plain"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "InBsYWluIiwiY2Fm6SBhdSBsYWl0IiwicGxhaW4i",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 2,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 2
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0,
+          "skip" : "cannotDecodeData"
+        },
+        {
+          "base64" : "//4iAHAAbABhAGkAbgAiACwAIgBjAGEAZgDpACAAYQB1ACAAbABhAGkAdAAiACwAIgBwAGwAYQBpAG4AIgA=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/missing-backslash-afterValue.csv",
+      "rows" : [
+        [
+          "\"10\"",
+          "\"20\"\"",
+          "\"30\""
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "IjEwIiwiMjAiIiwiMzAi",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "IjEwIiwiMjAiIiwiMzAi",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iADEAMAAiACwAIgAyADAAIgAiACwAIgAzADAAIgA=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/missing-backslash-beforeValue.csv",
+      "rows" : [
+        [
+          "\"10\"",
+          "\"\"20\"",
+          "\"30\""
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "IjEwIiwiIjIwIiwiMzAi",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "IjEwIiwiIjIwIiwiMzAi",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iADEAMAAiACwAIgAiADIAMAAiACwAIgAzADAAIgA=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/missing-quote-atEnd.csv",
+      "rows" : [
+        [
+          "\"10\"",
+          "\"20\"",
+          "\"30"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "IjEwIiwiMjAiLCIzMA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "IjEwIiwiMjAiLCIzMA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iADEAMAAiACwAIgAyADAAIgAsACIAMwAwAA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/missing-value-for-backslash-inquote.csv",
+      "rows" : [
+        [
+          "10",
+          "\\"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "IjEwIiwiXCI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "IjEwIiwiXCI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iADEAMAAiACwAIgBcACIA",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/missing-value-for-backslash.csv",
+      "rows" : [
+        [
+          "\"10\"",
+          "\"\\"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "IjEwIiwiXA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "IjEwIiwiXA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iADEAMAAiACwAIgBcAA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\\",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/quote-backslash-escape.csv",
+      "rows" : [
+        [
+          "sample\" value",
+          "sample"
+        ],
+        [
+          "2.4",
+          "2,5"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "InNhbXBsZVwiIHZhbHVlIiwic2FtcGxlIgoiMi40IiwiMiw1Ig==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "InNhbXBsZVwiIHZhbHVlIiwic2FtcGxlIgoiMi40IiwiMiw1Ig==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAHMAYQBtAHAAbABlAFwAIgAgAHYAYQBsAHUAZQAiACwAIgBzAGEAbQBwAGwAZQAiAAoAIgAyAC4ANAAiACwAIgAyACwANQAiAA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/quote-in-unquoted-value.csv",
+      "rows" : [
+        [
+          "\"Widget\"",
+          "5\" Panel",
+          "\"444\""
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "IldpZGdldCIsNSIgUGFuZWwsIjQ0NCI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "IldpZGdldCIsNSIgUGFuZWwsIjQ0NCI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAFcAaQBkAGcAZQB0ACIALAA1ACIAIABQAGEAbgBlAGwALAAiADQANAA0ACIA",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/quote-quote-escape.csv",
+      "rows" : [
+        [
+          "sample\" value",
+          "sample"
+        ],
+        [
+          "2.4",
+          "2,5"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "InNhbXBsZSIiIHZhbHVlIiwic2FtcGxlIgoiMi40IiwiMiw1Ig==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "InNhbXBsZSIiIHZhbHVlIiwic2FtcGxlIgoiMi40IiwiMiw1Ig==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAHMAYQBtAHAAbABlACIAIgAgAHYAYQBsAHUAZQAiACwAIgBzAGEAbQBwAGwAZQAiAAoAIgAyAC4ANAAiACwAIgAyACwANQAiAA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ";"
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/semicolon-separated.csv",
+      "rows" : [
+        [
+          "alpha",
+          "beta",
+          "gamma"
+        ],
+        [
+          "10",
+          "20",
+          "30"
+        ],
+        [
+          "1,5",
+          "2,5",
+          "3,5"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImFscGhhIjsiYmV0YSI7ImdhbW1hIgoiMTAiOyIyMCI7IjMwIgoiMSw1IjsiMiw1IjsiMyw1Ig==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImFscGhhIjsiYmV0YSI7ImdhbW1hIgoiMTAiOyIyMCI7IjMwIgoiMSw1IjsiMiw1IjsiMyw1Ig==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGEAbABwAGgAYQAiADsAIgBiAGUAdABhACIAOwAiAGcAYQBtAG0AYQAiAAoAIgAxADAAIgA7ACIAMgAwACIAOwAiADMAMAAiAAoAIgAxACwANQAiADsAIgAyACwANQAiADsAIgAzACwANQAiAA==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Reading/tooMany-quotes-atEnd.csv",
+      "rows" : [
+        [
+          "\"10\"",
+          "\"\"\""
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "IjEwIiwiIiI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "IjEwIiwiIiI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iADEAMAAiACwAIgAiACIA",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-comma-separated-people-1.csv",
+      "rows" : [
+        [
+          "name",
+          "age"
+        ],
+        [
+          "Pixel",
+          "4"
+        ],
+        [
+          "Orion",
+          "6"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "Im5hbWUiLCJhZ2UiCiJQaXhlbCIsIjQiCiJPcmlvbiIsIjYi",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "Im5hbWUiLCJhZ2UiCiJQaXhlbCIsIjQiCiJPcmlvbiIsIjYi",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAG4AYQBtAGUAIgAsACIAYQBnAGUAIgAKACIAUABpAHgAZQBsACIALAAiADQAIgAKACIATwByAGkAbwBuACIALAAiADYAIgA=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-comma-separated-people-2.csv",
+      "rows" : [
+        [
+          "name",
+          "age"
+        ],
+        [
+          "Juno",
+          "8"
+        ],
+        [
+          "Bean",
+          "12"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "Im5hbWUiLCJhZ2UiCiJKdW5vIiwiOCIKIkJlYW4iLCIxMiI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "Im5hbWUiLCJhZ2UiCiJKdW5vIiwiOCIKIkJlYW4iLCIxMiI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAG4AYQBtAGUAIgAsACIAYQBnAGUAIgAKACIASgB1AG4AbwAiACwAIgA4ACIACgAiAEIAZQBhAG4AIgAsACIAMQAyACIA",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-comma-separated-places.csv",
+      "rows" : [
+        [
+          "id",
+          "name",
+          "long",
+          "lat",
+          "country",
+          "codes"
+        ],
+        [
+          "100",
+          "Vallbach",
+          "8.1021",
+          "49.2217",
+          "Deutschland",
+          "2491, 6488, 811, 1206, 8799, 1562"
+        ],
+        [
+          "101",
+          "Närsten",
+          "9.4412",
+          "48.9034",
+          "Deutschland",
+          "9568, 970, 8333, 3537, 634, 1428"
+        ],
+        [
+          "102",
+          "Östkirch",
+          "14.2216",
+          "47.5532",
+          "Österreich",
+          "6871, 1164, 3963, 1506, 9048, 6975, 988"
+        ],
+        [
+          "103",
+          "Grünau",
+          "14.887",
+          "47.6614",
+          "Österreich",
+          "3677, 9571"
+        ],
+        [
+          "104",
+          "Tälhof",
+          "13.0412",
+          "47.9921",
+          "Österreich",
+          "9475"
+        ],
+        [
+          "105",
+          "Mörsee",
+          "7.6523",
+          "47.118",
+          "Schweiz",
+          "832, 3642, 783, 9140, 2201, 4764, 6887"
+        ],
+        [
+          "106",
+          "Bärnau",
+          "7.441",
+          "46.9482",
+          "Schweiz",
+          "8878, 1949, 9373"
+        ],
+        [
+          "107",
+          "Lindholm",
+          "10.512",
+          "55.3314",
+          "Dänemark",
+          "9199, 2981, 1708, 9548, 9378"
+        ],
+        [
+          "108",
+          "Fjällby",
+          "12.9903",
+          "56.0407",
+          "Schweden",
+          "6121, 1616, 8994, 1048"
+        ],
+        [
+          "109",
+          "Åskog",
+          "15.1211",
+          "59.274",
+          "Schweden",
+          "3394"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIiwibmFtZSIsImxvbmciLCJsYXQiLCJjb3VudHJ5IiwiY29kZXMiCiIxMDAiLCJWYWxsYmFjaCIsIjguMTAyMSIsIjQ5LjIyMTciLCJEZXV0c2NobGFuZCIsIjI0OTEsIDY0ODgsIDgxMSwgMTIwNiwgODc5OSwgMTU2MiIKIjEwMSIsIk7DpHJzdGVuIiwiOS40NDEyIiwiNDguOTAzNCIsIkRldXRzY2hsYW5kIiwiOTU2OCwgOTcwLCA4MzMzLCAzNTM3LCA2MzQsIDE0MjgiCiIxMDIiLCLDlnN0a2lyY2giLCIxNC4yMjE2IiwiNDcuNTUzMiIsIsOWc3RlcnJlaWNoIiwiNjg3MSwgMTE2NCwgMzk2MywgMTUwNiwgOTA0OCwgNjk3NSwgOTg4IgoiMTAzIiwiR3LDvG5hdSIsIjE0Ljg4NyIsIjQ3LjY2MTQiLCLDlnN0ZXJyZWljaCIsIjM2NzcsIDk1NzEiCiIxMDQiLCJUw6RsaG9mIiwiMTMuMDQxMiIsIjQ3Ljk5MjEiLCLDlnN0ZXJyZWljaCIsIjk0NzUiCiIxMDUiLCJNw7Zyc2VlIiwiNy42NTIzIiwiNDcuMTE4IiwiU2Nod2VpeiIsIjgzMiwgMzY0MiwgNzgzLCA5MTQwLCAyMjAxLCA0NzY0LCA2ODg3IgoiMTA2IiwiQsOkcm5hdSIsIjcuNDQxIiwiNDYuOTQ4MiIsIlNjaHdlaXoiLCI4ODc4LCAxOTQ5LCA5MzczIgoiMTA3IiwiTGluZGhvbG0iLCIxMC41MTIiLCI1NS4zMzE0IiwiRMOkbmVtYXJrIiwiOTE5OSwgMjk4MSwgMTcwOCwgOTU0OCwgOTM3OCIKIjEwOCIsIkZqw6RsbGJ5IiwiMTIuOTkwMyIsIjU2LjA0MDciLCJTY2h3ZWRlbiIsIjYxMjEsIDE2MTYsIDg5OTQsIDEwNDgiCiIxMDkiLCLDhXNrb2ciLCIxNS4xMjExIiwiNTkuMjc0IiwiU2Nod2VkZW4iLCIzMzk0Ig==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIiwibmFtZSIsImxvbmciLCJsYXQiLCJjb3VudHJ5IiwiY29kZXMiCiIxMDAiLCJWYWxsYmFjaCIsIjguMTAyMSIsIjQ5LjIyMTciLCJEZXV0c2NobGFuZCIsIjI0OTEsIDY0ODgsIDgxMSwgMTIwNiwgODc5OSwgMTU2MiIKIjEwMSIsIk7DpHJzdGVuIiwiOS40NDEyIiwiNDguOTAzNCIsIkRldXRzY2hsYW5kIiwiOTU2OCwgOTcwLCA4MzMzLCAzNTM3LCA2MzQsIDE0MjgiCiIxMDIiLCLDlnN0a2lyY2giLCIxNC4yMjE2IiwiNDcuNTUzMiIsIsOWc3RlcnJlaWNoIiwiNjg3MSwgMTE2NCwgMzk2MywgMTUwNiwgOTA0OCwgNjk3NSwgOTg4IgoiMTAzIiwiR3LDvG5hdSIsIjE0Ljg4NyIsIjQ3LjY2MTQiLCLDlnN0ZXJyZWljaCIsIjM2NzcsIDk1NzEiCiIxMDQiLCJUw6RsaG9mIiwiMTMuMDQxMiIsIjQ3Ljk5MjEiLCLDlnN0ZXJyZWljaCIsIjk0NzUiCiIxMDUiLCJNw7Zyc2VlIiwiNy42NTIzIiwiNDcuMTE4IiwiU2Nod2VpeiIsIjgzMiwgMzY0MiwgNzgzLCA5MTQwLCAyMjAxLCA0NzY0LCA2ODg3IgoiMTA2IiwiQsOkcm5hdSIsIjcuNDQxIiwiNDYuOTQ4MiIsIlNjaHdlaXoiLCI4ODc4LCAxOTQ5LCA5MzczIgoiMTA3IiwiTGluZGhvbG0iLCIxMC41MTIiLCI1NS4zMzE0IiwiRMOkbmVtYXJrIiwiOTE5OSwgMjk4MSwgMTcwOCwgOTU0OCwgOTM3OCIKIjEwOCIsIkZqw6RsbGJ5IiwiMTIuOTkwMyIsIjU2LjA0MDciLCJTY2h3ZWRlbiIsIjYxMjEsIDE2MTYsIDg5OTQsIDEwNDgiCiIxMDkiLCLDhXNrb2ciLCIxNS4xMjExIiwiNTkuMjc0IiwiU2Nod2VkZW4iLCIzMzk0Ig==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiACwAIgBuAGEAbQBlACIALAAiAGwAbwBuAGcAIgAsACIAbABhAHQAIgAsACIAYwBvAHUAbgB0AHIAeQAiACwAIgBjAG8AZABlAHMAIgAKACIAMQAwADAAIgAsACIAVgBhAGwAbABiAGEAYwBoACIALAAiADgALgAxADAAMgAxACIALAAiADQAOQAuADIAMgAxADcAIgAsACIARABlAHUAdABzAGMAaABsAGEAbgBkACIALAAiADIANAA5ADEALAAgADYANAA4ADgALAAgADgAMQAxACwAIAAxADIAMAA2ACwAIAA4ADcAOQA5ACwAIAAxADUANgAyACIACgAiADEAMAAxACIALAAiAE4A5AByAHMAdABlAG4AIgAsACIAOQAuADQANAAxADIAIgAsACIANAA4AC4AOQAwADMANAAiACwAIgBEAGUAdQB0AHMAYwBoAGwAYQBuAGQAIgAsACIAOQA1ADYAOAAsACAAOQA3ADAALAAgADgAMwAzADMALAAgADMANQAzADcALAAgADYAMwA0ACwAIAAxADQAMgA4ACIACgAiADEAMAAyACIALAAiANYAcwB0AGsAaQByAGMAaAAiACwAIgAxADQALgAyADIAMQA2ACIALAAiADQANwAuADUANQAzADIAIgAsACIA1gBzAHQAZQByAHIAZQBpAGMAaAAiACwAIgA2ADgANwAxACwAIAAxADEANgA0ACwAIAAzADkANgAzACwAIAAxADUAMAA2ACwAIAA5ADAANAA4ACwAIAA2ADkANwA1ACwAIAA5ADgAOAAiAAoAIgAxADAAMwAiACwAIgBHAHIA/ABuAGEAdQAiACwAIgAxADQALgA4ADgANwAiACwAIgA0ADcALgA2ADYAMQA0ACIALAAiANYAcwB0AGUAcgByAGUAaQBjAGgAIgAsACIAMwA2ADcANwAsACAAOQA1ADcAMQAiAAoAIgAxADAANAAiACwAIgBUAOQAbABoAG8AZgAiACwAIgAxADMALgAwADQAMQAyACIALAAiADQANwAuADkAOQAyADEAIgAsACIA1gBzAHQAZQByAHIAZQBpAGMAaAAiACwAIgA5ADQANwA1ACIACgAiADEAMAA1ACIALAAiAE0A9gByAHMAZQBlACIALAAiADcALgA2ADUAMgAzACIALAAiADQANwAuADEAMQA4ACIALAAiAFMAYwBoAHcAZQBpAHoAIgAsACIAOAAzADIALAAgADMANgA0ADIALAAgADcAOAAzACwAIAA5ADEANAAwACwAIAAyADIAMAAxACwAIAA0ADcANgA0ACwAIAA2ADgAOAA3ACIACgAiADEAMAA2ACIALAAiAEIA5AByAG4AYQB1ACIALAAiADcALgA0ADQAMQAiACwAIgA0ADYALgA5ADQAOAAyACIALAAiAFMAYwBoAHcAZQBpAHoAIgAsACIAOAA4ADcAOAAsACAAMQA5ADQAOQAsACAAOQAzADcAMwAiAAoAIgAxADAANwAiACwAIgBMAGkAbgBkAGgAbwBsAG0AIgAsACIAMQAwAC4ANQAxADIAIgAsACIANQA1AC4AMwAzADEANAAiACwAIgBEAOQAbgBlAG0AYQByAGsAIgAsACIAOQAxADkAOQAsACAAMgA5ADgAMQAsACAAMQA3ADAAOAAsACAAOQA1ADQAOAAsACAAOQAzADcAOAAiAAoAIgAxADAAOAAiACwAIgBGAGoA5ABsAGwAYgB5ACIALAAiADEAMgAuADkAOQAwADMAIgAsACIANQA2AC4AMAA0ADAANwAiACwAIgBTAGMAaAB3AGUAZABlAG4AIgAsACIANgAxADIAMQAsACAAMQA2ADEANgAsACAAOAA5ADkANAAsACAAMQAwADQAOAAiAAoAIgAxADAAOQAiACwAIgDFAHMAawBvAGcAIgAsACIAMQA1AC4AMQAyADEAMQAiACwAIgA1ADkALgAyADcANAAiACwAIgBTAGMAaAB3AGUAZABlAG4AIgAsACIAMwAzADkANAAiAA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config1.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81.4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2,5\" wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47.9",
+          "Plain note; \\ , check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCJzY29yZSIsInJlbWFyayIKIjEiLCJNaXJhIFN0b25lIiwiMDcvMDQvMTk5MSIsIjgxLjQiLCJOZWVkIGEgMzAiIiBkZXNrIGxhbXAiCiIyIiwiT3NrYXIgTGluZHF2aXN0IiwiMDktMTEtMjAwMiIsIjI1MGUtMSIsIk5lZWQgYSAyLDUiIiB3YWxsIHNoZWxmIgoiMyIsIk5hZGlhIFBldHJvdmEiLCIyMS4wNi4xOTk3IiwiNDcuOSIsIlBsYWluIG5vdGU7IFwgLCBjaGVjayI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCJzY29yZSIsInJlbWFyayIKIjEiLCJNaXJhIFN0b25lIiwiMDcvMDQvMTk5MSIsIjgxLjQiLCJOZWVkIGEgMzAiIiBkZXNrIGxhbXAiCiIyIiwiT3NrYXIgTGluZHF2aXN0IiwiMDktMTEtMjAwMiIsIjI1MGUtMSIsIk5lZWQgYSAyLDUiIiB3YWxsIHNoZWxmIgoiMyIsIk5hZGlhIFBldHJvdmEiLCIyMS4wNi4xOTk3IiwiNDcuOSIsIlBsYWluIG5vdGU7IFwgLCBjaGVjayI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiACwAIgBjAHUAcwB0AG8AbQBlAHIAIgAsACIAagBvAGkAbgBlAGQAIgAsACIAcwBjAG8AcgBlACIALAAiAHIAZQBtAGEAcgBrACIACgAiADEAIgAsACIATQBpAHIAYQAgAFMAdABvAG4AZQAiACwAIgAwADcALwAwADQALwAxADkAOQAxACIALAAiADgAMQAuADQAIgAsACIATgBlAGUAZAAgAGEAIAAzADAAIgAiACAAZABlAHMAawAgAGwAYQBtAHAAIgAKACIAMgAiACwAIgBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAiACwAIgAwADkALQAxADEALQAyADAAMAAyACIALAAiADIANQAwAGUALQAxACIALAAiAE4AZQBlAGQAIABhACAAMgAsADUAIgAiACAAdwBhAGwAbAAgAHMAaABlAGwAZgAiAAoAIgAzACIALAAiAE4AYQBkAGkAYQAgAFAAZQB0AHIAbwB2AGEAIgAsACIAMgAxAC4AMAA2AC4AMQA5ADkANwAiACwAIgA0ADcALgA5ACIALAAiAFAAbABhAGkAbgAgAG4AbwB0AGUAOwAgAFwAIAAsACAAYwBoAGUAYwBrACIA",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\\",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config10.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81.4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2,5\" wall shelf\""
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47.9",
+          "Plain note; \\ ,  \" check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCJzY29yZSIsInJlbWFyayIKIjEiLCJNaXJhIFN0b25lIiwiMDcvMDQvMTk5MSIsIjgxLjQiLCJOZWVkIGEgMzBcIiBkZXNrIGxhbXAiCiIyIiwiT3NrYXIgTGluZHF2aXN0IiwiMDktMTEtMjAwMiIsIjI1MGUtMSIsIk5lZWQgYSAyLDVcIiB3YWxsIHNoZWxmXCIiCiIzIiwiTmFkaWEgUGV0cm92YSIsIjIxLjA2LjE5OTciLCI0Ny45IiwiUGxhaW4gbm90ZTsgXFwgLCAgXCIgY2hlY2si",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCJzY29yZSIsInJlbWFyayIKIjEiLCJNaXJhIFN0b25lIiwiMDcvMDQvMTk5MSIsIjgxLjQiLCJOZWVkIGEgMzBcIiBkZXNrIGxhbXAiCiIyIiwiT3NrYXIgTGluZHF2aXN0IiwiMDktMTEtMjAwMiIsIjI1MGUtMSIsIk5lZWQgYSAyLDVcIiB3YWxsIHNoZWxmXCIiCiIzIiwiTmFkaWEgUGV0cm92YSIsIjIxLjA2LjE5OTciLCI0Ny45IiwiUGxhaW4gbm90ZTsgXFwgLCAgXCIgY2hlY2si",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiACwAIgBjAHUAcwB0AG8AbQBlAHIAIgAsACIAagBvAGkAbgBlAGQAIgAsACIAcwBjAG8AcgBlACIALAAiAHIAZQBtAGEAcgBrACIACgAiADEAIgAsACIATQBpAHIAYQAgAFMAdABvAG4AZQAiACwAIgAwADcALwAwADQALwAxADkAOQAxACIALAAiADgAMQAuADQAIgAsACIATgBlAGUAZAAgAGEAIAAzADAAXAAiACAAZABlAHMAawAgAGwAYQBtAHAAIgAKACIAMgAiACwAIgBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAiACwAIgAwADkALQAxADEALQAyADAAMAAyACIALAAiADIANQAwAGUALQAxACIALAAiAE4AZQBlAGQAIABhACAAMgAsADUAXAAiACAAdwBhAGwAbAAgAHMAaABlAGwAZgBcACIAIgAKACIAMwAiACwAIgBOAGEAZABpAGEAIABQAGUAdAByAG8AdgBhACIALAAiADIAMQAuADAANgAuADEAOQA5ADcAIgAsACIANAA3AC4AOQAiACwAIgBQAGwAYQBpAG4AIABuAG8AdABlADsAIABcAFwAIAAsACAAIABcACIAIABjAGgAZQBjAGsAIgA=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config11.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81,4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2,5\" wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47,9",
+          "Plain note; \\ , \" check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCJzY29yZSIsInJlbWFyayIKIjEiLCJNaXJhIFN0b25lIiwiMDcvMDQvMTk5MSIsIjgxLDQiLCJOZWVkIGEgMzAiIiBkZXNrIGxhbXAiCiIyIiwiT3NrYXIgTGluZHF2aXN0IiwiMDktMTEtMjAwMiIsIjI1MGUtMSIsIk5lZWQgYSAyLDUiIiB3YWxsIHNoZWxmIgoiMyIsIk5hZGlhIFBldHJvdmEiLCIyMS4wNi4xOTk3IiwiNDcsOSIsIlBsYWluIG5vdGU7IFwgLCAiIiBjaGVjayI=",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCJzY29yZSIsInJlbWFyayIKIjEiLCJNaXJhIFN0b25lIiwiMDcvMDQvMTk5MSIsIjgxLDQiLCJOZWVkIGEgMzAiIiBkZXNrIGxhbXAiCiIyIiwiT3NrYXIgTGluZHF2aXN0IiwiMDktMTEtMjAwMiIsIjI1MGUtMSIsIk5lZWQgYSAyLDUiIiB3YWxsIHNoZWxmIgoiMyIsIk5hZGlhIFBldHJvdmEiLCIyMS4wNi4xOTk3IiwiNDcsOSIsIlBsYWluIG5vdGU7IFwgLCAiIiBjaGVjayI=",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiACwAIgBjAHUAcwB0AG8AbQBlAHIAIgAsACIAagBvAGkAbgBlAGQAIgAsACIAcwBjAG8AcgBlACIALAAiAHIAZQBtAGEAcgBrACIACgAiADEAIgAsACIATQBpAHIAYQAgAFMAdABvAG4AZQAiACwAIgAwADcALwAwADQALwAxADkAOQAxACIALAAiADgAMQAsADQAIgAsACIATgBlAGUAZAAgAGEAIAAzADAAIgAiACAAZABlAHMAawAgAGwAYQBtAHAAIgAKACIAMgAiACwAIgBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAiACwAIgAwADkALQAxADEALQAyADAAMAAyACIALAAiADIANQAwAGUALQAxACIALAAiAE4AZQBlAGQAIABhACAAMgAsADUAIgAiACAAdwBhAGwAbAAgAHMAaABlAGwAZgAiAAoAIgAzACIALAAiAE4AYQBkAGkAYQAgAFAAZQB0AHIAbwB2AGEAIgAsACIAMgAxAC4AMAA2AC4AMQA5ADkANwAiACwAIgA0ADcALAA5ACIALAAiAFAAbABhAGkAbgAgAG4AbwB0AGUAOwAgAFwAIAAsACAAIgAiACAAYwBoAGUAYwBrACIA",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ";"
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config2.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81,4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2,5\" wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47,9",
+          "Plain note; \\ , check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIjsiY3VzdG9tZXIiOyJqb2luZWQiOyJzY29yZSI7InJlbWFyayIKIjEiOyJNaXJhIFN0b25lIjsiMDcvMDQvMTk5MSI7IjgxLDQiOyJOZWVkIGEgMzAiIiBkZXNrIGxhbXAiCiIyIjsiT3NrYXIgTGluZHF2aXN0IjsiMDktMTEtMjAwMiI7IjI1MGUtMSI7Ik5lZWQgYSAyLDUiIiB3YWxsIHNoZWxmIgoiMyI7Ik5hZGlhIFBldHJvdmEiOyIyMS4wNi4xOTk3IjsiNDcsOSI7IlBsYWluIG5vdGU7IFwgLCBjaGVjayI=",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIjsiY3VzdG9tZXIiOyJqb2luZWQiOyJzY29yZSI7InJlbWFyayIKIjEiOyJNaXJhIFN0b25lIjsiMDcvMDQvMTk5MSI7IjgxLDQiOyJOZWVkIGEgMzAiIiBkZXNrIGxhbXAiCiIyIjsiT3NrYXIgTGluZHF2aXN0IjsiMDktMTEtMjAwMiI7IjI1MGUtMSI7Ik5lZWQgYSAyLDUiIiB3YWxsIHNoZWxmIgoiMyI7Ik5hZGlhIFBldHJvdmEiOyIyMS4wNi4xOTk3IjsiNDcsOSI7IlBsYWluIG5vdGU7IFwgLCBjaGVjayI=",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiADsAIgBjAHUAcwB0AG8AbQBlAHIAIgA7ACIAagBvAGkAbgBlAGQAIgA7ACIAcwBjAG8AcgBlACIAOwAiAHIAZQBtAGEAcgBrACIACgAiADEAIgA7ACIATQBpAHIAYQAgAFMAdABvAG4AZQAiADsAIgAwADcALwAwADQALwAxADkAOQAxACIAOwAiADgAMQAsADQAIgA7ACIATgBlAGUAZAAgAGEAIAAzADAAIgAiACAAZABlAHMAawAgAGwAYQBtAHAAIgAKACIAMgAiADsAIgBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAiADsAIgAwADkALQAxADEALQAyADAAMAAyACIAOwAiADIANQAwAGUALQAxACIAOwAiAE4AZQBlAGQAIABhACAAMgAsADUAIgAiACAAdwBhAGwAbAAgAHMAaABlAGwAZgAiAAoAIgAzACIAOwAiAE4AYQBkAGkAYQAgAFAAZQB0AHIAbwB2AGEAIgA7ACIAMgAxAC4AMAA2AC4AMQA5ADkANwAiADsAIgA0ADcALAA5ACIAOwAiAFAAbABhAGkAbgAgAG4AbwB0AGUAOwAgAFwAIAAsACAAYwBoAGUAYwBrACIA",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : "\t"
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config3.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81.4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2,5\" wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47.9",
+          "Plain note; \\ ,\t check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIgkiY3VzdG9tZXIiCSJqb2luZWQiCSJzY29yZSIJInJlbWFyayIKIjEiCSJNaXJhIFN0b25lIgkiMDcvMDQvMTk5MSIJIjgxLjQiCSJOZWVkIGEgMzAiIiBkZXNrIGxhbXAiCiIyIgkiT3NrYXIgTGluZHF2aXN0IgkiMDktMTEtMjAwMiIJIjI1MGUtMSIJIk5lZWQgYSAyLDUiIiB3YWxsIHNoZWxmIgoiMyIJIk5hZGlhIFBldHJvdmEiCSIyMS4wNi4xOTk3IgkiNDcuOSIJIlBsYWluIG5vdGU7IFwgLAkgY2hlY2si",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIgkiY3VzdG9tZXIiCSJqb2luZWQiCSJzY29yZSIJInJlbWFyayIKIjEiCSJNaXJhIFN0b25lIgkiMDcvMDQvMTk5MSIJIjgxLjQiCSJOZWVkIGEgMzAiIiBkZXNrIGxhbXAiCiIyIgkiT3NrYXIgTGluZHF2aXN0IgkiMDktMTEtMjAwMiIJIjI1MGUtMSIJIk5lZWQgYSAyLDUiIiB3YWxsIHNoZWxmIgoiMyIJIk5hZGlhIFBldHJvdmEiCSIyMS4wNi4xOTk3IgkiNDcuOSIJIlBsYWluIG5vdGU7IFwgLAkgY2hlY2si",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiAAkAIgBjAHUAcwB0AG8AbQBlAHIAIgAJACIAagBvAGkAbgBlAGQAIgAJACIAcwBjAG8AcgBlACIACQAiAHIAZQBtAGEAcgBrACIACgAiADEAIgAJACIATQBpAHIAYQAgAFMAdABvAG4AZQAiAAkAIgAwADcALwAwADQALwAxADkAOQAxACIACQAiADgAMQAuADQAIgAJACIATgBlAGUAZAAgAGEAIAAzADAAIgAiACAAZABlAHMAawAgAGwAYQBtAHAAIgAKACIAMgAiAAkAIgBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAiAAkAIgAwADkALQAxADEALQAyADAAMAAyACIACQAiADIANQAwAGUALQAxACIACQAiAE4AZQBlAGQAIABhACAAMgAsADUAIgAiACAAdwBhAGwAbAAgAHMAaABlAGwAZgAiAAoAIgAzACIACQAiAE4AYQBkAGkAYQAgAFAAZQB0AHIAbwB2AGEAIgAJACIAMgAxAC4AMAA2AC4AMQA5ADkANwAiAAkAIgA0ADcALgA5ACIACQAiAFAAbABhAGkAbgAgAG4AbwB0AGUAOwAgAFwAIAAsAAkAIABjAGgAZQBjAGsAIgA=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : "\t"
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config4.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81,4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2,5\" wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47,9",
+          "Plain note; \\ ,\t check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIgkiY3VzdG9tZXIiCSJqb2luZWQiCSJzY29yZSIJInJlbWFyayIKIjEiCSJNaXJhIFN0b25lIgkiMDcvMDQvMTk5MSIJIjgxLDQiCSJOZWVkIGEgMzAiIiBkZXNrIGxhbXAiCiIyIgkiT3NrYXIgTGluZHF2aXN0IgkiMDktMTEtMjAwMiIJIjI1MGUtMSIJIk5lZWQgYSAyLDUiIiB3YWxsIHNoZWxmIgoiMyIJIk5hZGlhIFBldHJvdmEiCSIyMS4wNi4xOTk3IgkiNDcsOSIJIlBsYWluIG5vdGU7IFwgLAkgY2hlY2si",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIgkiY3VzdG9tZXIiCSJqb2luZWQiCSJzY29yZSIJInJlbWFyayIKIjEiCSJNaXJhIFN0b25lIgkiMDcvMDQvMTk5MSIJIjgxLDQiCSJOZWVkIGEgMzAiIiBkZXNrIGxhbXAiCiIyIgkiT3NrYXIgTGluZHF2aXN0IgkiMDktMTEtMjAwMiIJIjI1MGUtMSIJIk5lZWQgYSAyLDUiIiB3YWxsIHNoZWxmIgoiMyIJIk5hZGlhIFBldHJvdmEiCSIyMS4wNi4xOTk3IgkiNDcsOSIJIlBsYWluIG5vdGU7IFwgLAkgY2hlY2si",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiAAkAIgBjAHUAcwB0AG8AbQBlAHIAIgAJACIAagBvAGkAbgBlAGQAIgAJACIAcwBjAG8AcgBlACIACQAiAHIAZQBtAGEAcgBrACIACgAiADEAIgAJACIATQBpAHIAYQAgAFMAdABvAG4AZQAiAAkAIgAwADcALwAwADQALwAxADkAOQAxACIACQAiADgAMQAsADQAIgAJACIATgBlAGUAZAAgAGEAIAAzADAAIgAiACAAZABlAHMAawAgAGwAYQBtAHAAIgAKACIAMgAiAAkAIgBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAiAAkAIgAwADkALQAxADEALQAyADAAMAAyACIACQAiADIANQAwAGUALQAxACIACQAiAE4AZQBlAGQAIABhACAAMgAsADUAIgAiACAAdwBhAGwAbAAgAHMAaABlAGwAZgAiAAoAIgAzACIACQAiAE4AYQBkAGkAYQAgAFAAZQB0AHIAbwB2AGEAIgAJACIAMgAxAC4AMAA2AC4AMQA5ADkANwAiAAkAIgA0ADcALAA5ACIACQAiAFAAbABhAGkAbgAgAG4AbwB0AGUAOwAgAFwAIAAsAAkAIABjAGgAZQBjAGsAIgA=",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\\",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ";"
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config5.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81,4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2,5\" wall shelf\""
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47,9",
+          "Plain note; \\ , \"check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIjsiY3VzdG9tZXIiOyJqb2luZWQiOyJzY29yZSI7InJlbWFyayIKIjEiOyJNaXJhIFN0b25lIjsiMDcvMDQvMTk5MSI7IjgxLDQiOyJOZWVkIGEgMzBcIiBkZXNrIGxhbXAiCiIyIjsiT3NrYXIgTGluZHF2aXN0IjsiMDktMTEtMjAwMiI7IjI1MGUtMSI7Ik5lZWQgYSAyLDVcIiB3YWxsIHNoZWxmXCIiCiIzIjsiTmFkaWEgUGV0cm92YSI7IjIxLjA2LjE5OTciOyI0Nyw5IjsiUGxhaW4gbm90ZTsgXFwgLCBcImNoZWNrIg==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIjsiY3VzdG9tZXIiOyJqb2luZWQiOyJzY29yZSI7InJlbWFyayIKIjEiOyJNaXJhIFN0b25lIjsiMDcvMDQvMTk5MSI7IjgxLDQiOyJOZWVkIGEgMzBcIiBkZXNrIGxhbXAiCiIyIjsiT3NrYXIgTGluZHF2aXN0IjsiMDktMTEtMjAwMiI7IjI1MGUtMSI7Ik5lZWQgYSAyLDVcIiB3YWxsIHNoZWxmXCIiCiIzIjsiTmFkaWEgUGV0cm92YSI7IjIxLjA2LjE5OTciOyI0Nyw5IjsiUGxhaW4gbm90ZTsgXFwgLCBcImNoZWNrIg==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiADsAIgBjAHUAcwB0AG8AbQBlAHIAIgA7ACIAagBvAGkAbgBlAGQAIgA7ACIAcwBjAG8AcgBlACIAOwAiAHIAZQBtAGEAcgBrACIACgAiADEAIgA7ACIATQBpAHIAYQAgAFMAdABvAG4AZQAiADsAIgAwADcALwAwADQALwAxADkAOQAxACIAOwAiADgAMQAsADQAIgA7ACIATgBlAGUAZAAgAGEAIAAzADAAXAAiACAAZABlAHMAawAgAGwAYQBtAHAAIgAKACIAMgAiADsAIgBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAiADsAIgAwADkALQAxADEALQAyADAAMAAyACIAOwAiADIANQAwAGUALQAxACIAOwAiAE4AZQBlAGQAIABhACAAMgAsADUAXAAiACAAdwBhAGwAbAAgAHMAaABlAGwAZgBcACIAIgAKACIAMwAiADsAIgBOAGEAZABpAGEAIABQAGUAdAByAG8AdgBhACIAOwAiADIAMQAuADAANgAuADEAOQA5ADcAIgA7ACIANAA3ACwAOQAiADsAIgBQAGwAYQBpAG4AIABuAG8AdABlADsAIABcAFwAIAAsACAAXAAiAGMAaABlAGMAawAiAA==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 12,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 15,
+            "escape" : "\\",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ";"
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config6.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81.4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2.5\" wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47.9",
+          "Plain note; \\     \" check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "aWQsY3VzdG9tZXIsam9pbmVkLHNjb3JlLHJlbWFyawoxLE1pcmEgU3RvbmUsMDcvMDQvMTk5MSw4MS40LE5lZWQgYSAzMCIgZGVzayBsYW1wCjIsT3NrYXIgTGluZHF2aXN0LDA5LTExLTIwMDIsMjUwZS0xLE5lZWQgYSAyLjUiIHdhbGwgc2hlbGYKMyxOYWRpYSBQZXRyb3ZhLDIxLjA2LjE5OTcsNDcuOSxQbGFpbiBub3RlOyBcICAgICAiIGNoZWNr",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "aWQsY3VzdG9tZXIsam9pbmVkLHNjb3JlLHJlbWFyawoxLE1pcmEgU3RvbmUsMDcvMDQvMTk5MSw4MS40LE5lZWQgYSAzMCIgZGVzayBsYW1wCjIsT3NrYXIgTGluZHF2aXN0LDA5LTExLTIwMDIsMjUwZS0xLE5lZWQgYSAyLjUiIHdhbGwgc2hlbGYKMyxOYWRpYSBQZXRyb3ZhLDIxLjA2LjE5OTcsNDcuOSxQbGFpbiBub3RlOyBcICAgICAiIGNoZWNr",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//5pAGQALABjAHUAcwB0AG8AbQBlAHIALABqAG8AaQBuAGUAZAAsAHMAYwBvAHIAZQAsAHIAZQBtAGEAcgBrAAoAMQAsAE0AaQByAGEAIABTAHQAbwBuAGUALAAwADcALwAwADQALwAxADkAOQAxACwAOAAxAC4ANAAsAE4AZQBlAGQAIABhACAAMwAwACIAIABkAGUAcwBrACAAbABhAG0AcAAKADIALABPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAsADAAOQAtADEAMQAtADIAMAAwADIALAAyADUAMABlAC0AMQAsAE4AZQBlAGQAIABhACAAMgAuADUAIgAgAHcAYQBsAGwAIABzAGgAZQBsAGYACgAzACwATgBhAGQAaQBhACAAUABlAHQAcgBvAHYAYQAsADIAMQAuADAANgAuADEAOQA5ADcALAA0ADcALgA5ACwAUABsAGEAaQBuACAAbgBvAHQAZQA7ACAAXAAgACAAIAAgACAAIgAgAGMAaABlAGMAawA=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "",
+        "separator" : ";"
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config7.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81,4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2,5\" wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47,9",
+          "Plain note \\ ,\t \" check\""
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "aWQ7Y3VzdG9tZXI7am9pbmVkO3Njb3JlO3JlbWFyawoxO01pcmEgU3RvbmU7MDcvMDQvMTk5MTs4MSw0O05lZWQgYSAzMCIgZGVzayBsYW1wCjI7T3NrYXIgTGluZHF2aXN0OzA5LTExLTIwMDI7MjUwZS0xO05lZWQgYSAyLDUiIHdhbGwgc2hlbGYKMztOYWRpYSBQZXRyb3ZhOzIxLjA2LjE5OTc7NDcsOTtQbGFpbiBub3RlIFwgLAkgIiBjaGVjayI=",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ";"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "aWQ7Y3VzdG9tZXI7am9pbmVkO3Njb3JlO3JlbWFyawoxO01pcmEgU3RvbmU7MDcvMDQvMTk5MTs4MSw0O05lZWQgYSAzMCIgZGVzayBsYW1wCjI7T3NrYXIgTGluZHF2aXN0OzA5LTExLTIwMDI7MjUwZS0xO05lZWQgYSAyLDUiIHdhbGwgc2hlbGYKMztOYWRpYSBQZXRyb3ZhOzIxLjA2LjE5OTc7NDcsOTtQbGFpbiBub3RlIFwgLAkgIiBjaGVjayI=",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ";"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//5pAGQAOwBjAHUAcwB0AG8AbQBlAHIAOwBqAG8AaQBuAGUAZAA7AHMAYwBvAHIAZQA7AHIAZQBtAGEAcgBrAAoAMQA7AE0AaQByAGEAIABTAHQAbwBuAGUAOwAwADcALwAwADQALwAxADkAOQAxADsAOAAxACwANAA7AE4AZQBlAGQAIABhACAAMwAwACIAIABkAGUAcwBrACAAbABhAG0AcAAKADIAOwBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAA7ADAAOQAtADEAMQAtADIAMAAwADIAOwAyADUAMABlAC0AMQA7AE4AZQBlAGQAIABhACAAMgAsADUAIgAgAHcAYQBsAGwAIABzAGgAZQBsAGYACgAzADsATgBhAGQAaQBhACAAUABlAHQAcgBvAHYAYQA7ADIAMQAuADAANgAuADEAOQA5ADcAOwA0ADcALAA5ADsAUABsAGEAaQBuACAAbgBvAHQAZQAgAFwAIAAsAAkAIAAiACAAYwBoAGUAYwBrACIA",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ";"
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : ";"
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "",
+        "separator" : "\t"
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config8.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81.4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2,5\" wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47.9",
+          "Plain note; \\ , \"check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "aWQJY3VzdG9tZXIJam9pbmVkCXNjb3JlCXJlbWFyawoxCU1pcmEgU3RvbmUJMDcvMDQvMTk5MQk4MS40CU5lZWQgYSAzMCIgZGVzayBsYW1wCjIJT3NrYXIgTGluZHF2aXN0CTA5LTExLTIwMDIJMjUwZS0xCU5lZWQgYSAyLDUiIHdhbGwgc2hlbGYKMwlOYWRpYSBQZXRyb3ZhCTIxLjA2LjE5OTcJNDcuOQlQbGFpbiBub3RlOyBcICwgImNoZWNr",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : "\t"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "aWQJY3VzdG9tZXIJam9pbmVkCXNjb3JlCXJlbWFyawoxCU1pcmEgU3RvbmUJMDcvMDQvMTk5MQk4MS40CU5lZWQgYSAzMCIgZGVzayBsYW1wCjIJT3NrYXIgTGluZHF2aXN0CTA5LTExLTIwMDIJMjUwZS0xCU5lZWQgYSAyLDUiIHdhbGwgc2hlbGYKMwlOYWRpYSBQZXRyb3ZhCTIxLjA2LjE5OTcJNDcuOQlQbGFpbiBub3RlOyBcICwgImNoZWNr",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : "\t"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//5pAGQACQBjAHUAcwB0AG8AbQBlAHIACQBqAG8AaQBuAGUAZAAJAHMAYwBvAHIAZQAJAHIAZQBtAGEAcgBrAAoAMQAJAE0AaQByAGEAIABTAHQAbwBuAGUACQAwADcALwAwADQALwAxADkAOQAxAAkAOAAxAC4ANAAJAE4AZQBlAGQAIABhACAAMwAwACIAIABkAGUAcwBrACAAbABhAG0AcAAKADIACQBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAJADAAOQAtADEAMQAtADIAMAAwADIACQAyADUAMABlAC0AMQAJAE4AZQBlAGQAIABhACAAMgAsADUAIgAgAHcAYQBsAGwAIABzAGgAZQBsAGYACgAzAAkATgBhAGQAaQBhACAAUABlAHQAcgBvAHYAYQAJADIAMQAuADAANgAuADEAOQA5ADcACQA0ADcALgA5AAkAUABsAGEAaQBuACAAbgBvAHQAZQA7ACAAXAAgACwAIAAiAGMAaABlAGMAawA=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : "\t"
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : "\t"
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ",",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "",
+        "separator" : "\t"
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-config9.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81,4",
+          "Need a 30\" desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2,5\" wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47,9",
+          "Plain note; \\ , \" check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "aWQJY3VzdG9tZXIJam9pbmVkCXNjb3JlCXJlbWFyawoxCU1pcmEgU3RvbmUJMDcvMDQvMTk5MQk4MSw0CU5lZWQgYSAzMCIgZGVzayBsYW1wCjIJT3NrYXIgTGluZHF2aXN0CTA5LTExLTIwMDIJMjUwZS0xCU5lZWQgYSAyLDUiIHdhbGwgc2hlbGYKMwlOYWRpYSBQZXRyb3ZhCTIxLjA2LjE5OTcJNDcsOQlQbGFpbiBub3RlOyBcICwgIiBjaGVjaw==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : "\t"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "aWQJY3VzdG9tZXIJam9pbmVkCXNjb3JlCXJlbWFyawoxCU1pcmEgU3RvbmUJMDcvMDQvMTk5MQk4MSw0CU5lZWQgYSAzMCIgZGVzayBsYW1wCjIJT3NrYXIgTGluZHF2aXN0CTA5LTExLTIwMDIJMjUwZS0xCU5lZWQgYSAyLDUiIHdhbGwgc2hlbGYKMwlOYWRpYSBQZXRyb3ZhCTIxLjA2LjE5OTcJNDcsOQlQbGFpbiBub3RlOyBcICwgIiBjaGVjaw==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : "\t"
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//5pAGQACQBjAHUAcwB0AG8AbQBlAHIACQBqAG8AaQBuAGUAZAAJAHMAYwBvAHIAZQAJAHIAZQBtAGEAcgBrAAoAMQAJAE0AaQByAGEAIABTAHQAbwBuAGUACQAwADcALwAwADQALwAxADkAOQAxAAkAOAAxACwANAAJAE4AZQBlAGQAIABhACAAMwAwACIAIABkAGUAcwBrACAAbABhAG0AcAAKADIACQBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAJADAAOQAtADEAMQAtADIAMAAwADIACQAyADUAMABlAC0AMQAJAE4AZQBlAGQAIABhACAAMgAsADUAIgAgAHcAYQBsAGwAIABzAGgAZQBsAGYACgAzAAkATgBhAGQAaQBhACAAUABlAHQAcgBvAHYAYQAJADIAMQAuADAANgAuADEAOQA5ADcACQA0ADcALAA5AAkAUABsAGEAaQBuACAAbgBvAHQAZQA7ACAAXAAgACwAIAAiACAAYwBoAGUAYwBrAA==",
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : "\t"
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ",",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "",
+            "separator" : "\t"
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-first-row-longer.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark",
+          "extra"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81.4",
+          "Need a 30 inch desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2",
+          "5 inch wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47.9",
+          "Plain note; \\ check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCJzY29yZSIsInJlbWFyayIsImV4dHJhIgoiMSIsIk1pcmEgU3RvbmUiLCIwNy8wNC8xOTkxIiwiODEuNCIsIk5lZWQgYSAzMCBpbmNoIGRlc2sgbGFtcCIsIiIKIjIiLCJPc2thciBMaW5kcXZpc3QiLCIwOS0xMS0yMDAyIiwiMjUwZS0xIiwiTmVlZCBhIDIiLCI1IGluY2ggd2FsbCBzaGVsZiIKIjMiLCJOYWRpYSBQZXRyb3ZhIiwiMjEuMDYuMTk5NyIsIjQ3LjkiLCJQbGFpbiBub3RlOyBcIGNoZWNrIiwiIg==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCJzY29yZSIsInJlbWFyayIsImV4dHJhIgoiMSIsIk1pcmEgU3RvbmUiLCIwNy8wNC8xOTkxIiwiODEuNCIsIk5lZWQgYSAzMCBpbmNoIGRlc2sgbGFtcCIsIiIKIjIiLCJPc2thciBMaW5kcXZpc3QiLCIwOS0xMS0yMDAyIiwiMjUwZS0xIiwiTmVlZCBhIDIiLCI1IGluY2ggd2FsbCBzaGVsZiIKIjMiLCJOYWRpYSBQZXRyb3ZhIiwiMjEuMDYuMTk5NyIsIjQ3LjkiLCJQbGFpbiBub3RlOyBcIGNoZWNrIiwiIg==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiACwAIgBjAHUAcwB0AG8AbQBlAHIAIgAsACIAagBvAGkAbgBlAGQAIgAsACIAcwBjAG8AcgBlACIALAAiAHIAZQBtAGEAcgBrACIALAAiAGUAeAB0AHIAYQAiAAoAIgAxACIALAAiAE0AaQByAGEAIABTAHQAbwBuAGUAIgAsACIAMAA3AC8AMAA0AC8AMQA5ADkAMQAiACwAIgA4ADEALgA0ACIALAAiAE4AZQBlAGQAIABhACAAMwAwACAAaQBuAGMAaAAgAGQAZQBzAGsAIABsAGEAbQBwACIALAAiACIACgAiADIAIgAsACIATwBzAGsAYQByACAATABpAG4AZABxAHYAaQBzAHQAIgAsACIAMAA5AC0AMQAxAC0AMgAwADAAMgAiACwAIgAyADUAMABlAC0AMQAiACwAIgBOAGUAZQBkACAAYQAgADIAIgAsACIANQAgAGkAbgBjAGgAIAB3AGEAbABsACAAcwBoAGUAbABmACIACgAiADMAIgAsACIATgBhAGQAaQBhACAAUABlAHQAcgBvAHYAYQAiACwAIgAyADEALgAwADYALgAxADkAOQA3ACIALAAiADQANwAuADkAIgAsACIAUABsAGEAaQBuACAAbgBvAHQAZQA7ACAAXAAgAGMAaABlAGMAawAiACwAIgAiAA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-first-row-one-row-shorter.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "score",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81.4",
+          "Need a 30 inch desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2",
+          "5 inch wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47.9",
+          "Plain note; \\ check"
+        ],
+        [
+          ""
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCJzY29yZSIsInJlbWFyayIsIiIKIjEiLCJNaXJhIFN0b25lIiwiMDcvMDQvMTk5MSIsIjgxLjQiLCJOZWVkIGEgMzAgaW5jaCBkZXNrIGxhbXAiLCIiCiIyIiwiT3NrYXIgTGluZHF2aXN0IiwiMDktMTEtMjAwMiIsIjI1MGUtMSIsIk5lZWQgYSAyIiwiNSBpbmNoIHdhbGwgc2hlbGYiCiIzIiwiTmFkaWEgUGV0cm92YSIsIjIxLjA2LjE5OTciLCI0Ny45IiwiUGxhaW4gbm90ZTsgXCBjaGVjayIsIiIKIiIsIiIsIiIsIiIsIiIsIiI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCJzY29yZSIsInJlbWFyayIsIiIKIjEiLCJNaXJhIFN0b25lIiwiMDcvMDQvMTk5MSIsIjgxLjQiLCJOZWVkIGEgMzAgaW5jaCBkZXNrIGxhbXAiLCIiCiIyIiwiT3NrYXIgTGluZHF2aXN0IiwiMDktMTEtMjAwMiIsIjI1MGUtMSIsIk5lZWQgYSAyIiwiNSBpbmNoIHdhbGwgc2hlbGYiCiIzIiwiTmFkaWEgUGV0cm92YSIsIjIxLjA2LjE5OTciLCI0Ny45IiwiUGxhaW4gbm90ZTsgXCBjaGVjayIsIiIKIiIsIiIsIiIsIiIsIiIsIiI=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiACwAIgBjAHUAcwB0AG8AbQBlAHIAIgAsACIAagBvAGkAbgBlAGQAIgAsACIAcwBjAG8AcgBlACIALAAiAHIAZQBtAGEAcgBrACIALAAiACIACgAiADEAIgAsACIATQBpAHIAYQAgAFMAdABvAG4AZQAiACwAIgAwADcALwAwADQALwAxADkAOQAxACIALAAiADgAMQAuADQAIgAsACIATgBlAGUAZAAgAGEAIAAzADAAIABpAG4AYwBoACAAZABlAHMAawAgAGwAYQBtAHAAIgAsACIAIgAKACIAMgAiACwAIgBPAHMAawBhAHIAIABMAGkAbgBkAHEAdgBpAHMAdAAiACwAIgAwADkALQAxADEALQAyADAAMAAyACIALAAiADIANQAwAGUALQAxACIALAAiAE4AZQBlAGQAIABhACAAMgAiACwAIgA1ACAAaQBuAGMAaAAgAHcAYQBsAGwAIABzAGgAZQBsAGYAIgAKACIAMwAiACwAIgBOAGEAZABpAGEAIABQAGUAdAByAG8AdgBhACIALAAiADIAMQAuADAANgAuADEAOQA5ADcAIgAsACIANAA3AC4AOQAiACwAIgBQAGwAYQBpAG4AIABuAG8AdABlADsAIABcACAAYwBoAGUAYwBrACIALAAiACIACgAiACIALAAiACIALAAiACIALAAiACIALAAiACIALAAiACIA",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 0,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-first-row-with-number.csv",
+      "rows" : [
+        [
+          "id",
+          "customer",
+          "joined",
+          "4.8",
+          "remark"
+        ],
+        [
+          "1",
+          "Mira Stone",
+          "07/04/1991",
+          "81.4",
+          "Need a 30 inch desk lamp"
+        ],
+        [
+          "2",
+          "Oskar Lindqvist",
+          "09-11-2002",
+          "250e-1",
+          "Need a 2",
+          "5 inch wall shelf"
+        ],
+        [
+          "3",
+          "Nadia Petrova",
+          "21.06.1997",
+          "47.9",
+          "Plain note; \\ check"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCI0LjgiLCJyZW1hcmsiLCIiCiIxIiwiTWlyYSBTdG9uZSIsIjA3LzA0LzE5OTEiLCI4MS40IiwiTmVlZCBhIDMwIGluY2ggZGVzayBsYW1wIiwiIgoiMiIsIk9za2FyIExpbmRxdmlzdCIsIjA5LTExLTIwMDIiLCIyNTBlLTEiLCJOZWVkIGEgMiIsIjUgaW5jaCB3YWxsIHNoZWxmIgoiMyIsIk5hZGlhIFBldHJvdmEiLCIyMS4wNi4xOTk3IiwiNDcuOSIsIlBsYWluIG5vdGU7IFwgY2hlY2siLCIi",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "ImlkIiwiY3VzdG9tZXIiLCJqb2luZWQiLCI0LjgiLCJyZW1hcmsiLCIiCiIxIiwiTWlyYSBTdG9uZSIsIjA3LzA0LzE5OTEiLCI4MS40IiwiTmVlZCBhIDMwIGluY2ggZGVzayBsYW1wIiwiIgoiMiIsIk9za2FyIExpbmRxdmlzdCIsIjA5LTExLTIwMDIiLCIyNTBlLTEiLCJOZWVkIGEgMiIsIjUgaW5jaCB3YWxsIHNoZWxmIgoiMyIsIk5hZGlhIFBldHJvdmEiLCIyMS4wNi4xOTk3IiwiNDcuOSIsIlBsYWluIG5vdGU7IFwgY2hlY2siLCIi",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0
+        },
+        {
+          "base64" : "//4iAGkAZAAiACwAIgBjAHUAcwB0AG8AbQBlAHIAIgAsACIAagBvAGkAbgBlAGQAIgAsACIANAAuADgAIgAsACIAcgBlAG0AYQByAGsAIgAsACIAIgAKACIAMQAiACwAIgBNAGkAcgBhACAAUwB0AG8AbgBlACIALAAiADAANwAvADAANAAvADEAOQA5ADEAIgAsACIAOAAxAC4ANAAiACwAIgBOAGUAZQBkACAAYQAgADMAMAAgAGkAbgBjAGgAIABkAGUAcwBrACAAbABhAG0AcAAiACwAIgAiAAoAIgAyACIALAAiAE8AcwBrAGEAcgAgAEwAaQBuAGQAcQB2AGkAcwB0ACIALAAiADAAOQAtADEAMQAtADIAMAAwADIAIgAsACIAMgA1ADAAZQAtADEAIgAsACIATgBlAGUAZAAgAGEAIAAyACIALAAiADUAIABpAG4AYwBoACAAdwBhAGwAbAAgAHMAaABlAGwAZgAiAAoAIgAzACIALAAiAE4AYQBkAGkAYQAgAFAAZQB0AHIAbwB2AGEAIgAsACIAMgAxAC4AMAA2AC4AMQA5ADkANwAiACwAIgA0ADcALgA5ACIALAAiAFAAbABhAGkAbgAgAG4AbwB0AGUAOwAgAFwAIABjAGgAZQBjAGsAIgAsACIAIgA=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 2,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-gbk.csv",
+      "rows" : [
+        [
+          "item1",
+          "item2",
+          "item3"
+        ],
+        [
+          "Ð»Ð»",
+          "Ñ§Ï°",
+          "±±¾©"
+        ],
+        [
+          "Hello",
+          "Study",
+          "Beijing"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "Iml0ZW0xIiwiaXRlbTIiLCJpdGVtMyIKItC70LsiLCLRp8+wIiwisbG+qSIKIkhlbGxvIiwiU3R1ZHkiLCJCZWlqaW5nIg==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 2,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 2
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0,
+          "skip" : "cannotDecodeData"
+        },
+        {
+          "base64" : "//4iAGkAdABlAG0AMQAiACwAIgBpAHQAZQBtADIAIgAsACIAaQB0AGUAbQAzACIACgAiANAAuwDQALsAIgAsACIA0QCnAM8AsAAiACwAIgCxALEAvgCpACIACgAiAEgAZQBsAGwAbwAiACwAIgBTAHQAdQBkAHkAIgAsACIAQgBlAGkAagBpAG4AZwAiAA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 2,
+        "escape" : "\"",
+        "header" : false,
+        "quote" : "\"",
+        "separator" : ","
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/heuristic-no-utf-encoding.csv",
+      "rows" : [
+        [
+          "Grün",
+          "d,",
+          "\"e\"",
+          ""
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "Ikdy/G4iLCJkLCIsIiIiZSIiIiwiIg==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 2,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 2
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 0,
+          "skip" : "cannotDecodeData"
+        },
+        {
+          "base64" : "//4iAEcAcgD8AG4AIgAsACIAZAAsACIALAAiACIAIgBlACIAIgAiACwAIgAiAA==",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : false,
+            "quote" : "\"",
+            "separator" : ","
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    },
+    {
+      "detected" : {
+        "decimalMark" : ".",
+        "encoding" : 1,
+        "escape" : "\"",
+        "header" : true,
+        "quote" : "\"",
+        "separator" : "\t"
+      },
+      "hadUTF8BOM" : false,
+      "name" : "Heuristic/macroman-tab-sample.csv",
+      "rows" : [
+        [
+          "kode",
+          "navn",
+          "beskrivelse",
+          "pris",
+          "by"
+        ],
+        [
+          "301",
+          "Sjøhytta Åsgård",
+          "Fiske og båttur i fjørden, åpent hele året.",
+          "120",
+          "Bodø"
+        ],
+        [
+          "302",
+          "Fjellstøgu",
+          "Overnatting for to på øvre etasje æ gjør det koselig.",
+          "95",
+          "Røros"
+        ],
+        [
+          "303",
+          "Kjøkkenhagen",
+          "Fersk grønnsak fra gården, økologisk og nært.",
+          "60",
+          "Ålesund"
+        ],
+        [
+          "304",
+          "Brønnhuset",
+          "Kaffe og våffel ved åra, åpent fra mørket til kveld.",
+          "45",
+          "Tønsberg"
+        ]
+      ],
+      "writes" : [
+        {
+          "base64" : "ImtvZGUiCSJuYXZuIgkiYmVza3JpdmVsc2UiCSJwcmlzIgkiYnkiCiIzMDEiCSJTar9oeXR0YSCBc2eMcmQiCSJGaXNrZSBvZyBijHR0dXIgaSBmar9yZGVuLCCMcGVudCBoZWxlIIxyZXQuIgkiMTIwIgkiQm9kvyIKIjMwMiIJIkZqZWxsc3S/Z3UiCSJPdmVybmF0dGluZyBmb3IgdG8gcIwgv3ZyZSBldGFzamUgviBnar9yIGRldCBrb3NlbGlnLiIJIjk1IgkiUr9yb3MiCiIzMDMiCSJLar9ra2VuaGFnZW4iCSJGZXJzayBncr9ubnNhayBmcmEgZ4xyZGVuLCC/a29sb2dpc2sgb2cgbr5ydC4iCSI2MCIJIoFsZXN1bmQiCiIzMDQiCSJCcr9ubmh1c2V0IgkiS2FmZmUgb2cgdoxmZmVsIHZlZCCMcmEsIIxwZW50IGZyYSBtv3JrZXQgdGlsIGt2ZWxkLiIJIjQ1IgkiVL9uc2Jlcmci",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 1,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 1
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 0,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 0,
+          "skip" : "cannotDecodeData"
+        },
+        {
+          "base64" : "//4iAGsAbwBkAGUAIgAJACIAbgBhAHYAbgAiAAkAIgBiAGUAcwBrAHIAaQB2AGUAbABzAGUAIgAJACIAcAByAGkAcwAiAAkAIgBiAHkAIgAKACIAMwAwADEAIgAJACIAUwBqAPgAaAB5AHQAdABhACAAxQBzAGcA5QByAGQAIgAJACIARgBpAHMAawBlACAAbwBnACAAYgDlAHQAdAB1AHIAIABpACAAZgBqAPgAcgBkAGUAbgAsACAA5QBwAGUAbgB0ACAAaABlAGwAZQAgAOUAcgBlAHQALgAiAAkAIgAxADIAMAAiAAkAIgBCAG8AZAD4ACIACgAiADMAMAAyACIACQAiAEYAagBlAGwAbABzAHQA+ABnAHUAIgAJACIATwB2AGUAcgBuAGEAdAB0AGkAbgBnACAAZgBvAHIAIAB0AG8AIABwAOUAIAD4AHYAcgBlACAAZQB0AGEAcwBqAGUAIADmACAAZwBqAPgAcgAgAGQAZQB0ACAAawBvAHMAZQBsAGkAZwAuACIACQAiADkANQAiAAkAIgBSAPgAcgBvAHMAIgAKACIAMwAwADMAIgAJACIASwBqAPgAawBrAGUAbgBoAGEAZwBlAG4AIgAJACIARgBlAHIAcwBrACAAZwByAPgAbgBuAHMAYQBrACAAZgByAGEAIABnAOUAcgBkAGUAbgAsACAA+ABrAG8AbABvAGcAaQBzAGsAIABvAGcAIABuAOYAcgB0AC4AIgAJACIANgAwACIACQAiAMUAbABlAHMAdQBuAGQAIgAKACIAMwAwADQAIgAJACIAQgByAPgAbgBuAGgAdQBzAGUAdAAiAAkAIgBLAGEAZgBmAGUAIABvAGcAIAB2AOUAZgBmAGUAbAAgAHYAZQBkACAA5QByAGEALAAgAOUAcABlAG4AdAAgAGYAcgBhACAAbQD4AHIAawBlAHQAIAB0AGkAbAAgAGsAdgBlAGwAZAAuACIACQAiADQANQAiAAkAIgBUAPgAbgBzAGIAZQByAGcAIgA=",
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 12,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 12
+        },
+        {
+          "configuration" : {
+            "decimalMark" : ".",
+            "encoding" : 15,
+            "escape" : "\"",
+            "header" : true,
+            "quote" : "\"",
+            "separator" : "\t"
+          },
+          "encoding" : 15,
+          "skip" : "cannotDecodeData"
+        }
+      ]
+    }
+  ],
+  "locale" : "ko_KR",
+  "sort" : [
+    {
+      "cells" : [
+        "2",
+        "10",
+        "001.5",
+        "1,5",
+        "a",
+        "A",
+        "b",
+        "B",
+        "z",
+        "Z",
+        "あ",
+        "ァ",
+        "あー",
+        "アー",
+        "ア",
+        "か",
+        "カ",
+        "中国",
+        "日本語",
+        "日本",
+        "item2",
+        "banana",
+        "cafe",
+        "é",
+        "é",
+        "Über",
+        "uber",
+        "about",
+        "abc",
+        "apple",
+        "Apple",
+        "",
+        " ",
+        "\t",
+        "  ",
+        "-3",
+        "3.14",
+        "1e2",
+        "0",
+        "item10"
+      ],
+      "decimalMark" : ".",
+      "direction" : "ascending",
+      "name" : "corpus-dot-ascending",
+      "order" : [
+        35,
+        38,
+        2,
+        0,
+        36,
+        1,
+        37,
+        3,
+        19,
+        18,
+        17,
+        4,
+        5,
+        28,
+        27,
+        29,
+        30,
+        6,
+        7,
+        21,
+        22,
+        24,
+        23,
+        20,
+        39,
+        26,
+        25,
+        8,
+        9,
+        11,
+        10,
+        14,
+        12,
+        13,
+        15,
+        16,
+        31,
+        32,
+        33,
+        34
+      ]
+    },
+    {
+      "cells" : [
+        "2",
+        "10",
+        "001.5",
+        "1,5",
+        "a",
+        "A",
+        "b",
+        "B",
+        "z",
+        "Z",
+        "あ",
+        "ァ",
+        "あー",
+        "アー",
+        "ア",
+        "か",
+        "カ",
+        "中国",
+        "日本語",
+        "日本",
+        "item2",
+        "banana",
+        "cafe",
+        "é",
+        "é",
+        "Über",
+        "uber",
+        "about",
+        "abc",
+        "apple",
+        "Apple",
+        "",
+        " ",
+        "\t",
+        "  ",
+        "-3",
+        "3.14",
+        "1e2",
+        "0",
+        "item10"
+      ],
+      "decimalMark" : ".",
+      "direction" : "descending",
+      "name" : "corpus-dot-descending",
+      "order" : [
+        16,
+        15,
+        13,
+        12,
+        14,
+        10,
+        11,
+        9,
+        8,
+        25,
+        26,
+        39,
+        20,
+        23,
+        24,
+        22,
+        21,
+        7,
+        6,
+        30,
+        29,
+        27,
+        28,
+        5,
+        4,
+        17,
+        18,
+        19,
+        3,
+        37,
+        1,
+        36,
+        0,
+        2,
+        38,
+        35,
+        31,
+        32,
+        33,
+        34
+      ]
+    },
+    {
+      "cells" : [
+        "2",
+        "10",
+        "001.5",
+        "1,5",
+        "a",
+        "A",
+        "b",
+        "B",
+        "z",
+        "Z",
+        "あ",
+        "ァ",
+        "あー",
+        "アー",
+        "ア",
+        "か",
+        "カ",
+        "中国",
+        "日本語",
+        "日本",
+        "item2",
+        "banana",
+        "cafe",
+        "é",
+        "é",
+        "Über",
+        "uber",
+        "about",
+        "abc",
+        "apple",
+        "Apple",
+        "",
+        " ",
+        "\t",
+        "  ",
+        "-3",
+        "3.14",
+        "1e2",
+        "0",
+        "item10"
+      ],
+      "decimalMark" : ",",
+      "direction" : "ascending",
+      "name" : "corpus-comma-ascending",
+      "order" : [
+        35,
+        38,
+        3,
+        0,
+        1,
+        37,
+        2,
+        36,
+        19,
+        18,
+        17,
+        4,
+        5,
+        28,
+        27,
+        29,
+        30,
+        6,
+        7,
+        21,
+        22,
+        24,
+        23,
+        20,
+        39,
+        26,
+        25,
+        8,
+        9,
+        11,
+        10,
+        14,
+        12,
+        13,
+        15,
+        16,
+        31,
+        32,
+        33,
+        34
+      ]
+    },
+    {
+      "cells" : [
+        "2",
+        "10",
+        "001.5",
+        "1,5",
+        "a",
+        "A",
+        "b",
+        "B",
+        "z",
+        "Z",
+        "あ",
+        "ァ",
+        "あー",
+        "アー",
+        "ア",
+        "か",
+        "カ",
+        "中国",
+        "日本語",
+        "日本",
+        "item2",
+        "banana",
+        "cafe",
+        "é",
+        "é",
+        "Über",
+        "uber",
+        "about",
+        "abc",
+        "apple",
+        "Apple",
+        "",
+        " ",
+        "\t",
+        "  ",
+        "-3",
+        "3.14",
+        "1e2",
+        "0",
+        "item10"
+      ],
+      "decimalMark" : ",",
+      "direction" : "descending",
+      "name" : "corpus-comma-descending",
+      "order" : [
+        16,
+        15,
+        13,
+        12,
+        14,
+        10,
+        11,
+        9,
+        8,
+        25,
+        26,
+        39,
+        20,
+        23,
+        24,
+        22,
+        21,
+        7,
+        6,
+        30,
+        29,
+        27,
+        28,
+        5,
+        4,
+        17,
+        18,
+        19,
+        36,
+        2,
+        37,
+        1,
+        0,
+        3,
+        38,
+        35,
+        31,
+        32,
+        33,
+        34
+      ]
+    }
+  ]
+}

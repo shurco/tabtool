@@ -4,12 +4,6 @@ use std::borrow::Cow;
 
 use crate::{CsvConfiguration, CsvParser, Encoding, is_numeric};
 
-/// Bytes Windows-1252 leaves undefined, which Foundation rejects.
-///
-/// `encoding_rs` follows WHATWG and maps them to C1 controls instead, so the
-/// detector rejects them itself to keep the encoding choice identical to Apple.
-const WINDOWS_1252_UNDEFINED: [u8; 5] = [0x81, 0x8D, 0x8F, 0x90, 0x9D];
-
 /// Picks the most likely [`CsvConfiguration`] for raw data.
 ///
 /// The detector scores candidates in a fixed order:
@@ -186,13 +180,6 @@ fn encodings(prefers_chinese_encoding: bool) -> [Encoding; 4] {
 /// Decodes `data` for one encoding attempt, or returns `None` when Apple's
 /// Foundation decoder would reject the bytes.
 fn decode(data: &[u8], encoding: Encoding) -> Option<Cow<'_, str>> {
-    if encoding == Encoding::Windows1252
-        && data
-            .iter()
-            .any(|byte| WINDOWS_1252_UNDEFINED.contains(byte))
-    {
-        return None;
-    }
     encoding.decode(data).ok()
 }
 

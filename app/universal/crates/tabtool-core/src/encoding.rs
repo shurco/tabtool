@@ -10,6 +10,12 @@ const UTF16_LE_BOM: [u8; 2] = [0xFF, 0xFE];
 const UTF32_BE_BOM: [u8; 4] = [0x00, 0x00, 0xFE, 0xFF];
 const UTF32_LE_BOM: [u8; 4] = [0xFF, 0xFE, 0x00, 0x00];
 
+/// Bytes Windows-1252 leaves undefined, which Foundation rejects.
+///
+/// `encoding_rs` follows WHATWG and maps them to C1 controls instead, so they
+/// are rejected here to keep decoding identical to Apple's Foundation.
+const WINDOWS_1252_UNDEFINED: [u8; 5] = [0x81, 0x8D, 0x8F, 0x90, 0x9D];
+
 /// An encoding offered in the format bar.
 ///
 /// [`Encoding::ALL`] lists the encodings in display order with the exact names
@@ -41,14 +47,14 @@ pub enum Encoding {
     /// Japanese (ISO 2022-JP).
     Iso2022Jp,
     /// Unicode (UTF-16); a byte order mark picks the endianness, otherwise
-    /// little-endian is assumed.
+    /// big-endian is assumed.
     Utf16,
     /// Unicode (UTF-16, Big Endian).
     Utf16Be,
     /// Unicode (UTF-16, Little Endian).
     Utf16Le,
     /// Unicode (UTF-32); a byte order mark picks the endianness, otherwise
-    /// little-endian is assumed.
+    /// big-endian is assumed.
     Utf32,
     /// Unicode (UTF-32, Big Endian).
     Utf32Be,
@@ -119,13 +125,14 @@ impl Encoding {
     /// Decodes bytes, rejecting input that is invalid for this encoding.
     ///
     /// UTF-8 strips a leading byte order mark. The generic UTF-16 and UTF-32
-    /// variants honour a byte order mark and otherwise assume little-endian;
-    /// the explicit endian variants never consume a byte order mark.
+    /// variants honour a byte order mark and otherwise assume big-endian;
+    /// the explicit endian variants never consume a byte order mark. Like
+    /// Foundation, an incomplete trailing code unit is ignored.
     pub fn decode(self, bytes: &[u8]) -> Result<Cow<'_, str>, CsvError> {
         match self {
             Self::Utf8 => decode_with(encoding_rs::UTF_8, strip_utf8_bom(bytes)),
             Self::MacRoman => decode_with(encoding_rs::MACINTOSH, bytes),
-            Self::Windows1252 => decode_with(encoding_rs::WINDOWS_1252, bytes),
+            Self::Windows1252 => decode_windows_1252(bytes),
             Self::Gbk => decode_with(encoding_rs::GBK, bytes),
             Self::IsoLatin2 => decode_with(encoding_rs::ISO_8859_2, bytes),
             Self::Windows1250 => decode_with(encoding_rs::WINDOWS_1250, bytes),
@@ -192,22 +199,31 @@ fn decode_with<'a>(
         .ok_or(CsvError::CannotDecodeData)
 }
 
+/// Decodes Windows-1252, rejecting the five bytes the code page leaves open.
+fn decode_windows_1252(bytes: &[u8]) -> Result<Cow<'_, str>, CsvError> {
+    if bytes
+        .iter()
+        .any(|byte| WINDOWS_1252_UNDEFINED.contains(byte))
+    {
+        return Err(CsvError::CannotDecodeData);
+    }
+    decode_with(encoding_rs::WINDOWS_1252, bytes)
+}
+
 fn decode_utf16_bom(bytes: &[u8]) -> Result<String, CsvError> {
     if let Some(rest) = bytes.strip_prefix(UTF16_BE_BOM.as_slice()) {
         decode_utf16(rest, ByteOrder::Big)
     } else if let Some(rest) = bytes.strip_prefix(UTF16_LE_BOM.as_slice()) {
         decode_utf16(rest, ByteOrder::Little)
     } else {
-        decode_utf16(bytes, ByteOrder::Little)
+        decode_utf16(bytes, ByteOrder::Big)
     }
 }
 
 fn decode_utf16(bytes: &[u8], order: ByteOrder) -> Result<String, CsvError> {
-    if !bytes.len().is_multiple_of(2) {
-        return Err(CsvError::CannotDecodeData);
-    }
-
-    let units = bytes.as_chunks::<2>().0.iter().map(|pair| match order {
+    // Foundation ignores a trailing incomplete code unit.
+    let (pairs, _remainder) = bytes.as_chunks::<2>();
+    let units = pairs.iter().map(|pair| match order {
         ByteOrder::Big => u16::from_be_bytes(*pair),
         ByteOrder::Little => u16::from_le_bytes(*pair),
     });
@@ -223,17 +239,15 @@ fn decode_utf32_bom(bytes: &[u8]) -> Result<String, CsvError> {
     } else if let Some(rest) = bytes.strip_prefix(UTF32_LE_BOM.as_slice()) {
         decode_utf32(rest, ByteOrder::Little)
     } else {
-        decode_utf32(bytes, ByteOrder::Little)
+        decode_utf32(bytes, ByteOrder::Big)
     }
 }
 
 fn decode_utf32(bytes: &[u8], order: ByteOrder) -> Result<String, CsvError> {
-    if !bytes.len().is_multiple_of(4) {
-        return Err(CsvError::CannotDecodeData);
-    }
-
+    // Foundation ignores trailing bytes that do not form a whole code unit.
     let mut text = String::with_capacity(bytes.len() / 4);
-    for chunk in bytes.as_chunks::<4>().0 {
+    let (chunks, _remainder) = bytes.as_chunks::<4>();
+    for chunk in chunks {
         let value = match order {
             ByteOrder::Big => u32::from_be_bytes(*chunk),
             ByteOrder::Little => u32::from_le_bytes(*chunk),

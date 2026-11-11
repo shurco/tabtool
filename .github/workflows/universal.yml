@@ -71,4 +71,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-1.99.1-
       - run: cargo test --workspace
+      - run: cargo test -p tabtool-core --test golden
       - run: cargo run -p tabtool-desktop -- --smoke

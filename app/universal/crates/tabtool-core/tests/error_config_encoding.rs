@@ -170,6 +170,18 @@ fn invalid_bytes_are_a_typed_error() {
 }
 
 #[test]
+fn windows1252_rejects_the_five_undefined_bytes() {
+    // Foundation rejects these bytes; WHATWG would map them to C1 controls.
+    for byte in [0x81, 0x8D, 0x8F, 0x90, 0x9D] {
+        assert_eq!(
+            Encoding::Windows1252.decode(&[b'a', byte, b'b']),
+            Err(CsvError::CannotDecodeData),
+            "{byte:#04x}"
+        );
+    }
+}
+
+#[test]
 fn legacy_decoders_do_not_substitute_replacements() {
     // A replacement character would give `Ok`, so `Err` proves the decoders
     // reject truncated multi-byte sequences instead of substituting U+FFFD.
@@ -258,7 +270,7 @@ fn explicit_endianness_is_always_used_and_has_no_bom() {
 }
 
 #[test]
-fn generic_utf16_detects_the_bom_and_defaults_to_little_endian() {
+fn generic_utf16_detects_the_bom_and_defaults_to_big_endian() {
     assert_eq!(
         Encoding::Utf16.decode(&[0xFE, 0xFF, 0x00, 0x61]).unwrap(),
         "a"
@@ -267,7 +279,7 @@ fn generic_utf16_detects_the_bom_and_defaults_to_little_endian() {
         Encoding::Utf16.decode(&[0xFF, 0xFE, 0x61, 0x00]).unwrap(),
         "a"
     );
-    assert_eq!(Encoding::Utf16.decode(&[0x61, 0x00]).unwrap(), "a");
+    assert_eq!(Encoding::Utf16.decode(&[0x00, 0x61]).unwrap(), "a");
     assert_eq!(
         Encoding::Utf16.encode("a").unwrap(),
         [0xFF, 0xFE, 0x61, 0x00]
@@ -275,7 +287,7 @@ fn generic_utf16_detects_the_bom_and_defaults_to_little_endian() {
 }
 
 #[test]
-fn generic_utf32_detects_the_bom_and_defaults_to_little_endian() {
+fn generic_utf32_detects_the_bom_and_defaults_to_big_endian() {
     assert_eq!(
         Encoding::Utf32
             .decode(&[0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x61])
@@ -289,7 +301,7 @@ fn generic_utf32_detects_the_bom_and_defaults_to_little_endian() {
         "a"
     );
     assert_eq!(
-        Encoding::Utf32.decode(&[0x61, 0x00, 0x00, 0x00]).unwrap(),
+        Encoding::Utf32.decode(&[0x00, 0x00, 0x00, 0x61]).unwrap(),
         "a"
     );
     assert_eq!(
@@ -299,15 +311,15 @@ fn generic_utf32_detects_the_bom_and_defaults_to_little_endian() {
 }
 
 #[test]
-fn utf16_rejects_odd_lengths_and_unpaired_surrogates() {
-    assert_eq!(
-        Encoding::Utf16.decode(&[0x61]),
-        Err(CsvError::CannotDecodeData)
-    );
-    assert_eq!(
-        Encoding::Utf16Be.decode(&[0x00, 0x61, 0x00]),
-        Err(CsvError::CannotDecodeData)
-    );
+fn utf16_ignores_an_incomplete_trailing_code_unit() {
+    // Foundation's decoders drop a trailing byte instead of failing.
+    assert_eq!(Encoding::Utf16.decode(&[0x00, 0x61, 0x62]).unwrap(), "a");
+    assert_eq!(Encoding::Utf16Be.decode(&[0x00, 0x61, 0x00]).unwrap(), "a");
+    assert_eq!(Encoding::Utf16Le.decode(&[0x61, 0x00, 0x62]).unwrap(), "a");
+}
+
+#[test]
+fn utf16_rejects_unpaired_surrogates() {
     // A lone high surrogate, a lone low surrogate, and a high surrogate
     // followed by a non-low-surrogate unit.
     assert_eq!(
@@ -325,10 +337,13 @@ fn utf16_rejects_odd_lengths_and_unpaired_surrogates() {
 }
 
 #[test]
-fn utf32_rejects_odd_lengths_invalid_code_points_and_surrogates() {
+fn utf32_ignores_trailing_bytes_and_rejects_invalid_code_points() {
+    assert_eq!(Encoding::Utf32.decode(&[0x00, 0x00, 0x00]).unwrap(), "");
     assert_eq!(
-        Encoding::Utf32.decode(&[0x61, 0x00, 0x00]),
-        Err(CsvError::CannotDecodeData)
+        Encoding::Utf32
+            .decode(&[0x00, 0x00, 0x00, 0x61, 0x62])
+            .unwrap(),
+        "a"
     );
     assert_eq!(
         Encoding::Utf32Le.decode(&[0x00, 0x00, 0x11, 0x00]),
@@ -345,7 +360,7 @@ fn utf32_rejects_odd_lengths_invalid_code_points_and_surrogates() {
     );
     // U+10FFFF is the highest scalar value and must decode.
     assert_eq!(
-        Encoding::Utf32Le.decode(&[0xFF, 0xFF, 0x10, 0x00]).unwrap(),
+        Encoding::Utf32Be.decode(&[0x00, 0x10, 0xFF, 0xFF]).unwrap(),
         "\u{10FFFF}"
     );
 }

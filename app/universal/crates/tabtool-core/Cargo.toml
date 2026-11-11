@@ -13,4 +13,6 @@ icu_locale_core = "2.4"
 regex = "1"
 
 [dev-dependencies]
+base64 = "0.22"
+serde_json.workspace = true
 tabtool-testdata = { path = "../tabtool-testdata" }

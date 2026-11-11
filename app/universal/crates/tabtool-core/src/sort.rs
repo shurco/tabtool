@@ -7,8 +7,8 @@
 
 use std::cmp::Ordering;
 
-use icu_collator::options::CollatorOptions;
-use icu_collator::preferences::CollationNumericOrdering;
+use icu_collator::options::{CollatorOptions, Strength};
+use icu_collator::preferences::{CollationCaseFirst, CollationNumericOrdering};
 use icu_collator::{Collator, CollatorBorrowed, CollatorPreferences};
 use icu_locale_core::Locale;
 
@@ -57,11 +57,18 @@ fn parse_number(trimmed: &str, decimal_mark: &str) -> Option<f64> {
 }
 
 /// Builds the locale collator used for text, or `None` when its data is
-/// unavailable. Numeric ordering matches `localizedStandardCompare`.
+/// unavailable.
+///
+/// The settings mirror Foundation's `localizedStandardCompare`: numeric
+/// ordering, lowercase (and small kana) first, quaternary kana distinctions
+/// and canonical-equivalence ties broken by the original code units.
 fn make_collator(locale: &Locale) -> Option<CollatorBorrowed<'static>> {
     let mut preferences = CollatorPreferences::from(locale);
     preferences.numeric_ordering = Some(CollationNumericOrdering::True);
-    Collator::try_new(preferences, CollatorOptions::default()).ok()
+    preferences.case_first = Some(CollationCaseFirst::Lower);
+    let mut options = CollatorOptions::default();
+    options.strength = Some(Strength::Quaternary);
+    Collator::try_new(preferences, options).ok()
 }
 
 /// Returns the row indexes ordered by `column`.
@@ -123,10 +130,20 @@ fn ascending(lhs: &CellKey, rhs: &CellKey, collator: Option<&CollatorBorrowed<'_
         }
         (CellKey::Text(lhs), CellKey::Text(rhs)) => collator.map_or_else(
             || lhs.cmp(rhs),
-            |collator| collator.compare(lhs.as_str(), rhs.as_str()),
+            |collator| match collator.compare(lhs.as_str(), rhs.as_str()) {
+                Ordering::Equal => forced_order(lhs, rhs),
+                order => order,
+            },
         ),
         (CellKey::Number(_), _) => Ordering::Less,
         (_, CellKey::Number(_)) => Ordering::Greater,
         _ => Ordering::Equal,
     }
+}
+
+/// Foundation breaks canonical-equivalence ties with the original code units
+/// (`kCFCompareForcedOrdering`), which puts a decomposed sequence before its
+/// composed form.
+fn forced_order(lhs: &str, rhs: &str) -> Ordering {
+    lhs.encode_utf16().cmp(rhs.encode_utf16())
 }
