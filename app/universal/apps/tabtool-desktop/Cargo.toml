@@ -1,0 +1,12 @@
+[package]
+name = "tabtool-desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "TabTool desktop application."
+
+[dependencies]
+# X11 and Wayland are required for winit to build on Linux; eframe's defaults are off.
+eframe = { version = "=0.37.0", default-features = false, features = ["default_fonts", "wgpu", "accesskit", "x11", "wayland"] }
+tabtool-core = { path = "../../crates/tabtool-core" }

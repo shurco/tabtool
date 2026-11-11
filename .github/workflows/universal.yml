@@ -1,0 +1,74 @@
+name: Universal
+
+on:
+  push:
+    paths:
+      - "app/universal/**"
+      - ".github/workflows/universal.yml"
+  pull_request:
+    paths:
+      - "app/universal/**"
+      - ".github/workflows/universal.yml"
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    working-directory: app/universal
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install --yes libxkbcommon-dev libwayland-dev libgtk-3-dev
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          components: rustfmt, clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/universal/target
+          key: ${{ runner.os }}-cargo-1.99.1-${{ hashFiles('app/universal/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-1.99.1-
+      - run: cargo fmt --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/universal/target
+          key: ${{ runner.os }}-cargo-1.99.1-${{ hashFiles('app/universal/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-1.99.1-
+      - run: cargo test --workspace
+
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/universal/target
+          key: ${{ runner.os }}-cargo-1.99.1-${{ hashFiles('app/universal/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-1.99.1-
+      - run: cargo test --workspace
+      - run: cargo run -p tabtool-desktop -- --smoke
