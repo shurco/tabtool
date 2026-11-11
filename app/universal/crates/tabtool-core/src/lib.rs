@@ -4,6 +4,7 @@
 
 mod column_name;
 mod configuration;
+mod detector;
 mod encoding;
 mod error;
 mod number;
@@ -16,6 +17,7 @@ mod writer;
 
 pub use column_name::{column_name, column_name_checked};
 pub use configuration::CsvConfiguration;
+pub use detector::CsvFormatDetector;
 pub use encoding::Encoding;
 pub use error::CsvError;
 pub use number::{is_numeric, localized};
