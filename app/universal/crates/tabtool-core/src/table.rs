@@ -343,9 +343,10 @@ impl CsvTable {
 
     /// Converts the decimal mark in numeric cells from `from` to `to`.
     ///
-    /// An empty source or target mark and identical marks are no-ops.
+    /// An empty source mark and identical marks are no-ops; an empty target
+    /// mark strips the source mark from numeric cells.
     pub fn convert_decimal_mark(&mut self, from: &str, to: &str) {
-        if from.is_empty() || to.is_empty() || from == to {
+        if from.is_empty() || from == to {
             return;
         }
 

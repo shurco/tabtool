@@ -136,11 +136,11 @@ fn decimal_conversion_only_touches_numeric_cells() {
     table.convert_decimal_mark(",", ".");
     assert_eq!(table.columns[0].cells, vec!["1.50", "a,b", "001.00"]);
 
-    // An empty or unchanged mark is a no-op.
+    // An empty source or unchanged mark is a no-op; an empty target strips it.
     table.convert_decimal_mark(".", ".");
     table.convert_decimal_mark("", ",");
     table.convert_decimal_mark(".", "");
-    assert_eq!(table.columns[0].cells, vec!["1.50", "a,b", "001.00"]);
+    assert_eq!(table.columns[0].cells, vec!["150", "a,b", "00100"]);
 }
 
 #[test]

@@ -29,8 +29,8 @@ fn convert_with_empty_source_mark_is_no_op() {
 }
 
 #[test]
-fn convert_with_empty_target_mark_is_no_op() {
-    assert_eq!(convert_decimal_mark("1.5", ".", ""), "1.5");
+fn convert_with_empty_target_mark_strips_the_mark() {
+    assert_eq!(convert_decimal_mark("1.5", ".", ""), "15");
 }
 
 #[test]

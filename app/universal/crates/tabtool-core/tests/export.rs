@@ -267,6 +267,22 @@ fn export_preflight_reports_unencodable_text() {
 }
 
 #[test]
+fn export_with_empty_export_mark_strips_the_mark() {
+    let t = table(rows(&[&["1.5", "x"]]), None);
+    let document_configuration = document(".");
+    let export_configuration = document("");
+    assert_eq!(
+        preflight(&t, &document_configuration, &export_configuration),
+        None
+    );
+    assert_eq!(
+        export(&t, &document_configuration, &export_configuration),
+        "\"15\",\"x\""
+    );
+    assert_eq!(t.cell(0, 0), "1.5");
+}
+
+#[test]
 fn export_preflight_checks_the_written_header() {
     let t = table(rows(&[&["x"]]), headers(&["a,b"]));
     let export_configuration = CsvConfiguration {
