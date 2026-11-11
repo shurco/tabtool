@@ -9,3 +9,6 @@ description = "Pure CSV engine shared by every TabTool app."
 [dependencies]
 encoding_rs = "0.8"
 regex = "1"
+
+[dev-dependencies]
+tabtool-testdata = { path = "../tabtool-testdata" }

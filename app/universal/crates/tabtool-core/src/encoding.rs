@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use crate::CsvError;
 
-const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
+pub(crate) const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
 const UTF16_BE_BOM: [u8; 2] = [0xFE, 0xFF];
 const UTF16_LE_BOM: [u8; 2] = [0xFF, 0xFE];
 const UTF32_BE_BOM: [u8; 4] = [0x00, 0x00, 0xFE, 0xFF];

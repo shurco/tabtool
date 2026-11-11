@@ -6,11 +6,13 @@ mod configuration;
 mod encoding;
 mod error;
 mod number;
+mod parser;
 
 pub use configuration::CsvConfiguration;
 pub use encoding::Encoding;
 pub use error::CsvError;
 pub use number::{is_numeric, localized};
+pub use parser::CsvParser;
 
 /// Crate version, taken from its package manifest.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
