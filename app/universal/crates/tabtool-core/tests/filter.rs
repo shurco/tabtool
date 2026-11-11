@@ -126,6 +126,41 @@ fn empty_cell_never_satisfies_equals_or_ordering() {
 }
 
 #[test]
+fn text_operators_treat_composed_and_decomposed_forms_as_equal() {
+    let table = CsvTable::from_rows(
+        vec![
+            vec!["éclair".to_owned()],
+            vec!["e\u{301}clair".to_owned()],
+            vec!["other".to_owned()],
+        ],
+        None,
+        1,
+    );
+
+    assert_eq!(single(&table, 0, FilterOperator::Contains, "é"), vec![0, 1]);
+    assert_eq!(
+        single(&table, 0, FilterOperator::NotContains, "e\u{301}"),
+        vec![2]
+    );
+    assert_eq!(
+        single(&table, 0, FilterOperator::BeginsWith, "e\u{301}"),
+        vec![0, 1]
+    );
+    assert_eq!(
+        single(&table, 0, FilterOperator::EndsWith, "éclair"),
+        vec![0, 1]
+    );
+    assert_eq!(
+        single(&table, 0, FilterOperator::Equals, "e\u{301}clair"),
+        vec![0, 1]
+    );
+    assert_eq!(
+        single(&table, 0, FilterOperator::NotEquals, "éclair"),
+        vec![2]
+    );
+}
+
+#[test]
 fn decimal_mark_controls_numeric_parsing() {
     let table = CsvTable::from_rows(
         vec![

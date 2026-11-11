@@ -69,11 +69,11 @@ func fixtureObject(name: String, fixturesRoot: URL) throws -> [String: Any] {
     let rows = try parser.readAll()
     let table = CSVTable(rows: rows, headers: nil)
 
-    // The detected configuration first, then explicit Unicode writes. A write
-    // is skipped when the fixture bytes are not valid in that encoding, which
-    // is what Foundation's decode attempt reports.
+    // The detected configuration first, then explicit Windows and Unicode
+    // writes. A write is skipped when the fixture bytes are not valid in that
+    // encoding, which is what Foundation's decode attempt reports.
     var writes: [[String: Any]] = []
-    for encoding in [detected.encoding, .utf8, .utf16, .utf32] {
+    for encoding in [detected.encoding, .windowsCP1252, .utf8, .utf16, .utf32] {
         var writeConfiguration = detected
         writeConfiguration.encoding = encoding
         var write: [String: Any] = [
@@ -115,10 +115,11 @@ func sortCases() -> [[String: Any]] {
         "a", "A", "b", "B", "z", "Z",
         "あ", "ァ", "あー", "アー", "ア", "か", "カ",
         "中国", "日本語", "日本",
-        "item2", "banana", "cafe", "é", "e\u{301}", "Über", "uber", "about", "abc",
+        "item2", "Äpfel", "Apfel", "côte", "cote", "Straße", "Strasse",
+        "é", "e\u{301}", "Über", "uber",
         "apple", "Apple", "",
         " ", "\t", "  ",
-        "-3", "3.14", "1e2", "0", "item10",
+        "-3", "item10", "1e2",
     ]
     precondition(corpus.count == 40, "the golden sort corpus must have 40 cells")
 
@@ -149,6 +150,7 @@ func filterCases() throws -> [[String: Any]] {
         ["Carol", "", "cherry"],
         ["dave", "2.5", "date"],
         ["Éva", "7", "éclair"],
+        ["Zoé", "8", "e\u{301}clair"],
     ]
     let table = CSVTable(rows: rows, headers: nil)
 
@@ -186,6 +188,12 @@ func filterCases() throws -> [[String: Any]] {
             try criterion(.contains, column: 0, value: "a"),
             try criterion(.greaterThan, column: 1, value: "3"),
         ]),
+        ("nfcContains", [try criterion(.contains, column: 2, value: "é")]),
+        ("nfdContains", [try criterion(.contains, column: 2, value: "e\u{301}")]),
+        ("nfcEquals", [try criterion(.equals, column: 2, value: "éclair")]),
+        ("nfdEquals", [try criterion(.equals, column: 2, value: "e\u{301}clair")]),
+        ("nfcBeginsWith", [try criterion(.beginsWith, column: 2, value: "éclair")]),
+        ("nfdEndsWith", [try criterion(.endsWith, column: 2, value: "e\u{301}clair")]),
     ]
 
     return cases.map { name, criteria in

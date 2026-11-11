@@ -8,6 +8,7 @@ use std::cmp::Ordering;
 
 use icu_locale_core::Locale;
 use regex::{Regex, RegexBuilder};
+use unicode_normalization::UnicodeNormalization;
 
 use crate::sort::{CellKey, cell_key};
 use crate::{ColumnId, CriterionId, RowSource};
@@ -274,9 +275,14 @@ fn compare(order: Ordering, op: FilterOperator) -> bool {
     }
 }
 
-/// Unicode-aware lowercase folding used for case-insensitive text matching.
+/// Case-insensitive text folding with canonical equivalence.
+///
+/// Foundation compares text case-insensitively and treats composed and
+/// decomposed forms as equal, so both the cell and the criterion value are
+/// normalized to NFC before they are folded.
 fn folded(text: &str) -> String {
-    text.to_lowercase()
+    let normalized: String = text.nfc().collect();
+    normalized.to_lowercase().nfc().collect()
 }
 
 /// Whether a cell is blank after trimming, like Foundation's whitespace sets.

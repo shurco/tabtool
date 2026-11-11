@@ -13,14 +13,28 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use serde_json::{Value, json};
 use tabtool_core::{
-    CsvConfiguration, CsvFormatDetector, CsvParser, CsvTable, CsvWriteIssue, CsvWriter, Encoding,
-    ExportInput, FilterCriterion, FilterOperator, Locale, RowFilter, SortDirection, export_data,
-    export_preflight_issue, make_tsv, parse_tsv, row_order_sorted_by,
+    CsvConfiguration, CsvError, CsvFormatDetector, CsvParser, CsvTable, CsvWriteIssue, CsvWriter,
+    Encoding, ExportInput, FilterCriterion, FilterOperator, Locale, RowFilter, SortDirection,
+    export_data, export_preflight_issue, make_tsv, parse_tsv, row_order_sorted_by,
 };
+
+/// The `Reading/` plus `Heuristic/` fixture count.
+const FIXTURE_COUNT: usize = 34;
+/// One case per operator plus disabled, empty value, unknown column, invalid
+/// regex, AND and the six canonical-equivalence cases.
+const FILTER_CASE_COUNT: usize = 24;
+const CLIPBOARD_PARSE_COUNT: usize = 9;
+const CLIPBOARD_MAKE_COUNT: usize = 5;
+const EXPORT_CASE_COUNT: usize = 8;
 
 /// Directory holding the Swift-generated golden files.
 fn golden_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/golden")
+}
+
+/// Path of the tracked Foundation/ICU4X sort divergences.
+fn known_divergences_path() -> PathBuf {
+    golden_dir().join("known_divergences.json")
 }
 
 /// Every golden file, sorted by locale for deterministic failures.
@@ -31,6 +45,9 @@ fn golden_files() -> Vec<PathBuf> {
         .filter(|path| {
             path.extension()
                 .is_some_and(|extension| extension == "json")
+                && path
+                    .file_name()
+                    .is_some_and(|name| name != "known_divergences.json")
         })
         .collect();
     files.sort();
@@ -79,6 +96,16 @@ fn cells(value: &Value) -> Vec<String> {
         .expect("golden cells are an array")
         .iter()
         .map(|cell| text(cell).to_owned())
+        .collect()
+}
+
+/// One flat array of row indexes.
+fn indexes(value: &Value) -> Vec<usize> {
+    value
+        .as_array()
+        .expect("golden indexes are an array")
+        .iter()
+        .map(|index| usize::try_from(number(index)).expect("index fits usize"))
         .collect()
 }
 
@@ -165,6 +192,11 @@ fn check_fixtures(locale_name: &str, document: &Value) {
     let fixtures = document["fixtures"]
         .as_array()
         .expect("fixtures are an array");
+    assert_eq!(
+        fixtures.len(),
+        FIXTURE_COUNT,
+        "{locale_name}: fixture count"
+    );
     let mut expected_names: Vec<&str> = tabtool_testdata::fixture_names()
         .iter()
         .copied()
@@ -213,24 +245,6 @@ fn check_fixtures(locale_name: &str, document: &Value) {
                 "{write_context}: encoding mismatch in configuration"
             );
 
-            if let Err(error) = write_encoding.decode(&data) {
-                assert_eq!(
-                    error,
-                    tabtool_core::CsvError::CannotDecodeData,
-                    "{write_context}: decode error"
-                );
-                assert_eq!(
-                    write.get("skip").and_then(Value::as_str),
-                    Some("cannotDecodeData"),
-                    "{write_context}: Rust rejected bytes Foundation accepted"
-                );
-                continue;
-            }
-            assert!(
-                write.get("skip").is_none(),
-                "{write_context}: unexpected skip {write:?}"
-            );
-
             let writer = CsvWriter {
                 table: &table,
                 header: None,
@@ -238,14 +252,50 @@ fn check_fixtures(locale_name: &str, document: &Value) {
                 include_utf8_bom,
                 allow_ambiguous_output: false,
             };
-            let bytes = writer
-                .data()
-                .unwrap_or_else(|error| panic!("{write_context}: write failed: {error:?}"));
-            assert_eq!(
-                STANDARD.encode(bytes),
-                text(&write["base64"]),
-                "{write_context}: bytes"
-            );
+            let decoded = write_encoding.decode(&data);
+            match write.get("skip").and_then(Value::as_str) {
+                Some("cannotDecodeData") => assert!(
+                    decoded.is_err(),
+                    "{write_context}: Rust accepted bytes Foundation rejected"
+                ),
+                Some("unencodableText") => {
+                    assert!(
+                        decoded.is_ok(),
+                        "{write_context}: decode failed before the write"
+                    );
+                    assert_eq!(
+                        writer.data(),
+                        Err(CsvError::UnencodableText),
+                        "{write_context}: expected unencodable text"
+                    );
+                }
+                Some("ambiguousOutput") => {
+                    assert!(
+                        decoded.is_ok(),
+                        "{write_context}: decode failed before the write"
+                    );
+                    assert_eq!(
+                        writer.data(),
+                        Err(CsvError::AmbiguousOutput),
+                        "{write_context}: expected ambiguous output"
+                    );
+                }
+                Some(reason) => panic!("{write_context}: unknown skip reason {reason:?}"),
+                None => {
+                    assert!(
+                        decoded.is_ok(),
+                        "{write_context}: Rust rejected bytes Foundation accepted"
+                    );
+                    let bytes = writer
+                        .data()
+                        .unwrap_or_else(|error| panic!("{write_context}: write failed: {error:?}"));
+                    assert_eq!(
+                        STANDARD.encode(bytes),
+                        text(&write["base64"]),
+                        "{write_context}: bytes"
+                    );
+                }
+            }
         }
     }
 }
@@ -284,10 +334,15 @@ fn check_sort(locale_name: &str, document: &Value, locale: &Locale) {
 
 /// Rebuilds every filter case and compares the matching rows.
 fn check_filters(locale_name: &str, document: &Value, locale: &Locale) {
-    for case in document["filters"]
+    let cases = document["filters"]
         .as_array()
-        .expect("filter cases are an array")
-    {
+        .expect("filter cases are an array");
+    assert_eq!(
+        cases.len(),
+        FILTER_CASE_COUNT,
+        "{locale_name}: filter count"
+    );
+    for case in cases {
         let name = text(&case["name"]);
         let table = CsvTable::from_rows(rows(&case["rows"]), None, 3);
         let criteria: Vec<FilterCriterion> = case["criteria"]
@@ -324,10 +379,15 @@ fn check_filters(locale_name: &str, document: &Value, locale: &Locale) {
 
 /// Rebuilds the clipboard parse and make cases.
 fn check_clipboard(locale_name: &str, document: &Value) {
-    for case in document["clipboard"]["parse"]
+    let parse_cases = document["clipboard"]["parse"]
         .as_array()
-        .expect("clipboard parse cases are an array")
-    {
+        .expect("clipboard parse cases are an array");
+    assert_eq!(
+        parse_cases.len(),
+        CLIPBOARD_PARSE_COUNT,
+        "{locale_name}: clipboard parse count"
+    );
+    for case in parse_cases {
         let input = text(&case["input"]);
         assert_eq!(
             json!(parse_tsv(input)),
@@ -336,10 +396,15 @@ fn check_clipboard(locale_name: &str, document: &Value) {
         );
     }
 
-    for case in document["clipboard"]["make"]
+    let make_cases = document["clipboard"]["make"]
         .as_array()
-        .expect("clipboard make cases are an array")
-    {
+        .expect("clipboard make cases are an array");
+    assert_eq!(
+        make_cases.len(),
+        CLIPBOARD_MAKE_COUNT,
+        "{locale_name}: clipboard make count"
+    );
+    for case in make_cases {
         let output = make_tsv(
             &rows(&case["rows"]),
             text(&case["decimalMark"]),
@@ -356,10 +421,15 @@ fn check_clipboard(locale_name: &str, document: &Value) {
 
 /// Rebuilds every export case, including its preflight issue and bytes.
 fn check_export(locale_name: &str, document: &Value) {
-    for case in document["export"]
+    let cases = document["export"]
         .as_array()
-        .expect("export cases are an array")
-    {
+        .expect("export cases are an array");
+    assert_eq!(
+        cases.len(),
+        EXPORT_CASE_COUNT,
+        "{locale_name}: export count"
+    );
+    for case in cases {
         let name = text(&case["name"]);
         let headers = match &case["headers"] {
             Value::Null => None,
@@ -402,6 +472,52 @@ fn check_export(locale_name: &str, document: &Value) {
     }
 }
 
+/// Asserts that every tracked Foundation/ICU4X divergence is still real and
+/// that the Rust order has not changed. A change in either direction forces a
+/// re-evaluation instead of silently hiding the difference.
+fn check_known_divergences() {
+    let contents = std::fs::read_to_string(known_divergences_path())
+        .expect("known divergences file is readable");
+    let document: Value =
+        serde_json::from_str(&contents).expect("known divergences file is valid JSON");
+    let entries = document.as_array().expect("known divergences are an array");
+    assert!(!entries.is_empty(), "known divergences are tracked");
+
+    for entry in entries {
+        let locale_id = text(&entry["locale"]);
+        let locale: Locale = locale_id
+            .replace('_', "-")
+            .parse()
+            .expect("divergence locale is valid");
+        let values = cells(&entry["cells"]);
+        let context = format!("known divergence {locale_id}: {:?}", entry["cells"]);
+        let table = CsvTable::from_rows(
+            values.iter().map(|cell| vec![cell.clone()]).collect(),
+            None,
+            1,
+        );
+        let order = row_order_sorted_by(&table, 0, SortDirection::Ascending, ".", &locale);
+        let foundation = indexes(&entry["foundationOrder"]);
+        let rust = indexes(&entry["rustOrder"]);
+
+        assert_ne!(
+            foundation, rust,
+            "{context}: no longer diverges; remove it from the tracked file"
+        );
+        assert_eq!(
+            order, rust,
+            "{context}: Rust order changed; re-evaluate the divergence"
+        );
+        let expected: Vec<usize> = (0..values.len()).collect();
+        for (name, order) in [("foundationOrder", &foundation), ("rustOrder", &rust)] {
+            let mut sorted = order.clone();
+            sorted.sort_unstable();
+            assert_eq!(sorted, expected, "{context}: {name} is a permutation");
+        }
+        assert!(!text(&entry["reason"]).is_empty(), "{context}: reason");
+    }
+}
+
 #[test]
 fn rust_matches_every_swift_golden() {
     let mut locales = Vec::new();
@@ -424,4 +540,9 @@ fn rust_matches_every_swift_golden() {
         ["de_DE", "en_US", "fr_FR", "ja_JP", "ko_KR", "zh_CN"],
         "golden locale set"
     );
+}
+
+#[test]
+fn rust_matches_known_divergences() {
+    check_known_divergences();
 }

@@ -63,6 +63,12 @@ fn regenerate() -> Result<(), String> {
 
 /// Runs the Rust parity test against the committed golden files.
 fn check() -> Result<(), String> {
+    if std::env::consts::OS != "macos" {
+        return Err(
+            "xtask golden --check requires macOS: the golden files pin Foundation behavior"
+                .to_owned(),
+        );
+    }
     run(Command::new("cargo").current_dir(workspace_root()).args([
         "test",
         "-p",
