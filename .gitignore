@@ -6,6 +6,12 @@ xcuserdata/
 DerivedData/
 app/apple/build/
 target/
+app/universal/apps/tabtool-android/android/.gradle/
+app/universal/apps/tabtool-android/android/.kotlin/
+app/universal/apps/tabtool-android/android/build/
+app/universal/apps/tabtool-android/android/app/build/
+app/universal/apps/tabtool-android/android/app/src/main/jniLibs/
+app/universal/apps/tabtool-android/android/local.properties
 *.rs.bk
 *.profraw
 .superpowers/

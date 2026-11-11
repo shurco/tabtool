@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["apps/tabtool-desktop", "crates/tabtool-core", "crates/tabtool-testdata"]
+members = ["apps/tabtool-android", "apps/tabtool-desktop", "crates/tabtool-core", "crates/tabtool-testdata"]
 
 [workspace.package]
 version = "0.1.0"
