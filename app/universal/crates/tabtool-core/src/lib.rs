@@ -11,6 +11,8 @@ mod parser;
 mod reorder;
 mod row_source;
 mod table;
+mod write_validation;
+mod writer;
 
 pub use column_name::{column_name, column_name_checked};
 pub use configuration::CsvConfiguration;
@@ -21,6 +23,8 @@ pub use parser::CsvParser;
 pub use reorder::{is_permutation, shifted};
 pub use row_source::RowSource;
 pub use table::{ColumnId, CriterionId, CsvColumn, CsvTable, RowSet};
+pub use write_validation::{CsvWriteIssue, is_ambiguous, issue};
+pub use writer::CsvWriter;
 
 /// Crate version, taken from its package manifest.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
