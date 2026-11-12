@@ -124,7 +124,7 @@ fn remove_sort_undo_and_redo() {
 
     document.sort_rows(0, SortDirection::Ascending, &locale("en-US"));
     document.remove_sort();
-    assert_eq!(document.undo_action(), Some(UndoAction::SortRows));
+    assert_eq!(document.undo_action(), Some(UndoAction::RemoveSort));
 
     assert!(document.undo());
     assert_eq!(column(&document, 0), vec!["a", "b", "c"]);
@@ -207,15 +207,33 @@ fn cycle_sort_on_another_column_starts_ascending() {
 }
 
 #[test]
+fn sorting_is_blocked_while_a_reread_is_in_progress() {
+    let mut document = loaded("b\na\nc\n");
+    document.sort_rows(0, SortDirection::Ascending, &locale("en-US"));
+    let revision = document.revision();
+
+    assert!(document.begin_reread());
+    document.sort_rows(0, SortDirection::Descending, &locale("en-US"));
+    document.cycle_sort(0, &locale("en-US"));
+    document.remove_sort();
+    assert_eq!(column(&document, 0), vec!["a", "b", "c"]);
+    assert_eq!(document.sort_direction(0), Some(SortDirection::Ascending));
+    assert_eq!(document.revision(), revision);
+    document.end_reread();
+
+    document.remove_sort();
+    assert_eq!(column(&document, 0), vec!["b", "a", "c"]);
+    assert_eq!(document.active_sort(), None);
+}
+
+#[test]
 fn sorting_uses_the_requested_locale() {
-    let english = loaded("z\nä\n");
-    let swedish = loaded("z\nä\n");
+    let mut english = loaded("z\nä\n");
+    let mut swedish = loaded("z\nä\n");
     let en = locale("en-US");
     let sv = locale("sv-SE");
 
-    let mut english = english;
     english.sort_rows(0, SortDirection::Ascending, &en);
-    let mut swedish = swedish;
     swedish.sort_rows(0, SortDirection::Ascending, &sv);
 
     assert_eq!(column(&english, 0), vec!["ä", "z"]);

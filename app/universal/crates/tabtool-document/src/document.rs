@@ -332,6 +332,13 @@ impl Document {
         self.notice.set(Some(notice));
     }
 
+    /// Takes the one-shot message the window should present, if any.
+    ///
+    /// A taken notice is gone; a second take returns `None`.
+    pub fn take_notice(&mut self) -> Option<DocumentNotice> {
+        self.notice.take()
+    }
+
     /// Recomputes `Ready`/`NeedsAttention` from the current table and format.
     ///
     /// The save gate must match [`Document::encoded_data`], so headers are

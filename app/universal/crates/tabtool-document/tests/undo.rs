@@ -261,5 +261,6 @@ fn undo_action_keys_are_stable_english_identifiers() {
     assert_eq!(UndoAction::ToggleHeader.key(), "toggleHeader");
     assert_eq!(UndoAction::RenameColumn.key(), "renameColumn");
     assert_eq!(UndoAction::SortRows.key(), "sortRows");
+    assert_eq!(UndoAction::RemoveSort.key(), "removeSort");
     assert_eq!(UndoAction::RevertToSaved.key(), "revertToSaved");
 }

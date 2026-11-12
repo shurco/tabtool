@@ -78,7 +78,7 @@ impl Document {
 
         let mut restored = Arc::clone(&current);
         Arc::make_mut(&mut restored).reorder_rows(&inverse);
-        self.replace_table_with(UndoAction::SortRows, restored, None);
+        self.replace_table_with(UndoAction::RemoveSort, restored, None);
         self.active_sort = None;
     }
 

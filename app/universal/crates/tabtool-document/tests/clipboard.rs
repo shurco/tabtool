@@ -194,6 +194,13 @@ fn copy_is_capped_at_one_million_cells() {
     select_rows(&mut document, 0..1_000);
     assert_eq!(document.copy_selection(&en, "."), None);
     assert_eq!(document.notice(), Some(DocumentNotice::CopyLimitExceeded));
+
+    assert_eq!(
+        document.take_notice(),
+        Some(DocumentNotice::CopyLimitExceeded)
+    );
+    assert_eq!(document.notice(), None);
+    assert_eq!(document.take_notice(), None);
 }
 
 #[test]

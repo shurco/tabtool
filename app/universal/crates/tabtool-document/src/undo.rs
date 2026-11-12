@@ -43,6 +43,8 @@ pub enum UndoAction {
     RenameColumn,
     /// Rows were sorted.
     SortRows,
+    /// The row sort was removed and the source order restored.
+    RemoveSort,
     /// The document was reverted to its saved content.
     RevertToSaved,
 }
@@ -63,6 +65,7 @@ impl UndoAction {
             Self::ToggleHeader => "toggleHeader",
             Self::RenameColumn => "renameColumn",
             Self::SortRows => "sortRows",
+            Self::RemoveSort => "removeSort",
             Self::RevertToSaved => "revertToSaved",
         }
     }
