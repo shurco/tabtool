@@ -4,10 +4,9 @@
 use std::sync::Arc;
 
 use tabtool_core::{CsvConfiguration, CsvError, CsvWriteIssue, CsvWriter};
-use tabtool_document::{Document, DocumentError, DocumentPhase};
+use tabtool_document::{Document, DocumentError, DocumentPhase, StdStorage};
 
-/// A configuration that differs from the defaults, so a load uses it instead
-/// of detecting the format.
+/// A non-default configuration used where a test supplies an explicit format.
 fn supplied() -> CsvConfiguration {
     CsvConfiguration {
         decimal_mark: ",".to_string(),
@@ -20,7 +19,7 @@ fn snapshot_before_load_is_not_ready() {
     let document = Document::new(CsvConfiguration::default());
 
     assert_eq!(document.snapshot().unwrap_err(), DocumentError::NotReady);
-    assert!(document.encoded_data().is_err());
+    assert_eq!(document.encoded_data(), Err(DocumentError::NotReady));
 }
 
 #[test]
@@ -30,7 +29,7 @@ fn snapshot_captures_the_table_configuration_and_bom() {
     input.extend_from_slice(b"a,b\n1,2\n");
     let mut document = Document::new(configuration.clone());
     document
-        .load_from_bytes(&input, None)
+        .load_from_bytes(&input, None, Some(configuration.clone()), false)
         .expect("load byte-order-marked data");
 
     let snapshot = document.snapshot().expect("snapshot");
@@ -48,7 +47,12 @@ fn snapshot_captures_the_table_configuration_and_bom() {
 fn encoded_data_round_trips_through_the_snapshot() {
     let mut document = Document::new(supplied());
     document
-        .load_from_bytes(b"a,b,c\n1,2,3\n\"1,1\",\"1,2\",\"1,3\"\n", None)
+        .load_from_bytes(
+            b"a,b,c\n1,2,3\n\"1,1\",\"1,2\",\"1,3\"\n",
+            None,
+            Some(supplied()),
+            false,
+        )
         .expect("load data");
     let snapshot = document.snapshot().expect("snapshot");
 
@@ -70,7 +74,7 @@ fn the_utf8_bom_is_written_back_from_the_snapshot() {
     let mut document = Document::new(supplied());
 
     document
-        .load_from_bytes(&input, None)
+        .load_from_bytes(&input, None, Some(supplied()), false)
         .expect("load byte-order-marked data");
 
     assert!(document.snapshot().expect("snapshot").includes_utf8_bom);
@@ -88,10 +92,10 @@ fn encoded_data_writes_the_header_row_when_configured() {
         first_row_as_header: true,
         ..supplied()
     };
-    let mut document = Document::new(configuration);
+    let mut document = Document::new(configuration.clone());
 
     document
-        .load_from_bytes(b"a,b\n1,2\n", None)
+        .load_from_bytes(b"a,b\n1,2\n", None, Some(configuration), false)
         .expect("load data");
 
     let snapshot = document.snapshot().expect("snapshot");
@@ -111,9 +115,9 @@ fn encoded_data_reports_the_write_issue_for_ambiguous_output() {
         quote_character: String::new(),
         ..CsvConfiguration::default()
     };
-    let mut document = Document::new(configuration);
+    let mut document = Document::new(configuration.clone());
     document
-        .load_from_bytes(b"a\n\n", None)
+        .load_from_bytes(b"a\n\n", None, Some(configuration), false)
         .expect("load ambiguous content");
 
     assert_eq!(
@@ -121,17 +125,40 @@ fn encoded_data_reports_the_write_issue_for_ambiguous_output() {
         &DocumentPhase::NeedsAttention(CsvWriteIssue::AmbiguousOutput)
     );
     assert!(document.snapshot().is_ok());
-    assert_eq!(document.encoded_data(), Err(CsvError::AmbiguousOutput));
+    assert_eq!(
+        document.encoded_data(),
+        Err(DocumentError::Csv(CsvError::AmbiguousOutput))
+    );
 }
 
 #[test]
 fn encoded_data_without_a_table_fails() {
     let mut document = Document::new(supplied());
-    assert!(document.load_from_bytes(&[0xFF, 0xFD], None).is_err());
+    assert!(
+        document
+            .load_from_bytes(&[0xFF, 0xFD], None, Some(supplied()), false)
+            .is_err()
+    );
     assert!(document.table().is_none());
 
     assert_eq!(document.snapshot().unwrap_err(), DocumentError::NotReady);
-    assert_eq!(document.encoded_data(), Err(CsvError::CannotDecodeData));
+    assert_eq!(document.encoded_data(), Err(DocumentError::NotReady));
+}
+
+#[test]
+fn snapshot_after_an_unreadable_file_is_not_ready() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let path = directory.path().join("missing.csv");
+    let mut document = Document::new(supplied());
+
+    assert_eq!(
+        document.load_from_path(&path, &StdStorage, None, false),
+        Err(DocumentError::CannotReadFile)
+    );
+    assert_eq!(document.phase(), &DocumentPhase::UnreadableFile);
+
+    assert_eq!(document.snapshot().unwrap_err(), DocumentError::NotReady);
+    assert_eq!(document.encoded_data(), Err(DocumentError::NotReady));
 }
 
 #[test]

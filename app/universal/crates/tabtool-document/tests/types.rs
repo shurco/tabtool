@@ -137,6 +137,18 @@ fn document_errors_are_distinct_values() {
         DocumentError::CannotReadFile
     );
     assert_ne!(DocumentError::CannotReadFile, DocumentError::NotReady);
+    assert_eq!(
+        DocumentError::Csv(CsvError::AmbiguousOutput),
+        DocumentError::Csv(CsvError::AmbiguousOutput)
+    );
+    assert_ne!(
+        DocumentError::Csv(CsvError::AmbiguousOutput),
+        DocumentError::Csv(CsvError::UnencodableText)
+    );
+    assert_ne!(
+        DocumentError::Csv(CsvError::AmbiguousOutput),
+        DocumentError::NotReady
+    );
 }
 
 #[test]

@@ -1,17 +1,16 @@
 //! Port of the load cases in `CSVDocumentTests.swift` and the load invariants
 //! in `CSVDocumentConcurrencyTests.swift`.
 //!
-//! A supplied (non-default) configuration is used verbatim; the default
-//! configuration means "detect the format from the bytes", mirroring Swift's
-//! `configuration: nil` initializer.
+//! `None` means "detect the format from the bytes", matching Swift's
+//! `configuration: nil` initializer. `Some`, including
+//! `Some(CsvConfiguration::default())`, is used verbatim.
 
 use std::path::Path;
 
 use tabtool_core::{CsvConfiguration, CsvError, CsvWriteIssue, Encoding};
 use tabtool_document::{Document, DocumentError, DocumentPhase, StdStorage};
 
-/// A configuration that differs from the defaults, so a load uses it instead
-/// of detecting the format.
+/// A non-default configuration used where a test supplies an explicit format.
 fn supplied() -> CsvConfiguration {
     CsvConfiguration {
         decimal_mark: ",".to_string(),
@@ -23,7 +22,7 @@ fn supplied() -> CsvConfiguration {
 fn an_empty_file_loads_as_a_one_by_one_table() {
     let mut document = Document::new(CsvConfiguration::default());
 
-    assert_eq!(document.load_from_bytes(b"", None), Ok(()));
+    assert_eq!(document.load_from_bytes(b"", None, None, false), Ok(()));
 
     assert_eq!(document.phase(), &DocumentPhase::Ready);
     let table = document.table().expect("the empty file has a table");
@@ -41,7 +40,10 @@ fn load_uses_a_supplied_configuration() {
     let mut document = Document::new(configuration.clone());
     let data = b"a,b,c\n1,2,3\n\"1,1\",\"1,2\",\"1,3\"\n";
 
-    assert_eq!(document.load_from_bytes(data, None), Ok(()));
+    assert_eq!(
+        document.load_from_bytes(data, None, Some(configuration.clone()), false),
+        Ok(())
+    );
 
     assert_eq!(document.phase(), &DocumentPhase::Ready);
     assert_eq!(document.configuration(), &configuration);
@@ -56,7 +58,10 @@ fn load_uses_a_supplied_configuration() {
 fn load_detects_the_format_when_the_configuration_is_default() {
     let mut document = Document::new(CsvConfiguration::default());
 
-    assert_eq!(document.load_from_bytes(b"a;b\n1,5;2,5\n", None), Ok(()));
+    assert_eq!(
+        document.load_from_bytes(b"a;b\n1,5;2,5\n", None, None, false),
+        Ok(())
+    );
 
     assert_eq!(document.configuration().column_separator, ";");
     assert_eq!(document.configuration().decimal_mark, ",");
@@ -71,6 +76,45 @@ fn load_detects_the_format_when_the_configuration_is_default() {
 }
 
 #[test]
+fn an_explicit_default_configuration_skips_detection() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let path = directory.path().join("semicolons.csv");
+    // Detection would pick the semicolon separator and comma decimal mark.
+    std::fs::write(&path, "a;b\n1,5;2,5\n").expect("write sample file");
+    let mut document = Document::new(CsvConfiguration::default());
+
+    assert_eq!(
+        document.load_from_path(&path, &StdStorage, Some(CsvConfiguration::default()), false),
+        Ok(())
+    );
+
+    assert_eq!(document.configuration(), &CsvConfiguration::default());
+    let table = document.table().expect("table");
+    assert_eq!(table.columns.len(), 3);
+    assert_eq!(table.row_count(), 2);
+    assert_eq!(table.cell(0, 0), "a;b");
+    assert_eq!(table.cell(1, 0), "1");
+}
+
+#[test]
+fn detection_prefers_gbk_when_chinese_encoding_is_preferred() {
+    // "日本" in GBK; the same bytes also decode as CP1252 text.
+    let bytes = b"a\n\xC8\xD5\xB1\xBE\n";
+
+    let mut chinese = Document::new(CsvConfiguration::default());
+    assert_eq!(chinese.load_from_bytes(bytes, None, None, true), Ok(()));
+    assert_eq!(chinese.configuration().encoding, Encoding::Gbk);
+    assert_eq!(
+        chinese.table().expect("table").cell(0, 0),
+        "日本".to_string()
+    );
+
+    let mut western = Document::new(CsvConfiguration::default());
+    assert_eq!(western.load_from_bytes(bytes, None, None, false), Ok(()));
+    assert_eq!(western.configuration().encoding, Encoding::Windows1252);
+}
+
+#[test]
 fn a_supplied_no_quote_configuration_reports_ambiguous_output() {
     let configuration = CsvConfiguration {
         quote_character: String::new(),
@@ -78,7 +122,10 @@ fn a_supplied_no_quote_configuration_reports_ambiguous_output() {
     };
     let mut document = Document::new(configuration.clone());
 
-    assert_eq!(document.load_from_bytes(b"a\n\n", None), Ok(()));
+    assert_eq!(
+        document.load_from_bytes(b"a\n\n", None, Some(configuration.clone()), false),
+        Ok(())
+    );
 
     // Detection would pick a quoted configuration and report `Ready`; using
     // the supplied configuration is what makes the loaded content ambiguous.
@@ -93,10 +140,10 @@ fn a_supplied_no_quote_configuration_reports_ambiguous_output() {
 #[test]
 fn invalid_bytes_fail_the_read_and_leave_no_table() {
     let configuration = supplied();
-    let mut document = Document::new(configuration);
+    let mut document = Document::new(configuration.clone());
 
     assert_eq!(
-        document.load_from_bytes(&[0xFF, 0xFD], None),
+        document.load_from_bytes(&[0xFF, 0xFD], None, Some(configuration), false),
         Err(DocumentError::NotReady)
     );
 
@@ -116,9 +163,12 @@ fn load_from_path_reads_the_bytes_and_records_the_path() {
         column_separator: ";".to_string(),
         ..CsvConfiguration::default()
     };
-    let mut document = Document::new(configuration);
+    let mut document = Document::new(configuration.clone());
 
-    assert_eq!(document.load_from_path(&path, &StdStorage), Ok(()));
+    assert_eq!(
+        document.load_from_path(&path, &StdStorage, Some(configuration), false),
+        Ok(())
+    );
 
     assert_eq!(document.phase(), &DocumentPhase::Ready);
     assert_eq!(document.file_path(), Some(path.as_path()));
@@ -134,11 +184,31 @@ fn a_missing_file_is_unreadable_not_a_parse_failure() {
     let mut document = Document::new(supplied());
 
     assert_eq!(
-        document.load_from_path(&path, &StdStorage),
+        document.load_from_path(&path, &StdStorage, None, false),
         Err(DocumentError::CannotReadFile)
     );
 
     assert_eq!(document.phase(), &DocumentPhase::UnreadableFile);
+    assert!(document.table().is_none());
+    assert_eq!(document.file_path(), Some(path.as_path()));
+}
+
+#[test]
+fn load_from_path_reports_a_parse_error_without_a_table() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let path = directory.path().join("invalid.csv");
+    std::fs::write(&path, [0xFF, 0xFD]).expect("write invalid bytes");
+    let mut document = Document::new(supplied());
+
+    assert_eq!(
+        document.load_from_path(&path, &StdStorage, Some(supplied()), false),
+        Err(DocumentError::NotReady)
+    );
+
+    assert_eq!(
+        document.phase(),
+        &DocumentPhase::ReadFailed(CsvError::CannotDecodeData)
+    );
     assert!(document.table().is_none());
     assert_eq!(document.file_path(), Some(path.as_path()));
 }
@@ -151,7 +221,7 @@ fn a_failed_load_can_be_retried_from_its_file() {
     let mut document = Document::new(supplied());
 
     assert_eq!(
-        document.load_from_bytes(&[0xFF, 0xFD], Some(&path)),
+        document.load_from_bytes(&[0xFF, 0xFD], Some(&path), Some(supplied()), false),
         Err(DocumentError::NotReady)
     );
     assert_eq!(
@@ -160,7 +230,10 @@ fn a_failed_load_can_be_retried_from_its_file() {
     );
 
     std::fs::write(&path, "a,b\nc,d\n").expect("write valid bytes");
-    assert_eq!(document.load_from_path(&path, &StdStorage), Ok(()));
+    assert_eq!(
+        document.load_from_path(&path, &StdStorage, Some(supplied()), false),
+        Ok(())
+    );
 
     assert_eq!(document.phase(), &DocumentPhase::Ready);
     let table = document.table().expect("table");
@@ -171,12 +244,22 @@ fn a_failed_load_can_be_retried_from_its_file() {
 #[test]
 fn a_second_load_does_not_replace_published_content() {
     let mut document = Document::new(supplied());
-    assert_eq!(document.load_from_bytes(b"a,b\n", None), Ok(()));
+    assert_eq!(
+        document.load_from_bytes(b"a,b\n", None, Some(supplied()), false),
+        Ok(())
+    );
     let first = document.table().expect("table").clone();
+    let revision = document.revision();
+    let phase = *document.phase();
 
-    assert_eq!(document.load_from_bytes(b"x,y,z\n", None), Ok(()));
+    assert_eq!(
+        document.load_from_bytes(b"x,y,z\n", Some(Path::new("/tmp/other.csv")), None, false),
+        Ok(())
+    );
 
     assert_eq!(document.table(), Some(&first));
+    assert_eq!(document.revision(), revision);
+    assert_eq!(document.phase(), &phase);
     assert!(document.file_path().is_none());
 }
 
@@ -186,7 +269,7 @@ fn a_failed_load_does_not_publish_a_partial_table() {
 
     assert!(
         document
-            .load_from_bytes(b"a,b\n\"unterminated\n", None)
+            .load_from_bytes(b"a,b\n\"unterminated\n", None, Some(supplied()), false)
             .is_err()
     );
 
@@ -251,7 +334,10 @@ fn new_document_uses_the_injected_configuration() {
 fn setting_a_path_binds_the_document_and_none_makes_it_untitled() {
     let path = Path::new("/tmp/tabtool-load-test.csv");
     let mut document = Document::new(supplied());
-    assert_eq!(document.load_from_bytes(b"a,b\n", Some(path)), Ok(()));
+    assert_eq!(
+        document.load_from_bytes(b"a,b\n", Some(path), Some(supplied()), false),
+        Ok(())
+    );
     let table = document.table().expect("table").clone();
     assert_eq!(document.file_path(), Some(path));
 
@@ -270,9 +356,12 @@ fn loading_decodes_utf16_bytes_with_a_supplied_encoding() {
     };
     // "a,b" as little-endian UTF-16 code units.
     let bytes = [0x61, 0x00, 0x2C, 0x00, 0x62, 0x00];
-    let mut document = Document::new(configuration);
+    let mut document = Document::new(configuration.clone());
 
-    assert_eq!(document.load_from_bytes(&bytes, None), Ok(()));
+    assert_eq!(
+        document.load_from_bytes(&bytes, None, Some(configuration), false),
+        Ok(())
+    );
 
     assert_eq!(document.phase(), &DocumentPhase::Ready);
     assert_eq!(document.table().expect("table").cell(0, 1), "b".to_string());

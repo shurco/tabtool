@@ -4,8 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use tabtool_core::{
-    CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, CsvWriter, RowSource,
-    issue as validate_write,
+    CsvConfiguration, CsvTable, CsvWriteIssue, CsvWriter, RowSource, issue as validate_write,
 };
 
 use crate::io;
@@ -99,16 +98,19 @@ impl Document {
 
     /// Loads initial bytes and publishes the whole outcome at once.
     ///
-    /// The UI may call this from a background thread. A parse error leaves the
-    /// table empty and reports [`DocumentPhase::ReadFailed`]; a completed
-    /// document ignores a repeated load so edits cannot be replaced by a late
-    /// duplicate. When the document has the default configuration the format is
-    /// detected from the bytes, mirroring a Swift document opened without a
-    /// supplied configuration; any other configuration is used verbatim.
+    /// The UI may call this from a background thread. `configuration` is
+    /// `None` to detect the format from the bytes, or `Some` to parse with an
+    /// explicit format (including [`CsvConfiguration::default`], which must
+    /// not trigger detection). `prefers_chinese` changes the detector's
+    /// encoding order. A parse error leaves the table empty and reports
+    /// [`DocumentPhase::ReadFailed`]; a completed document ignores a repeated
+    /// load so edits cannot be replaced by a late duplicate.
     pub fn load_from_bytes(
         &mut self,
         bytes: &[u8],
         path: Option<&Path>,
+        configuration: Option<CsvConfiguration>,
+        prefers_chinese: bool,
     ) -> Result<(), DocumentError> {
         if matches!(
             self.phase,
@@ -117,11 +119,7 @@ impl Document {
             return Ok(());
         }
 
-        let configuration = if self.configuration == CsvConfiguration::default() {
-            io::detect(bytes, false)
-        } else {
-            self.configuration.clone()
-        };
+        let configuration = configuration.unwrap_or_else(|| io::detect(bytes, prefers_chinese));
         self.file_path = path.map(Path::to_path_buf);
 
         match io::parse(bytes, &configuration) {
@@ -148,12 +146,16 @@ impl Document {
 
     /// Reads and loads the file at `path` through `storage`.
     ///
-    /// A read failure is distinct from a parse failure: the phase becomes
-    /// [`DocumentPhase::UnreadableFile`] and the path stays bound for a retry.
+    /// `configuration` and `prefers_chinese` are forwarded to
+    /// [`Document::load_from_bytes`]. A read failure is distinct from a parse
+    /// failure: the phase becomes [`DocumentPhase::UnreadableFile`] and the
+    /// path stays bound for a retry.
     pub fn load_from_path(
         &mut self,
         path: &Path,
         storage: &dyn Storage,
+        configuration: Option<CsvConfiguration>,
+        prefers_chinese: bool,
     ) -> Result<(), DocumentError> {
         if matches!(
             self.phase,
@@ -163,7 +165,7 @@ impl Document {
         }
 
         match storage.read(path) {
-            Ok(bytes) => self.load_from_bytes(&bytes, Some(path)),
+            Ok(bytes) => self.load_from_bytes(&bytes, Some(path), configuration, prefers_chinese),
             Err(_) => {
                 self.table = None;
                 self.file_path = Some(path.to_path_buf());
@@ -189,7 +191,9 @@ impl Document {
     /// Captures the table, format and BOM state for saving.
     ///
     /// The table is shared, not copied, so repeated autosave attempts stay
-    /// cheap. A document with no loaded table has nothing to save.
+    /// cheap. A document with no loaded table has nothing to save. A
+    /// `NeedsAttention` document still returns its snapshot; the save gate is
+    /// applied by the save path (Task 7), not by snapshotting.
     pub fn snapshot(&self) -> Result<DocumentSnapshot, DocumentError> {
         if matches!(
             self.phase,
@@ -207,11 +211,12 @@ impl Document {
 
     /// Serializes the current content with the same format a save would use.
     ///
-    /// The writer reports the typed write gate: ambiguous no-quote output or
-    /// text the configured encoding cannot represent. A document with no
-    /// loaded table reports [`CsvError::CannotDecodeData`].
-    pub fn encoded_data(&self) -> Result<Vec<u8>, CsvError> {
-        let snapshot = self.snapshot().map_err(|_| CsvError::CannotDecodeData)?;
+    /// A document with no loaded table reports [`DocumentError::NotReady`];
+    /// the writer reports the typed write gate as [`DocumentError::Csv`]
+    /// (ambiguous no-quote output or text the configured encoding cannot
+    /// represent).
+    pub fn encoded_data(&self) -> Result<Vec<u8>, DocumentError> {
+        let snapshot = self.snapshot()?;
         let header = if snapshot.configuration.first_row_as_header {
             snapshot.table.headers()
         } else {
@@ -220,7 +225,7 @@ impl Document {
         let mut writer =
             CsvWriter::new(&snapshot.table, header.as_deref(), &snapshot.configuration);
         writer.include_utf8_bom = snapshot.includes_utf8_bom;
-        writer.data()
+        writer.data().map_err(DocumentError::Csv)
     }
 
     /// The in-memory table, or `None` while no table is loaded.
@@ -314,8 +319,9 @@ impl Document {
     ///
     /// The save gate must match [`Document::encoded_data`], so headers are
     /// validated only when the format writes them. A document without a table
-    /// keeps its current phase.
-    fn refresh_phase(&mut self) {
+    /// keeps its current phase. Tasks that replace the table or format call
+    /// this so the phase never goes stale.
+    pub(crate) fn refresh_phase(&mut self) {
         let Some(table) = self.table.as_deref() else {
             return;
         };

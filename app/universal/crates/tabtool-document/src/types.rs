@@ -19,7 +19,7 @@ pub enum DocumentPhase {
     NeedsAttention(CsvWriteIssue),
 }
 
-/// Document operations that fail for reasons unrelated to CSV parsing.
+/// Document operations that fail before or after CSV parsing.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DocumentError {
     /// The table is not loaded yet or the file could not be read.
@@ -29,6 +29,9 @@ pub enum DocumentError {
     RequiresConfirmation,
     /// The file bytes are unavailable to the document.
     CannotReadFile,
+    /// Serializing the table failed with a typed CSV error, such as
+    /// [`CsvError::AmbiguousOutput`] or [`CsvError::UnencodableText`].
+    Csv(CsvError),
 }
 
 /// The rows and columns selected in the grid.
