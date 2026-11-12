@@ -3,6 +3,8 @@
 //! `xtask golden` regenerates the Swift golden files; `xtask golden --check`
 //! runs the Rust parity test without needing a Swift toolchain.
 
+use std::collections::BTreeMap;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
@@ -37,6 +39,7 @@ fn run(command: &mut Command) -> Result<(), String> {
 /// Regenerates every golden file by running the Swift tool once per locale.
 fn regenerate() -> Result<(), String> {
     let repository = repo_root();
+    verify_fixture_copies(&repository)?;
     let tool = repository.join("tools/swift-golden");
     let fixtures = repository.join("app/universal/testdata/fixtures");
     let golden = repository.join("app/universal/testdata/golden");
@@ -57,6 +60,62 @@ fn regenerate() -> Result<(), String> {
             .arg(locale)
             .arg("-AppleLanguages")
             .arg(format!("({language})")))?;
+    }
+    Ok(())
+}
+
+/// Byte contents of every CSV fixture below `root`, keyed by `Folder/file`.
+fn fixture_snapshot(root: &Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
+    let mut files = BTreeMap::new();
+    for folder in ["Heuristic", "Performance", "Reading"] {
+        let directory = root.join(folder);
+        let entries = fs::read_dir(&directory).map_err(|error| {
+            format!(
+                "cannot read fixture directory {}: {error}",
+                directory.display()
+            )
+        })?;
+        for entry in entries {
+            let entry = entry.map_err(|error| format!("cannot read fixture entry: {error}"))?;
+            let path = entry.path();
+            if path.extension().is_some_and(|extension| extension == "csv") {
+                let name = format!("{folder}/{}", entry.file_name().to_string_lossy().as_ref());
+                let bytes = fs::read(&path)
+                    .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+                files.insert(name, bytes);
+            }
+        }
+    }
+    Ok(files)
+}
+
+/// Fails when the committed fixture copies are not byte-identical to the Apple
+/// test bundle, so the manifest can never validate a corrupted copy.
+fn verify_fixture_copies(repository: &Path) -> Result<(), String> {
+    let apple = repository.join("app/apple/TabToolKit/Tests/TabToolKitTests/Fixtures");
+    let copies = repository.join("app/universal/testdata/fixtures");
+    if !apple.is_dir() {
+        return Err(format!(
+            "Apple fixture source is missing: {}",
+            apple.display()
+        ));
+    }
+
+    let apple_files = fixture_snapshot(&apple)?;
+    let copy_files = fixture_snapshot(&copies)?;
+    for (name, bytes) in &apple_files {
+        match copy_files.get(name) {
+            None => return Err(format!("fixture copy is missing: {name}")),
+            Some(copy) if copy != bytes => {
+                return Err(format!("fixture copy differs from Apple: {name}"));
+            }
+            Some(_) => {}
+        }
+    }
+    for name in copy_files.keys() {
+        if !apple_files.contains_key(name) {
+            return Err(format!("fixture copy has no Apple source: {name}"));
+        }
     }
     Ok(())
 }

@@ -40,7 +40,11 @@ pub fn open(request: TextInputRequest) {
 }
 
 /// Removes the native editor without reporting a commit or cancel.
+///
+/// A pending outcome is cleared so a stale commit from an earlier session
+/// cannot be delivered after the editor is closed.
 pub fn close() {
+    set_outcome(None);
     platform_bridge::hide_text_editor();
 }
 

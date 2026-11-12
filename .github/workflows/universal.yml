@@ -4,11 +4,16 @@ on:
   push:
     paths:
       - "app/universal/**"
+      - "tools/swift-golden/**"
       - ".github/workflows/universal.yml"
   pull_request:
     paths:
       - "app/universal/**"
+      - "tools/swift-golden/**"
       - ".github/workflows/universal.yml"
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always

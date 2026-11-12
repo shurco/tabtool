@@ -109,7 +109,7 @@ func fixtureObject(name: String, fixturesRoot: URL) throws -> [String: Any] {
 
 func sortCases() -> [[String: Any]] {
     // Covers numbers, case pairs, natural-order text, kana and CJK, composed
-    // and decomposed diacritics, and blank cells.
+    // and decomposed diacritics, blank cells and non-ASCII digits.
     let corpus = [
         "2", "10", "001.5", "1,5",
         "a", "A", "b", "B", "z", "Z",
@@ -120,8 +120,9 @@ func sortCases() -> [[String: Any]] {
         "apple", "Apple", "",
         " ", "\t", "  ",
         "-3", "item10", "1e2",
+        "١٢٣", "٣", "１２３",
     ]
-    precondition(corpus.count == 40, "the golden sort corpus must have 40 cells")
+    precondition(corpus.count == 43, "the golden sort corpus must have 43 cells")
 
     let table = CSVTable(rows: corpus.map { [$0] }, headers: nil)
     var cases: [[String: Any]] = []
@@ -151,6 +152,7 @@ func filterCases() throws -> [[String: Any]] {
         ["dave", "2.5", "date"],
         ["Éva", "7", "éclair"],
         ["Zoé", "8", "e\u{301}clair"],
+        ["١٢٣", "٣", "１２３"],
     ]
     let table = CSVTable(rows: rows, headers: nil)
 
@@ -194,6 +196,10 @@ func filterCases() throws -> [[String: Any]] {
         ("nfdEquals", [try criterion(.equals, column: 2, value: "e\u{301}clair")]),
         ("nfcBeginsWith", [try criterion(.beginsWith, column: 2, value: "éclair")]),
         ("nfdEndsWith", [try criterion(.endsWith, column: 2, value: "e\u{301}clair")]),
+        ("nonAsciiDigitsEquals", [try criterion(.equals, column: 1, value: "٣")]),
+        ("nonAsciiDigitsCellEquals", [try criterion(.equals, column: 0, value: "١٢٣")]),
+        ("nonAsciiFullwidthDigitsContains",
+         [try criterion(.contains, column: 2, value: "１２３")]),
     ]
 
     return cases.map { name, criteria in
@@ -335,6 +341,41 @@ func exportCases() throws -> [[String: Any]] {
             defaultDocument,
             exportConfiguration(encoding: .utf16)
         ),
+        (
+            "utf16beExport",
+            nil,
+            [["1.5", "x"]],
+            defaultDocument,
+            exportConfiguration(encoding: .utf16BigEndian)
+        ),
+        (
+            "utf16leExport",
+            nil,
+            [["1.5", "x"]],
+            defaultDocument,
+            exportConfiguration(encoding: .utf16LittleEndian)
+        ),
+        (
+            "utf32Export",
+            nil,
+            [["1.5", "x"]],
+            defaultDocument,
+            exportConfiguration(encoding: .utf32)
+        ),
+        (
+            "utf32beExport",
+            nil,
+            [["1.5", "x"]],
+            defaultDocument,
+            exportConfiguration(encoding: .utf32BigEndian)
+        ),
+        (
+            "utf32leExport",
+            nil,
+            [["1.5", "x"]],
+            defaultDocument,
+            exportConfiguration(encoding: .utf32LittleEndian)
+        ),
     ]
 
     return try cases.map { name, headers, rows, document, export in
@@ -370,6 +411,94 @@ func exportCases() throws -> [[String: Any]] {
     }
 }
 
+/// Encodes a fixed sample set and decodes every single byte for each of the 18
+/// encodings, so the Rust side can assert Foundation-compatible guards.
+///
+/// `decode` has exactly 256 entries: a string when Foundation accepts the byte
+/// alone, `null` when it throws `cannotDecodeData`. `encode` has one base64
+/// string per sample, or `null` for `unencodableText`.
+func encodingOracle() -> [String: Any] {
+    let samples = [
+        "A", "é", "€", "\u{00A0}", "\u{0080}", "\u{0081}", "\u{009F}",
+        "Привет", "Ελληνικά", "Türkçe", "日本", "😀", "\u{FEFF}",
+    ]
+
+    let entries: [[String: Any]] = SupportedEncodings.all.enumerated().map { index, supported in
+        var decode: [Any] = []
+        decode.reserveCapacity(256)
+        for byte in 0...255 {
+            if let text = String(data: Data([UInt8(byte)]), encoding: supported.encoding) {
+                decode.append(text)
+            } else {
+                decode.append(NSNull())
+            }
+        }
+
+        let encode: [Any] = samples.map { sample in
+            if let data = sample.data(using: supported.encoding) {
+                return data.base64EncodedString()
+            }
+            return NSNull()
+        }
+
+        return [
+            "encoding": index,
+            "decode": decode,
+            "encode": encode,
+        ]
+    }
+
+    return ["samples": samples, "encodings": entries]
+}
+
+/// Named decode cases that pin BOM handling and trailing incomplete units.
+func encodingDecodeCases() -> [[String: Any]] {
+    let cases: [(name: String, encoding: Int, bytes: [UInt8])] = [
+        ("utf8-bom", 0, [0xEF, 0xBB, 0xBF, 0x41]),
+        ("utf16-bom-be", 12, [0xFE, 0xFF, 0x00, 0x41]),
+        ("utf16-bom-le", 12, [0xFF, 0xFE, 0x41, 0x00]),
+        ("utf16be-trailing", 13, [0x00, 0x41, 0x00]),
+        ("utf16le-trailing", 14, [0x41, 0x00, 0x41]),
+        ("utf16be-lone-surrogate", 13, [0xD8, 0x00]),
+        ("utf32-bom-be", 15, [0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x41]),
+        ("utf32-bom-le", 15, [0xFF, 0xFE, 0x00, 0x00, 0x41, 0x00, 0x00, 0x00]),
+        ("utf32be-trailing", 16, [0x00, 0x00, 0x00, 0x41, 0x62]),
+        ("utf32le-trailing", 17, [0x41, 0x00, 0x00, 0x00, 0x62]),
+        ("utf32be-invalid-scalar", 16, [0x00, 0x11, 0x00, 0x00]),
+        ("cp1252-undefined", 2, [0x81]),
+        ("gbk-utf8-bom-prefix", 3, [0xEF, 0xBB, 0xBF, 0x41]),
+    ]
+
+    return cases.map { name, encoding, bytes in
+        let data = Data(bytes)
+        var object: [String: Any] = [
+            "name": name,
+            "encoding": encoding,
+            "base64": data.base64EncodedString(),
+        ]
+        if let text = String(data: data, encoding: SupportedEncodings.all[encoding].encoding) {
+            object["text"] = text
+        } else {
+            object["unable"] = "cannotDecodeData"
+        }
+        return object
+    }
+}
+
+/// The fixed corpus used to track known Foundation/ICU4X collation
+/// divergences. Each locale file carries the real Foundation order, so the
+/// tracked file never has to guess it.
+func sortDivergenceCases() -> [[String: Any]] {
+    let corpus = ["café", "cafe", "ábc", "abc"]
+    let table = CSVTable(rows: corpus.map { [$0] }, headers: nil)
+    let order = table.rowOrder(sortedByColumn: 0, direction: .ascending, decimalMark: ".")
+    return [[
+        "locale": Locale.current.identifier,
+        "cells": corpus,
+        "foundationOrder": order,
+    ]]
+}
+
 func generate(fixturesRoot: URL) throws -> [String: Any] {
     let names = try fixtureNames(in: fixturesRoot)
     return [
@@ -377,9 +506,12 @@ func generate(fixturesRoot: URL) throws -> [String: Any] {
         "encodings": SupportedEncodings.all.map(\.name),
         "fixtures": try names.map { try fixtureObject(name: $0, fixturesRoot: fixturesRoot) },
         "sort": sortCases(),
+        "sortDivergences": sortDivergenceCases(),
         "filters": try filterCases(),
         "clipboard": clipboardSection(),
         "export": try exportCases(),
+        "encodingOracle": encodingOracle(),
+        "encodingDecodeCases": encodingDecodeCases(),
     ]
 }
 

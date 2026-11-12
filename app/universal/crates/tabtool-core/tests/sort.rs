@@ -1,7 +1,7 @@
 //! Ports of the Apple `CSVCellOrderTests` suite, plus the Review Focus cases
 //! for numbers, text, empties, stability and locale collation.
 
-use tabtool_core::{CsvTable, Locale, SortDirection, row_order_sorted_by};
+use tabtool_core::{CsvColumn, CsvTable, Locale, SortDirection, row_order_sorted_by};
 
 fn locale(id: &str) -> Locale {
     id.parse().expect("test locale is valid")
@@ -152,4 +152,27 @@ fn locale_controls_text_ordering() {
     let swedish = row_order_sorted_by(&table, 0, SortDirection::Ascending, ".", &locale("sv-SE"));
     assert_eq!(english, vec![2, 0, 1]);
     assert_eq!(swedish, vec![2, 1, 0]);
+}
+
+#[test]
+fn short_columns_sort_as_empty_cells_instead_of_panicking() {
+    let table = CsvTable {
+        columns: vec![
+            CsvColumn {
+                id: 1,
+                header: None,
+                cells: vec!["a".to_owned(), "b".to_owned()],
+            },
+            CsvColumn {
+                id: 2,
+                header: None,
+                cells: vec!["x".to_owned()],
+            },
+        ],
+    };
+
+    // `row_count` comes from the first column, so the short second column
+    // reads an empty cell for the missing row instead of panicking.
+    let order = row_order_sorted_by(&table, 1, SortDirection::Ascending, ".", &locale("en-US"));
+    assert_eq!(order, vec![0, 1]);
 }

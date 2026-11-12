@@ -2,8 +2,7 @@
   {
     "locale": "zh_CN",
     "cells": ["café", "cafe", "ábc", "abc"],
-    "foundationOrder": [2, 3, 1, 0],
     "rustOrder": [2, 3, 0, 1],
-    "reason": "Foundation's localizedStandardCompare keeps root-style Latin accent ordering for zh text (cafe before café), while ICU4X pinyin collation puts tone-marked vowels first (café before cafe). ábc/abc agree. Sorting deliberately uses ICU4X on every platform (§14.15)."
+    "reason": "Foundation's localizedStandardCompare keeps root-style Latin accent ordering for zh text (cafe before café), while ICU4X pinyin collation puts tone-marked vowels first (café before cafe). ábc/abc agree. Sorting deliberately uses ICU4X on every platform (§14.15). The Foundation order comes from the `sortDivergences` section of zh_CN.json."
   }
 ]

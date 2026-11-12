@@ -272,6 +272,17 @@ fn new_with_no_columns_keeps_one_column() {
 }
 
 #[test]
+fn column_equality_compares_content_not_identity() {
+    let first = column(1, Some("a"), &["x"]);
+    let second = column(2, Some("a"), &["x"]);
+    let different = column(1, Some("b"), &["x"]);
+
+    assert_eq!(first, second);
+    assert_ne!(first, different);
+    assert_ne!(first.id, second.id);
+}
+
+#[test]
 fn generated_column_ids_are_unique_and_positive() {
     let first = CsvColumn::new(None, Vec::new());
     let second = CsvColumn::new(None, Vec::new());

@@ -210,7 +210,10 @@ fn first_scalar(text: &str) -> Option<char> {
 
 /// Whether a scalar ends a row: LF, CR, NEL, line separator or paragraph
 /// separator.
-fn is_row_break(scalar: char) -> bool {
+///
+/// Shared with [`crate::write_validation`] so the writer, writer validation and
+/// parser cannot disagree about row breaks.
+pub(crate) fn is_row_break(scalar: char) -> bool {
     matches!(
         scalar,
         '\u{000A}' | '\u{000D}' | '\u{0085}' | '\u{2028}' | '\u{2029}'

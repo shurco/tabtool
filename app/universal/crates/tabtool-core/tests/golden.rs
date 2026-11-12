@@ -21,11 +21,17 @@ use tabtool_core::{
 /// The `Reading/` plus `Heuristic/` fixture count.
 const FIXTURE_COUNT: usize = 34;
 /// One case per operator plus disabled, empty value, unknown column, invalid
-/// regex, AND and the six canonical-equivalence cases.
-const FILTER_CASE_COUNT: usize = 24;
+/// regex, AND, the six canonical-equivalence cases and three non-ASCII digit
+/// cases.
+const FILTER_CASE_COUNT: usize = 27;
 const CLIPBOARD_PARSE_COUNT: usize = 9;
 const CLIPBOARD_MAKE_COUNT: usize = 5;
-const EXPORT_CASE_COUNT: usize = 8;
+const EXPORT_CASE_COUNT: usize = 13;
+/// Cells in the curated sort corpus.
+const SORT_CORPUS_SIZE: usize = 43;
+/// Number of ISO-2022-JP single bytes where Foundation is lenient and
+/// `encoding_rs` rejects: SO, SI, ESC and all bytes >= 0x80.
+const ISO_2022_JP_DECODE_EXCLUSIONS: usize = 131;
 
 /// Directory holding the Swift-generated golden files.
 fn golden_dir() -> PathBuf {
@@ -300,6 +306,135 @@ fn check_fixtures(locale_name: &str, document: &Value) {
     }
 }
 
+/// Rebuilds every encoding oracle entry and compares Foundation with Rust.
+///
+/// The oracle decodes all 256 single bytes for each encoding and encodes a
+/// fixed sample set. ISO-2022-JP is stateful and Foundation passes incomplete
+/// escape sequences and 8-bit bytes through where `encoding_rs` rejects them;
+/// those 131 exact cases are asserted to be the only divergence.
+fn check_encoding_oracle(locale_name: &str, document: &Value) {
+    let oracle = &document["encodingOracle"];
+    let samples = cells(&oracle["samples"]);
+    let entries = oracle["encodings"]
+        .as_array()
+        .expect("encoding oracle entries are an array");
+    assert_eq!(
+        entries.len(),
+        Encoding::ALL.len(),
+        "{locale_name}: oracle encoding count"
+    );
+
+    for (index, entry) in entries.iter().enumerate() {
+        let encoding = encoding(&entry["encoding"]);
+        assert_eq!(
+            usize::from(encoding.id()),
+            index,
+            "{locale_name}: oracle encoding order"
+        );
+        let context = format!("{locale_name}: {encoding:?}");
+
+        let decode = entry["decode"]
+            .as_array()
+            .expect("oracle decode table is an array");
+        assert_eq!(decode.len(), 256, "{context}: decode table size");
+        let mut lenient = 0;
+        for (value, expected) in decode.iter().enumerate() {
+            let byte = u8::try_from(value).expect("byte fits u8");
+            let bytes = [byte];
+            let decoded = encoding.decode(&bytes);
+            if encoding == Encoding::Iso2022Jp && is_iso2022jp_lenient_byte(byte) {
+                lenient += 1;
+                assert_eq!(
+                    expected,
+                    &Value::String(char::from(byte).to_string()),
+                    "{context}: byte {byte:#04x} Foundation pass-through changed"
+                );
+                assert_eq!(
+                    decoded,
+                    Err(CsvError::CannotDecodeData),
+                    "{context}: byte {byte:#04x} Rust leniency changed"
+                );
+                continue;
+            }
+
+            match expected {
+                Value::Null => assert_eq!(
+                    decoded,
+                    Err(CsvError::CannotDecodeData),
+                    "{context}: byte {byte:#04x} should be rejected"
+                ),
+                Value::String(text) => assert_eq!(
+                    decoded.as_deref(),
+                    Ok(text.as_str()),
+                    "{context}: byte {byte:#04x}"
+                ),
+                other => panic!("{context}: unexpected decode entry {other:?}"),
+            }
+        }
+        if encoding == Encoding::Iso2022Jp {
+            assert_eq!(
+                lenient, ISO_2022_JP_DECODE_EXCLUSIONS,
+                "{context}: ISO-2022-JP decoder leniency set changed"
+            );
+        }
+
+        let encode = entry["encode"]
+            .as_array()
+            .expect("oracle encode table is an array");
+        assert_eq!(encode.len(), samples.len(), "{context}: encode table size");
+        for (sample, expected) in samples.iter().zip(encode) {
+            match expected {
+                Value::Null => assert_eq!(
+                    encoding.encode(sample),
+                    Err(CsvError::UnencodableText),
+                    "{context}: {sample:?} should be unencodable"
+                ),
+                Value::String(encoded) => {
+                    let bytes = STANDARD
+                        .decode(encoded)
+                        .expect("oracle encode bytes are base64");
+                    assert_eq!(encoding.encode(sample), Ok(bytes), "{context}: {sample:?}");
+                }
+                other => panic!("{context}: unexpected encode entry {other:?}"),
+            }
+        }
+    }
+
+    let decode_cases = document["encodingDecodeCases"]
+        .as_array()
+        .expect("encoding decode cases are an array");
+    assert!(
+        !decode_cases.is_empty(),
+        "{locale_name}: encoding decode cases"
+    );
+    for case in decode_cases {
+        let name = text(&case["name"]);
+        let encoding = encoding(&case["encoding"]);
+        let bytes = STANDARD
+            .decode(text(&case["base64"]))
+            .expect("decode case bytes are base64");
+        let context = format!("{locale_name}: decode case {name}");
+        match case.get("text") {
+            Some(Value::String(expected)) => assert_eq!(
+                encoding.decode(&bytes).unwrap().as_ref(),
+                expected,
+                "{context}"
+            ),
+            _ => assert_eq!(
+                encoding.decode(&bytes),
+                Err(CsvError::CannotDecodeData),
+                "{context}"
+            ),
+        }
+    }
+}
+
+/// Whether Foundation's ISO-2022-JP decoder passes this byte through while
+/// `encoding_rs` rejects it.
+fn is_iso2022jp_lenient_byte(byte: u8) -> bool {
+    matches!(byte, 0x0E | 0x0F | 0x1B) || byte >= 0x80
+}
+
 /// Rebuilds every sort case and compares the row order.
 fn check_sort(locale_name: &str, document: &Value, locale: &Locale) {
     let cases = document["sort"]
@@ -309,7 +444,11 @@ fn check_sort(locale_name: &str, document: &Value, locale: &Locale) {
     for case in cases {
         let name = text(&case["name"]);
         let values = cells(&case["cells"]);
-        assert_eq!(values.len(), 40, "{locale_name}: sort corpus size");
+        assert_eq!(
+            values.len(),
+            SORT_CORPUS_SIZE,
+            "{locale_name}: sort corpus size"
+        );
         let table = CsvTable::from_rows(
             values.iter().map(|cell| vec![cell.clone()]).collect(),
             None,
@@ -473,8 +612,8 @@ fn check_export(locale_name: &str, document: &Value) {
 }
 
 /// Asserts that every tracked Foundation/ICU4X divergence is still real and
-/// that the Rust order has not changed. A change in either direction forces a
-/// re-evaluation instead of silently hiding the difference.
+/// that the Rust order has not changed. The Foundation order comes from the
+/// locale's Swift-generated golden, never from the tracked file.
 fn check_known_divergences() {
     let contents = std::fs::read_to_string(known_divergences_path())
         .expect("known divergences file is readable");
@@ -491,13 +630,28 @@ fn check_known_divergences() {
             .expect("divergence locale is valid");
         let values = cells(&entry["cells"]);
         let context = format!("known divergence {locale_id}: {:?}", entry["cells"]);
+
+        let golden_path = golden_dir().join(format!("{locale_id}.json"));
+        let golden_contents = std::fs::read_to_string(&golden_path).unwrap_or_else(|error| {
+            panic!("{context}: cannot read {}: {error}", golden_path.display())
+        });
+        let golden: Value =
+            serde_json::from_str(&golden_contents).expect("divergence golden file is valid JSON");
+        let divergences = golden["sortDivergences"]
+            .as_array()
+            .expect("sort divergences are an array");
+        let divergence = divergences
+            .iter()
+            .find(|divergence| cells(&divergence["cells"]) == values)
+            .unwrap_or_else(|| panic!("{context}: no Foundation order in the golden"));
+
         let table = CsvTable::from_rows(
             values.iter().map(|cell| vec![cell.clone()]).collect(),
             None,
             1,
         );
         let order = row_order_sorted_by(&table, 0, SortDirection::Ascending, ".", &locale);
-        let foundation = indexes(&entry["foundationOrder"]);
+        let foundation = indexes(&divergence["foundationOrder"]);
         let rust = indexes(&entry["rustOrder"]);
 
         assert_ne!(
@@ -533,6 +687,7 @@ fn rust_matches_every_swift_golden() {
         check_filters(locale_name, &document, &locale);
         check_clipboard(locale_name, &document);
         check_export(locale_name, &document);
+        check_encoding_oracle(locale_name, &document);
     }
     locales.sort_unstable();
     assert_eq!(

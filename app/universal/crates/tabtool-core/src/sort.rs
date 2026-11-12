@@ -76,6 +76,8 @@ fn make_collator(locale: &Locale) -> Option<CollatorBorrowed<'static>> {
 /// An invalid column yields the identity order. Empty cells sort last in both
 /// directions and compare equal to each other. Text comparison uses `locale`
 /// and falls back to ordinal comparison when the collator cannot be built.
+/// A short column in a malformed literal [`CsvTable`] contributes empty cells
+/// rather than panicking.
 pub fn row_order_sorted_by(
     table: &CsvTable,
     column: usize,
@@ -88,10 +90,13 @@ pub fn row_order_sorted_by(
         return (0..row_count).collect();
     };
 
-    let keys: Vec<CellKey> = column
-        .cells
-        .iter()
-        .map(|cell| cell_key(cell, decimal_mark))
+    let keys: Vec<CellKey> = (0..row_count)
+        .map(|row| {
+            column
+                .cells
+                .get(row)
+                .map_or(CellKey::Empty, |cell| cell_key(cell, decimal_mark))
+        })
         .collect();
     let collator = make_collator(locale);
     let mut order: Vec<usize> = (0..row_count).collect();

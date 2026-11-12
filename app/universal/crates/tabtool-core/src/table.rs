@@ -28,7 +28,11 @@ fn next_column_id() -> ColumnId {
 }
 
 /// One column of a [`CsvTable`].
-#[derive(Clone, Debug, PartialEq, Eq)]
+///
+/// Equality compares content (header and cells) only, matching [`CsvTable`]
+/// equality; `id` is session identity and is compared separately by
+/// [`CsvTable::has_same_column_order`].
+#[derive(Clone, Debug)]
 pub struct CsvColumn {
     /// Session identity of the column.
     pub id: ColumnId,
@@ -37,6 +41,14 @@ pub struct CsvColumn {
     /// Cell text, one entry per row.
     pub cells: Vec<String>,
 }
+
+impl PartialEq for CsvColumn {
+    fn eq(&self, other: &Self) -> bool {
+        self.header == other.header && self.cells == other.cells
+    }
+}
+
+impl Eq for CsvColumn {}
 
 impl CsvColumn {
     /// Creates a column with a freshly allocated id.
@@ -128,7 +140,7 @@ impl CsvTable {
 
     /// The headers of all columns, or `None` when the table has no headers.
     pub fn headers(&self) -> Option<Vec<String>> {
-        if self.columns.is_empty() || self.columns.iter().any(|column| column.header.is_none()) {
+        if !self.has_headers() {
             return None;
         }
 
@@ -138,6 +150,11 @@ impl CsvTable {
                 .map(|column| column.header.clone().unwrap_or_default())
                 .collect(),
         )
+    }
+
+    /// Whether every column carries a header.
+    fn has_headers(&self) -> bool {
+        !self.columns.is_empty() && self.columns.iter().all(|column| column.header.is_some())
     }
 
     /// Replaces all headers, or removes them when `headers` is `None`.
@@ -188,7 +205,7 @@ impl CsvTable {
         if index >= self.columns.len() {
             return false;
         }
-        if self.headers().is_none() {
+        if !self.has_headers() {
             if name == column_name(index) {
                 return false;
             }
@@ -300,7 +317,7 @@ impl CsvTable {
     /// new column keeps headers disabled.
     pub fn add_column(&mut self, index: usize, header: Option<&str>) {
         let insertion = index.min(self.columns.len());
-        let new_header = if self.headers().is_some() {
+        let new_header = if self.has_headers() {
             Some(header.unwrap_or_default().to_owned())
         } else {
             None

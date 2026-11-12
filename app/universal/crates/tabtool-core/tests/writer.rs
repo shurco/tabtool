@@ -5,7 +5,8 @@
 //! Task 13; the fixture round-trip needs no generator and is ported here.
 
 use tabtool_core::{
-    CsvConfiguration, CsvError, CsvParser, CsvTable, CsvWriteIssue, CsvWriter, is_ambiguous, issue,
+    CsvColumn, CsvConfiguration, CsvError, CsvParser, CsvTable, CsvWriteIssue, CsvWriter,
+    is_ambiguous, issue,
 };
 use tabtool_testdata::fixture;
 
@@ -236,6 +237,99 @@ fn unencodable_text_throws() {
 
     assert!(writer.string().is_ok());
     assert_eq!(writer.data(), Err(CsvError::UnencodableText));
+}
+
+#[test]
+fn c1_only_cell_is_unencodable_for_legacy_code_pages() {
+    let t = table(rows(&[&["a\u{0081}b"]]), None);
+    let configuration = CsvConfiguration {
+        encoding: tabtool_core::Encoding::Windows1252,
+        ..CsvConfiguration::default()
+    };
+
+    assert_eq!(
+        issue(&t, None, &configuration),
+        Some(CsvWriteIssue::UnencodableText)
+    );
+    assert_eq!(
+        CsvWriter::new(&t, None, &configuration).data(),
+        Err(CsvError::UnencodableText)
+    );
+}
+
+#[test]
+fn no_quote_leading_utf8_bom_is_ambiguous() {
+    let t = table(rows(&[&["\u{FEFF}x"]]), None);
+    let configuration = no_quote();
+
+    assert!(is_ambiguous(&t, None, &configuration));
+    assert_eq!(
+        CsvWriter::new(&t, None, &configuration).data(),
+        Err(CsvError::AmbiguousOutput)
+    );
+}
+
+#[test]
+fn no_quote_leading_utf8_bom_in_the_header_is_ambiguous() {
+    let t = table(rows(&[&["x"]]), headers(&["\u{FEFF}name"]));
+    let header = t.headers();
+    let configuration = no_quote();
+
+    assert!(is_ambiguous(&t, header.as_deref(), &configuration));
+    assert_eq!(
+        CsvWriter::new(&t, header.as_deref(), &configuration).data(),
+        Err(CsvError::AmbiguousOutput)
+    );
+}
+
+#[test]
+fn no_quote_utf8_bom_later_in_the_output_is_not_ambiguous() {
+    let configuration = no_quote();
+
+    // Inside the first field, after its first character.
+    let inside = table(rows(&[&["x\u{FEFF}"]]), None);
+    assert!(!is_ambiguous(&inside, None, &configuration));
+    assert!(CsvWriter::new(&inside, None, &configuration).data().is_ok());
+
+    // At the start of a later row, not at the start of the output.
+    let later = table(rows(&[&["x"], &["\u{FEFF}y"]]), None);
+    assert!(!is_ambiguous(&later, None, &configuration));
+    assert!(CsvWriter::new(&later, None, &configuration).data().is_ok());
+
+    // Quoting puts the quote character first, so the BOM cannot be confused
+    // with the file signature.
+    let quoted = table(rows(&[&["\u{FEFF}x"]]), None);
+    assert!(!is_ambiguous(&quoted, None, &CsvConfiguration::default()));
+    assert!(
+        CsvWriter::new(&quoted, None, &CsvConfiguration::default())
+            .data()
+            .is_ok()
+    );
+}
+
+#[test]
+fn short_columns_write_empty_cells_instead_of_panicking() {
+    let t = CsvTable {
+        columns: vec![
+            CsvColumn {
+                id: 1,
+                header: None,
+                cells: vec!["a".to_owned(), "b".to_owned()],
+            },
+            CsvColumn {
+                id: 2,
+                header: None,
+                cells: vec!["x".to_owned()],
+            },
+        ],
+    };
+    let configuration = CsvConfiguration::default();
+
+    assert_eq!(
+        CsvWriter::new(&t, None, &configuration).string().unwrap(),
+        "\"a\",\"x\"\n\"b\",\"\""
+    );
+    assert_eq!(issue(&t, None, &configuration), None);
 }
 
 #[test]

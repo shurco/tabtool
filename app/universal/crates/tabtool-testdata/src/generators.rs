@@ -101,6 +101,10 @@ pub fn make_benchmark_csv(rows: usize, columns: usize, quoted: bool) -> String {
 /// and reports the rows (header included) and bytes written.
 pub fn generate_large_csv(options: &LargeOptions) -> io::Result<LargeFixture> {
     assert!(options.columns > 0, "columns must be greater than zero");
+    assert!(
+        options.multiline_every != Some(0),
+        "multiline_every must be greater than zero"
+    );
 
     const CHUNK_LIMIT: usize = 8 << 20;
 

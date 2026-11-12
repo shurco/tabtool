@@ -78,6 +78,10 @@ impl<'a> CsvWriter<'a> {
 
     /// Serializes without ambiguity enforcement, for validation to inspect the
     /// exact text that saving would encode.
+    ///
+    /// Every column normally holds exactly [`CsvTable::row_count`] cells. The
+    /// fields of [`CsvTable`] are public, so a literal table can be malformed;
+    /// a short column then contributes empty cells instead of panicking.
     pub fn serialized_text(
         table: &CsvTable,
         header: Option<&[String]>,
@@ -99,7 +103,7 @@ impl<'a> CsvWriter<'a> {
                 table
                     .columns
                     .iter()
-                    .map(|column| column.cells[row].as_str()),
+                    .map(|column| column.cells.get(row).map_or("", String::as_str)),
                 &mut text,
                 &mut is_first_row,
                 configuration,

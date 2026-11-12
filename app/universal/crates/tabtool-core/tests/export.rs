@@ -303,3 +303,40 @@ fn export_preflight_ignores_an_unwritten_header() {
         None
     );
 }
+
+#[test]
+fn export_writes_the_unicode_byte_order_marks() {
+    let t = table(rows(&[&["1.5", "x"]]), None);
+    let document = CsvConfiguration::default();
+
+    let cases = [
+        (Encoding::Utf16, &[0xFF, 0xFE][..]),
+        (Encoding::Utf32, &[0xFF, 0xFE, 0x00, 0x00][..]),
+        (Encoding::Utf16Be, &[][..]),
+        (Encoding::Utf16Le, &[][..]),
+        (Encoding::Utf32Be, &[][..]),
+        (Encoding::Utf32Le, &[][..]),
+    ];
+
+    for (encoding, bom) in cases {
+        let export = CsvConfiguration {
+            encoding,
+            ..CsvConfiguration::default()
+        };
+        let input = ExportInput {
+            table: &t,
+            document_configuration: &document,
+            export_configuration: &export,
+        };
+        assert_eq!(export_preflight_issue(&input), None, "{encoding:?}");
+        let bytes = export_data(&input, false).expect("export succeeds");
+        assert!(
+            bytes.starts_with(bom),
+            "{encoding:?}: expected prefix {bom:02x?}, got {:02x?}",
+            &bytes[..bytes.len().min(4)]
+        );
+        if bom.is_empty() {
+            assert_ne!(bytes.get(..2), Some(&[0xFF, 0xFE][..]), "{encoding:?}");
+        }
+    }
+}

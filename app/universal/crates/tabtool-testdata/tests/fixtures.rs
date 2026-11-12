@@ -46,6 +46,47 @@ fn every_manifest_entry_matches_the_bytes() {
 }
 
 #[test]
+fn fixture_copies_match_the_apple_source() {
+    let apple = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../apple/TabToolKit/Tests/TabToolKitTests/Fixtures");
+    if !apple.is_dir() {
+        eprintln!(
+            "skipping: Apple fixture source is not present at {}",
+            apple.display()
+        );
+        return;
+    }
+
+    let mut apple_names: Vec<String> = Vec::new();
+    for folder in ["Heuristic", "Performance", "Reading"] {
+        let directory = apple.join(folder);
+        for entry in fs::read_dir(&directory)
+            .unwrap_or_else(|error| panic!("cannot read {}: {error}", directory.display()))
+        {
+            let entry = entry.expect("fixture entry is readable");
+            let path = entry.path();
+            if path.extension().is_some_and(|extension| extension == "csv") {
+                apple_names.push(format!("{folder}/{}", entry.file_name().to_string_lossy()));
+            }
+        }
+    }
+    apple_names.sort();
+
+    let mut copy_names: Vec<String> = fixture_names()
+        .iter()
+        .map(|name| (*name).to_owned())
+        .collect();
+    copy_names.sort();
+    assert_eq!(copy_names, apple_names, "fixture copy list");
+
+    for name in fixture_names() {
+        let expected = fs::read(apple.join(name))
+            .unwrap_or_else(|error| panic!("cannot read Apple fixture {name}: {error}"));
+        assert_eq!(fixture(name), expected, "{name}");
+    }
+}
+
+#[test]
 fn copies_the_apple_fixture_counts() {
     assert_eq!(fixture_names().len(), 36);
 }
@@ -196,4 +237,13 @@ fn large_matches_the_apple_bytes() {
     assert_eq!(fixture.rows, LARGE_GOLDEN_ROWS);
     assert_eq!(bytes.len() as u64, LARGE_GOLDEN_BYTES);
     assert_eq!(sha256_hex(&bytes), LARGE_GOLDEN_SHA256);
+}
+
+#[test]
+#[should_panic(expected = "multiline_every must be greater than zero")]
+fn large_generator_rejects_a_zero_multiline_interval() {
+    let dir = tempfile::tempdir().expect("temp directory");
+    let mut options = options(&dir.path().join("zero.csv"), 500, 2);
+    options.multiline_every = Some(0);
+    let _ = generate_large_csv(&options);
 }

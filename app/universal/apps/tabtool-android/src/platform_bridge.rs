@@ -13,9 +13,6 @@ const BRIDGE_CLASS: &str = "app/shurco/tabtool/TabToolBridge";
 
 struct Bridge {
     vm: JavaVM,
-    /// Cached Android context handle from `ndk_context`.
-    #[allow(dead_code)]
-    context: GlobalRef,
     class: GlobalRef,
 }
 
@@ -42,7 +39,7 @@ unsafe fn init_bridge() -> Option<Bridge> {
         }
     };
 
-    let (context, class) = {
+    let class = {
         let mut env = match vm.attach_current_thread() {
             Ok(env) => env,
             Err(error) => {
@@ -51,19 +48,17 @@ unsafe fn init_bridge() -> Option<Bridge> {
             }
         };
 
-        let refs = (|| -> jni::errors::Result<(GlobalRef, GlobalRef)> {
-            // SAFETY: `ndk_context` holds a live Android context reference. It is
-            // copied into a global reference immediately; the borrowed value is not
-            // used after this scope.
+        let class = (|| -> jni::errors::Result<GlobalRef> {
+            // SAFETY: `ndk_context` holds a live Android context reference for
+            // the process lifetime. It is borrowed only to reach the app's
+            // class loader; the borrowed value is not used after this scope.
             let context = unsafe { JObject::from_raw(android_context.context() as jobject) };
-            let context = env.new_global_ref(context)?;
-            let class = bridge_class(&mut env, context.as_obj())?;
-            let class = env.new_global_ref(class)?;
-            Ok((context, class))
+            let class = bridge_class(&mut env, &context)?;
+            env.new_global_ref(class)
         })();
 
-        match refs {
-            Ok(refs) => refs,
+        match class {
+            Ok(class) => class,
             Err(error) => {
                 log_jni_error(&mut env, "init_bridge", &error);
                 return None;
@@ -72,7 +67,7 @@ unsafe fn init_bridge() -> Option<Bridge> {
     };
 
     info!("JNI bridge initialized");
-    Some(Bridge { vm, context, class })
+    Some(Bridge { vm, class })
 }
 
 fn bridge_class<'local>(
