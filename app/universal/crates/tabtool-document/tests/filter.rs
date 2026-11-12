@@ -181,7 +181,7 @@ fn undo_and_redo_of_a_cell_edit_reevaluate_the_filter() {
     // Cell edits keep the snapshot, so the rows have not changed yet.
     assert_eq!(document.row_filter().visible_rows, Some(vec![0, 2]));
 
-    // Undoing the second edit gives "a,b,a"; only a refresh shows row 1.
+    // Undoing the second edit restores "a,a,a"; only a refresh shows row 1.
     assert!(document.undo());
     assert_eq!(document.row_filter().visible_rows, Some(vec![0, 1, 2]));
     assert!(document.undo());
@@ -322,6 +322,20 @@ fn deleting_rows_while_filtering_is_a_no_op() {
 }
 
 #[test]
+fn row_commands_are_blocked_while_filtering() {
+    let mut document = loaded("a\nb\na\n");
+    select_rows(&mut document, [0]);
+    apply_filter(&mut document, "a", 0);
+    let rows = document.table().expect("table").columns[0].cells.clone();
+
+    document.delete_rows(&BTreeSet::from([0]));
+    document.move_rows(&BTreeSet::from([0]), 2);
+    document.move_selected_rows(1);
+
+    assert_eq!(document.table().expect("table").columns[0].cells, rows);
+}
+
+#[test]
 fn column_deletion_stays_available_while_filtering() {
     let mut document = loaded("a,1\nb,2\n");
     apply_filter(&mut document, "a", 0);
@@ -385,6 +399,31 @@ fn column_copy_limit_counts_only_visible_rows() {
         .copy_selection(&locale("en-US"), ".")
         .expect("one million visible cells is allowed");
     assert_eq!(copied.len(), 1_999_999);
+}
+
+#[test]
+fn a_large_visible_set_keeps_the_selection_and_export_correct() {
+    // 100k matching rows: the membership set keeps the apply/selection trim
+    // and the filtered export linear instead of rows × visible.
+    let row_count = 100_000;
+    let mut csv = String::with_capacity(row_count * 2);
+    for _ in 0..row_count {
+        csv.push_str("a\n");
+    }
+    let mut document = loaded(&csv);
+    select_rows(&mut document, 0..row_count);
+
+    apply_filter(&mut document, "a", 0);
+
+    assert_eq!(
+        document.row_filter().visible_rows.as_ref().map(Vec::len),
+        Some(row_count)
+    );
+    assert_eq!(document.selection().rows.len(), row_count);
+    assert_eq!(
+        document.visible_table().expect("visible table").row_count(),
+        row_count
+    );
 }
 
 #[test]

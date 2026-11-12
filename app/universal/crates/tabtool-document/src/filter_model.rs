@@ -292,8 +292,9 @@ impl Document {
         let Some(visible_rows) = self.row_filter.visible_rows.as_ref() else {
             return Some(table.clone());
         };
+        let visible: HashSet<usize> = visible_rows.iter().copied().collect();
         let hidden: BTreeSet<usize> = (0..table.row_count())
-            .filter(|row| !visible_rows.contains(row))
+            .filter(|row| !visible.contains(row))
             .collect();
         let mut visible_table = table.clone();
         visible_table.delete_rows(&hidden);
@@ -375,12 +376,13 @@ impl Document {
 
     /// Drops selected rows that the filter hides.
     fn keep_selection_visible(&mut self) {
-        let Some(visible) = self.row_filter.visible_rows.as_ref() else {
+        let Some(visible_rows) = self.row_filter.visible_rows.as_ref() else {
             return;
         };
         if self.selection.rows.is_empty() {
             return;
         }
+        let visible: HashSet<usize> = visible_rows.iter().copied().collect();
         self.selection.rows.retain(|row| visible.contains(row));
     }
 }

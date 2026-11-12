@@ -425,6 +425,9 @@ impl Document {
         updated: Arc<CsvTable>,
         next_sort: Option<ActiveSort>,
     ) -> bool {
+        if self.table.is_none() {
+            return false;
+        }
         let configuration = self.configuration.clone();
         let includes_utf8_bom = self.had_utf8_bom;
         self.publish_content(action, updated, configuration, includes_utf8_bom, next_sort)
@@ -435,7 +438,8 @@ impl Document {
     /// This is the one path every structural or format action shares, so the
     /// revision, phase, filter refresh and undo snapshot cannot go stale.
     /// Equal content, column order, configuration and BOM record nothing,
-    /// matching the Swift `applyChange` early return.
+    /// matching the Swift `applyChange` early return. A document without a
+    /// table still accepts a first table, without an undo snapshot.
     pub(crate) fn publish_content(
         &mut self,
         action: UndoAction,
@@ -444,10 +448,8 @@ impl Document {
         includes_utf8_bom: bool,
         next_sort: Option<ActiveSort>,
     ) -> bool {
-        let Some(current) = self.table.as_ref().map(Arc::clone) else {
-            return false;
-        };
-        if current.as_ref() == updated.as_ref()
+        if let Some(current) = self.table.as_ref()
+            && current.as_ref() == updated.as_ref()
             && current.has_same_column_order(updated.as_ref())
             && self.configuration == configuration
             && self.had_utf8_bom == includes_utf8_bom
@@ -455,9 +457,7 @@ impl Document {
             return false;
         }
 
-        let Some(before) = self.capture_state() else {
-            return false;
-        };
+        let before = self.capture_state();
         self.table = Some(updated);
         self.configuration = configuration;
         self.had_utf8_bom = includes_utf8_bom;
@@ -466,7 +466,9 @@ impl Document {
         self.revision += 1;
         self.refresh_phase();
         self.refresh_filter();
-        self.record_state_change(action, before);
+        if let Some(before) = before {
+            self.record_state_change(action, before);
+        }
         true
     }
 

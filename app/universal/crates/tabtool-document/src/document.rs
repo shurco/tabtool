@@ -366,17 +366,27 @@ impl Document {
 mod tests {
     use super::*;
 
-    /// Marks the document as a large-file document without mapped content.
+    /// Loads a ready table, then marks the document as a large-file document.
+    ///
+    /// Large mode has no in-memory table in production; keeping one here makes
+    /// the test prove that the mode flag alone hides filtering, not the phase
+    /// or a missing table.
     fn large_document() -> Document {
-        let mut document = Document::new(CsvConfiguration::default());
+        let configuration = CsvConfiguration::default();
+        let mut document = Document::new(configuration.clone());
+        document
+            .load_from_bytes(b"a\nb\n", None, Some(configuration), false)
+            .expect("load the fixture");
         document.large = Some(());
-        document.table = None;
         document
     }
 
     #[test]
     fn large_documents_cannot_filter_or_toggle_the_bar() {
         let mut document = large_document();
+        assert!(document.table().is_some());
+        assert_eq!(document.phase(), &DocumentPhase::Ready);
+
         assert!(!document.can_filter());
 
         document.toggle_filter_bar();

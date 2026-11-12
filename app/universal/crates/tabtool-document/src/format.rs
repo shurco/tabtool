@@ -273,9 +273,9 @@ impl Document {
 
     /// Replaces table, configuration and BOM as one undoable change.
     ///
-    /// The active sort is cleared and the selection is trimmed to the new
-    /// bounds. Content that leaves table, configuration and BOM unchanged
-    /// records nothing.
+    /// The active sort is cleared, the selection is trimmed to the new bounds
+    /// and the applied filter is refreshed. Content, column order,
+    /// configuration and BOM that are all unchanged record nothing.
     fn apply_content_change(
         &mut self,
         table: Arc<CsvTable>,
@@ -283,25 +283,7 @@ impl Document {
         includes_utf8_bom: bool,
         action: UndoAction,
     ) {
-        let unchanged = self.table.as_deref() == Some(table.as_ref())
-            && self.configuration == configuration
-            && self.had_utf8_bom == includes_utf8_bom;
-        if unchanged {
-            return;
-        }
-
-        let before = self.capture_state();
-        self.table = Some(table);
-        self.configuration = configuration;
-        self.had_utf8_bom = includes_utf8_bom;
-        self.active_sort = None;
-        self.trim_selection();
-        self.revision += 1;
-        self.refresh_phase();
-        self.refresh_filter();
-        if let Some(before) = before {
-            self.record_state_change(action, before);
-        }
+        self.publish_content(action, table, configuration, includes_utf8_bom, None);
     }
 }
 
