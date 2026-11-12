@@ -30,9 +30,11 @@ impl Document {
     ///
     /// A document still loading, failed to read, unreadable or without a table
     /// cannot save. Save As is available whenever the table itself is
-    /// writable; Save additionally needs a file path.
+    /// writable; Save additionally needs a file path. A re-read in flight owns
+    /// the document, so saving is refused until it finishes.
     pub fn can_save(&self) -> bool {
-        self.file_path().is_some()
+        !self.rereading
+            && self.file_path().is_some()
             && self.table.is_some()
             && matches!(
                 self.phase,
@@ -43,16 +45,16 @@ impl Document {
 
     /// Writes the document to its current path.
     ///
-    /// Returns [`DocumentError::NotReady`] before a table loads, or when the
-    /// document has no path (Save As is the way to bind one).
-    /// [`DocumentError::Csv`] reports the typed write issue. A blocked gate or
-    /// a failed write leaves the document dirty and the previous file
-    /// untouched.
+    /// Returns [`DocumentError::RequiresConfirmation`] while a re-read is in
+    /// flight, [`DocumentError::NotReady`] before a table loads or when the
+    /// document has no path (Save As is the way to bind one), and
+    /// [`DocumentError::Csv`] for the typed write issue. A blocked gate or a
+    /// failed write leaves the document dirty and the previous file untouched.
     pub fn save(&mut self, storage: &dyn Storage) -> Result<(), DocumentError> {
+        self.ensure_writable()?;
         let Some(path) = self.file_path().map(Path::to_path_buf) else {
             return Err(DocumentError::NotReady);
         };
-        self.ensure_writable()?;
         self.write_to(&path, storage, false)
     }
 
@@ -105,6 +107,9 @@ impl Document {
 
     /// Rejects a save before any bytes are encoded or written.
     fn ensure_writable(&self) -> Result<(), DocumentError> {
+        if self.rereading {
+            return Err(DocumentError::RequiresConfirmation);
+        }
         if self.table.is_none()
             || !matches!(
                 self.phase,
@@ -138,6 +143,9 @@ impl Document {
             self.set_file_path(Some(path));
         }
         self.saved_revision = self.revision;
+        // The gate passed above, but a stale phase must not keep reporting a
+        // write issue after the bytes were written.
+        self.refresh_phase();
         Ok(())
     }
 

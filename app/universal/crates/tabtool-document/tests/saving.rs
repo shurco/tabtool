@@ -7,8 +7,8 @@ use std::cell::{Cell, RefCell};
 use std::io;
 use std::path::Path;
 
-use tabtool_core::{CsvConfiguration, CsvError, CsvWriteIssue, Encoding};
-use tabtool_document::{Document, DocumentError, DocumentPhase, StdStorage, Storage};
+use tabtool_core::{CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, Encoding};
+use tabtool_document::{Document, DocumentError, DocumentPhase, ParsedTable, StdStorage, Storage};
 
 /// In-memory [`Storage`] that records reads and writes and can refuse either.
 struct MemoryStorage {
@@ -434,6 +434,96 @@ fn save_after_save_as_targets_the_new_path() {
         b"\"b\"".to_vec()
     );
     assert_eq!(std::fs::read(&first).expect("the old file"), b"\"a\"");
+}
+
+#[test]
+fn undoing_an_edit_after_a_save_keeps_the_document_dirty() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let path = directory.path().join("saved.csv");
+    let mut document = loaded_bytes(b"a\n", CsvConfiguration::default());
+    document
+        .save_as(&path, &StdStorage)
+        .expect("the initial save");
+    assert!(!document.is_dirty());
+
+    document.set_cell(0, 0, "b");
+    assert!(document.is_dirty());
+
+    assert!(document.undo());
+    assert_eq!(document.table().expect("table").cell(0, 0), "a");
+
+    // Dirty is revision-based, not a content comparison with the file.
+    assert!(document.is_dirty());
+    assert_eq!(std::fs::read(&path).expect("the saved file"), b"\"a\"");
+}
+
+#[test]
+fn save_is_refused_while_a_reread_is_in_flight() {
+    let storage = MemoryStorage::new(b"a,b\n");
+    let mut document = loaded(&storage, CsvConfiguration::default());
+    assert!(document.begin_reread());
+
+    assert!(!document.can_save());
+    assert_eq!(
+        document.save(&storage),
+        Err(DocumentError::RequiresConfirmation)
+    );
+    assert_eq!(
+        document.save_as(Path::new("/virtual/new.csv"), &storage),
+        Err(DocumentError::RequiresConfirmation)
+    );
+    assert_eq!(storage.writes.get(), 0);
+
+    // Complete the public begin/apply/end cycle the UI uses.
+    let configuration = CsvConfiguration::default();
+    document.apply_reparsed_candidate(ParsedTable {
+        table: CsvTable::from_rows(vec![vec!["x".to_string()]], None, 1),
+        configuration,
+        had_utf8_bom: false,
+        expected_revision: document.revision(),
+    });
+    document.end_reread();
+
+    assert!(document.can_save());
+    document.save(&storage).expect("save after the re-read");
+    assert_eq!(storage.writes.get(), 1);
+}
+
+#[test]
+fn a_real_atomic_write_failure_leaves_the_target_untouched() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    // A directory is an existing target that `StdStorage` can open for
+    // metadata but cannot replace atomically; the temporary file is created
+    // and then the install step fails.
+    let target = directory.path().join("folder");
+    std::fs::create_dir(&target).expect("a directory target");
+    std::fs::write(target.join("inside.txt"), b"keep").expect("target content");
+
+    let configuration = CsvConfiguration::default();
+    let mut document = Document::new(configuration.clone());
+    document
+        .load_from_bytes(b"a\n", Some(&target), Some(configuration), false)
+        .expect("load the fixture");
+    document.set_cell(0, 0, "b");
+
+    assert_eq!(
+        document.save(&StdStorage),
+        Err(DocumentError::CannotWriteFile)
+    );
+
+    assert!(target.is_dir());
+    assert_eq!(
+        std::fs::read(target.join("inside.txt")).expect("target content"),
+        b"keep"
+    );
+    let leftovers: Vec<_> = std::fs::read_dir(directory.path())
+        .expect("the directory")
+        .map(|entry| entry.expect("an entry").file_name())
+        .filter(|name| name.to_string_lossy().starts_with(".tabtool-save-"))
+        .collect();
+    assert!(leftovers.is_empty(), "no temporary save file remains");
+    assert!(document.is_dirty());
+    assert_eq!(document.file_path(), Some(target.as_path()));
 }
 
 #[test]

@@ -282,6 +282,13 @@ impl Document {
     ///
     /// An untitled document has no file holding its content, so it stays dirty
     /// until Save As binds a path.
+    ///
+    /// The check is revision-based: a save records `saved_revision = revision`,
+    /// and any later content or binding change bumps the revision. Undoing an
+    /// edit back to the saved text therefore still reports dirty. The file on
+    /// disk is never re-read, so a change made outside the document is not
+    /// detected; the UI tracks revisions separately for autosave and close
+    /// prompts.
     pub fn is_dirty(&self) -> bool {
         self.file_path.is_none() || self.revision != self.saved_revision
     }
