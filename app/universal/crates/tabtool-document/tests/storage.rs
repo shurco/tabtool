@@ -80,7 +80,7 @@ fn write_atomic_preserves_an_existing_files_permissions() {
     let directory = scratch();
     let path = directory.path().join("document.csv");
     fs::write(&path, "old\n").expect("a readable file");
-    fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).expect("chmod");
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o640)).expect("chmod");
 
     StdStorage
         .write_atomic(&path, b"new\n")
@@ -90,7 +90,26 @@ fn write_atomic_preserves_an_existing_files_permissions() {
         .expect("the saved file")
         .permissions()
         .mode();
-    assert_eq!(mode & 0o777, 0o600);
+    assert_eq!(mode & 0o777, 0o640);
+}
+
+#[cfg(unix)]
+#[test]
+fn write_atomic_gives_a_new_file_a_readable_mode() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let directory = scratch();
+    let path = directory.path().join("document.csv");
+
+    StdStorage
+        .write_atomic(&path, b"a\n")
+        .expect("a writable directory");
+
+    let mode = fs::metadata(&path)
+        .expect("the saved file")
+        .permissions()
+        .mode();
+    assert_eq!(mode & 0o777, 0o644);
 }
 
 #[test]

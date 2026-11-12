@@ -14,6 +14,10 @@ use tabtool_large::replace_file;
 /// target directory while the new bytes are being written.
 const TEMPORARY_PREFIX: &str = ".tabtool-save-";
 
+/// Mode of a new document: owner read/write, group and others read.
+#[cfg(unix)]
+const NEW_FILE_MODE: u32 = 0o644;
+
 /// Byte access to the file behind a document.
 pub trait Storage {
     /// Reads the whole file.
@@ -54,7 +58,7 @@ impl Storage for StdStorage {
         temporary.write_all(data)?;
         temporary.as_file().sync_all()?;
         #[cfg(unix)]
-        copy_permissions(path, temporary.path())?;
+        apply_permissions(path, temporary.path())?;
         // Close the file and stop `TempPath` from deleting the path on drop.
         // Keeping it after the rename would fail on Windows, where keeping
         // clears the temporary attribute by path, because that path is gone.
@@ -80,16 +84,23 @@ fn install(target: &Path, temporary: &Path) -> io::Result<()> {
     }
 }
 
-/// Gives `target` the permissions of `source` when `source` exists.
+/// Gives `target` the permissions `source` had, or the default for a new file.
 ///
-/// The temporary file is created private (`0600`), so a document with other
-/// permissions would otherwise narrow to `0600` after a save. A missing source
-/// is a new file and keeps the default.
+/// The temporary file is created private (`0600`), so without this step a save
+/// would narrow an existing document's mode or create a new document only its
+/// owner can read. A new file gets `0644` explicitly; this does not consult the
+/// process umask, which the standard library does not expose, so a restrictive
+/// umask is not observed for saves that create a file.
 #[cfg(unix)]
-fn copy_permissions(source: &Path, target: &Path) -> io::Result<()> {
-    match fs::metadata(source) {
-        Ok(metadata) => fs::set_permissions(target, metadata.permissions()),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error),
-    }
+fn apply_permissions(source: &Path, target: &Path) -> io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let permissions = match fs::metadata(source) {
+        Ok(metadata) => metadata.permissions(),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            fs::Permissions::from_mode(NEW_FILE_MODE)
+        }
+        Err(error) => return Err(error),
+    };
+    fs::set_permissions(target, permissions)
 }

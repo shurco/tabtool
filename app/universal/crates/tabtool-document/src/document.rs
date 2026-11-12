@@ -48,6 +48,8 @@ impl Document {
     pub fn new(configuration: CsvConfiguration) -> Self {
         Self {
             phase: DocumentPhase::Loading,
+            // Task 2 reconciles this placeholder with the load path; the
+            // untitled table exists now so the defaults are observable.
             table: Some(Arc::new(CsvTable::new_document(1, 3))),
             large: None,
             configuration,
@@ -58,6 +60,8 @@ impl Document {
             file_path: None,
             had_utf8_bom: false,
             revision: 0,
+            // Task 7 reconciles revisions with saves; an untitled document
+            // reports clean until then.
             saved_revision: 0,
             notice: None,
             large_status: LargeStatus::None,
@@ -144,6 +148,9 @@ impl Document {
     }
 
     /// The one-shot message the window should present, if any.
+    ///
+    /// Always `None` until the large-file tasks raise a notice; kept now so
+    /// the window has one accessor for it.
     pub fn notice(&self) -> Option<DocumentNotice> {
         self.notice
     }
