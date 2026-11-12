@@ -31,7 +31,8 @@ fn an_empty_file_loads_as_a_one_by_one_table() {
     assert_eq!(table.cell(0, 0), "");
     assert_eq!(table.headers(), None);
     assert!(document.file_path().is_none());
-    assert!(!document.is_dirty());
+    // Untitled content stays dirty until Save As binds a file.
+    assert!(document.is_dirty());
 }
 
 #[test]

@@ -27,7 +27,8 @@ fn a_new_document_starts_loading_with_a_blank_three_by_one_table() {
     assert!(document.active_sort().is_none());
     assert!(document.file_path().is_none());
     assert_eq!(document.revision(), 0);
-    assert!(!document.is_dirty());
+    // Untitled content stays dirty until Save As binds a file.
+    assert!(document.is_dirty());
     assert!(document.write_issue().is_none());
     assert_eq!(document.large_status(), LargeStatus::None);
     assert!(!document.is_large_mode());

@@ -4,9 +4,7 @@ use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use tabtool_core::{
-    CsvConfiguration, CsvTable, CsvWriteIssue, CsvWriter, RowSource, issue as validate_write,
-};
+use tabtool_core::{CsvConfiguration, CsvTable, CsvWriteIssue, RowSource};
 
 use crate::filter_model::RowFilterModel;
 use crate::io;
@@ -20,8 +18,8 @@ use crate::undo::UndoEntry;
 /// One CSV document.
 ///
 /// The value owns the table and every piece of view-independent state. Loading,
-/// snapshots, editing, structural changes, selections and undo all land here;
-/// the save gate and large-file state arrive in later tasks.
+/// snapshots, editing, structural changes, selections, undo and saving all land
+/// here; large-file state arrives in a later task.
 pub struct Document {
     pub(crate) phase: DocumentPhase,
     pub(crate) table: Option<Arc<CsvTable>>,
@@ -40,8 +38,15 @@ pub struct Document {
     /// Whether the loaded bytes began with a UTF-8 byte order mark.
     pub(crate) had_utf8_bom: bool,
     pub(crate) revision: u64,
-    /// The revision the file last matched; a re-read from disk refreshes it.
+    /// The revision the file last matched; a re-read from disk or a save
+    /// refreshes it.
     pub(crate) saved_revision: u64,
+    /// The snapshot captured for saving, keyed by the revision it describes.
+    ///
+    /// Saving reuses the entry while the revision is unchanged, so repeated
+    /// saves of an untouched document do not clone the table metadata. Every
+    /// revision bump clears it.
+    pub(crate) snapshot_cache: Option<(u64, Arc<DocumentSnapshot>)>,
     /// Whether a transactional re-read currently owns the document.
     pub(crate) rereading: bool,
     /// A one-shot message the window should present.
@@ -73,9 +78,10 @@ impl Document {
             file_path: None,
             had_utf8_bom: false,
             revision: 0,
-            // Task 7 reconciles revisions with saves; an untitled document
-            // reports clean until then.
+            // An untitled document reports dirty until Save As binds a path;
+            // loading file content resets this to the loaded revision.
             saved_revision: 0,
+            snapshot_cache: None,
             rereading: false,
             notice: Cell::new(None),
             large_status: LargeStatus::None,
@@ -103,7 +109,7 @@ impl Document {
         self.undo_entries.clear();
         self.redo_entries.clear();
         self.phase = DocumentPhase::Ready;
-        self.revision += 1;
+        self.bump_revision();
         self.refresh_phase();
     }
 
@@ -139,7 +145,7 @@ impl Document {
                 self.configuration = outcome.configuration;
                 self.had_utf8_bom = outcome.had_utf8_bom;
                 self.phase = DocumentPhase::Ready;
-                self.revision += 1;
+                self.bump_revision();
                 // Loading content is not an unsaved edit.
                 self.saved_revision = self.revision;
                 self.refresh_phase();
@@ -150,7 +156,7 @@ impl Document {
                 self.configuration = configuration;
                 self.table = None;
                 self.phase = DocumentPhase::ReadFailed(error);
-                self.revision += 1;
+                self.bump_revision();
                 Err(DocumentError::NotReady)
             }
         }
@@ -182,7 +188,7 @@ impl Document {
                 self.table = None;
                 self.file_path = Some(path.to_path_buf());
                 self.phase = DocumentPhase::UnreadableFile;
-                self.revision += 1;
+                self.bump_revision();
                 Err(DocumentError::CannotReadFile)
             }
         }
@@ -197,15 +203,15 @@ impl Document {
             return;
         }
         self.file_path = path;
-        self.revision += 1;
+        self.bump_revision();
     }
 
     /// Captures the table, format and BOM state for saving.
     ///
     /// The table is shared, not copied, so repeated autosave attempts stay
     /// cheap. A document with no loaded table has nothing to save. A
-    /// `NeedsAttention` document still returns its snapshot; the save gate is
-    /// applied by the save path (Task 7), not by snapshotting.
+    /// `NeedsAttention` document still returns its snapshot; the save path
+    /// applies the write gate, not snapshotting.
     pub fn snapshot(&self) -> Result<DocumentSnapshot, DocumentError> {
         if matches!(
             self.phase,
@@ -229,15 +235,7 @@ impl Document {
     /// represent).
     pub fn encoded_data(&self) -> Result<Vec<u8>, DocumentError> {
         let snapshot = self.snapshot()?;
-        let header = if snapshot.configuration.first_row_as_header {
-            snapshot.table.headers()
-        } else {
-            None
-        };
-        let mut writer =
-            CsvWriter::new(&snapshot.table, header.as_deref(), &snapshot.configuration);
-        writer.include_utf8_bom = snapshot.includes_utf8_bom;
-        writer.data().map_err(DocumentError::Csv)
+        crate::snapshot::encode(&snapshot).map_err(DocumentError::Csv)
     }
 
     /// The in-memory table, or `None` while no table is loaded.
@@ -281,8 +279,11 @@ impl Document {
     }
 
     /// Whether the content differs from the last saved revision.
+    ///
+    /// An untitled document has no file holding its content, so it stays dirty
+    /// until Save As binds a path.
     pub fn is_dirty(&self) -> bool {
-        self.revision != self.saved_revision
+        self.file_path.is_none() || self.revision != self.saved_revision
     }
 
     /// The typed problem that blocks saving, when the phase reports one.
@@ -347,18 +348,18 @@ impl Document {
     /// keeps its current phase. Tasks that replace the table or format call
     /// this so the phase never goes stale.
     pub(crate) fn refresh_phase(&mut self) {
-        let Some(table) = self.table.as_deref() else {
-            return;
-        };
-        let header = if self.configuration.first_row_as_header {
-            table.headers()
-        } else {
-            None
-        };
-        self.phase = match validate_write(table, header.as_deref(), &self.configuration) {
-            Some(issue) => DocumentPhase::NeedsAttention(issue),
-            None => DocumentPhase::Ready,
-        };
+        if self.table.is_some() {
+            self.refresh_write_issue();
+        }
+    }
+
+    /// Counts one content or file-binding change.
+    ///
+    /// The save-snapshot cache is invalidated here, so every revision bump
+    /// drops the value a later save would otherwise reuse.
+    pub(crate) fn bump_revision(&mut self) {
+        self.revision += 1;
+        self.snapshot_cache = None;
     }
 }
 

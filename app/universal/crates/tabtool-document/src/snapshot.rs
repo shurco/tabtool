@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use tabtool_core::{CsvConfiguration, CsvTable};
+use tabtool_core::{CsvConfiguration, CsvError, CsvTable, CsvWriter};
 
 /// The table, format and byte-order-mark state a save writes.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -17,4 +17,19 @@ pub struct DocumentSnapshot {
     pub configuration: CsvConfiguration,
     /// Whether the saved bytes start with a UTF-8 byte order mark.
     pub includes_utf8_bom: bool,
+}
+
+/// Serializes a snapshot with its captured table, format and BOM.
+///
+/// The writer applies the same ambiguity and encoding checks as the save gate,
+/// so a snapshot that passes validation cannot fail for a different reason.
+pub(crate) fn encode(snapshot: &DocumentSnapshot) -> Result<Vec<u8>, CsvError> {
+    let header = if snapshot.configuration.first_row_as_header {
+        snapshot.table.headers()
+    } else {
+        None
+    };
+    let mut writer = CsvWriter::new(&snapshot.table, header.as_deref(), &snapshot.configuration);
+    writer.include_utf8_bom = snapshot.includes_utf8_bom;
+    writer.data()
 }

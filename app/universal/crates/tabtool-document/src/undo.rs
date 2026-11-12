@@ -265,7 +265,7 @@ impl Document {
         self.active_sort = snapshot.active_sort;
         self.selection = snapshot.selection;
         self.had_utf8_bom = snapshot.includes_utf8_bom;
-        self.revision += 1;
+        self.bump_revision();
         self.refresh_phase();
         self.refresh_filter();
     }

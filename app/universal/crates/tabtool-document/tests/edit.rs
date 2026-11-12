@@ -6,6 +6,7 @@
 //! commands themselves follow the same selection rules.
 
 use std::collections::BTreeSet;
+use std::path::Path;
 
 use tabtool_core::{CsvConfiguration, CsvWriteIssue};
 use tabtool_document::{Document, DocumentPhase, GridSelection};
@@ -15,6 +16,21 @@ fn loaded(csv: &str) -> Document {
     let mut document = Document::new(configuration.clone());
     document
         .load_from_bytes(csv.as_bytes(), None, Some(configuration), false)
+        .expect("load the fixture");
+    document
+}
+
+/// A loaded, file-bound document; no file has to exist for these tests.
+fn loaded_from_file(csv: &str) -> Document {
+    let configuration = CsvConfiguration::default();
+    let mut document = Document::new(configuration.clone());
+    document
+        .load_from_bytes(
+            csv.as_bytes(),
+            Some(Path::new("fixture.csv")),
+            Some(configuration),
+            false,
+        )
         .expect("load the fixture");
     document
 }
@@ -163,7 +179,7 @@ fn inserting_a_column_in_header_mode_gives_it_an_empty_header() {
 
 #[test]
 fn set_cell_replaces_the_text_and_bumps_the_revision() {
-    let mut document = loaded("a,b\n1,2\n");
+    let mut document = loaded_from_file("a,b\n1,2\n");
     let revision = document.revision();
     assert!(!document.is_dirty());
 

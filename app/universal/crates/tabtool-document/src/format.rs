@@ -188,10 +188,9 @@ impl Document {
     /// Whether the content differs from the saved content.
     ///
     /// An untitled document always has unsaved changes: there is no file that
-    /// could hold its content. The save gate itself arrives with the saving
-    /// task.
+    /// could hold its content.
     pub fn has_unsaved_changes(&self) -> bool {
-        self.file_path().is_none() || self.is_dirty()
+        self.is_dirty()
     }
 
     /// Marks a re-read in flight and returns `false` when one is already

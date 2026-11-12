@@ -29,6 +29,8 @@ pub enum DocumentError {
     RequiresConfirmation,
     /// The file bytes are unavailable to the document.
     CannotReadFile,
+    /// The new bytes could not be written; the previous file is untouched.
+    CannotWriteFile,
     /// Serializing the table failed with a typed CSV error, such as
     /// [`CsvError::AmbiguousOutput`] or [`CsvError::UnencodableText`].
     Csv(CsvError),

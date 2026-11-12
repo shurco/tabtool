@@ -372,7 +372,7 @@ impl Document {
             }
         }
         Arc::make_mut(table).set_cell(text.to_owned(), row, column);
-        self.revision += 1;
+        self.bump_revision();
         self.refresh_phase();
         true
     }
@@ -463,7 +463,7 @@ impl Document {
         self.had_utf8_bom = includes_utf8_bom;
         self.active_sort = next_sort;
         self.trim_selection();
-        self.revision += 1;
+        self.bump_revision();
         self.refresh_phase();
         self.refresh_filter();
         if let Some(before) = before {
