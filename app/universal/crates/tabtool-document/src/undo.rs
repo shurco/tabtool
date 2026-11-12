@@ -99,6 +99,15 @@ pub(crate) enum UndoEntry {
     },
 }
 
+impl UndoEntry {
+    /// The user action this entry belongs to.
+    fn action(&self) -> UndoAction {
+        match self {
+            Self::Cell { action, .. } | Self::State { action, .. } => *action,
+        }
+    }
+}
+
 impl Document {
     /// Whether there is an action to undo.
     pub fn can_undo(&self) -> bool {
@@ -108,6 +117,16 @@ impl Document {
     /// Whether there is an action to redo.
     pub fn can_redo(&self) -> bool {
         !self.redo_entries.is_empty()
+    }
+
+    /// The action the next undo would reverse, if any.
+    pub fn undo_action(&self) -> Option<UndoAction> {
+        self.undo_entries.last().map(UndoEntry::action)
+    }
+
+    /// The action the next redo would repeat, if any.
+    pub fn redo_action(&self) -> Option<UndoAction> {
+        self.redo_entries.last().map(UndoEntry::action)
     }
 
     /// Undoes the most recent action.

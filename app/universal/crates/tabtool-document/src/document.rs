@@ -40,7 +40,10 @@ pub struct Document {
     /// Whether the loaded bytes began with a UTF-8 byte order mark.
     pub(crate) had_utf8_bom: bool,
     pub(crate) revision: u64,
-    saved_revision: u64,
+    /// The revision the file last matched; a re-read from disk refreshes it.
+    pub(crate) saved_revision: u64,
+    /// Whether a transactional re-read currently owns the document.
+    pub(crate) rereading: bool,
     /// A one-shot message the window should present.
     notice: Option<DocumentNotice>,
     large_status: LargeStatus,
@@ -70,6 +73,7 @@ impl Document {
             // Task 7 reconciles revisions with saves; an untitled document
             // reports clean until then.
             saved_revision: 0,
+            rereading: false,
             notice: None,
             large_status: LargeStatus::None,
         }

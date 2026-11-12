@@ -375,7 +375,7 @@ impl Document {
     }
 
     /// Whether the document has loaded content that can be edited.
-    fn can_edit_content(&self) -> bool {
+    pub(crate) fn can_edit_content(&self) -> bool {
         self.table.is_some()
             && matches!(
                 self.phase,
@@ -420,7 +420,7 @@ impl Document {
     }
 
     /// Drops selected indexes that no longer exist after a structural change.
-    fn trim_selection(&mut self) {
+    pub(crate) fn trim_selection(&mut self) {
         let Some(table) = self.table.as_ref() else {
             self.selection = GridSelection::default();
             return;
