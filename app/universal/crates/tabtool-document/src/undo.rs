@@ -100,6 +100,15 @@ pub(crate) enum UndoEntry {
         action: UndoAction,
         snapshot: StateSnapshot,
     },
+    /// A targeted large-file cell change, keyed by physical (file) row.
+    LargeCell {
+        row: usize,
+        column: usize,
+        old: String,
+        new: String,
+    },
+    /// A large-file header toggle. `enabled` is the value this entry applies.
+    LargeHeader { enabled: bool },
 }
 
 impl UndoEntry {
@@ -107,6 +116,16 @@ impl UndoEntry {
     fn action(&self) -> UndoAction {
         match self {
             Self::Cell { action, .. } | Self::State { action, .. } => *action,
+            Self::LargeCell { .. } => UndoAction::EditCell,
+            Self::LargeHeader { .. } => UndoAction::ToggleHeader,
+        }
+    }
+
+    /// Whether this entry belongs to the content mode the document has now.
+    fn applies_to(&self, document: &Document) -> bool {
+        match self {
+            Self::Cell { .. } | Self::State { .. } => document.table.is_some(),
+            Self::LargeCell { .. } | Self::LargeHeader { .. } => document.large.is_some(),
         }
     }
 }
@@ -134,15 +153,22 @@ impl Document {
 
     /// Undoes the most recent action.
     ///
-    /// Returns `false` when the history is empty or no table is loaded. A
-    /// successful undo records the resulting state for redo.
+    /// Returns `false` when the history is empty, no content is loaded, or the
+    /// entry belongs to a content mode the document no longer has. A refused
+    /// large-file edit raises [`crate::DocumentNotice::EditRejected`] and keeps
+    /// the entry on the undo stack. A successful undo records the resulting
+    /// state for redo.
     pub fn undo(&mut self) -> bool {
-        if self.table.is_none() {
+        if self.table.is_none() && self.large.is_none() {
             return false;
         }
         let Some(entry) = self.undo_entries.pop() else {
             return false;
         };
+        if !entry.applies_to(self) {
+            self.undo_entries.push(entry);
+            return false;
+        }
 
         match entry {
             UndoEntry::Cell {
@@ -172,21 +198,59 @@ impl Document {
                     snapshot: after,
                 });
             }
+            UndoEntry::LargeCell {
+                row,
+                column,
+                old,
+                new,
+            } => {
+                if let Err(error) = self.apply_large_cell_at(row, column, &old) {
+                    self.set_notice(crate::DocumentNotice::EditRejected(error));
+                    self.undo_entries.push(UndoEntry::LargeCell {
+                        row,
+                        column,
+                        old,
+                        new,
+                    });
+                    return false;
+                }
+                self.redo_entries.push(UndoEntry::LargeCell {
+                    row,
+                    column,
+                    old,
+                    new,
+                });
+            }
+            UndoEntry::LargeHeader { enabled } => {
+                if !self.apply_large_header_value(enabled) {
+                    self.undo_entries.push(UndoEntry::LargeHeader { enabled });
+                    return false;
+                }
+                self.redo_entries
+                    .push(UndoEntry::LargeHeader { enabled: !enabled });
+            }
         }
         true
     }
 
     /// Redoes the most recently undone action.
     ///
-    /// Returns `false` when there is nothing to redo or no table is loaded. A
-    /// successful redo records the resulting state for another undo.
+    /// Returns `false` when there is nothing to redo, no content is loaded, or
+    /// the entry belongs to a content mode the document no longer has. A
+    /// refused large-file edit raises [`crate::DocumentNotice::EditRejected`]
+    /// and keeps the entry on the redo stack. A successful redo records the
+    /// resulting state for another undo.
     pub fn redo(&mut self) -> bool {
-        if self.table.is_none() {
+        if self.table.is_none() && self.large.is_none() {
             return false;
         }
         let Some(entry) = self.redo_entries.pop() else {
             return false;
         };
+        if !entry.applies_to(self) {
+            self.redo_entries.push(entry);
+            return false;
+        }
 
         match entry {
             UndoEntry::Cell {
@@ -215,6 +279,37 @@ impl Document {
                     action,
                     snapshot: before,
                 });
+            }
+            UndoEntry::LargeCell {
+                row,
+                column,
+                old,
+                new,
+            } => {
+                if let Err(error) = self.apply_large_cell_at(row, column, &new) {
+                    self.set_notice(crate::DocumentNotice::EditRejected(error));
+                    self.redo_entries.push(UndoEntry::LargeCell {
+                        row,
+                        column,
+                        old,
+                        new,
+                    });
+                    return false;
+                }
+                self.undo_entries.push(UndoEntry::LargeCell {
+                    row,
+                    column,
+                    old,
+                    new,
+                });
+            }
+            UndoEntry::LargeHeader { enabled } => {
+                if !self.apply_large_header_value(enabled) {
+                    self.redo_entries.push(UndoEntry::LargeHeader { enabled });
+                    return false;
+                }
+                self.undo_entries
+                    .push(UndoEntry::LargeHeader { enabled: !enabled });
             }
         }
         true
@@ -255,6 +350,30 @@ impl Document {
             old,
             new,
         });
+        self.redo_entries.clear();
+    }
+
+    /// Stores a targeted large-file cell change, keyed by physical row.
+    pub(crate) fn record_large_cell_change(
+        &mut self,
+        row: usize,
+        column: usize,
+        old: String,
+        new: String,
+    ) {
+        self.undo_entries.push(UndoEntry::LargeCell {
+            row,
+            column,
+            old,
+            new,
+        });
+        self.redo_entries.clear();
+    }
+
+    /// Stores the header value a large-file toggle must restore.
+    pub(crate) fn record_large_header_change(&mut self, previous: bool) {
+        self.undo_entries
+            .push(UndoEntry::LargeHeader { enabled: previous });
         self.redo_entries.clear();
     }
 

@@ -17,9 +17,15 @@ use crate::undo::UndoAction;
 impl Document {
     /// Replaces one cell with a targeted undo record.
     ///
-    /// Invalid indexes, an unchanged value and a document without a table are
-    /// ignored, so a no-op edit records no undo step.
+    /// A large document routes to [`Document::set_large_cell`], which edits the
+    /// overlay and reports refusals through [`Document::notice`]. Invalid
+    /// indexes, an unchanged value and an in-memory document without a table
+    /// are ignored, so a no-op edit records no undo step.
     pub fn set_cell(&mut self, row: usize, column: usize, text: &str) {
+        if self.is_large_mode() {
+            let _ = self.set_large_cell(text, row, column);
+            return;
+        }
         if !self.can_edit_content() {
             return;
         }
@@ -448,6 +454,11 @@ impl Document {
         includes_utf8_bom: bool,
         next_sort: Option<ActiveSort>,
     ) -> bool {
+        // A large document has exactly one content mode: a table can never
+        // replace the mapped source.
+        if self.large.is_some() {
+            return false;
+        }
         if let Some(current) = self.table.as_ref()
             && current.as_ref() == updated.as_ref()
             && current.has_same_column_order(updated.as_ref())
@@ -472,8 +483,20 @@ impl Document {
         true
     }
 
-    /// Drops selected indexes that no longer exist after a structural change.
+    /// Drops selected indexes that no longer exist after a change.
+    ///
+    /// A large document trims against the rows and columns its source shows
+    /// now; a document with neither content mode clears the selection.
     pub(crate) fn trim_selection(&mut self) {
+        if let Some(large) = &self.large {
+            let row_count = large.source.row_count();
+            let column_count = large.source.column_count();
+            self.selection.rows.retain(|&row| row < row_count);
+            self.selection
+                .columns
+                .retain(|&column| column < column_count);
+            return;
+        }
         let Some(table) = self.table.as_ref() else {
             self.selection = GridSelection::default();
             return;

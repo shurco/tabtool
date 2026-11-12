@@ -58,6 +58,12 @@ impl Document {
             return Err(DocumentError::NotReady);
         }
 
+        // A large document re-reads its mapping with the new format; it never
+        // materializes a table.
+        if self.is_large_mode() {
+            return self.reopen_large(new, force);
+        }
+
         if self.file_path().is_none() {
             let Some(table) = self.table.as_ref().map(Arc::clone) else {
                 return Err(DocumentError::NotReady);
@@ -85,8 +91,10 @@ impl Document {
 
     /// Runs the format detector over the current bytes of the file on disk.
     ///
-    /// The configuration is returned without changing the document. An
-    /// untitled document has no bytes to read and returns its configuration.
+    /// A large document sniffs the head of its mapped file instead of reading
+    /// the whole file into memory. The configuration is returned without
+    /// changing the document. An untitled document has no bytes to read and
+    /// returns its configuration.
     pub fn detect_format_from_disk(
         &self,
         storage: &dyn Storage,
@@ -95,6 +103,11 @@ impl Document {
         let Some(path) = self.file_path() else {
             return Ok(self.configuration.clone());
         };
+        if self.is_large_mode() {
+            let file =
+                tabtool_large::MappedFile::open(path).map_err(|_| DocumentError::CannotReadFile)?;
+            return tabtool_large::sniff(&file, prefers_chinese).map_err(DocumentError::Csv);
+        }
         let bytes = storage
             .read(path)
             .map_err(|_| DocumentError::CannotReadFile)?;
@@ -131,8 +144,15 @@ impl Document {
     /// Turns header mode on or off by moving the first row across the header
     /// boundary, updating both the table and the configuration.
     ///
-    /// One undo snapshot restores the table, configuration and first row.
+    /// A large document routes to [`Document::set_large_header_enabled`], which
+    /// moves the source's row mapping instead of a table. One undo snapshot
+    /// restores the table, configuration and first row, or the large row
+    /// mapping and configuration.
     pub fn set_header_enabled(&mut self, enabled: bool) {
+        if self.is_large_mode() {
+            self.set_large_header_enabled(enabled);
+            return;
+        }
         if !self.can_edit_content() {
             return;
         }
@@ -256,6 +276,7 @@ impl Document {
     /// A successful apply makes the content match disk, so it is not dirty.
     fn apply_candidate(&mut self, candidate: ParsedTable, action: UndoAction) -> bool {
         if self.revision != candidate.expected_revision
+            || self.large.is_some()
             || matches!(self.phase, crate::DocumentPhase::Loading)
         {
             return false;

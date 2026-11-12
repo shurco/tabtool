@@ -8,7 +8,7 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use tabtool_core::{Locale, convert_decimal_mark, make_tsv, parse_tsv};
+use tabtool_core::{CsvError, Locale, convert_decimal_mark, make_tsv, parse_tsv};
 use tabtool_large::LargeFile;
 
 use crate::Document;
@@ -100,6 +100,87 @@ impl Document {
             })
             .collect();
         Some(make_tsv(
+            &values,
+            &self.configuration.decimal_mark,
+            decimal_separator,
+        ))
+    }
+
+    /// Copies the given large-file selection as tab-separated text.
+    ///
+    /// Selected rows win over selected columns, as in `copySelection`. Rows
+    /// copy every column of each requested row; columns copy the requested
+    /// columns across the visible rows (a large document cannot apply a filter,
+    /// but a visible-row set is honored if one exists). Out-of-range indexes
+    /// are ignored.
+    ///
+    /// Returns [`CsvError::RowNotEditable`] when there is no large source,
+    /// nothing valid is selected, or the copy would exceed
+    /// [`LargeFile::MAX_COPY_CELLS`]; the last case also raises
+    /// [`DocumentNotice::CopyLimitExceeded`].
+    pub fn copy_large_selection(
+        &self,
+        rows: &BTreeSet<usize>,
+        columns: &BTreeSet<usize>,
+        decimal_separator: &str,
+    ) -> Result<String, CsvError> {
+        let Some(large) = &self.large else {
+            return Err(CsvError::RowNotEditable);
+        };
+        let source = large.source.as_ref();
+
+        if !rows.is_empty() {
+            let selected: Vec<usize> = rows
+                .iter()
+                .copied()
+                .filter(|&row| row < source.row_count())
+                .collect();
+            if selected.is_empty()
+                || !self.fits_copy_limit(selected.len().saturating_mul(source.column_count()))
+            {
+                return Err(CsvError::RowNotEditable);
+            }
+            let values: Vec<Vec<String>> = selected
+                .iter()
+                .map(|&row| {
+                    (0..source.column_count())
+                        .map(|column| source.cell(row, column))
+                        .collect()
+                })
+                .collect();
+            return Ok(make_tsv(
+                &values,
+                &self.configuration.decimal_mark,
+                decimal_separator,
+            ));
+        }
+
+        let column_count = source.column_count();
+        let selected: Vec<usize> = columns
+            .iter()
+            .copied()
+            .filter(|&column| column < column_count)
+            .collect();
+        if selected.is_empty() {
+            return Err(CsvError::RowNotEditable);
+        }
+        let visible_rows: Vec<usize> = match &self.row_filter.visible_rows {
+            Some(visible_rows) => visible_rows.clone(),
+            None => (0..source.row_count()).collect(),
+        };
+        if !self.fits_copy_limit(visible_rows.len().saturating_mul(selected.len())) {
+            return Err(CsvError::RowNotEditable);
+        }
+        let values: Vec<Vec<String>> = visible_rows
+            .iter()
+            .map(|&row| {
+                selected
+                    .iter()
+                    .map(|&column| source.cell(row, column))
+                    .collect()
+            })
+            .collect();
+        Ok(make_tsv(
             &values,
             &self.configuration.decimal_mark,
             decimal_separator,

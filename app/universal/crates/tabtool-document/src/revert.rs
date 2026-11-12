@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use crate::Document;
 use crate::DocumentPhase;
 use crate::storage::Storage;
-use crate::types::DocumentError;
+use crate::types::{DocumentError, LargeStatus};
 use crate::undo::UndoAction;
 
 /// What File > Revert to Saved should do for the current document.
@@ -19,19 +19,22 @@ pub enum RevertDecision {
     Revert,
     /// The document has unsaved changes; ask before reverting.
     NeedsConfirmation,
-    /// There is no file or table to revert.
+    /// There is no file or content to revert, or a save is in flight.
     Unavailable,
 }
 
 /// Decides whether a revert needs a confirmation dialog.
 ///
-/// A missing path, a missing table and a document that is still loading are
-/// unavailable. A clean file-backed document reverts directly; a dirty one
-/// asks the user, exactly like `RevertCoordinator` in the Apple app.
+/// A missing path, no loaded content (table or large source), a document that
+/// is still loading and a large document being saved are unavailable. A clean
+/// file-backed document reverts directly; a dirty one asks the user, exactly
+/// like `RevertCoordinator` in the Apple app. A large document is dirty while
+/// its overlay holds an edit.
 pub fn plan_revert(document: &Document) -> RevertDecision {
     if document.file_path().is_none()
-        || document.table().is_none()
+        || !document.has_content()
         || matches!(document.phase(), DocumentPhase::Loading)
+        || matches!(document.large_status(), LargeStatus::Saving(_))
     {
         return RevertDecision::Unavailable;
     }
@@ -43,14 +46,24 @@ pub fn plan_revert(document: &Document) -> RevertDecision {
 }
 
 impl Document {
-    /// Replaces the table with the file at the current path parsed with the
-    /// current configuration.
+    /// Replaces the document with the saved content.
+    ///
+    /// A large document drops its overlay edits and undo history; the file is
+    /// not re-read. An in-memory document replaces the table with the file at
+    /// the current path parsed with the current configuration.
     ///
     /// The caller asks the user first when [`plan_revert`] reports
-    /// [`RevertDecision::NeedsConfirmation`]. The replacement is one
+    /// [`RevertDecision::NeedsConfirmation`]. The in-memory replacement is one
     /// [`UndoAction::RevertToSaved`] step and leaves the file untouched. A
     /// failed read or parse keeps the previous table and records no undo.
     pub fn revert_to_saved(&mut self, storage: &dyn Storage) -> Result<(), DocumentError> {
+        if matches!(self.large_status(), LargeStatus::Saving(_)) {
+            return Err(DocumentError::RequiresConfirmation);
+        }
+        if self.is_large_mode() {
+            self.revert_large_edits();
+            return Ok(());
+        }
         if matches!(self.phase, DocumentPhase::Loading) || self.table.is_none() {
             return Err(DocumentError::NotReady);
         }

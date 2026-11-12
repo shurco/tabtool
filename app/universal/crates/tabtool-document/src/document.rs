@@ -8,6 +8,7 @@ use tabtool_core::{CsvConfiguration, CsvTable, CsvWriteIssue, RowSource};
 
 use crate::filter_model::RowFilterModel;
 use crate::io;
+use crate::large_state::LargeState;
 use crate::snapshot::DocumentSnapshot;
 use crate::storage::Storage;
 use crate::types::{
@@ -19,22 +20,20 @@ use crate::undo::UndoEntry;
 ///
 /// The value owns the table and every piece of view-independent state. Loading,
 /// snapshots, editing, structural changes, selections, undo and saving all land
-/// here; large-file state arrives in a later task.
+/// here. Exactly one content mode is active: an in-memory table, a mapped
+/// large-file state, or neither while nothing has loaded.
 pub struct Document {
     pub(crate) phase: DocumentPhase,
     pub(crate) table: Option<Arc<CsvTable>>,
-    /// Placeholder for the memory-mapped state of a large file.
-    ///
-    /// The large-file task replaces the unit value with the mapped source,
-    /// indexer and file handle.
-    large: Option<()>,
+    /// The mapped state of a large file; `table` is `None` in this mode.
+    pub(crate) large: Option<LargeState>,
     pub(crate) configuration: CsvConfiguration,
     pub(crate) selection: GridSelection,
     pub(crate) active_sort: Option<ActiveSort>,
     pub(crate) row_filter: RowFilterModel,
     pub(crate) undo_entries: Vec<UndoEntry>,
     pub(crate) redo_entries: Vec<UndoEntry>,
-    file_path: Option<PathBuf>,
+    pub(crate) file_path: Option<PathBuf>,
     /// Whether the loaded bytes began with a UTF-8 byte order mark.
     pub(crate) had_utf8_bom: bool,
     pub(crate) revision: u64,
@@ -54,7 +53,7 @@ pub struct Document {
     /// A [`Cell`] lets the read-only copy commands raise the copy-limit
     /// notice while the rest of the document stays borrowed immutably.
     notice: Cell<Option<DocumentNotice>>,
-    large_status: LargeStatus,
+    pub(crate) large_status: LargeStatus,
 }
 
 impl Document {
@@ -100,6 +99,7 @@ impl Document {
         }
 
         self.table = Some(Arc::new(table));
+        self.clear_large_state();
         self.configuration = configuration;
         self.had_utf8_bom = false;
         self.file_path = None;
@@ -138,6 +138,7 @@ impl Document {
 
         let configuration = configuration.unwrap_or_else(|| io::detect(bytes, prefers_chinese));
         self.file_path = path.map(Path::to_path_buf);
+        self.clear_large_state();
 
         match io::parse(bytes, &configuration) {
             Ok(outcome) => {
@@ -185,6 +186,7 @@ impl Document {
         match storage.read(path) {
             Ok(bytes) => self.load_from_bytes(&bytes, Some(path), configuration, prefers_chinese),
             Err(_) => {
+                self.clear_large_state();
                 self.table = None;
                 self.file_path = Some(path.to_path_buf());
                 self.phase = DocumentPhase::UnreadableFile;
@@ -283,13 +285,21 @@ impl Document {
     /// An untitled document has no file holding its content, so it stays dirty
     /// until Save As binds a path.
     ///
-    /// The check is revision-based: a save records `saved_revision = revision`,
-    /// and any later content or binding change bumps the revision. Undoing an
-    /// edit back to the saved text therefore still reports dirty. The file on
-    /// disk is never re-read, so a change made outside the document is not
-    /// detected; the UI tracks revisions separately for autosave and close
-    /// prompts.
+    /// In-memory content is revision-based: a save records
+    /// `saved_revision = revision`, and any later content or binding change
+    /// bumps the revision. Undoing an edit back to the saved text therefore
+    /// still reports dirty. The file on disk is never re-read, so a change made
+    /// outside the document is not detected; the UI tracks revisions
+    /// separately for autosave and close prompts.
+    ///
+    /// A large document is dirty while its overlay holds an unsaved edit,
+    /// matching the Swift `hasUnsavedLargeEdits`: an edit written back to the
+    /// file's own text clears the overlay and the document becomes clean
+    /// without a save.
     pub fn is_dirty(&self) -> bool {
+        if let Some(large) = &self.large {
+            return !large.source.overlay.is_empty();
+        }
         self.file_path.is_none() || self.revision != self.saved_revision
     }
 
@@ -306,6 +316,11 @@ impl Document {
         self.large_status
     }
 
+    /// The mapped state of a large document, if this is one.
+    pub fn large_state(&self) -> Option<&LargeState> {
+        self.large.as_ref()
+    }
+
     /// Whether this document opens its file through the memory-mapped path.
     pub fn is_large_mode(&self) -> bool {
         self.large.is_some()
@@ -317,18 +332,28 @@ impl Document {
     }
 
     /// The rows the grid and status bar read.
+    ///
+    /// A large document reads its mapped source; its rows appear as soon as
+    /// the mapping exists, even while the index is still growing.
     pub fn row_source(&self) -> Option<&dyn RowSource> {
+        if let Some(large) = &self.large {
+            return Some(large.source.as_ref() as &dyn RowSource);
+        }
         self.table.as_deref().map(|table| table as &dyn RowSource)
     }
 
     /// Whether cells can be edited now: always in memory, and in large mode
     /// once the index is complete.
     pub fn can_edit_cells(&self) -> bool {
-        !self.is_large_mode() || self.large_status == LargeStatus::Ready
+        match &self.large {
+            Some(_) => self.large_status == LargeStatus::Ready,
+            None => true,
+        }
     }
 
     /// The one-shot message the window should present, if any.
     ///
+    /// A refused large-file edit raises [`DocumentNotice::EditRejected`].
     /// The copy commands raise [`DocumentNotice::CopyLimitExceeded`] when a
     /// selection would exceed [`tabtool_large::LargeFile::MAX_COPY_CELLS`];
     /// the window clears the notice by presenting it.
@@ -348,16 +373,29 @@ impl Document {
         self.notice.take()
     }
 
-    /// Recomputes `Ready`/`NeedsAttention` from the current table and format.
+    /// Recomputes `Ready`/`NeedsAttention` from the current content and format.
     ///
-    /// The save gate must match [`Document::encoded_data`], so headers are
-    /// validated only when the format writes them. A document without a table
-    /// keeps its current phase. Tasks that replace the table or format call
-    /// this so the phase never goes stale.
+    /// A large document is always [`DocumentPhase::Ready`] while its source is
+    /// available: large files have no in-memory table to validate and their
+    /// write gates belong to the streaming saver. The save gate of an
+    /// in-memory document must match [`Document::encoded_data`], so headers are
+    /// validated only when the format writes them. A document without content
+    /// keeps its current phase. Tasks that replace content or format call this
+    /// so the phase never goes stale.
     pub(crate) fn refresh_phase(&mut self) {
+        if self.large.is_some() {
+            self.phase = DocumentPhase::Ready;
+            return;
+        }
         if self.table.is_some() {
             self.refresh_write_issue();
         }
+    }
+
+    /// Drops the mapped state and its status, leaving the in-memory mode.
+    pub(crate) fn clear_large_state(&mut self) {
+        self.large = None;
+        self.large_status = LargeStatus::None;
     }
 
     /// Counts one content or file-binding change.
@@ -374,25 +412,25 @@ impl Document {
 mod tests {
     use super::*;
 
-    /// Loads a ready table, then marks the document as a large-file document.
-    ///
-    /// Large mode has no in-memory table in production; keeping one here makes
-    /// the test prove that the mode flag alone hides filtering, not the phase
-    /// or a missing table.
+    /// Opens a small file through the large path so the mode flag is real.
     fn large_document() -> Document {
-        let configuration = CsvConfiguration::default();
-        let mut document = Document::new(configuration.clone());
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let path = directory.path().join("big.csv");
+        std::fs::write(&path, "a\nb\n").expect("fixture file is written");
+        let mut document = Document::new(CsvConfiguration::default());
         document
-            .load_from_bytes(b"a\nb\n", None, Some(configuration), false)
-            .expect("load the fixture");
-        document.large = Some(());
+            .open_large(&path, None, false, 0)
+            .expect("open the fixture large");
+        document.large_state().expect("large state").indexer.wait();
+        document.poll_large_indexing();
         document
     }
 
     #[test]
     fn large_documents_cannot_filter_or_toggle_the_bar() {
         let mut document = large_document();
-        assert!(document.table().is_some());
+        assert!(document.table().is_none());
+        assert!(document.is_large_mode());
         assert_eq!(document.phase(), &DocumentPhase::Ready);
 
         assert!(!document.can_filter());
