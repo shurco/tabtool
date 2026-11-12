@@ -1,4 +1,15 @@
-//! Read-only support for CSV files too large to load into memory.
+//! Memory-mapped access to CSV files too large to load into memory.
+//!
+//! [`MappedFile`] maps a file read-only and tracks its identity. [`RowScanner`]
+//! finds row boundaries in raw bytes, [`LargeFileIndexer`] scans in the
+//! background and publishes a growing [`RowIndex`], and [`LargeCSVSource`]
+//! exposes the rows as a `tabtool_core::RowSource`. Edited cells live in
+//! [`CellOverlay`]; [`save`] streams the file back with only edited rows
+//! rewritten.
+//!
+//! The crate has no document state and no UI. Threshold routing, undo, save
+//! orchestration, the staleness banner and every screen are Plan 3 and Plan 4;
+//! `docs/universal.md` records the behavior this layer provides.
 
 #![deny(unsafe_code)]
 

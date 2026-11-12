@@ -119,17 +119,17 @@ fn run() -> Result<(), String> {
     for row in 0..LargeFile::BLOCK_ROWS {
         let _ = source.cell(row, COLUMNS - 1);
     }
-    report.add("Open to the first 64 rows", milliseconds(opened.elapsed()));
+    report.add("Open to first 64 rows", milliseconds(opened.elapsed()));
 
     eprintln!("bench-large: indexing ...");
     indexer.wait();
     let index_time = opened.elapsed();
     let rate = file.size() as f64 / index_time.as_secs_f64() / 1e9;
     report.add(
-        "Full index",
+        "Open to full index",
         format!("{} ({rate:.2} GB/s)", seconds(index_time)),
     );
-    report.add("Footprint after indexing", mib(footprint()));
+    report.add("Footprint after index", mib(footprint()));
 
     let rows = source.row_count();
     let columns = source.column_count();
@@ -221,8 +221,9 @@ fn run() -> Result<(), String> {
             written,
             &mut random,
         )?;
+        let noun = if count == 1 { "edit" } else { "edits" };
         report.add(
-            format!("Save, {count} edits"),
+            format!("Save, {count} {noun}"),
             format!(
                 "{}, peak footprint {}; {}",
                 seconds(elapsed),
