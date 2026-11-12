@@ -27,6 +27,14 @@ fn next_column_id() -> ColumnId {
     NEXT_COLUMN_ID.fetch_add(1, Ordering::Relaxed)
 }
 
+/// Allocates a process-unique column identity.
+///
+/// Row sources that do not own a [`CsvColumn`] use it to hand the grid the
+/// same kind of stable identity.
+pub fn new_column_id() -> ColumnId {
+    next_column_id()
+}
+
 /// One column of a [`CsvTable`].
 ///
 /// Equality compares content (header and cells) only, matching [`CsvTable`]

@@ -193,22 +193,45 @@ pub fn make_input(seed: u64, rows: usize) -> Vec<u8> {
     text.into_bytes()
 }
 
-/// Writes a deterministic quoted CSV of at least `target_bytes` to `path` and
-/// returns the row count, header included.
+/// Writes a deterministic CSV of at least `target_bytes` to `path` and returns
+/// the number of rows (header included) and bytes written.
 ///
-/// Even columns hold numbers, odd columns quoted text, and every seventh row
-/// carries a multiline quoted field with embedded separators and quotes. Ported
-/// from `generateLargeCSV` in `LargeFileTestSupport.swift` with the indexer
-/// fixture's settings.
-fn generate_large_csv(path: &Path, target_bytes: usize, columns: usize, seed: u64) -> usize {
+/// Ported from `generateLargeCSV` in `LargeFileTestSupport.swift`: even columns
+/// hold numbers, odd columns hold text (quoted when `quoted`), and every
+/// `multiline_every`-th row gets a quoted field with an embedded LF, separator
+/// and doubled quotes. Rows end with CRLF when `crlf`, else LF; `bom` starts
+/// the file with a UTF-8 byte order mark.
+#[allow(clippy::too_many_arguments)] // Mirror the Swift fixture's parameters.
+pub fn generate_large_csv(
+    path: &Path,
+    target_bytes: usize,
+    columns: usize,
+    quoted: bool,
+    multiline_every: Option<usize>,
+    crlf: bool,
+    bom: bool,
+    seed: u64,
+) -> (usize, usize) {
+    assert!(columns > 0, "the generator needs a column");
     let mut writer = BufWriter::new(File::create(path).expect("fixture file is created"));
     let mut generator = SplitMix64::new(seed);
+    let terminator = if crlf { "\r\n" } else { "\n" };
+    let mut written = 0;
+
+    if bom {
+        writer
+            .write_all(&[0xEF, 0xBB, 0xBF])
+            .expect("BOM is written");
+        written += 3;
+    }
     let header = (0..columns)
         .map(|column| format!("col{column}"))
         .collect::<Vec<_>>()
         .join(",");
-    writeln!(writer, "{header}").expect("header is written");
-    let mut written = header.len() + 1;
+    writer
+        .write_all(format!("{header}{terminator}").as_bytes())
+        .expect("header is written");
+    written += header.len() + terminator.len();
     let mut rows = 1;
     while written < target_bytes {
         let mut line = String::new();
@@ -217,21 +240,25 @@ fn generate_large_csv(path: &Path, target_bytes: usize, columns: usize, seed: u6
                 line.push(',');
             }
             let value = generator.next();
-            if rows % 7 == 0 && column == 1.min(columns - 1) {
+            if multiline_every.is_some_and(|every| rows % every == 0)
+                && column == 1.min(columns - 1)
+            {
                 line.push_str(&format!("\"line one\nline, \"\"two\"\" {rows}\""));
             } else if column % 2 == 0 {
                 line.push_str(&format!("{}.{column}", value % 1_000_000));
-            } else {
+            } else if quoted {
                 line.push_str(&format!("\"text{}\"", value % 5000));
+            } else {
+                line.push_str(&format!("text{}", value % 5000));
             }
         }
-        line.push('\n');
+        line.push_str(terminator);
         written += line.len();
         writer.write_all(line.as_bytes()).expect("row is written");
         rows += 1;
     }
     writer.flush().expect("fixture file flushes");
-    rows
+    (rows, written)
 }
 
 /// A mapped large CSV fixture kept alive for the test, with the generator's
@@ -252,7 +279,7 @@ impl LargeCsvFixture {
     pub fn with_target(target_bytes: usize) -> Self {
         let directory = tempfile::tempdir().expect("fixture directory is created");
         let path = directory.path().join("big.csv");
-        let rows = generate_large_csv(&path, target_bytes, 5, 3);
+        let (rows, _) = generate_large_csv(&path, target_bytes, 5, true, Some(7), false, false, 3);
         let file = Arc::new(MappedFile::open(&path).expect("fixture file opens"));
         Self {
             _directory: directory,
@@ -264,6 +291,37 @@ impl LargeCsvFixture {
     /// The path of the fixture file.
     pub fn path(&self) -> PathBuf {
         self._directory.path().join("big.csv")
+    }
+}
+
+/// A scratch directory removed when the value goes away.
+pub struct TempDirectory {
+    directory: tempfile::TempDir,
+}
+
+impl TempDirectory {
+    pub fn new() -> Self {
+        Self {
+            directory: tempfile::tempdir().expect("temporary directory is created"),
+        }
+    }
+
+    /// The directory path.
+    pub fn path(&self) -> &Path {
+        self.directory.path()
+    }
+
+    /// Writes `bytes` to `name` in the directory and returns its path.
+    pub fn file(&self, name: &str, bytes: &[u8]) -> PathBuf {
+        let path = self.path().join(name);
+        std::fs::write(&path, bytes).expect("fixture file is written");
+        path
+    }
+}
+
+impl Default for TempDirectory {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

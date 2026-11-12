@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use support::{LargeCsvFixture, large_file_indexer, scan_index};
 use tabtool_core::CsvConfiguration;
-use tabtool_large::{IndexProgress, LargeFileIndexer, MappedFile};
+use tabtool_large::{IndexCounters, IndexProgress, LargeFileIndexer, MappedFile};
 
 const STEP_BYTES: usize = 4096;
 const MIB: usize = 1 << 20;
@@ -55,6 +55,24 @@ fn matches_direct_scan() {
         .file
         .with_bytes(0..size, |bytes| scan_index(bytes, &configuration));
     assert_eq!(indexer.snapshot(), direct);
+}
+
+#[test]
+fn counters_match_the_published_index() {
+    let fixture = LargeCsvFixture::new();
+    let indexer = indexer(&fixture);
+    indexer.start(|_| {});
+    indexer.wait();
+
+    let snapshot = indexer.snapshot();
+    let counters = indexer.counters();
+    assert_eq!(counters.row_count, snapshot.row_count);
+    assert_eq!(counters.max_field_count, snapshot.max_field_count);
+    assert_eq!(counters.scanned_bytes, snapshot.scanned_bytes);
+    assert!(counters.is_finished);
+
+    let not_started = large_file_indexer(&fixture, STEP_BYTES, Duration::ZERO);
+    assert_eq!(not_started.counters(), IndexCounters::default());
 }
 
 #[test]

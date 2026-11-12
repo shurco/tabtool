@@ -2,20 +2,26 @@
 
 #![deny(unsafe_code)]
 
+mod block;
 mod index;
 mod indexer;
 mod mapped;
+mod overlay;
 #[allow(unsafe_code)]
 mod platform;
 mod scanner;
 mod sniffer;
+mod source;
 
+pub use block::LargeBlock;
 pub use index::RowIndex;
-pub use indexer::{IndexProgress, LargeFileIndexer};
+pub use indexer::{IndexCounters, IndexProgress, LargeFileIndexer};
 pub use mapped::{FileIdentity, MappedFile, Staleness};
+pub use overlay::{CellKey, CellOverlay};
 pub use platform::{available_space, replace_file};
 pub use scanner::{RowScanner, ScanMode, row_ranges};
 pub use sniffer::{check, is_byte_scannable, sniff, validate};
+pub use source::{LargeCSVSource, LargeSaveSnapshot};
 
 /// Limits shared by every large-file component.
 pub struct LargeFile;

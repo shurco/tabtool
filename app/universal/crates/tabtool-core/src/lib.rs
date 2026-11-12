@@ -34,7 +34,7 @@ pub use parser::CsvParser;
 pub use reorder::{is_permutation, shifted};
 pub use row_source::RowSource;
 pub use sort::{SortDirection, row_order_sorted_by};
-pub use table::{ColumnId, CriterionId, CsvColumn, CsvTable, RowSet};
+pub use table::{ColumnId, CriterionId, CsvColumn, CsvTable, RowSet, new_column_id};
 pub use write_validation::{CsvWriteIssue, is_ambiguous, issue};
 pub use writer::CsvWriter;
 

@@ -26,6 +26,22 @@ pub struct IndexProgress {
     pub is_finished: bool,
 }
 
+/// The cheap counters of an index, without its block checkpoints.
+///
+/// The grid reads these once per cell; copying the whole [`RowIndex`] there
+/// would clone every checkpoint of a growing scan.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct IndexCounters {
+    /// Rows that have started in the scanned bytes.
+    pub row_count: usize,
+    /// The most fields seen in one row so far.
+    pub max_field_count: usize,
+    /// Bytes consumed so far.
+    pub scanned_bytes: usize,
+    /// Whether the whole file has been scanned.
+    pub is_finished: bool,
+}
+
 /// Scans a mapped file on a background thread and publishes the growing
 /// [`RowIndex`].
 ///
@@ -118,6 +134,18 @@ impl LargeFileIndexer {
     /// The index of the bytes scanned so far.
     pub fn snapshot(&self) -> RowIndex {
         lock(&self.published).clone()
+    }
+
+    /// The counters of the index of the bytes scanned so far, without copying
+    /// its checkpoints.
+    pub fn counters(&self) -> IndexCounters {
+        let published = lock(&self.published);
+        IndexCounters {
+            row_count: published.row_count,
+            max_field_count: published.max_field_count,
+            scanned_bytes: published.scanned_bytes,
+            is_finished: self.finished.load(Ordering::Acquire),
+        }
     }
 
     /// Whether the whole file has been scanned.
