@@ -8,12 +8,14 @@ mod mapped;
 #[allow(unsafe_code)]
 mod platform;
 mod scanner;
+mod sniffer;
 
 pub use index::RowIndex;
 pub use indexer::{IndexProgress, LargeFileIndexer};
 pub use mapped::{FileIdentity, MappedFile, Staleness};
 pub use platform::{available_space, replace_file};
 pub use scanner::{RowScanner, ScanMode, row_ranges};
+pub use sniffer::{check, is_byte_scannable, sniff, validate};
 
 /// Limits shared by every large-file component.
 pub struct LargeFile;
