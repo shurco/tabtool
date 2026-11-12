@@ -13,33 +13,33 @@ use crate::storage::Storage;
 use crate::types::{
     ActiveSort, DocumentError, DocumentNotice, DocumentPhase, GridSelection, LargeStatus,
 };
+use crate::undo::UndoEntry;
 
 /// One CSV document.
 ///
 /// The value owns the table and every piece of view-independent state. Loading,
-/// snapshots and the save gate land here; editing lands in later tasks and
-/// builds on the same state.
+/// snapshots, editing, structural changes, selections and undo all land here;
+/// the save gate and large-file state arrive in later tasks.
 pub struct Document {
-    phase: DocumentPhase,
-    table: Option<Arc<CsvTable>>,
+    pub(crate) phase: DocumentPhase,
+    pub(crate) table: Option<Arc<CsvTable>>,
     /// Placeholder for the memory-mapped state of a large file.
     ///
     /// The large-file task replaces the unit value with the mapped source,
     /// indexer and file handle.
     large: Option<()>,
-    configuration: CsvConfiguration,
-    selection: GridSelection,
-    active_sort: Option<ActiveSort>,
+    pub(crate) configuration: CsvConfiguration,
+    pub(crate) selection: GridSelection,
+    pub(crate) active_sort: Option<ActiveSort>,
     /// Placeholder for the row filter; the filter task adds the model.
     #[allow(dead_code)]
     filter: (),
-    /// Placeholder for the undo history; the editing task adds the stack.
-    #[allow(dead_code)]
-    undo: (),
+    pub(crate) undo_entries: Vec<UndoEntry>,
+    pub(crate) redo_entries: Vec<UndoEntry>,
     file_path: Option<PathBuf>,
     /// Whether the loaded bytes began with a UTF-8 byte order mark.
     had_utf8_bom: bool,
-    revision: u64,
+    pub(crate) revision: u64,
     saved_revision: u64,
     /// A one-shot message the window should present.
     notice: Option<DocumentNotice>,
@@ -62,7 +62,8 @@ impl Document {
             selection: GridSelection::default(),
             active_sort: None,
             filter: (),
-            undo: (),
+            undo_entries: Vec::new(),
+            redo_entries: Vec::new(),
             file_path: None,
             had_utf8_bom: false,
             revision: 0,
@@ -91,6 +92,8 @@ impl Document {
         self.file_path = None;
         self.selection = GridSelection::default();
         self.active_sort = None;
+        self.undo_entries.clear();
+        self.redo_entries.clear();
         self.phase = DocumentPhase::Ready;
         self.revision += 1;
         self.refresh_phase();
