@@ -8,10 +8,14 @@
 #![forbid(unsafe_code)]
 
 mod document;
+mod io;
+mod snapshot;
 mod storage;
 mod types;
 
 pub use document::Document;
+pub use io::LoadOutcome;
+pub use snapshot::DocumentSnapshot;
 pub use storage::{StdStorage, Storage};
 pub use types::{
     ActiveSort, DocumentError, DocumentNotice, DocumentPhase, GridSelection, LargeStatus,
