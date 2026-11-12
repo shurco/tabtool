@@ -44,13 +44,17 @@ impl Document {
         if selected.is_empty() {
             return None;
         }
-        let row_count = source.row_count();
-        if !self.fits_copy_limit(row_count.saturating_mul(selected.len())) {
+        let visible_rows: Vec<usize> = match self.row_filter.visible_rows.as_ref() {
+            Some(visible_rows) => visible_rows.clone(),
+            None => (0..source.row_count()).collect(),
+        };
+        if !self.fits_copy_limit(visible_rows.len().saturating_mul(selected.len())) {
             return None;
         }
 
-        let rows: Vec<Vec<String>> = (0..row_count)
-            .map(|row| {
+        let rows: Vec<Vec<String>> = visible_rows
+            .iter()
+            .map(|&row| {
                 selected
                     .iter()
                     .map(|&column| source.cell(row, column))
@@ -108,7 +112,7 @@ impl Document {
     /// `decimal_separator` to the document decimal mark. The inserted rows
     /// become the selection and the whole paste is one undo operation.
     pub fn paste_tsv(&mut self, text: &str, _locale: &Locale, decimal_separator: &str) {
-        if !self.can_edit_content() {
+        if !self.can_edit_content() || !self.can_edit_row_structure() {
             return;
         }
         let Some(current) = self.table.as_ref().map(Arc::clone) else {

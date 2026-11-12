@@ -8,6 +8,7 @@ use tabtool_core::{
     CsvConfiguration, CsvTable, CsvWriteIssue, CsvWriter, RowSource, issue as validate_write,
 };
 
+use crate::filter_model::RowFilterModel;
 use crate::io;
 use crate::snapshot::DocumentSnapshot;
 use crate::storage::Storage;
@@ -32,9 +33,7 @@ pub struct Document {
     pub(crate) configuration: CsvConfiguration,
     pub(crate) selection: GridSelection,
     pub(crate) active_sort: Option<ActiveSort>,
-    /// Placeholder for the row filter; the filter task adds the model.
-    #[allow(dead_code)]
-    filter: (),
+    pub(crate) row_filter: RowFilterModel,
     pub(crate) undo_entries: Vec<UndoEntry>,
     pub(crate) redo_entries: Vec<UndoEntry>,
     file_path: Option<PathBuf>,
@@ -68,7 +67,7 @@ impl Document {
             configuration,
             selection: GridSelection::default(),
             active_sort: None,
-            filter: (),
+            row_filter: RowFilterModel::default(),
             undo_entries: Vec::new(),
             redo_entries: Vec::new(),
             file_path: None,
@@ -100,6 +99,7 @@ impl Document {
         self.file_path = None;
         self.selection = GridSelection::default();
         self.active_sort = None;
+        self.row_filter = RowFilterModel::default();
         self.undo_entries.clear();
         self.redo_entries.clear();
         self.phase = DocumentPhase::Ready;
@@ -143,6 +143,7 @@ impl Document {
                 // Loading content is not an unsaved edit.
                 self.saved_revision = self.revision;
                 self.refresh_phase();
+                self.refresh_filter();
                 Ok(())
             }
             Err(error) => {
@@ -358,5 +359,34 @@ impl Document {
             Some(issue) => DocumentPhase::NeedsAttention(issue),
             None => DocumentPhase::Ready,
         };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Marks the document as a large-file document without mapped content.
+    fn large_document() -> Document {
+        let mut document = Document::new(CsvConfiguration::default());
+        document.large = Some(());
+        document.table = None;
+        document
+    }
+
+    #[test]
+    fn large_documents_cannot_filter_or_toggle_the_bar() {
+        let mut document = large_document();
+        assert!(!document.can_filter());
+
+        document.toggle_filter_bar();
+        assert!(!document.row_filter().is_bar_visible);
+    }
+
+    #[test]
+    fn a_loading_document_cannot_filter() {
+        let document = Document::new(CsvConfiguration::default());
+        assert!(!document.can_filter());
+        assert!(!document.can_rename_column(0));
     }
 }

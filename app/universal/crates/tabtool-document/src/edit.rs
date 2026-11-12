@@ -8,7 +8,7 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use tabtool_core::{CsvTable, shifted};
+use tabtool_core::{CsvConfiguration, CsvTable, shifted};
 
 use crate::Document;
 use crate::types::{ActiveSort, DocumentPhase, GridSelection};
@@ -44,7 +44,7 @@ impl Document {
     ///
     /// The new row becomes the whole selection.
     pub fn add_row_above_selection(&mut self) {
-        if !self.can_edit_content() {
+        if !self.can_edit_content() || !self.can_edit_row_structure() {
             return;
         }
         let row_count = self.table.as_ref().map_or(0, |table| table.row_count());
@@ -67,7 +67,7 @@ impl Document {
     ///
     /// The new row becomes the whole selection.
     pub fn add_row_below_selection(&mut self) {
-        if !self.can_edit_content() {
+        if !self.can_edit_content() || !self.can_edit_row_structure() {
             return;
         }
         let row_count = self.table.as_ref().map_or(0, |table| table.row_count());
@@ -157,6 +157,9 @@ impl Document {
         let column_count = table.columns.len();
 
         if !self.selection.rows.is_empty() {
+            if !self.can_edit_row_structure() {
+                return;
+            }
             let rows: BTreeSet<usize> = self
                 .selection
                 .rows
@@ -200,7 +203,7 @@ impl Document {
     /// The active sort is cleared and the selection is trimmed to the remaining
     /// rows.
     pub fn delete_rows(&mut self, rows: &BTreeSet<usize>) {
-        if !self.can_edit_content() {
+        if !self.can_edit_content() || !self.can_edit_row_structure() {
             return;
         }
         self.replace_table(
@@ -248,7 +251,7 @@ impl Document {
     /// The active sort is cleared; the selection is trimmed but does not follow
     /// the moved rows.
     pub fn move_rows(&mut self, rows: &BTreeSet<usize>, destination: usize) {
-        if !self.can_edit_content() {
+        if !self.can_edit_content() || !self.can_edit_row_structure() {
             return;
         }
         self.replace_table(
@@ -289,7 +292,7 @@ impl Document {
     ///
     /// A step that would push any selected row past an edge is ignored.
     pub fn move_selected_rows(&mut self, by: isize) {
-        if !self.can_edit_content() {
+        if !self.can_edit_content() || !self.can_edit_row_structure() {
             return;
         }
         let row_count = self.table.as_ref().map_or(0, |table| table.row_count());
@@ -407,7 +410,9 @@ impl Document {
         };
         let mut updated = Arc::clone(&current);
         mutate(Arc::make_mut(&mut updated));
-        self.publish_table(action, current, updated, next_sort)
+        let configuration = self.configuration.clone();
+        let includes_utf8_bom = self.had_utf8_bom;
+        self.publish_content(action, updated, configuration, includes_utf8_bom, next_sort)
     }
 
     /// Applies a table prepared by the caller and records the previous state.
@@ -420,21 +425,33 @@ impl Document {
         updated: Arc<CsvTable>,
         next_sort: Option<ActiveSort>,
     ) -> bool {
+        let configuration = self.configuration.clone();
+        let includes_utf8_bom = self.had_utf8_bom;
+        self.publish_content(action, updated, configuration, includes_utf8_bom, next_sort)
+    }
+
+    /// Publishes prepared table, format and BOM state after the no-op check.
+    ///
+    /// This is the one path every structural or format action shares, so the
+    /// revision, phase, filter refresh and undo snapshot cannot go stale.
+    /// Equal content, column order, configuration and BOM record nothing,
+    /// matching the Swift `applyChange` early return.
+    pub(crate) fn publish_content(
+        &mut self,
+        action: UndoAction,
+        updated: Arc<CsvTable>,
+        configuration: CsvConfiguration,
+        includes_utf8_bom: bool,
+        next_sort: Option<ActiveSort>,
+    ) -> bool {
         let Some(current) = self.table.as_ref().map(Arc::clone) else {
             return false;
         };
-        self.publish_table(action, current, updated, next_sort)
-    }
-
-    /// Publishes a prepared table after the no-op check.
-    fn publish_table(
-        &mut self,
-        action: UndoAction,
-        current: Arc<CsvTable>,
-        updated: Arc<CsvTable>,
-        next_sort: Option<ActiveSort>,
-    ) -> bool {
-        if current.as_ref() == updated.as_ref() && current.has_same_column_order(updated.as_ref()) {
+        if current.as_ref() == updated.as_ref()
+            && current.has_same_column_order(updated.as_ref())
+            && self.configuration == configuration
+            && self.had_utf8_bom == includes_utf8_bom
+        {
             return false;
         }
 
@@ -442,10 +459,13 @@ impl Document {
             return false;
         };
         self.table = Some(updated);
+        self.configuration = configuration;
+        self.had_utf8_bom = includes_utf8_bom;
         self.active_sort = next_sort;
         self.trim_selection();
         self.revision += 1;
         self.refresh_phase();
+        self.refresh_filter();
         self.record_state_change(action, before);
         true
     }

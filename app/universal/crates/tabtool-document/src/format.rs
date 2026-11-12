@@ -298,6 +298,7 @@ impl Document {
         self.trim_selection();
         self.revision += 1;
         self.refresh_phase();
+        self.refresh_filter();
         if let Some(before) = before {
             self.record_state_change(action, before);
         }

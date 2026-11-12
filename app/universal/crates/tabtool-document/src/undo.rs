@@ -153,6 +153,7 @@ impl Document {
                 new,
             } => {
                 self.replace_cell(row, column, &old);
+                self.refresh_filter();
                 self.redo_entries.push(UndoEntry::Cell {
                     action,
                     row,
@@ -196,6 +197,7 @@ impl Document {
                 new,
             } => {
                 self.replace_cell(row, column, &new);
+                self.refresh_filter();
                 self.undo_entries.push(UndoEntry::Cell {
                     action,
                     row,
@@ -265,6 +267,7 @@ impl Document {
         self.had_utf8_bom = snapshot.includes_utf8_bom;
         self.revision += 1;
         self.refresh_phase();
+        self.refresh_filter();
     }
 }
 

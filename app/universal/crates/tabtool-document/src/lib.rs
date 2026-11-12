@@ -10,9 +10,11 @@
 mod clipboard;
 mod document;
 mod edit;
+mod filter_model;
 mod format;
 mod format_planner;
 mod io;
+mod rename;
 mod revert;
 mod snapshot;
 mod sort;
@@ -21,6 +23,7 @@ mod types;
 mod undo;
 
 pub use document::Document;
+pub use filter_model::RowFilterModel;
 pub use format::ParsedTable;
 pub use format_planner::{FormatChange, plan_format_change};
 pub use io::LoadOutcome;
