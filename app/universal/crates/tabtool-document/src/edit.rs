@@ -375,8 +375,12 @@ impl Document {
     }
 
     /// Whether the document has loaded content that can be edited.
+    ///
+    /// A re-read in flight owns the document, so edits are refused until it
+    /// finishes instead of racing the replacement table.
     pub(crate) fn can_edit_content(&self) -> bool {
-        self.table.is_some()
+        !self.rereading
+            && self.table.is_some()
             && matches!(
                 self.phase,
                 DocumentPhase::Ready | DocumentPhase::NeedsAttention(_)
@@ -392,7 +396,7 @@ impl Document {
     ///
     /// Returns `false` without a revision, sort change or undo entry when the
     /// mutation leaves the content and column order unchanged.
-    fn replace_table(
+    pub(crate) fn replace_table(
         &mut self,
         action: UndoAction,
         mutate: impl FnOnce(&mut CsvTable),
@@ -403,6 +407,33 @@ impl Document {
         };
         let mut updated = Arc::clone(&current);
         mutate(Arc::make_mut(&mut updated));
+        self.publish_table(action, current, updated, next_sort)
+    }
+
+    /// Applies a table prepared by the caller and records the previous state.
+    ///
+    /// Sorting and pasting build their table from a COW clone, so they hand
+    /// the prepared value in instead of mutating a second copy.
+    pub(crate) fn replace_table_with(
+        &mut self,
+        action: UndoAction,
+        updated: Arc<CsvTable>,
+        next_sort: Option<ActiveSort>,
+    ) -> bool {
+        let Some(current) = self.table.as_ref().map(Arc::clone) else {
+            return false;
+        };
+        self.publish_table(action, current, updated, next_sort)
+    }
+
+    /// Publishes a prepared table after the no-op check.
+    fn publish_table(
+        &mut self,
+        action: UndoAction,
+        current: Arc<CsvTable>,
+        updated: Arc<CsvTable>,
+        next_sort: Option<ActiveSort>,
+    ) -> bool {
         if current.as_ref() == updated.as_ref() && current.has_same_column_order(updated.as_ref()) {
             return false;
         }

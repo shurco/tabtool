@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+mod clipboard;
 mod document;
 mod edit;
 mod format;
@@ -14,6 +15,7 @@ mod format_planner;
 mod io;
 mod revert;
 mod snapshot;
+mod sort;
 mod storage;
 mod types;
 mod undo;

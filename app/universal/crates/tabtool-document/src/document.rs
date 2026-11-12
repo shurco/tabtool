@@ -1,5 +1,6 @@
 //! The document value: table, phase, selection and save state.
 
+use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -45,7 +46,10 @@ pub struct Document {
     /// Whether a transactional re-read currently owns the document.
     pub(crate) rereading: bool,
     /// A one-shot message the window should present.
-    notice: Option<DocumentNotice>,
+    ///
+    /// A [`Cell`] lets the read-only copy commands raise the copy-limit
+    /// notice while the rest of the document stays borrowed immutably.
+    notice: Cell<Option<DocumentNotice>>,
     large_status: LargeStatus,
 }
 
@@ -74,7 +78,7 @@ impl Document {
             // reports clean until then.
             saved_revision: 0,
             rereading: false,
-            notice: None,
+            notice: Cell::new(None),
             large_status: LargeStatus::None,
         }
     }
@@ -316,10 +320,16 @@ impl Document {
 
     /// The one-shot message the window should present, if any.
     ///
-    /// Always `None` until the large-file tasks raise a notice; kept now so
-    /// the window has one accessor for it.
+    /// The copy commands raise [`DocumentNotice::CopyLimitExceeded`] when a
+    /// selection would exceed [`tabtool_large::LargeFile::MAX_COPY_CELLS`];
+    /// the window clears the notice by presenting it.
     pub fn notice(&self) -> Option<DocumentNotice> {
-        self.notice
+        self.notice.get()
+    }
+
+    /// Records a notice for the window to present.
+    pub(crate) fn set_notice(&self, notice: DocumentNotice) {
+        self.notice.set(Some(notice));
     }
 
     /// Recomputes `Ready`/`NeedsAttention` from the current table and format.
