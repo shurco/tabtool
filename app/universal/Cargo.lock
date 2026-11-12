@@ -3264,6 +3264,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tabtool-document"
+version = "0.1.0"
+dependencies = [
+ "tabtool-core",
+ "tabtool-large",
+ "tempfile",
+]
+
+[[package]]
 name = "tabtool-large"
 version = "0.1.0"
 dependencies = [

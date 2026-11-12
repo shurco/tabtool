@@ -4,6 +4,7 @@ members = [
     "apps/tabtool-android",
     "apps/tabtool-desktop",
     "crates/tabtool-core",
+    "crates/tabtool-document",
     "crates/tabtool-large",
     "crates/tabtool-testdata",
     "xtask",

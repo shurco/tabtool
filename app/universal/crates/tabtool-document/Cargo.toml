@@ -1,0 +1,12 @@
+[package]
+name = "tabtool-document"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "UI-free document state, storage and undo for TabTool."
+
+[dependencies]
+tabtool-core = { path = "../tabtool-core" }
+tabtool-large = { path = "../tabtool-large" }
+tempfile = "3"
