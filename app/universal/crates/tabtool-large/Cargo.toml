@@ -1,0 +1,21 @@
+[package]
+name = "tabtool-large"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Read-only memory-mapped access for large CSV files."
+
+[dependencies]
+fs2 = "0.4"
+memmap2 = "0.9"
+same-file = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+] }
+
+[dev-dependencies]
+tempfile = "3"

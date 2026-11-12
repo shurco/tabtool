@@ -3,8 +3,8 @@
 //! [`make_benchmark_csv`] mirrors `makeBenchmarkCSV` in `TestSupport.swift`.
 //! [`generate_large_csv`] mirrors `generateLargeCSV` in
 //! `LargeFileTestSupport.swift`, including its SplitMix64 stream, 8 MiB
-//! chunks, CRLF discipline, BOM and quoted multiline rows. The Swift
-//! `quoted` switch is fixed to its `true` form: odd text fields are quoted.
+//! chunks, CRLF discipline, BOM, quoted multiline rows and the `quoted`
+//! switch for odd text fields.
 
 use std::fs::File;
 use std::io::{self, Write};
@@ -26,6 +26,8 @@ pub struct LargeOptions {
     pub crlf: bool,
     /// Prefix the file with a UTF-8 BOM.
     pub bom: bool,
+    /// Quote odd text fields. Multiline fields stay quoted either way.
+    pub quoted: bool,
     /// SplitMix64 seed.
     pub seed: u64,
 }
@@ -150,9 +152,11 @@ pub fn generate_large_csv(options: &LargeOptions) -> io::Result<LargeFixture> {
             } else if column % 2 == 0 {
                 write!(&mut chunk, "{}.{}", value % 1_000_000, column)
                     .expect("writing to a Vec cannot fail");
-            } else {
+            } else if options.quoted {
                 write!(&mut chunk, "\"text{}\"", value % 5000)
                     .expect("writing to a Vec cannot fail");
+            } else {
+                write!(&mut chunk, "text{}", value % 5000).expect("writing to a Vec cannot fail");
             }
         }
         chunk.extend_from_slice(terminator);

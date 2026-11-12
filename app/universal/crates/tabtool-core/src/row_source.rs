@@ -6,7 +6,7 @@ use crate::{ColumnId, CsvTable};
 ///
 /// [`CsvTable`] implements it for in-memory documents. A large-file source can
 /// implement it later and materialize only the rows being read.
-pub trait RowSource {
+pub trait RowSource: Send + Sync {
     /// The number of cells in each column.
     fn row_count(&self) -> usize;
 
