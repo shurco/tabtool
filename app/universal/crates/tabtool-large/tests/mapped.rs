@@ -5,7 +5,9 @@ use std::io;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 
-use tabtool_large::{LargeFile, MappedFile, Staleness, available_space, replace_file};
+#[cfg(unix)]
+use tabtool_large::replace_file;
+use tabtool_large::{LargeFile, MappedFile, Staleness, available_space};
 
 /// A scratch directory removed when the value goes away.
 struct TempDirectory {
@@ -42,6 +44,7 @@ fn append(path: &Path, bytes: &[u8]) {
     io::Write::write_all(&mut file, bytes).expect("bytes are appended");
 }
 
+#[cfg(unix)]
 fn truncate(path: &Path, size: u64) {
     let file = OpenOptions::new()
         .write(true)
@@ -130,6 +133,11 @@ fn read_of_an_empty_file_is_empty() {
     assert!(file.read(0..10, &mut buffer, <[u8]>::to_vec).is_empty());
 }
 
+// Windows rejects truncating, replacing or deleting a file while a mapped view
+// of it is open (`ERROR_USER_MAPPED_FILE`), so these four states are only
+// reachable on Unix.
+
+#[cfg(unix)]
 #[test]
 fn read_stops_at_a_truncated_end() {
     let directory = TempDirectory::new();
@@ -162,6 +170,7 @@ fn detects_append() {
     assert_eq!(bytes(&file, 0..3), [1, 2, 3], "the mapping keeps its size");
 }
 
+#[cfg(unix)]
 #[test]
 fn detects_truncation() {
     let directory = TempDirectory::new();
@@ -173,12 +182,15 @@ fn detects_truncation() {
     assert!(!file.is_readable());
 }
 
+#[cfg(unix)]
 #[test]
 fn detects_replace_and_keeps_reading_the_open_file() {
     let directory = TempDirectory::new();
     let path = directory.file("a.csv", &[1, 2, 3]);
     let file = MappedFile::open(&path).expect("file opens");
-    let other = directory.file("b.csv", &[9, 9, 9]);
+    // The replacement has the same bytes and size, so the file key is the only
+    // discriminator.
+    let other = directory.file("b.csv", &[1, 2, 3]);
     replace_file(&path, &other).expect("replacement succeeds");
 
     assert_eq!(file.is_stale(), Staleness::ReplacedOrTruncated);
@@ -187,6 +199,7 @@ fn detects_replace_and_keeps_reading_the_open_file() {
     assert_eq!(bytes(&file, 0..3), [1, 2, 3]);
 }
 
+#[cfg(unix)]
 #[test]
 fn a_missing_path_reads_as_replaced_but_stays_readable() {
     let directory = TempDirectory::new();

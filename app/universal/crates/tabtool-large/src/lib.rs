@@ -1,6 +1,9 @@
 //! Read-only support for CSV files too large to load into memory.
 
+#![deny(unsafe_code)]
+
 mod mapped;
+#[allow(unsafe_code)]
 mod platform;
 
 pub use mapped::{FileIdentity, MappedFile, Staleness};

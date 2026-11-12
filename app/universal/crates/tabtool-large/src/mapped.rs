@@ -82,7 +82,7 @@ impl MappedFile {
             )
         })?;
         let mapping = if size > 0 {
-            Some(platform::map_read_only(identity.handle.as_file())?)
+            Some(platform::map_read_only(identity.handle.as_file(), size)?)
         } else {
             None
         };

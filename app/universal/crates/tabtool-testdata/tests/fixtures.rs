@@ -23,10 +23,14 @@ const LARGE_GOLDEN_BYTES: u64 = 1_010;
 const LARGE_GOLDEN_ROWS: u64 = 31;
 
 /// Exact bytes of `generateLargeCSV` with a 120-byte target, 2 columns, seed 1,
-/// LF, no BOM and no multiline fields, with unquoted text. 8 rows, 132 bytes.
+/// LF, no BOM and no multiline fields, with unquoted text. Computed by running
+/// the Apple Swift reference (`LargeFileTestSupport.swift`) under Swift 6.4.2:
+/// 8 rows, 132 bytes, SHA-256
+/// `667fc967a325a59be87e907f00fba7e331a1fae746ce0992578f16160677aee7`.
 const LARGE_SMALL_UNQUOTED: &str = "col0,col1\n822465.0,text3519\n890590.0,text235\n968761.0,text48\n867045.0,text533\n356520.0,text1950\n376737.0,text3870\n390784.0,text1522\n";
 
-/// The same small run with quoted text fields. 7 rows, 126 bytes.
+/// The same small run with quoted text fields: 7 rows, 126 bytes, SHA-256
+/// `e72735dd3bbb03b83430fdbbf379e966d1b7e6b05f1c0c138b1b30e4dc334449`.
 const LARGE_SMALL_QUOTED: &str = "col0,col1\n822465.0,\"text3519\"\n890590.0,\"text235\"\n968761.0,\"text48\"\n867045.0,\"text533\"\n356520.0,\"text1950\"\n376737.0,\"text3870\"\n";
 
 fn read(path: &Path) -> Vec<u8> {
