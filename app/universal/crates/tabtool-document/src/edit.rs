@@ -167,8 +167,11 @@ impl Document {
             if rows.is_empty() {
                 return;
             }
+            let revision = self.revision;
             self.delete_rows(&rows);
-            self.selection = GridSelection::default();
+            if self.revision != revision {
+                self.selection = GridSelection::default();
+            }
             return;
         }
 
@@ -185,8 +188,11 @@ impl Document {
         if columns.is_empty() {
             return;
         }
+        let revision = self.revision;
         self.delete_columns(&columns);
-        self.selection = GridSelection::default();
+        if self.revision != revision {
+            self.selection = GridSelection::default();
+        }
     }
 
     /// Removes the rows at `rows`; invalid indexes are ignored.
@@ -342,23 +348,27 @@ impl Document {
     }
 
     /// Replaces one cell without recording undo; undo and redo use it.
+    ///
+    /// A cell edit has no old-table snapshot, so the table is mutated through
+    /// [`Arc::make_mut`] directly. When the document owns the table the text is
+    /// changed in place; only a caller holding a snapshot makes it copy.
     pub(crate) fn replace_cell(&mut self, row: usize, column: usize, text: &str) -> bool {
-        let Some(table) = self.table.as_ref() else {
+        let Some(table) = self.table.as_mut() else {
             return false;
         };
-        let Some(current) = table
-            .columns
-            .get(column)
-            .and_then(|column| column.cells.get(row))
-        else {
-            return false;
-        };
-        if current == text {
-            return false;
+        {
+            let Some(current) = table
+                .columns
+                .get(column)
+                .and_then(|column| column.cells.get(row))
+            else {
+                return false;
+            };
+            if current == text {
+                return false;
+            }
         }
-        let mut updated = Arc::clone(table);
-        Arc::make_mut(&mut updated).set_cell(text.to_owned(), row, column);
-        self.table = Some(updated);
+        Arc::make_mut(table).set_cell(text.to_owned(), row, column);
         self.revision += 1;
         self.refresh_phase();
         true
@@ -489,6 +499,19 @@ mod tests {
         document.set_cell(0, 0, "z");
 
         assert_eq!(document.active_sort, Some(sort()));
+    }
+
+    #[test]
+    fn an_unshared_cell_edit_reuses_the_table_allocation() {
+        let mut document = document();
+        let allocation = Arc::as_ptr(document.table().expect("table")) as usize;
+
+        document.set_cell(0, 0, "z");
+
+        assert_eq!(
+            Arc::as_ptr(document.table().expect("table")) as usize,
+            allocation
+        );
     }
 
     #[test]

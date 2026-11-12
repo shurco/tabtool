@@ -78,6 +78,8 @@ pub(crate) struct StateSnapshot {
     pub(crate) configuration: CsvConfiguration,
     pub(crate) active_sort: Option<ActiveSort>,
     pub(crate) selection: GridSelection,
+    /// Whether saved output started with a UTF-8 byte order mark.
+    pub(crate) includes_utf8_bom: bool,
 }
 
 /// One entry of the undo or redo stack.
@@ -202,6 +204,7 @@ impl Document {
             configuration: self.configuration.clone(),
             active_sort: self.active_sort.clone(),
             selection: self.selection.clone(),
+            includes_utf8_bom: self.had_utf8_bom,
         })
     }
 
@@ -237,6 +240,7 @@ impl Document {
         self.configuration = snapshot.configuration;
         self.active_sort = snapshot.active_sort;
         self.selection = snapshot.selection;
+        self.had_utf8_bom = snapshot.includes_utf8_bom;
         self.revision += 1;
         self.refresh_phase();
     }
@@ -253,6 +257,17 @@ mod tests {
         let mut document = Document::new(configuration.clone());
         document
             .load_from_bytes(b"b\na\nc\n", None, Some(configuration), false)
+            .expect("load the fixture");
+        document
+    }
+
+    fn document_with_bom() -> Document {
+        let configuration = CsvConfiguration::default();
+        let mut input = vec![0xEF, 0xBB, 0xBF];
+        input.extend_from_slice(b"b\na\nc\n");
+        let mut document = Document::new(configuration.clone());
+        document
+            .load_from_bytes(&input, None, Some(configuration), false)
             .expect("load the fixture");
         document
     }
@@ -277,6 +292,20 @@ mod tests {
         assert!(document.undo());
         assert_eq!(document.active_sort, Some(sort()));
         assert_eq!(document.configuration.decimal_mark, ",");
+    }
+
+    #[test]
+    fn undoing_a_structural_change_restores_the_utf8_bom_flag() {
+        let mut document = document_with_bom();
+        assert!(document.snapshot().expect("snapshot").includes_utf8_bom);
+
+        document.add_row_below_selection();
+        // A later format change or re-read may clear the flag without changing
+        // the table; undo must restore the state captured before the action.
+        document.had_utf8_bom = false;
+
+        assert!(document.undo());
+        assert!(document.snapshot().expect("snapshot").includes_utf8_bom);
     }
 
     #[test]

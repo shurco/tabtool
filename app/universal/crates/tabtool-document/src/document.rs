@@ -38,7 +38,7 @@ pub struct Document {
     pub(crate) redo_entries: Vec<UndoEntry>,
     file_path: Option<PathBuf>,
     /// Whether the loaded bytes began with a UTF-8 byte order mark.
-    had_utf8_bom: bool,
+    pub(crate) had_utf8_bom: bool,
     pub(crate) revision: u64,
     saved_revision: u64,
     /// A one-shot message the window should present.

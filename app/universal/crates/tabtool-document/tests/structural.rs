@@ -131,6 +131,19 @@ fn deleting_the_only_column_is_a_no_op() {
 }
 
 #[test]
+fn deleting_the_only_column_from_the_selection_keeps_the_selection() {
+    let mut document = loaded("a\nb\n");
+    select_columns(&mut document, [0]);
+
+    document.delete_selection();
+
+    assert_eq!(document.table().expect("table").columns.len(), 1);
+    assert_eq!(document.selection().columns, BTreeSet::from([0]));
+    assert!(document.selection().rows.is_empty());
+    assert!(!document.can_undo());
+}
+
+#[test]
 fn deleting_columns_ignores_out_of_range_indexes() {
     let mut document = loaded("a,b\n1,2\n");
     let revision = document.revision();
