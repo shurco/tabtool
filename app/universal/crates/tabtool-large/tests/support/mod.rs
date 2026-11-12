@@ -3,9 +3,15 @@
 #![allow(dead_code)] // Each test crate uses a different subset of these helpers.
 
 use tabtool_core::{CsvConfiguration, CsvParser};
-use tabtool_large::{RowIndex, RowScanner, ScanMode};
+use tabtool_large::{RowIndex, RowScanner, ScanMode, row_ranges};
 
 /// SplitMix64, matching `SeededGenerator` in `TestSupport.swift`.
+///
+/// The bit stream matches Swift, but [`SplitMix64::below`] reduces with modulo
+/// while Swift's `randomElement`/`Int.random` use rejection sampling. The
+/// generated corpus is deterministic but not byte-identical to Swift's fuzz
+/// corpus; [`fixed_corpus`] anchors the boundary coverage independently of the
+/// generator.
 pub struct SplitMix64 {
     state: u64,
 }
@@ -80,6 +86,75 @@ pub fn expect_index_matches_parser(
             .expect("checkpoint points at a row");
         assert_eq!(row, rows[block * 64], "checkpoint {block} row");
     }
+}
+
+/// Fixed byte inputs around the 64-byte block edge, independent of the RNG.
+pub fn fixed_corpus() -> Vec<Vec<u8>> {
+    vec![
+        b"".to_vec(),
+        b"a".to_vec(),
+        b"\r\n".to_vec(),
+        b"a\nb\r\nc\rd".to_vec(),
+        b"\"x\ny\",z\r\nq".to_vec(),
+        [vec![b'a'; 64], b"\r\n".to_vec(), vec![b'b'; 64]].concat(),
+        [
+            vec![b'a'; 63],
+            b",\"a\"\"b\",c\r\n".to_vec(),
+            vec![b'd'; 65],
+        ]
+        .concat(),
+        [
+            vec![b'a'; 64],
+            b"\r".to_vec(),
+            b"\"\r\n\"".to_vec(),
+            b"\n".to_vec(),
+        ]
+        .concat(),
+    ]
+}
+
+/// Asserts that `row_ranges` covers `bytes` contiguously with the same rows as
+/// `CsvParser`, and that every non-final range ends with exactly one
+/// terminator.
+pub fn expect_ranges_match_rows(bytes: &[u8], configuration: &CsvConfiguration) {
+    let ranges = row_ranges(bytes, configuration);
+    let index = scan_index(bytes, configuration);
+    let mut parser =
+        CsvParser::from_bytes(bytes, configuration).expect("test input decodes with the encoding");
+    let rows = parser.read_all().expect("test input is valid CSV");
+    assert_eq!(ranges.len(), index.row_count);
+    assert_eq!(ranges.len(), rows.len());
+    let mut start = 0;
+    for (row, range) in ranges.iter().enumerate() {
+        assert_eq!(range.start, start, "row {row} starts where the last ended");
+        assert!(range.start <= range.end && range.end <= bytes.len());
+        start = range.end;
+        let slice = &bytes[range.clone()];
+        let terminator = if slice.ends_with(b"\r\n") {
+            2
+        } else if slice.ends_with(b"\n") || slice.ends_with(b"\r") {
+            1
+        } else {
+            0
+        };
+        if row + 1 < ranges.len() {
+            assert!(terminator > 0, "non-final row {row} has no terminator");
+        }
+        if terminator > 0 {
+            let content = &slice[..slice.len() - terminator];
+            assert!(
+                !content.ends_with(b"\n") && !content.ends_with(b"\r"),
+                "row {row} has more than one terminator"
+            );
+        }
+        let mut content = CsvParser::from_bytes(slice, configuration).expect("row content decodes");
+        assert_eq!(
+            content.read_all().expect("row content parses"),
+            vec![rows[row].clone()],
+            "row {row}"
+        );
+    }
+    assert_eq!(start, bytes.len());
 }
 
 /// Random CSV bytes with mixed terminators, quoting and multibyte text.

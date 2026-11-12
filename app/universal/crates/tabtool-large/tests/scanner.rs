@@ -5,8 +5,11 @@ mod support;
 
 use std::ops::Range;
 
-use support::{SplitMix64, expect_index_matches_parser, make_input, scan_index, scan_with};
-use tabtool_core::{CsvConfiguration, CsvParser};
+use support::{
+    SplitMix64, expect_index_matches_parser, expect_ranges_match_rows, fixed_corpus, make_input,
+    scan_index, scan_with,
+};
+use tabtool_core::CsvConfiguration;
 use tabtool_large::{RowIndex, RowScanner, ScanMode, row_ranges};
 
 const EDGE_CASES: &[&str] = &[
@@ -290,26 +293,26 @@ fn block_range_cases() {
 }
 
 #[test]
-fn row_ranges_exclude_terminators() {
+fn row_ranges_include_terminators() {
     let configuration = configuration();
     let cases: &[(&str, &[&str])] = &[
         ("", &[""]),
         ("a", &["a"]),
-        ("a\n", &["a"]),
-        ("a\nb", &["a", "b"]),
-        ("a\r\nb", &["a", "b"]),
-        ("a\rb", &["a", "b"]),
-        ("\n", &[""]),
-        ("\n\n", &["", ""]),
-        ("\r\n\r\n", &["", ""]),
-        ("a\n\nb", &["a", "", "b"]),
-        ("\"x\ny\",z\nq", &["\"x\ny\",z", "q"]),
-        ("a,\"b\r\nc\"\r\nd", &["a,\"b\r\nc\"", "d"]),
-        ("\"a\"\"b\"\n1", &["\"a\"\"b\"", "1"]),
-        ("\"\"\n", &["\"\""]),
-        ("a\r", &["a"]),
-        ("a\r\n", &["a"]),
-        ("x\r\ny\rz\nw", &["x", "y", "z", "w"]),
+        ("a\n", &["a\n"]),
+        ("a\nb", &["a\n", "b"]),
+        ("a\r\nb", &["a\r\n", "b"]),
+        ("a\rb", &["a\r", "b"]),
+        ("\n", &["\n"]),
+        ("\n\n", &["\n", "\n"]),
+        ("\r\n\r\n", &["\r\n", "\r\n"]),
+        ("a\n\nb", &["a\n", "\n", "b"]),
+        ("\"x\ny\",z\nq", &["\"x\ny\",z\n", "q"]),
+        ("a,\"b\r\nc\"\r\nd", &["a,\"b\r\nc\"\r\n", "d"]),
+        ("\"a\"\"b\"\n1", &["\"a\"\"b\"\n", "1"]),
+        ("\"\"\n", &["\"\"\n"]),
+        ("a\r", &["a\r"]),
+        ("a\r\n", &["a\r\n"]),
+        ("x\r\ny\rz\nw", &["x\r\n", "y\r", "z\n", "w"]),
         ("\"x\ny\"", &["\"x\ny\""]),
     ];
     for (text, expected) in cases {
@@ -320,40 +323,40 @@ fn row_ranges_exclude_terminators() {
 #[test]
 fn row_ranges_follow_escape_and_quoteless_configurations() {
     let escape = escape_configuration();
-    expect_ranges("\"a\\\"b\",c\nd", &escape, &["\"a\\\"b\",c", "d"]);
-    expect_ranges("\"a\\\\\",x\ny", &escape, &["\"a\\\\\",x", "y"]);
-    expect_ranges("\"a\\\n\",x\ny", &escape, &["\"a\\\n\",x", "y"]);
+    expect_ranges("\"a\\\"b\",c\nd", &escape, &["\"a\\\"b\",c\n", "d"]);
+    expect_ranges("\"a\\\\\",x\ny", &escape, &["\"a\\\\\",x\n", "y"]);
+    expect_ranges("\"a\\\n\",x\ny", &escape, &["\"a\\\n\",x\n", "y"]);
 
     let quoteless = CsvConfiguration {
         quote_character: String::new(),
         ..CsvConfiguration::default()
     };
-    expect_ranges("a\"b\nc", &quoteless, &["a\"b", "c"]);
+    expect_ranges("a\"b\nc", &quoteless, &["a\"b\n", "c"]);
 }
 
 #[test]
-fn row_ranges_leave_one_terminator_between_rows() {
+fn row_ranges_are_contiguous_with_one_terminator() {
     let configuration = configuration();
     for text in EDGE_CASES {
-        let bytes = text.as_bytes();
-        let ranges = row_ranges(bytes, &configuration);
-        let index = scan_index(bytes, &configuration);
-        assert_eq!(ranges.len(), index.row_count, "row count of {text:?}");
-        for (row, range) in ranges.iter().enumerate() {
-            assert!(range.start <= range.end, "row {row} of {text:?}");
-            assert!(range.end <= bytes.len(), "row {row} of {text:?}");
-            if row > 0 {
-                assert!(
-                    ranges[row - 1].end <= range.start,
-                    "rows overlap in {text:?}"
+        expect_ranges_match_rows(text.as_bytes(), &configuration);
+    }
+}
+
+#[test]
+fn fixed_corpus_matches_parser_scans_and_ranges() {
+    let configuration = configuration();
+    for bytes in fixed_corpus() {
+        let whole = scan_index(&bytes, &configuration);
+        expect_index_matches_parser(&bytes, &whole, &configuration);
+        expect_ranges_match_rows(&bytes, &configuration);
+        for cut in [1, 32, 63, 64, 65, 127, 128] {
+            if cut <= bytes.len() {
+                assert_eq!(
+                    scan_with(&bytes, &configuration, ScanMode::Automatic, &[cut]),
+                    whole,
+                    "cut {cut}"
                 );
             }
-            let next = ranges.get(row + 1).map_or(bytes.len(), |next| next.start);
-            let gap = &bytes[range.end..next];
-            assert!(
-                matches!(gap, b"" | b"\n" | b"\r" | b"\r\n"),
-                "gap {gap:?} after row {row} of {text:?}"
-            );
         }
     }
 }
@@ -362,34 +365,6 @@ fn row_ranges_leave_one_terminator_between_rows() {
 fn row_ranges_match_rows_on_fuzz() {
     let configuration = configuration();
     for seed in 1..=100u64 {
-        let bytes = make_input(seed, 150);
-        let ranges = row_ranges(&bytes, &configuration);
-        let index = scan_index(&bytes, &configuration);
-        let mut parser = CsvParser::from_bytes(&bytes, &configuration).expect("fuzz input decodes");
-        let rows = parser.read_all().expect("fuzz input parses");
-        assert_eq!(ranges.len(), index.row_count, "seed {seed}");
-        assert_eq!(ranges.len(), rows.len(), "seed {seed}");
-        for (row, range) in ranges.iter().enumerate() {
-            assert!(range.start <= range.end && range.end <= bytes.len());
-            if row > 0 {
-                assert!(
-                    ranges[row - 1].end <= range.start,
-                    "rows overlap at {row} of seed {seed}"
-                );
-            }
-            let mut content = CsvParser::from_bytes(&bytes[range.clone()], &configuration)
-                .expect("row content decodes");
-            assert_eq!(
-                content.read_all().expect("row content parses"),
-                vec![rows[row].clone()],
-                "row {row} of seed {seed}"
-            );
-            let next = ranges.get(row + 1).map_or(bytes.len(), |next| next.start);
-            let gap = &bytes[range.end..next];
-            assert!(
-                matches!(gap, b"" | b"\n" | b"\r" | b"\r\n"),
-                "gap {gap:?} after row {row} of seed {seed}"
-            );
-        }
+        expect_ranges_match_rows(&make_input(seed, 150), &configuration);
     }
 }

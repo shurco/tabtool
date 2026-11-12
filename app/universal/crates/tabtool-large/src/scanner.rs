@@ -86,7 +86,7 @@ impl RowScanner {
     /// chunk.
     pub fn scan(&mut self, bytes: &[u8], base: usize, index: &mut RowIndex, final_chunk: bool) {
         let mut offset = 0;
-        if self.mode != ScanMode::Scalar && self.escape.is_none() {
+        if self.mode != ScanMode::Scalar && self.allows_block_path() {
             while offset + BLOCK_BYTES <= bytes.len() {
                 self.scan_block(&bytes[offset..offset + BLOCK_BYTES], base + offset, index);
                 offset += BLOCK_BYTES;
@@ -94,6 +94,19 @@ impl RowScanner {
         }
         self.scan_bytes(&bytes[offset..], base + offset, index);
         self.finish_chunk(base + bytes.len(), index, final_chunk);
+    }
+
+    /// Whether the masks of the block path can reproduce the scalar order.
+    ///
+    /// The scalar path checks quote, separator and row break in that order. A
+    /// byte that is both a separator and a terminator, or both a quote and a
+    /// separator, would need two classifications, so those configurations stay
+    /// on the scalar path.
+    fn allows_block_path(&self) -> bool {
+        let quote_clash = matches!(self.quote, Some(LINE_FEED | CARRIAGE_RETURN));
+        let separator_clash = matches!(self.separator, Some(LINE_FEED | CARRIAGE_RETURN));
+        let same_quote_and_separator = self.quote.is_some() && self.quote == self.separator;
+        self.escape.is_none() && !quote_clash && !separator_clash && !same_quote_and_separator
     }
 
     fn scan_bytes(&mut self, bytes: &[u8], base: usize, index: &mut RowIndex) {
@@ -161,7 +174,9 @@ impl RowScanner {
     /// byte) and derives row ends from them, so quote state costs a prefix-xor
     /// instead of a branch per byte. It requires that a quote is escaped by
     /// doubling (or quoting is off), because a dedicated escape character would
-    /// make the quote state depend on the previous byte.
+    /// make the quote state depend on the previous byte. It is also disabled
+    /// when the quote or separator collides with a row terminator or with each
+    /// other; see [`RowScanner::allows_block_path`].
     fn scan_block(&mut self, block: &[u8], base: usize, index: &mut RowIndex) {
         let (quote_mask, line_feeds, carriage_returns, separator_mask) = self.block_masks(block);
 
@@ -270,28 +285,22 @@ fn single_byte(text: &str) -> Option<u8> {
     }
 }
 
-/// The byte range of every row in `bytes`, terminator excluded.
+/// The byte range of every row in `bytes`, terminator included.
 ///
 /// `bytes` must start at a row start outside any quote, as an index block does.
 /// The ranges follow the same row rules as [`RowScanner::scan`]: LF, CRLF and
-/// CR each end one row and are not part of its range. Empty input is one empty
-/// row. The saver reads each row's terminator from the bytes after its range.
+/// CR each end one row, and the range runs to the next row's start, or to the
+/// end of `bytes` for the last row. Empty input is one empty row.
 pub fn row_ranges(bytes: &[u8], configuration: &CsvConfiguration) -> Vec<Range<usize>> {
     let mut scanner = RowScanner::new(configuration);
     let mut index = RowIndex::new();
     let mut starts = Vec::new();
-    let mut ends = Vec::new();
-    for (position, &byte) in bytes.iter().enumerate() {
+    for position in 0..bytes.len() {
         let rows_before = index.row_count;
         let start_before = scanner.row_start;
-        let was_after_carriage_return = scanner.after_carriage_return;
         scanner.scan_bytes(&bytes[position..=position], position, &mut index);
         if index.row_count > rows_before {
             starts.push(start_before);
-        }
-        let swallowed = was_after_carriage_return && byte == LINE_FEED;
-        if !swallowed && scanner.at_row_start && (byte == LINE_FEED || byte == CARRIAGE_RETURN) {
-            ends.push(position);
         }
     }
     // Empty input is one row with an empty range.
@@ -301,7 +310,10 @@ pub fn row_ranges(bytes: &[u8], configuration: &CsvConfiguration) -> Vec<Range<u
     starts
         .iter()
         .enumerate()
-        .map(|(row, &start)| start..ends.get(row).copied().unwrap_or(bytes.len()))
+        .map(|(row, &start)| {
+            let end = starts.get(row + 1).copied().unwrap_or(bytes.len());
+            start..end
+        })
         .collect()
 }
 

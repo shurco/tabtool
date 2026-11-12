@@ -5,7 +5,7 @@ mod support;
 
 use std::time::Instant;
 
-use support::{expect_index_matches_parser, make_input, scan_with};
+use support::{expect_index_matches_parser, fixed_corpus, make_input, scan_with};
 use tabtool_core::CsvConfiguration;
 use tabtool_large::{RowScanner, ScanMode};
 
@@ -40,6 +40,65 @@ fn block_matches_scalar_on_fuzz() {
             "seed {seed} with cuts"
         );
         expect_index_matches_parser(&bytes, &scalar, &configuration());
+    }
+}
+
+#[test]
+fn block_matches_scalar_on_fixed_corpus() {
+    for bytes in fixed_corpus() {
+        assert_eq!(
+            scan_with(&bytes, &configuration(), ScanMode::Block, &[]),
+            scan_with(&bytes, &configuration(), ScanMode::Scalar, &[]),
+            "{} bytes",
+            bytes.len()
+        );
+    }
+}
+
+#[test]
+fn colliding_characters_match_scalar() {
+    let configurations = [
+        // Quote equal to a row terminator, with escaping by doubling.
+        CsvConfiguration {
+            quote_character: "\n".to_string(),
+            escape_character: String::new(),
+            ..CsvConfiguration::default()
+        },
+        CsvConfiguration {
+            quote_character: "\r".to_string(),
+            escape_character: String::new(),
+            ..CsvConfiguration::default()
+        },
+        // Separator equal to a row terminator.
+        CsvConfiguration {
+            column_separator: "\n".to_string(),
+            ..CsvConfiguration::default()
+        },
+        CsvConfiguration {
+            column_separator: "\r".to_string(),
+            ..CsvConfiguration::default()
+        },
+        // Quote equal to the separator.
+        CsvConfiguration {
+            column_separator: ",".to_string(),
+            quote_character: ",".to_string(),
+            escape_character: ",".to_string(),
+            ..CsvConfiguration::default()
+        },
+    ];
+    let bytes = make_input(11, 200);
+    for configuration in configurations {
+        let scalar = scan_with(&bytes, &configuration, ScanMode::Scalar, &[]);
+        assert_eq!(
+            scan_with(&bytes, &configuration, ScanMode::Block, &[]),
+            scalar,
+            "forced block path must fall back for {configuration:?}"
+        );
+        assert_eq!(
+            scan_with(&bytes, &configuration, ScanMode::Automatic, &[]),
+            scalar,
+            "automatic path must match scalar for {configuration:?}"
+        );
     }
 }
 
@@ -134,5 +193,5 @@ fn block_scan_throughput() {
     let rate = bytes.len() as f64 / seconds / 1e9;
     println!("block scan throughput: {rate:.2} GB/s");
     #[cfg(not(debug_assertions))]
-    assert!(rate >= 0.25, "block scan throughput was {rate:.2} GB/s");
+    assert!(rate >= 1.0, "block scan throughput was {rate:.2} GB/s");
 }
