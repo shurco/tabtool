@@ -100,6 +100,40 @@ normalization separately instead of pretending such a table round-trips.
 the expectations come from Foundation. On other hosts the command runs zero
 tests; CI only invokes it on the macOS job.
 
+## Large-file benchmark
+
+The large-file benchmark mirrors `scripts/bench-large` and the Performance
+section of `README.md`. From `app/universal`:
+
+```sh
+cargo run -p xtask -- bench-large        # 5 GiB, the documented default
+cargo run -p xtask -- bench-large 1      # 1 GiB local acceptance run
+```
+
+The task builds `bench-large` in release with the `bench` feature, creates a
+deterministic 8-column CSV (quoted text, a multiline field every 1000 rows,
+seed 42) in the system temporary directory, and removes it on success and on
+failure. It refuses to start unless the temporary volume has at least three
+times the requested size free, because the generated file and the saved copy
+live side by side.
+
+It prints the same Markdown table as `scripts/bench-large`: generation time,
+open to the first 64 rows, full index time and throughput, random-jump p50/p99
+over 1000 reads, a 100k-row scroll with the block-cache hit rate, footprint
+after indexing and after 10k random reads, and saves with 0, 1 and 1000 edits.
+Each save is verified by reopening the output: no edits must be byte-identical,
+edits must be present, and 10k sampled rows must match the source. Footprint is
+the resident set size on Unix and the working set on Windows, read through the
+safe `memory-stats` crate.
+
+The Apple reference run on a 5 GiB file (Apple M4 Pro, 24 GB, APFS SSD, file in
+the page cache) reported: open to the first 64 rows 45 ms, full index 1.97 s
+(2.7 GB/s), 43 MiB after indexing, jumps p50 0.06 ms / p99 1.2 ms, scroll
+179 ms at 99.8% cache hits, and saves of 3.8 s / 4.8 s / 6.2 s with peak
+footprints of 46 / 46 / 36 MiB. The Rust port is expected to land in the same
+range on the same hardware; the 1 GiB run is the local acceptance because it
+finishes in seconds and needs only 3 GiB free.
+
 ## Fixtures and golden parity
 
 The 36 Apple CSV fixtures live in `testdata/fixtures` with the exact bytes and a

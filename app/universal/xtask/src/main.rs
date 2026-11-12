@@ -2,6 +2,10 @@
 //!
 //! `xtask golden` regenerates the Swift golden files; `xtask golden --check`
 //! runs the Rust parity test without needing a Swift toolchain.
+//! `xtask bench-large [GiB]` builds and runs the large-file benchmark in
+//! release.
+
+mod bench;
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -140,15 +144,29 @@ fn check() -> Result<(), String> {
 fn main() -> ExitCode {
     let mut arguments = std::env::args().skip(1);
     let Some(command) = arguments.next() else {
-        eprintln!("usage: xtask golden [--check]");
+        usage();
         return ExitCode::from(2);
     };
 
-    let result = match (command.as_str(), arguments.next().as_deref()) {
-        ("golden", None) => regenerate(),
-        ("golden", Some("--check")) => check(),
+    let result = match command.as_str() {
+        "golden" => match arguments.next().as_deref() {
+            None => regenerate(),
+            Some("--check") => check(),
+            _ => {
+                usage();
+                return ExitCode::from(2);
+            }
+        },
+        "bench-large" => {
+            let size = arguments.next();
+            if arguments.next().is_some() {
+                usage();
+                return ExitCode::from(2);
+            }
+            bench::bench_large(size.as_deref())
+        }
         _ => {
-            eprintln!("usage: xtask golden [--check]");
+            usage();
             return ExitCode::from(2);
         }
     };
@@ -160,4 +178,9 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn usage() {
+    eprintln!("usage: xtask golden [--check]");
+    eprintln!("       xtask bench-large [GiB]");
 }

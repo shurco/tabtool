@@ -6,12 +6,23 @@ rust-version.workspace = true
 license.workspace = true
 description = "Read-only memory-mapped access for large CSV files."
 
+[features]
+# Development-only: builds the `bench-large` binary and its generator.
+bench = ["dep:memory-stats", "dep:tabtool-testdata"]
+
 [dependencies]
 fs2 = "0.4"
 memmap2 = "0.9"
+memory-stats = { version = "1.2", optional = true, features = ["always_use_statm"] }
 same-file = "1"
 tabtool-core = { path = "../tabtool-core" }
+tabtool-testdata = { path = "../tabtool-testdata", optional = true }
 tempfile = "3"
+
+[[bin]]
+name = "bench-large"
+path = "src/bin/bench_large.rs"
+required-features = ["bench"]
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
