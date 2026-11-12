@@ -10,6 +10,7 @@ description = "Read-only memory-mapped access for large CSV files."
 fs2 = "0.4"
 memmap2 = "0.9"
 same-file = "1"
+tabtool-core = { path = "../tabtool-core" }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
