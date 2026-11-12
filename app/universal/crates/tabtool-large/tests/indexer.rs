@@ -18,6 +18,16 @@ fn indexer(fixture: &LargeCsvFixture) -> Arc<LargeFileIndexer> {
     large_file_indexer(fixture, STEP_BYTES, Duration::ZERO)
 }
 
+fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else if let Some(message) = payload.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else {
+        "non-string panic payload".to_string()
+    }
+}
+
 #[test]
 fn final_count_matches_generator() {
     let fixture = LargeCsvFixture::new();
@@ -180,6 +190,26 @@ fn progress_fraction_reaches_one() {
 }
 
 #[test]
+fn long_interval_reports_only_the_first_and_last_step() {
+    let fixture = LargeCsvFixture::new();
+    let indexer = large_file_indexer(&fixture, 64 * 1024, Duration::from_secs(3600));
+    let reports = Arc::new(Mutex::new(Vec::new()));
+    let sink = Arc::clone(&reports);
+    indexer.start(move |progress| {
+        sink.lock().expect("reports lock").push(progress);
+    });
+    indexer.wait();
+
+    // 2 MiB at 64 KiB is 32 steps, but a one-hour interval throttles all but
+    // the first and the final report.
+    let reports = reports.lock().expect("reports lock");
+    assert_eq!(reports.len(), 2);
+    assert!(!reports[0].is_finished);
+    assert!(reports[1].is_finished);
+    assert_eq!(reports[1].fraction, 1.0);
+}
+
+#[test]
 fn file_just_over_one_step_is_scanned_in_two_steps() {
     let fixture = LargeCsvFixture::with_target(8 * MIB + 1);
     assert!(fixture.file.size() > 8 * MIB);
@@ -262,6 +292,70 @@ fn truncation_during_the_scan_stops_without_panic() {
 
     assert!(!indexer.is_finished());
     assert!(indexer.snapshot().scanned_bytes < fixture.file.size());
+}
+
+#[test]
+fn progress_panic_propagates_to_every_wait() {
+    let fixture = LargeCsvFixture::new();
+    let indexer = indexer(&fixture);
+    indexer.start(|_| panic!("progress callback failed"));
+
+    let panicked = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| indexer.wait()));
+    let payload = panicked.expect_err("wait propagates the worker panic");
+    assert!(panic_text(payload.as_ref()).contains("progress callback failed"));
+    assert!(!indexer.is_finished());
+
+    let again = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| indexer.wait()));
+    assert!(again.is_err(), "every wait reports the failure");
+}
+
+#[test]
+fn every_waiter_blocks_until_the_scan_completes() {
+    let fixture = LargeCsvFixture::new();
+    let indexer = indexer(&fixture);
+    let (entered_sender, entered) = std::sync::mpsc::channel::<()>();
+    let (release, released) = std::sync::mpsc::channel::<()>();
+    let blocked = Arc::new(AtomicUsize::new(0));
+    let first_block = Arc::clone(&blocked);
+    indexer.start(move |_| {
+        if first_block.fetch_add(1, Ordering::Relaxed) == 0 {
+            entered_sender
+                .send(())
+                .expect("test waits for the first step");
+            released.recv().expect("test releases the scan");
+        }
+    });
+    entered.recv().expect("first step reported");
+
+    // The worker is blocked in the callback, so both waiters must stay
+    // blocked. The old single-handle wait let the second one return early.
+    let waiters = (0..2)
+        .map(|_| {
+            let indexer = Arc::clone(&indexer);
+            std::thread::spawn(move || indexer.wait())
+        })
+        .collect::<Vec<_>>();
+    std::thread::sleep(Duration::from_millis(50));
+    assert!(
+        waiters.iter().all(|waiter| !waiter.is_finished()),
+        "every wait blocks until the scan completes"
+    );
+    release.send(()).expect("release the scan");
+    for waiter in waiters {
+        waiter.join().expect("waiter returns");
+    }
+
+    assert!(indexer.is_finished());
+}
+
+#[test]
+fn wait_before_start_returns() {
+    let fixture = LargeCsvFixture::new();
+    let indexer = indexer(&fixture);
+    indexer.wait();
+
+    assert!(!indexer.is_finished());
+    assert_eq!(indexer.snapshot().row_count, 0);
 }
 
 #[test]
