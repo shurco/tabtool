@@ -399,6 +399,33 @@ fn block_cache_hit_rate_on_sequential_read() {
     assert!(misses <= source.row_count() / LargeFile::BLOCK_ROWS + 2);
 }
 
+/// The scanner does not break rows at U+2028, but the parser that decodes a
+/// block does. A block holding one decodes into more rows than the index
+/// recorded; it must become unavailable instead of shifting every later row.
+#[test]
+fn unicode_line_separator_block_is_unavailable_and_read_only() {
+    let directory = TempDirectory::new();
+    let rows: Vec<String> = (0..70).map(|row| format!("r{row},v{row}")).collect();
+    let text = rows.join("\n").replace("r1,v1", "r1a\u{2028}r1b,v1");
+    let source = text_source(&directory, &text, &configuration());
+
+    assert_eq!(source.row_count(), 70, "the scanner counts only LF rows");
+    assert_eq!(source.cell(0, 0), "", "the unaligned block maps no rows");
+    assert_eq!(source.cell(0, 1), "");
+    assert!(!source.is_editable(0));
+    assert_eq!(source.set_cell("x", 0, 0), Err(CsvError::RowNotEditable));
+
+    assert_eq!(
+        source.cell(64, 0),
+        "r64",
+        "the following block still maps to its physical rows"
+    );
+    assert!(source.is_editable(64));
+    source
+        .set_cell("edited", 64, 1)
+        .expect("an aligned block after the separator stays editable");
+}
+
 #[test]
 fn malformed_block_shows_raw_line() {
     let directory = TempDirectory::new();

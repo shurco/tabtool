@@ -44,7 +44,7 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
-      - run: cargo check -p tabtool-large --features bench
+      - run: cargo clippy -p tabtool-large --features bench --all-targets -- -D warnings
 
   windows:
     runs-on: windows-2022
@@ -61,7 +61,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-1.99.1-
       - run: cargo test --workspace
-      - run: cargo check -p tabtool-large --features bench
+      - run: cargo clippy -p tabtool-large --features bench --all-targets -- -D warnings
 
   macos:
     runs-on: macos-14
@@ -79,5 +79,5 @@ jobs:
             ${{ runner.os }}-cargo-1.99.1-
       - run: cargo test --workspace
       - run: cargo test -p tabtool-core --test golden
-      - run: cargo check -p tabtool-large --features bench
+      - run: cargo clippy -p tabtool-large --features bench --all-targets -- -D warnings
       - run: cargo run -p tabtool-desktop -- --smoke

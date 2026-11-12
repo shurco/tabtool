@@ -94,6 +94,23 @@ fn partial_multibyte_at_sample_cut() {
     assert_eq!(configuration.encoding, Encoding::Utf8);
 }
 
+/// The 1 MiB cut can land inside a multibyte scalar. The partial scalar must
+/// be trimmed so strict UTF-8 decoding still succeeds.
+#[test]
+fn incomplete_multibyte_at_the_sample_cut_is_trimmed() {
+    let mut bytes = vec![b'a'; LargeFile::SAMPLE_BYTES - 1];
+    bytes.extend_from_slice("é".as_bytes());
+    assert!(bytes.len() > LargeFile::SAMPLE_BYTES);
+
+    let configuration = sniff_bytes(&bytes).expect("sniffs");
+    assert_eq!(configuration.encoding, Encoding::Utf8);
+    assert_eq!(configuration.column_separator, ",");
+
+    with_mapped(&bytes, |file| {
+        assert_eq!(check(file, &CsvConfiguration::default()), Ok(()));
+    });
+}
+
 #[test]
 fn sample_cut_inside_quoted_multiline_field() {
     let mut bytes = "x,y\n".repeat(262_143).into_bytes();

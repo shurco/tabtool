@@ -338,7 +338,11 @@ impl LargeCSVSource {
             return None;
         }
         let bytes = self.file.with_bytes(range.clone(), <[u8]>::to_vec);
-        let block = Arc::new(LargeBlock::decode(&bytes, &self.configuration));
+        let block = Arc::new(LargeBlock::decode_indexed(
+            &bytes,
+            &self.configuration,
+            index.block_row_count(number),
+        ));
         Some(self.store(number, block, range.end))
     }
 

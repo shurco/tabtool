@@ -633,16 +633,124 @@ fn truncation_during_the_copy_fails_the_save() {
     assert!(!output.exists(), "a failed write leaves no file");
 }
 
+/// The source scanner does not break rows at U+2028, but the block parser
+/// does. An edit inserted into such a block must fail instead of writing a
+/// row that belongs to another physical row.
 #[test]
-fn volume_capacity_reports_free_space() {
+fn edit_in_a_unicode_line_break_block_is_refused() {
+    let directory = TempDirectory::new();
+    let rows: Vec<String> = (0..70).map(|row| format!("r{row},v{row}")).collect();
+    let text = rows.join("\n").replace("r1,v1", "r1a\u{2028}r1b,v1");
+    let source = make_source(&directory, text.as_bytes(), &configuration());
+    let mut snapshot = source.save_snapshot();
+    snapshot
+        .edits
+        .insert(CellKey { row: 1, column: 0 }, "x".to_string());
+    let output = directory.path().join("out.csv");
+    let cancelled = AtomicBool::new(false);
+    let error =
+        write(&snapshot, &output, 64, |_| {}, &cancelled).expect_err("the block is unaligned");
+    assert!(
+        matches!(error, LargeFileSaveError::Csv(CsvError::RowNotEditable)),
+        "unexpected error: {error:?}"
+    );
+    assert!(!output.exists(), "a refused write leaves no file");
+}
+
+/// Truncate after the first edited block has been written but before the next
+/// edited block is read: the read must fail cleanly, not touch removed pages.
+#[cfg(unix)]
+#[test]
+fn truncation_before_an_edited_block_read_fails_the_save() {
+    let directory = TempDirectory::new();
+    let text = (0..200)
+        .map(|row| format!("row{row},v"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let source = make_source(&directory, text.as_bytes(), &configuration());
+    source.set_cell("x", 70, 1).expect("row 70 is editable");
+    source.set_cell("y", 130, 0).expect("row 130 is editable");
+    let snapshot = source.save_snapshot();
+    let target = directory.path().join("source.csv");
+    let output = directory.path().join("out.csv");
+    // The copy stops at the start of row 70 and reports exactly that fraction,
+    // so truncating there leaves the block holding row 130 unread.
+    let row_70_start: usize = text.lines().take(70).map(|line| line.len() + 1).sum();
+    let size = text.len();
+    let cancelled = AtomicBool::new(false);
+    let error = write(
+        &snapshot,
+        &output,
+        64,
+        |fraction| {
+            if fraction * size as f64 >= row_70_start as f64 {
+                let file = OpenOptions::new()
+                    .write(true)
+                    .open(&target)
+                    .expect("the source opens for truncation");
+                file.set_len(10).expect("the source is truncated");
+            }
+        },
+        &cancelled,
+    )
+    .expect_err("a truncated source fails the save");
+    assert!(
+        matches!(error, LargeFileSaveError::SourceChanged),
+        "unexpected error: {error:?}"
+    );
+    assert!(!output.exists(), "a failed write leaves no file");
+}
+
+/// `File::create` would truncate the mapped source through a hard link or
+/// symlink before any short-read guard could run. The identity probe must
+/// refuse first and leave the source intact.
+#[cfg(unix)]
+#[test]
+fn write_refuses_the_mapped_source_through_any_link() {
+    let directory = TempDirectory::new();
+    let original = b"a,b\n1,2\n";
+    let source = make_source(&directory, original, &configuration());
+    let path = directory.path().join("source.csv");
+    let hard_link = directory.path().join("hard.csv");
+    fs::hard_link(&path, &hard_link).expect("the hard link is created");
+    let symlink = directory.path().join("link.csv");
+    std::os::unix::fs::symlink(&path, &symlink).expect("the symbolic link is created");
+    let snapshot = source.save_snapshot();
+    let cancelled = AtomicBool::new(false);
+
+    for target in [&path, &hard_link, &symlink] {
+        let error = write(&snapshot, target, 64, |_| {}, &cancelled)
+            .expect_err("writing to the source is refused");
+        assert!(
+            matches!(&error, LargeFileSaveError::Io(error)
+                if error.kind() == io::ErrorKind::InvalidInput),
+            "unexpected error for {target:?}: {error:?}"
+        );
+        assert_eq!(
+            fs::read(&path).expect("the source still reads"),
+            original,
+            "the source is untouched after refusing {target:?}"
+        );
+    }
+}
+
+#[test]
+fn volume_capacity_falls_back_to_the_nearest_existing_ancestor() {
     let directory = TempDirectory::new();
     assert!(
         volume_capacity(directory.path()).is_some(),
         "a temp directory has a volume"
     );
-    assert_eq!(
-        volume_capacity(&directory.path().join("missing")),
-        None,
-        "a missing path has no volume"
+    assert!(
+        volume_capacity(&directory.path().join("new.csv")).is_some(),
+        "a new target reports its parent's volume"
+    );
+    assert!(
+        volume_capacity(&directory.path().join("missing").join("new.csv")).is_some(),
+        "a missing parent falls back to the nearest existing ancestor"
+    );
+    assert!(
+        volume_capacity(Path::new("missing.csv")).is_some(),
+        "a relative target falls back to the current directory"
     );
 }

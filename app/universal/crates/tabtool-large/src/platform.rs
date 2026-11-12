@@ -9,9 +9,11 @@ use memmap2::{Mmap, MmapOptions};
 
 /// Maps exactly `size` bytes of `file` read-only.
 pub(crate) fn map_read_only(file: &File, size: usize) -> io::Result<Mmap> {
-    // SAFETY: the mapping is read-only and `MappedFile` keeps the descriptor
-    // open for as long as the mapping lives. A concurrent truncation can make
-    // pages unreadable; callers check `is_readable` before trusting the bytes.
+    // SAFETY: the mapping is read-only and `MappedFile` owns the descriptor for
+    // at least as long as the mapping: its mapping field is declared before the
+    // identity that owns the descriptor, so it is dropped first. A concurrent
+    // truncation can make pages unreadable; callers check `is_readable` before
+    // trusting the bytes.
     unsafe { MmapOptions::new().len(size).map(file) }
 }
 

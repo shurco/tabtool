@@ -39,6 +39,14 @@ impl RowIndex {
         self.ends_inside_quote = next.ends_inside_quote;
     }
 
+    /// The number of rows in `block`, at most
+    /// [`crate::LargeFile::BLOCK_ROWS`].
+    pub fn block_row_count(&self, block: usize) -> usize {
+        self.row_count
+            .saturating_sub(block.saturating_mul(crate::LargeFile::BLOCK_ROWS))
+            .min(crate::LargeFile::BLOCK_ROWS)
+    }
+
     /// The byte range of `block`, or `None` when the block is not indexed.
     ///
     /// The last block ends at `file_size`.

@@ -1,6 +1,6 @@
 //! Read-only memory mapping with identity and staleness tracking.
 
-use std::fs::{File, Metadata};
+use std::fs::{File, Metadata, OpenOptions};
 use std::io;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
@@ -65,8 +65,10 @@ pub enum Staleness {
 pub struct MappedFile {
     path: PathBuf,
     size: usize,
-    identity: FileIdentity,
+    /// Declared before `identity` so the mapping is dropped before the
+    /// descriptor that backs it.
     mapping: Option<Mmap>,
+    identity: FileIdentity,
 }
 
 impl MappedFile {
@@ -102,6 +104,20 @@ impl MappedFile {
     /// Identity recorded at open: size, modification time and file key.
     pub fn identity(&self) -> &FileIdentity {
         &self.identity
+    }
+
+    /// Whether `path` names the same file as this mapping, following symbolic
+    /// links and counting hard links as the same file.
+    ///
+    /// The probe opens the target for writing without truncating it. A missing
+    /// path is not the same file; other probe errors are returned.
+    pub(crate) fn is_same_file(&self, path: &Path) -> io::Result<bool> {
+        let probe = match OpenOptions::new().write(true).open(path) {
+            Ok(probe) => probe,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+            Err(error) => return Err(error),
+        };
+        Ok(Handle::from_file(probe)? == self.identity.handle)
     }
 
     /// Calls `body` with the bytes of `range`, clamped to the file.

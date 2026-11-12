@@ -146,11 +146,18 @@ layer will use; [Plan 2 boundary](#plan-2-boundary) lists what stops here.
   checkpoint per 64 rows (`LargeFile::BLOCK_ROWS`), about 0.125 bytes per row.
   The indexer takes its step size as an argument; the benchmark and the
   planned document layer use 8 MiB steps.
-- Rows break at LF, CR and CRLF outside quotes. U+0085, U+2028 and U+2029 are
-  ordinary characters in large mode, unlike the in-memory parser. Quote and
-  escape handling follows parity and never stops the scan. A block that does
-  not parse is shown as one raw-text cell per line; invalid UTF-8 shows U+FFFD
-  and other encodings fall back to Latin-1. Neither lossy view can be edited.
+- Rows break at LF, CR and CRLF outside quotes. U+0085 (NEL), U+2028 (LS) and
+  U+2029 (PS) are not row separators in large mode, and the scanner does not
+  support them as such. The strict parser that decodes a block does break at
+  them, so a block containing one outside quotes decodes into more rows than
+  the index recorded. Its rows cannot be mapped to physical rows without
+  shifting, so that block is treated as unavailable and read-only: its cells
+  stay empty and editing or saving it fails instead of writing shifted rows.
+  Quote and escape handling follows parity and never stops the scan. A block
+  that does not parse is shown as one raw-text cell per line when its decoded
+  row count still matches the index; a mismatched block stays empty. Invalid
+  UTF-8 shows U+FFFD and other encodings fall back to Latin-1. Neither lossy
+  view can be edited.
 
 ### Rows, edits and reload
 
@@ -188,8 +195,15 @@ the file to disk (and its parent directory on Unix), preserves an existing
 target's permissions on Unix, and swaps the result in atomically (Unix
 `rename`, Windows `ReplaceFileW`). It
 needs at least twice the file's size free on the target volume
-(`InsufficientDiskSpace`). A failure or cancel leaves the old file untouched
-and removes the temporary file.
+(`InsufficientDiskSpace`); a target that does not exist yet reports its
+volume through its nearest existing ancestor. A failure or cancel before the
+swap leaves the old file untouched and removes the temporary file.
+
+A failed save can still have replaced the file. On Unix the parent directory
+is synced after the atomic swap; if that sync fails, `save` returns an error
+although the target already holds the new bytes. `Err` therefore does not
+always mean "not saved": do not retry a failed save blindly. Reopen the target
+and compare, or leave that decision to the document layer.
 
 On Windows a mapped file cannot be replaced while a mapping of it is alive.
 `save` consumes the snapshot and drops its own mapping before the swap; the
@@ -197,10 +211,11 @@ caller must also drop every other reference to the source, the indexer and the
 mapping, then reopen the written file. If another mapping remains, the replace
 fails with a typed I/O error and there is no in-place fallback.
 
-`write` is the lower-level stream used by the benchmark: it writes to a path
-that must not be the source, checks staleness once at the start but not the
-volume's free space, and removes its output on failure or cancel. It does not
-replace atomically.
+`write` is the lower-level stream used by the benchmark: it refuses a path
+that is the source or a hard link or symbolic link to it before truncating,
+checks staleness at the start and before every edited-block read but not the
+volume's free space, and removes its output on failure or cancel, including a
+file that already existed at that path. It does not replace atomically.
 
 The crate never saves on its own; the document layer decides when to call
 `save` and keeps large files out of autosave.

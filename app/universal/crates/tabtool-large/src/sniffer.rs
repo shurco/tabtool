@@ -88,17 +88,20 @@ fn with_sample<R>(
     file: &MappedFile,
     body: impl FnOnce(&[u8]) -> Result<R, CsvError>,
 ) -> Result<R, CsvError> {
-    file.with_bytes(0..LargeFile::SAMPLE_BYTES, |head| {
-        if looks_like_refused_encoding(head) {
-            return Err(CsvError::UnsupportedLargeFileEncoding);
-        }
-        let sample = if file.size() > head.len() {
-            &head[..safe_cut(head)]
-        } else {
-            head
-        };
-        body(sample)
-    })
+    // A positioned read never faults on pages a truncation removed; a short
+    // read is the head of the file as it is now.
+    let mut buffer = Vec::new();
+    let read = file.read(0..LargeFile::SAMPLE_BYTES, &mut buffer, |head| head.len());
+    let head = &buffer[..read];
+    if looks_like_refused_encoding(head) {
+        return Err(CsvError::UnsupportedLargeFileEncoding);
+    }
+    let sample = if file.size() > read {
+        &head[..safe_cut(head)]
+    } else {
+        head
+    };
+    body(&sample[..trim_incomplete_utf8(sample)])
 }
 
 /// Strictly parses `sample` with `configuration`.
@@ -121,6 +124,18 @@ fn looks_like_refused_encoding(bytes: &[u8]) -> bool {
     bytes
         .windows(2)
         .any(|pair| pair[0] == 0x1B && matches!(pair[1], b'$' | b'('))
+}
+
+/// The length of `bytes` without an incomplete UTF-8 scalar at the end.
+///
+/// Only bytes that are valid UTF-8 except for a cut-off trailing scalar are
+/// trimmed; invalid bytes elsewhere mean another encoding and stay untouched.
+fn trim_incomplete_utf8(bytes: &[u8]) -> usize {
+    match std::str::from_utf8(bytes) {
+        Ok(_) => bytes.len(),
+        Err(error) if error.error_len().is_none() => error.valid_up_to(),
+        Err(_) => bytes.len(),
+    }
 }
 
 /// The length of `bytes` up to the last row break with an even number of

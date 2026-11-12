@@ -58,8 +58,9 @@ impl From<io::Error> for LargeFileSaveError {
 /// `progress` receives the fraction done, ending at `1.0`. The write stops with
 /// [`io::ErrorKind::Interrupted`] when `cancelled` is set. A failed or cancelled
 /// write removes the output file; if `to` already existed, that file is removed
-/// too. `to` must name a file other than the mapped source: creating it would
-/// truncate the mapping under the copy.
+/// too. `to` must name a file other than the mapped source, including through a
+/// hard link or symbolic link: the write fails with
+/// [`io::ErrorKind::InvalidInput`] before truncating anything.
 pub fn write(
     snapshot: &LargeSaveSnapshot,
     to: &Path,
@@ -86,6 +87,12 @@ fn create_and_stream(
     cancelled: &AtomicBool,
 ) -> Result<(File, u64), LargeFileSaveError> {
     ensure_ready(snapshot)?;
+    if snapshot.file.is_same_file(to)? {
+        return Err(LargeFileSaveError::Io(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "the output is the mapped source file",
+        )));
+    }
     let mut output = File::create(to)?;
     match stream(snapshot, &mut output, buffer_bytes, progress, cancelled) {
         Ok(written) => Ok((output, written)),
@@ -114,6 +121,10 @@ fn create_and_stream(
 /// cannot replace a file that is still mapped. If the caller kept another
 /// reference, the replacement fails with a typed I/O error; there is no
 /// in-place fallback.
+///
+/// On Unix the parent directory is synced after the swap. If that sync fails,
+/// the error is returned although `replacing` already holds the saved bytes;
+/// `Err` does not always mean the old file is still on disk.
 pub fn save(
     snapshot: LargeSaveSnapshot,
     replacing: &Path,
@@ -167,8 +178,27 @@ pub fn save(
 }
 
 /// Free bytes available to the current user on the volume holding `path`.
+///
+/// A path that does not exist yet reports its volume through the nearest
+/// existing ancestor, so a Save As target can be checked before it is created.
 pub fn volume_capacity(path: &Path) -> Option<u64> {
-    platform::available_space(path).ok()
+    let mut candidate = if path.as_os_str().is_empty() {
+        Path::new(".")
+    } else {
+        path
+    };
+    loop {
+        if let Ok(space) = platform::available_space(candidate) {
+            return Some(space);
+        }
+        match candidate.parent() {
+            Some(parent) if !parent.as_os_str().is_empty() => candidate = parent,
+            Some(_) if !candidate.is_absolute() && candidate != Path::new(".") => {
+                candidate = Path::new(".");
+            }
+            _ => return None,
+        }
+    }
 }
 
 /// Moves `temporary` onto `target`, replacing an existing file atomically.
@@ -292,12 +322,22 @@ fn stream(
             .index
             .block_range(number, size)
             .ok_or(LargeFileSaveError::Csv(CsvError::RowNotEditable))?;
-        let block_bytes = snapshot
+        if !snapshot.file.is_readable() {
+            return Err(LargeFileSaveError::SourceChanged);
+        }
+        let mut block_bytes = Vec::new();
+        let read = snapshot
             .file
-            .with_bytes(block_range.clone(), <[u8]>::to_vec);
-        let block = LargeBlock::decode(&block_bytes, &snapshot.configuration);
+            .read(block_range.clone(), &mut block_bytes, |bytes| bytes.len());
+        if read != block_range.len() {
+            return Err(LargeFileSaveError::SourceChanged);
+        }
+        block_bytes.truncate(read);
+        let expected_rows = snapshot.index.block_row_count(number);
+        let block =
+            LargeBlock::decode_indexed(&block_bytes, &snapshot.configuration, expected_rows);
         let ranges = row_ranges(&block_bytes, &snapshot.configuration);
-        if !block.is_faithful || ranges.len() != block.rows.len() {
+        if !block.is_faithful || ranges.len() != expected_rows {
             return Err(LargeFileSaveError::Csv(CsvError::RowNotEditable));
         }
         for (row, edits) in rows {

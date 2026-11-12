@@ -35,6 +35,29 @@ impl LargeBlock {
             is_faithful: false,
         }
     }
+
+    /// Decodes a block and checks its row count against the index.
+    ///
+    /// The scanner ends rows only at LF, CR and CRLF, while [`CsvParser`] also
+    /// treats NEL (U+0085), LS (U+2028) and PS (U+2029) as row breaks. A block
+    /// with one of those characters outside quotes therefore decodes into more
+    /// rows than the index recorded, and its rows can no longer be mapped to
+    /// physical rows. Such a block is returned empty and unfaithful.
+    pub(crate) fn decode_indexed(
+        bytes: &[u8],
+        configuration: &CsvConfiguration,
+        expected_rows: usize,
+    ) -> Self {
+        let block = Self::decode(bytes, configuration);
+        if block.rows.len() == expected_rows {
+            block
+        } else {
+            Self {
+                rows: Vec::new(),
+                is_faithful: false,
+            }
+        }
+    }
 }
 
 /// Text for display: U+FFFD for invalid UTF-8; other encodings fall back to
@@ -99,5 +122,17 @@ mod tests {
         assert_eq!(raw_lines("a\n"), vec![vec!["a"]]);
         assert_eq!(raw_lines(""), Vec::<Vec<String>>::new());
         assert_eq!(raw_lines("a\u{2028}b"), vec![vec!["a"], vec!["b"]]);
+    }
+
+    #[test]
+    fn decode_indexed_rejects_a_row_count_mismatch() {
+        let configuration = CsvConfiguration::default();
+        let block = LargeBlock::decode_indexed("a\u{2028}b,c\n".as_bytes(), &configuration, 1);
+        assert!(!block.is_faithful);
+        assert!(block.rows.is_empty(), "an unaligned block maps no rows");
+
+        let block = LargeBlock::decode_indexed(b"a,b\n", &configuration, 1);
+        assert!(block.is_faithful);
+        assert_eq!(block.rows, vec![vec!["a".to_string(), "b".to_string()]]);
     }
 }
