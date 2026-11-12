@@ -1,27 +1,86 @@
+# OS
 .DS_Store
+._*
+.AppleDouble
+.LSOverride
+Thumbs.db
+desktop.ini
+
+# Editors
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+.history/
+
+# Logs and temp files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+tmp/
+.tmp/
+
+# Environment and secrets
+.env*
+!.env.example
+*.p8
+*.p12
+*.cer
+*.mobileprovision
+*.keystore
+*.jks
+*.pem
+*.key
+
+# Swift / Xcode
 .build/
 .swiftpm/
 *.xcodeproj
 xcuserdata/
 DerivedData/
-app/apple/build/
-target/
-app/universal/apps/tabtool-android/android/.gradle/
-app/universal/apps/tabtool-android/android/.kotlin/
-app/universal/apps/tabtool-android/android/build/
-app/universal/apps/tabtool-android/android/app/build/
-app/universal/apps/tabtool-android/android/app/src/main/jniLibs/
-app/universal/apps/tabtool-android/android/local.properties
-*.rs.bk
-*.profraw
-.superpowers/
-docs/store/
-*.p8
-*.p12
-*.cer
-*.mobileprovision
+*.xcuserstate
+*.xcresult
+*.xcscmblueprint
+*.xccheckout
 *.dmg
 *.ipa
 *.xcarchive
-.env*
+
+# Rust
+target/
+*.rs.bk
+*.profraw
+*.profdata
+
+# Node / web
+node_modules/
+dist/
+coverage/
+.nyc_output/
+.vite/
+.svelte-kit/
+.output/
+.wrangler/
+.vercel/
+.netlify/
+*.tsbuildinfo
+
+# Android / Gradle
+.gradle/
+.kotlin/
+.cxx/
+build/
+captures/
+local.properties
+jniLibs/
+*.apk
+*.aab
+
+# Project
+.superpowers/
+docs/store/
 CLAUDE.md
