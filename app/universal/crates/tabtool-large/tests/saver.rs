@@ -102,6 +102,22 @@ fn save_with_capacity(
     save(snapshot, target, |_| Some(capacity), |_| {}, &cancelled)
 }
 
+/// The sorted names in `path`.
+fn entries(path: &Path) -> Vec<String> {
+    let mut names: Vec<String> = fs::read_dir(path)
+        .expect("the directory reads")
+        .map(|entry| {
+            entry
+                .expect("the entry reads")
+                .file_name()
+                .into_string()
+                .expect("the name is UTF-8")
+        })
+        .collect();
+    names.sort();
+    names
+}
+
 #[test]
 fn no_edits_is_byte_identical() {
     for text in [
@@ -434,6 +450,94 @@ fn saving_to_a_new_file_gives_it_the_default_permissions() {
             & 0o777
     };
     assert_eq!(mode(&target), mode(&plain));
+}
+
+#[cfg(unix)]
+#[test]
+fn saving_over_a_file_keeps_its_permissions() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let directory = TempDirectory::new();
+    let source = make_source(&directory, b"a,b\n1,2\n", &configuration());
+    let target = directory.path().join("source.csv");
+    fs::set_permissions(&target, fs::Permissions::from_mode(0o600))
+        .expect("the target becomes private");
+    source.set_cell("9", 1, 1).expect("row 1 is editable");
+    let snapshot = source.save_snapshot();
+    drop(source);
+    save_with_capacity(snapshot, &target, AMPLE_CAPACITY).expect("the save replaces the file");
+    let mode = fs::metadata(&target)
+        .expect("the target has metadata")
+        .permissions()
+        .mode()
+        & 0o777;
+    assert_eq!(mode, 0o600, "the target keeps its private mode");
+}
+
+#[test]
+fn successful_save_leaves_no_temporary_directory() {
+    let directory = TempDirectory::new();
+    let output_directory = directory.path().join("out");
+    fs::create_dir(&output_directory).expect("the output directory is created");
+    let source = make_source(&directory, b"a,b\n", &configuration());
+    let target = output_directory.join("copy.csv");
+    let snapshot = source.save_snapshot();
+    drop(source);
+    save_with_capacity(snapshot, &target, AMPLE_CAPACITY).expect("the save writes");
+    assert_eq!(entries(&output_directory), ["copy.csv"]);
+}
+
+#[test]
+fn failed_save_leaves_no_temporary_directory() {
+    let directory = TempDirectory::new();
+    let output_directory = directory.path().join("out");
+    fs::create_dir(&output_directory).expect("the output directory is created");
+    let configuration = CsvConfiguration {
+        encoding: Encoding::Windows1252,
+        ..configuration()
+    };
+    let source = make_source(&directory, b"a,b\n", &configuration);
+    let mut snapshot = source.save_snapshot();
+    snapshot
+        .edits
+        .insert(CellKey { row: 0, column: 0 }, "日本".to_string());
+    let target = output_directory.join("copy.csv");
+    let error = save_with_capacity(snapshot, &target, AMPLE_CAPACITY)
+        .expect_err("the edit cannot be written");
+    assert!(
+        matches!(error, LargeFileSaveError::Csv(CsvError::UnencodableText)),
+        "unexpected error: {error:?}"
+    );
+    assert!(entries(&output_directory).is_empty());
+    assert!(!target.exists());
+}
+
+#[test]
+fn cancelled_save_leaves_the_target_untouched() {
+    let directory = TempDirectory::new();
+    let source = make_source(&directory, b"a,b\n1,2\n", &configuration());
+    let target = directory.path().join("source.csv");
+    let snapshot = source.save_snapshot();
+    drop(source);
+    let cancelled = AtomicBool::new(true);
+    let error = save(
+        snapshot,
+        &target,
+        |_| Some(AMPLE_CAPACITY),
+        |_| {},
+        &cancelled,
+    )
+    .expect_err("the save is cancelled");
+    assert!(
+        matches!(&error, LargeFileSaveError::Io(error) if error.kind() == io::ErrorKind::Interrupted),
+        "unexpected error: {error:?}"
+    );
+    assert_eq!(
+        fs::read(&target).expect("the target reads"),
+        b"a,b\n1,2\n",
+        "a cancelled save leaves the original"
+    );
+    assert_eq!(entries(directory.path()), ["source.csv"]);
 }
 
 #[test]

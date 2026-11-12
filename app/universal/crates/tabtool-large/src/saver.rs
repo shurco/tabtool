@@ -56,9 +56,10 @@ impl From<io::Error> for LargeFileSaveError {
 /// and, for row 0, the UTF-8 byte order mark.
 ///
 /// `progress` receives the fraction done, ending at `1.0`. The write stops with
-/// [`io::ErrorKind::Interrupted`] when `cancelled` is set; a failed or cancelled
-/// write removes the partial file. `to` must name a file other than the mapped
-/// source: creating it would truncate the mapping under the copy.
+/// [`io::ErrorKind::Interrupted`] when `cancelled` is set. A failed or cancelled
+/// write removes the output file; if `to` already existed, that file is removed
+/// too. `to` must name a file other than the mapped source: creating it would
+/// truncate the mapping under the copy.
 pub fn write(
     snapshot: &LargeSaveSnapshot,
     to: &Path,
@@ -66,16 +67,28 @@ pub fn write(
     progress: impl Fn(f64),
     cancelled: &AtomicBool,
 ) -> Result<u64, LargeFileSaveError> {
+    let (output, written) =
+        create_and_stream(snapshot, to, buffer_bytes.max(1), &progress, cancelled)?;
+    drop(output);
+    Ok(written)
+}
+
+/// Creates `to` and streams the snapshot into it.
+///
+/// Returns the open file so `save` can flush it through the descriptor that
+/// wrote it, even when the process umask leaves the file unreadable by name.
+/// A failed or cancelled stream removes the output file before returning.
+fn create_and_stream(
+    snapshot: &LargeSaveSnapshot,
+    to: &Path,
+    buffer_bytes: usize,
+    progress: &impl Fn(f64),
+    cancelled: &AtomicBool,
+) -> Result<(File, u64), LargeFileSaveError> {
     ensure_ready(snapshot)?;
     let mut output = File::create(to)?;
-    match stream(
-        snapshot,
-        &mut output,
-        buffer_bytes.max(1),
-        &progress,
-        cancelled,
-    ) {
-        Ok(written) => Ok(written),
+    match stream(snapshot, &mut output, buffer_bytes, progress, cancelled) {
+        Ok(written) => Ok((output, written)),
         Err(error) => {
             // Close before removing: Windows rejects removing an open file.
             drop(output);
@@ -90,8 +103,12 @@ pub fn write(
 /// Needs twice the file's size free on the volume; `available_capacity`
 /// returns the free bytes for a path, and `None` skips the check. The file is
 /// written into a private temporary directory next to the target, flushed to
-/// disk, and then swapped in with [`platform::replace_file`]. The temporary
-/// directory is removed in every case.
+/// disk through the descriptor that wrote it, and then swapped in with
+/// [`platform::replace_file`]. The temporary directory is removed in every
+/// case.
+///
+/// An existing target keeps its permissions (Unix); its other metadata is not
+/// copied. On Unix the parent directory is synced after the swap.
 ///
 /// The snapshot is consumed so its mapping is dropped before the swap: Windows
 /// cannot replace a file that is still mapped. If the caller kept another
@@ -131,19 +148,21 @@ pub fn save(
         .tempdir_in(parent)?;
     let temporary = directory.path().join(name);
 
-    write(
+    let (output, _) = create_and_stream(
         &snapshot,
         &temporary,
         COPY_BUFFER_BYTES,
         &progress,
         cancelled,
     )?;
-    File::options()
-        .write(true)
-        .open(&temporary)
-        .and_then(|file| file.sync_all())?;
+    output.sync_all()?;
+    drop(output);
+    #[cfg(unix)]
+    copy_permissions(replacing, &temporary)?;
     drop(snapshot);
     install(&temporary, replacing)?;
+    #[cfg(unix)]
+    sync_directory(parent)?;
     Ok(())
 }
 
@@ -160,6 +179,26 @@ fn install(temporary: &Path, target: &Path) -> io::Result<()> {
         // `ReplaceFileW` needs an existing target; a new file is a plain rename.
         fs::rename(temporary, target)
     }
+}
+
+/// Gives `target` the permissions of `source` when `source` exists.
+///
+/// A rename keeps the temporary file's mode (`0666` less the umask), so a
+/// `0600` document would otherwise become world-readable after a save. A
+/// missing source is a new file and keeps the default.
+#[cfg(unix)]
+fn copy_permissions(source: &Path, target: &Path) -> io::Result<()> {
+    match fs::metadata(source) {
+        Ok(metadata) => fs::set_permissions(target, metadata.permissions()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
+/// Flushes a directory entry change (a rename) to disk.
+#[cfg(unix)]
+fn sync_directory(path: &Path) -> io::Result<()> {
+    File::open(path)?.sync_all()
 }
 
 fn ensure_ready(snapshot: &LargeSaveSnapshot) -> Result<(), LargeFileSaveError> {
