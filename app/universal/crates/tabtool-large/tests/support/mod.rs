@@ -1,9 +1,15 @@
-//! Shared helpers for the scanner tests.
+//! Shared helpers for the large-file tests.
 
 #![allow(dead_code)] // Each test crate uses a different subset of these helpers.
 
+use std::fs::File;
+use std::io::{BufWriter, Write};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
+
 use tabtool_core::{CsvConfiguration, CsvParser};
-use tabtool_large::{RowIndex, RowScanner, ScanMode, row_ranges};
+use tabtool_large::{LargeFileIndexer, MappedFile, RowIndex, RowScanner, ScanMode, row_ranges};
 
 /// SplitMix64, matching `SeededGenerator` in `TestSupport.swift`.
 ///
@@ -185,4 +191,92 @@ pub fn make_input(seed: u64, rows: usize) -> Vec<u8> {
         }
     }
     text.into_bytes()
+}
+
+/// Writes a deterministic quoted CSV of at least `target_bytes` to `path` and
+/// returns the row count, header included.
+///
+/// Even columns hold numbers, odd columns quoted text, and every seventh row
+/// carries a multiline quoted field with embedded separators and quotes. Ported
+/// from `generateLargeCSV` in `LargeFileTestSupport.swift` with the indexer
+/// fixture's settings.
+fn generate_large_csv(path: &Path, target_bytes: usize, columns: usize, seed: u64) -> usize {
+    let mut writer = BufWriter::new(File::create(path).expect("fixture file is created"));
+    let mut generator = SplitMix64::new(seed);
+    let header = (0..columns)
+        .map(|column| format!("col{column}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    writeln!(writer, "{header}").expect("header is written");
+    let mut written = header.len() + 1;
+    let mut rows = 1;
+    while written < target_bytes {
+        let mut line = String::new();
+        for column in 0..columns {
+            if column > 0 {
+                line.push(',');
+            }
+            let value = generator.next();
+            if rows % 7 == 0 && column == 1.min(columns - 1) {
+                line.push_str(&format!("\"line one\nline, \"\"two\"\" {rows}\""));
+            } else if column % 2 == 0 {
+                line.push_str(&format!("{}.{column}", value % 1_000_000));
+            } else {
+                line.push_str(&format!("\"text{}\"", value % 5000));
+            }
+        }
+        line.push('\n');
+        written += line.len();
+        writer.write_all(line.as_bytes()).expect("row is written");
+        rows += 1;
+    }
+    writer.flush().expect("fixture file flushes");
+    rows
+}
+
+/// A mapped large CSV fixture kept alive for the test, with the generator's
+/// row count. Matches `Fixture` in `LargeFileIndexerTests.swift`.
+pub struct LargeCsvFixture {
+    _directory: tempfile::TempDir,
+    pub file: Arc<MappedFile>,
+    pub rows: usize,
+}
+
+impl LargeCsvFixture {
+    /// The 2 MiB fixture used by the ported indexer tests.
+    pub fn new() -> Self {
+        Self::with_target(2 * 1_048_576)
+    }
+
+    /// A fixture of at least `target_bytes`.
+    pub fn with_target(target_bytes: usize) -> Self {
+        let directory = tempfile::tempdir().expect("fixture directory is created");
+        let path = directory.path().join("big.csv");
+        let rows = generate_large_csv(&path, target_bytes, 5, 3);
+        let file = Arc::new(MappedFile::open(&path).expect("fixture file opens"));
+        Self {
+            _directory: directory,
+            file,
+            rows,
+        }
+    }
+
+    /// The path of the fixture file.
+    pub fn path(&self) -> PathBuf {
+        self._directory.path().join("big.csv")
+    }
+}
+
+/// An indexer over `fixture` with the default row rules, not started yet.
+pub fn large_file_indexer(
+    fixture: &LargeCsvFixture,
+    step_bytes: usize,
+    progress_interval: Duration,
+) -> Arc<LargeFileIndexer> {
+    Arc::new(LargeFileIndexer::new(
+        Arc::clone(&fixture.file),
+        CsvConfiguration::default(),
+        step_bytes,
+        progress_interval,
+    ))
 }

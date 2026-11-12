@@ -3,12 +3,14 @@
 #![deny(unsafe_code)]
 
 mod index;
+mod indexer;
 mod mapped;
 #[allow(unsafe_code)]
 mod platform;
 mod scanner;
 
 pub use index::RowIndex;
+pub use indexer::{IndexProgress, LargeFileIndexer};
 pub use mapped::{FileIdentity, MappedFile, Staleness};
 pub use platform::{available_space, replace_file};
 pub use scanner::{RowScanner, ScanMode, row_ranges};
