@@ -1,11 +1,115 @@
 //! Virtualization read counts and render snapshots.
 
+use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Instant;
+
 use egui::{Rect, pos2, vec2};
-use tabtool_core::{CsvTable, SortDirection};
+use tabtool_core::{CsvConfiguration, CsvTable, RowSource, SortDirection};
+use tabtool_document::Document;
 use tabtool_ui::grid::{CellEditor, GridOptions, GridState, SortSpec};
 use tabtool_ui::harness::kittest::Queryable;
 
 use crate::support::{CountingSource, GridFixture, sample_table};
+
+/// Wraps a source and rejects any request outside its reported bounds.
+///
+/// The grid must never ask for rows that the large-file index has not
+/// published or columns beyond the widest scanned row.
+struct GuardedSource<'a> {
+    inner: &'a dyn RowSource,
+    out_of_bounds: AtomicUsize,
+    calls: AtomicUsize,
+    min_row: AtomicUsize,
+    max_row: AtomicUsize,
+    min_column: AtomicUsize,
+    max_column: AtomicUsize,
+}
+
+impl<'a> GuardedSource<'a> {
+    fn new(inner: &'a dyn RowSource) -> Self {
+        Self {
+            inner,
+            out_of_bounds: AtomicUsize::new(0),
+            calls: AtomicUsize::new(0),
+            min_row: AtomicUsize::new(usize::MAX),
+            max_row: AtomicUsize::new(0),
+            min_column: AtomicUsize::new(usize::MAX),
+            max_column: AtomicUsize::new(0),
+        }
+    }
+
+    fn reset(&self) {
+        self.out_of_bounds.store(0, Ordering::Relaxed);
+        self.calls.store(0, Ordering::Relaxed);
+        self.min_row.store(usize::MAX, Ordering::Relaxed);
+        self.max_row.store(0, Ordering::Relaxed);
+        self.min_column.store(usize::MAX, Ordering::Relaxed);
+        self.max_column.store(0, Ordering::Relaxed);
+    }
+
+    fn calls(&self) -> usize {
+        self.calls.load(Ordering::Relaxed)
+    }
+
+    fn out_of_bounds(&self) -> usize {
+        self.out_of_bounds.load(Ordering::Relaxed)
+    }
+
+    fn read_bounds(&self) -> Option<(usize, usize, usize, usize)> {
+        (self.calls() > 0).then(|| {
+            (
+                self.min_row.load(Ordering::Relaxed),
+                self.max_row.load(Ordering::Relaxed),
+                self.min_column.load(Ordering::Relaxed),
+                self.max_column.load(Ordering::Relaxed),
+            )
+        })
+    }
+}
+
+impl RowSource for GuardedSource<'_> {
+    fn row_count(&self) -> usize {
+        self.inner.row_count()
+    }
+
+    fn column_count(&self) -> usize {
+        self.inner.column_count()
+    }
+
+    fn column_ids(&self) -> Vec<tabtool_core::ColumnId> {
+        self.inner.column_ids()
+    }
+
+    fn headers(&self) -> Option<Vec<String>> {
+        self.inner.headers()
+    }
+
+    fn cell(&self, row: usize, column: usize) -> String {
+        self.calls.fetch_add(1, Ordering::Relaxed);
+        self.min_row.fetch_min(row, Ordering::Relaxed);
+        self.max_row.fetch_max(row, Ordering::Relaxed);
+        self.min_column.fetch_min(column, Ordering::Relaxed);
+        self.max_column.fetch_max(column, Ordering::Relaxed);
+        if row >= self.row_count() || column >= self.column_count() {
+            self.out_of_bounds.fetch_add(1, Ordering::Relaxed);
+        }
+        self.inner.cell(row, column)
+    }
+}
+
+/// Opens `path` as a large document and waits for its index.
+fn open_large(path: &Path, configuration: CsvConfiguration) -> Document {
+    let mut document = Document::new(configuration.clone());
+    document
+        .open_large(path, Some(configuration), false, 0)
+        .expect("open the large fixture");
+    if let Some(state) = document.large_state() {
+        state.indexer.wait();
+    }
+    document.poll_large_indexing();
+    document
+}
 
 #[test]
 fn only_the_visible_cells_of_a_large_source_are_read() {
@@ -52,6 +156,86 @@ fn scrolling_far_reads_only_the_rows_around_the_viewport() {
     eprintln!("scrolled large row count: read {calls} cells, viewport {viewport:?}");
     assert_eq!(calls, 17 * 9);
     assert_eq!(calls, 153);
+}
+
+#[test]
+fn a_hundred_thousand_row_scroll_stays_inside_the_viewport() {
+    let source = CountingSource::new(100_000, 12);
+    let mut state = GridState::default();
+    state.scroll = vec2(0.0, 99_000.0 * 24.0);
+    let mut fixture = GridFixture::new(&source, state, GridOptions::default(), [640.0, 400.0]);
+    fixture.run();
+    fixture.run();
+    source.reset();
+    let started = Instant::now();
+    fixture.run();
+    let elapsed = started.elapsed();
+
+    let calls = source.calls();
+    let viewport = fixture.state.borrow().viewport;
+    assert_eq!(viewport.min, pos2(0.0, 99_000.0 * 24.0));
+    assert_eq!(viewport.size(), vec2(624.0, 384.0));
+    assert_eq!(source.read_bounds(), Some((98_999, 99_015, 0, 6)));
+    assert_eq!(calls, 17 * 7);
+    assert_eq!(source.out_of_bounds(), 0);
+    eprintln!("100k row scroll: read {calls} cells in {elapsed:?}, viewport {viewport:?}");
+}
+
+#[test]
+fn a_large_document_reads_only_rows_inside_its_published_index() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let path = directory.path().join("large.csv");
+    let rows = 5_000;
+    let text: String = (0..rows)
+        .map(|row| format!("r{row},v{row},q{row}\n"))
+        .collect();
+    std::fs::write(&path, text).expect("fixture file is written");
+    let configuration = CsvConfiguration {
+        first_row_as_header: false,
+        ..CsvConfiguration::default()
+    };
+    let document = open_large(&path, configuration);
+    let state = document.large_state().expect("large state");
+    let counters = state.indexer.counters();
+    let source = document.row_source().expect("large row source");
+    assert_eq!(
+        counters.scanned_bytes,
+        std::fs::metadata(&path).expect("metadata").len() as usize,
+        "the fixture's index covers the whole file"
+    );
+    assert_eq!(source.row_count(), counters.row_count);
+
+    let guarded = GuardedSource::new(source);
+    let mut fixture = GridFixture::new(
+        &guarded,
+        GridState::default(),
+        GridOptions::default(),
+        [640.0, 400.0],
+    );
+    fixture.run();
+    fixture.run();
+    guarded.reset();
+    let started = Instant::now();
+    fixture.run();
+    let elapsed = started.elapsed();
+    let calls = guarded.calls();
+    let (min_row, max_row, min_column, max_column) =
+        guarded.read_bounds().expect("the grid read cells");
+
+    assert_eq!(guarded.out_of_bounds(), 0);
+    assert!(min_row < max_row);
+    assert!(max_row < counters.row_count);
+    assert!(max_column < counters.max_field_count);
+    assert_eq!(calls, 16 * 3);
+    assert_eq!((min_row, max_row, min_column, max_column), (0, 15, 0, 2));
+    eprintln!(
+        "large document: {} rows indexed, {} columns, read {calls} cells in {elapsed:?} in rows {min_row}..={max_row} and columns {min_column}..={max_column}",
+        counters.row_count, counters.max_field_count
+    );
+
+    let viewport = fixture.state.borrow().viewport;
+    assert_eq!(viewport.min, pos2(0.0, 0.0));
+    assert_eq!(viewport.size(), vec2(624.0, 384.0));
 }
 
 #[cfg(target_os = "macos")]

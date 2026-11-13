@@ -36,6 +36,7 @@ pub struct CountingSource {
     max_row: AtomicUsize,
     min_column: AtomicUsize,
     max_column: AtomicUsize,
+    out_of_bounds: AtomicUsize,
 }
 
 impl CountingSource {
@@ -66,6 +67,7 @@ impl CountingSource {
             max_row: AtomicUsize::new(0),
             min_column: AtomicUsize::new(usize::MAX),
             max_column: AtomicUsize::new(0),
+            out_of_bounds: AtomicUsize::new(0),
         }
     }
 
@@ -81,6 +83,7 @@ impl CountingSource {
         self.max_row.store(0, Ordering::Relaxed);
         self.min_column.store(usize::MAX, Ordering::Relaxed);
         self.max_column.store(0, Ordering::Relaxed);
+        self.out_of_bounds.store(0, Ordering::Relaxed);
     }
 
     /// How many cells were read.
@@ -100,6 +103,11 @@ impl CountingSource {
             self.min_column.load(Ordering::Relaxed),
             self.max_column.load(Ordering::Relaxed),
         ))
+    }
+
+    /// How many reads asked for a row or column outside the source.
+    pub fn out_of_bounds(&self) -> usize {
+        self.out_of_bounds.load(Ordering::Relaxed)
     }
 
     /// The deterministic text of a cell.
@@ -127,6 +135,9 @@ impl RowSource for CountingSource {
 
     fn cell(&self, row: usize, column: usize) -> String {
         self.cell_calls.fetch_add(1, Ordering::Relaxed);
+        if row >= self.rows || column >= self.columns {
+            self.out_of_bounds.fetch_add(1, Ordering::Relaxed);
+        }
         self.min_row.fetch_min(row, Ordering::Relaxed);
         self.max_row.fetch_max(row, Ordering::Relaxed);
         self.min_column.fetch_min(column, Ordering::Relaxed);

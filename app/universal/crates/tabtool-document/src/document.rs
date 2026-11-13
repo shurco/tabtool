@@ -72,6 +72,9 @@ pub struct Document {
     /// notice while the rest of the document stays borrowed immutably.
     notice: Cell<Option<DocumentNotice>>,
     pub(crate) large_status: LargeStatus,
+    /// A pinned indexing fraction for deterministic UI snapshots.
+    #[cfg(feature = "test-support")]
+    pub(crate) pinned_indexing: Option<f64>,
 }
 
 impl Document {
@@ -104,6 +107,8 @@ impl Document {
             large_save: None,
             notice: Cell::new(None),
             large_status: LargeStatus::None,
+            #[cfg(feature = "test-support")]
+            pinned_indexing: None,
         }
     }
 
@@ -464,6 +469,16 @@ impl Document {
         self.phase = DocumentPhase::Ready;
         self.large_status = LargeStatus::Saving(fraction.clamp(0.0, 1.0));
         self.bump_revision();
+    }
+
+    /// Pins the indexing progress for deterministic UI snapshots.
+    ///
+    /// Test-only: the mapping and row source stay real, so the grid renders
+    /// while the status line and large-file banner show a stable fraction.
+    #[cfg(feature = "test-support")]
+    #[doc(hidden)]
+    pub fn force_indexing_state_for_test(&mut self, fraction: f64) {
+        self.pinned_indexing = Some(fraction.clamp(0.0, 1.0));
     }
 
     /// Recomputes `Ready`/`NeedsAttention` from the current content and format.

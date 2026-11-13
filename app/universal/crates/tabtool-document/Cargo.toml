@@ -8,7 +8,7 @@ description = "UI-free document state, storage and undo for TabTool."
 
 [features]
 default = []
-# A deterministic saving state for UI snapshots.
+# Deterministic large-file progress states for UI snapshots.
 test-support = []
 
 [dependencies]

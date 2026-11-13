@@ -12,5 +12,9 @@ tests run on every platform.
 pixels) because GPU backends and font rasterizers may antialias slightly
 differently. Do not raise it to hide a layout change.
 
-Task 9 must produce per-OS baselines (or a per-OS output path) before the image
-tests run on Windows/Linux CI. Do not delete these macOS baselines.
+These are the granular UI baselines. The consolidated Plan 4 state inventory
+lives in `apps/tabtool-desktop/tests/snapshots/` and is rendered by
+`apps/tabtool-desktop/tests/visual.rs`. Both sets remain macOS/Metal baselines;
+per-OS baselines (or a per-OS output path) are required before image tests run
+on Windows/Linux CI. See `docs/desktop-ui.md`. Do not delete these macOS
+baselines.

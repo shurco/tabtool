@@ -220,6 +220,7 @@ Known limits: an accessibility client (VoiceOver, automation tools) reading the 
 - [Build and versions](docs/building.md)
 - [App Store and privacy](docs/app-store-compliance.md)
 - [CSV format and editor behavior](docs/csv-format.md)
+- [Desktop UI parity, snapshots and manual checks](docs/desktop-ui.md)
 
 The local working spec/plan and execution log live in `.superpowers/sdd/` and are not part of git.
 

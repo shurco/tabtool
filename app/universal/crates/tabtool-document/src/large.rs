@@ -194,6 +194,12 @@ impl Document {
             self.large_status = LargeStatus::None;
             return;
         };
+        #[cfg(feature = "test-support")]
+        if let Some(fraction) = self.pinned_indexing {
+            self.phase = DocumentPhase::Ready;
+            self.large_status = LargeStatus::Indexing(fraction);
+            return;
+        }
         let status = if large.indexer.is_finished() {
             LargeStatus::Ready
         } else {

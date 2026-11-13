@@ -6,9 +6,11 @@ this tree follows it and never invents a second product.
 
 Plan 1 delivers the pure CSV core and the platform input proof. Plan 2 adds
 the memory-mapped large-file layer. Plan 3 adds the document model, undo,
-filters and saves. No plan adds a usable editor yet: see
-[Plan 1 boundary](#plan-1-boundary), [Plan 2 boundary](#plan-2-boundary) and
-[Plan 3 boundary](#plan-3-boundary).
+filters and saves. Plan 4 adds the desktop editor for Windows and Linux, with a
+macOS development build that follows the Apple layout and behavior. Plan 5 adds
+the Android UI and packaging. See [Plan 1 boundary](#plan-1-boundary),
+[Plan 2 boundary](#plan-2-boundary), [Plan 3 boundary](#plan-3-boundary) and
+[Plan 4 boundary](#plan-4-boundary).
 
 ## Workspace layout
 
@@ -21,9 +23,13 @@ app/universal/
 │   ├── tabtool-core/          # pure CSV engine
 │   ├── tabtool-large/         # mmap, scanner/index, sniffer, source, saver
 │   ├── tabtool-document/      # document state, undo, filters and saves
+│   ├── tabtool-i18n/          # 11-locale catalog and native language names
+│   ├── tabtool-platform/      # platform traits, settings and OS services
+│   ├── tabtool-settings/      # platform-neutral settings model
+│   ├── tabtool-ui/            # design system, grid, chrome and kittest harness
 │   └── tabtool-testdata/      # dev-only fixtures, manifest and generators
 ├── apps/
-│   ├── tabtool-desktop/       # desktop shell and `--smoke` entry point
+│   ├── tabtool-desktop/       # eframe app, document windows and `--smoke`
 │   └── tabtool-android/       # cdylib, Gradle host, Kotlin bridge (spike)
 ├── xtask/                     # golden regeneration and check
 ├── testdata/
@@ -39,9 +45,10 @@ helpers, sorting, filters, clipboard helpers, export, numeric classification
 and decimal-mark conversion. It has no UI, platform, async-runtime or `unsafe`
 code (`#![forbid(unsafe_code)]`).
 
-Plan 2 adds `tabtool-large`. Plan 3 adds `tabtool-document`. Later plans add
-the other crates from the design: `tabtool-platform`, `tabtool-i18n`,
-`tabtool-ui` and `tabtool-app`, plus the real desktop and Android UIs.
+Plan 2 adds `tabtool-large`. Plan 3 adds `tabtool-document`. Plan 4 adds
+`tabtool-i18n`, `tabtool-settings`, `tabtool-platform` and `tabtool-ui`, and
+turns `tabtool-desktop` into the Windows/Linux editor with a macOS development
+build. Plan 5 owns `tabtool-app`, Android navigation, SAF and packaging.
 
 ## Toolchain
 
@@ -66,14 +73,24 @@ From `app/universal`:
 
 ```sh
 cargo build
-cargo run -p tabtool-desktop              # empty desktop window
+cargo run -p tabtool-desktop              # the desktop editor
 cargo run -p tabtool-desktop -- --smoke   # prints "tabtool 0.1.0" and exits
+cargo run -p tabtool-desktop -- FILE.csv  # open a file at launch
 cargo build -p tabtool-desktop --release
 ```
 
 `--smoke` is the headless check used by CI. It prints the core version and
-returns without opening a window. The desktop app itself is only a shell in
-Plans 1–3; it has no table, document model or file UI.
+returns without opening a window. The app opens one native deferred viewport
+per document, an in-window menu bar in every viewport, and the root window is
+shown only for the empty state or quit prompts. On Linux the app needs X11 or
+Wayland plus the GUI libraries named under [Toolchain](#toolchain); no display
+server is needed for `--smoke`.
+
+The manual Windows/Linux launch, IME, dialog, drag/drop, 1 GiB large-file,
+theme, language and accessibility pass is in
+`docs/desktop-ui.md` in the repository root. Its visual baselines and measured
+grid performance are recorded there and in
+[Desktop UI (Plan 4)](#desktop-ui-plan-4).
 
 ## Tests
 
@@ -86,9 +103,28 @@ cargo test --workspace
 cargo test -p tabtool-large               # fast large-file suite
 cargo test -p tabtool-document            # document layer
 cargo test -p tabtool-document --test parity  # ported-test inventory
+cargo test -p tabtool-ui                   # widgets, grid, chrome, panels
+cargo test -p tabtool-ui -p tabtool-desktop --tests  # UI scenarios
+cargo test -p tabtool-desktop --test visual          # macOS image baselines
 cargo check -p tabtool-large --features bench   # compiles the benchmark binary
 cargo test -p tabtool-core --test golden   # macOS only
 ```
+
+The UI suites use `egui_kittest` for deterministic interaction and
+accessibility assertions. Scenario, interaction and accessibility tests run on
+Linux, Windows and macOS. Image snapshots have two committed sets:
+
+- `crates/tabtool-ui/tests/snapshots/` holds the granular widget, grid and
+  document-chrome baselines gathered while those surfaces were built;
+- `apps/tabtool-desktop/tests/snapshots/` holds the consolidated Plan 4
+  `<state>-<size>-<theme>.png` baselines in `tests/visual.rs`.
+
+Both image sets are compiled and compared only on macOS. Set
+`TABTOOL_SKIP_SNAPSHOTS=1` on a macOS machine without a usable Metal device.
+Set `UPDATE_SNAPSHOTS=1` after reviewing a deliberate visual change. Linux CI
+runs the scenario tests under `xvfb-run`; Windows runs them directly. Neither
+runs the image comparison until per-OS baselines exist. The workflow and
+`docs/desktop-ui.md` record the split.
 
 The `bench` feature owns the benchmark binary and its dev-only dependencies,
 so the plain workspace commands skip it. Every CI job runs the `cargo check`
@@ -276,8 +312,7 @@ Not in Plan 2:
   save panel and the large-window delegate;
 - localization, packaging and installers.
 
-`tabtool-desktop` is still a shell; no user can open a large file through it
-yet.
+Those screens and the large-file window are delivered by Plan 4.
 
 ## Document layer
 
@@ -431,7 +466,8 @@ The `RowFilterModel` mirrors the Swift filter state machine:
   visible set. Applying or refreshing trims the selection to visible rows.
 - Export is UI work: the crate exposes `visible_table`, which contains only
   the visible rows with their edits, or the whole table without a filter. The
-  export writer and its format options are Plan 4–5 work.
+  export writer and its format options are Plan 4 desktop work and Plan 5
+  Android work.
 - A large document cannot filter and cannot show the filter bar.
 
 ### Saves
@@ -603,8 +639,107 @@ Not in Plan 3:
 - localization, settings UI, packaging and installers;
 - `tabtool-platform`, `tabtool-i18n`, `tabtool-ui` and `tabtool-app`.
 
-`tabtool-desktop` is still a shell; no user can open or edit a document
-through it yet.
+Plan 4 supplies every screen and dialog listed above.
+
+## Desktop UI (Plan 4)
+
+Plan 4 turns `tabtool-desktop` into the TabTool editor for Windows and Linux
+and keeps a macOS development build with the Apple layout and behavior. The
+Apple app remains the visual source of truth; the reference screenshots are
+`web/static/img/app-grid*.webp`, `app-columns*.webp` and `app-large*.webp`.
+
+### Architecture
+
+- `tabtool-i18n` owns the 11-locale catalog (`en`, `fr`, `es`, `de`, `it`,
+  `pl`, `be`, `uk`, `zh-Hans`, `ja`, `ko`) and the native language names.
+  Interface text comes from the catalog; the localization test scans the
+  non-test sources of `tabtool-ui` and `tabtool-desktop` for hard-coded labels
+  and unknown `tr` keys.
+- `tabtool-settings` is a platform-neutral settings model. `tabtool-platform`
+  wraps the OS services (dialogs, URLs, locale, clipboard support, settings
+  paths) behind traits so tests use fakes.
+- `tabtool-ui` contains the design tokens, widgets, virtualized grid, document
+  chrome, filter bar, Settings form, About content and export panel. It has no
+  platform services and no `unsafe`.
+- `tabtool-desktop` owns the eframe application, one deferred viewport per
+  document, menu dispatch, shortcuts, file workflows, autosave and the
+  Settings/About windows. It is thin: document mutations go through
+  `tabtool-document`, and every screen composes `tabtool-ui`.
+
+### Shell and windows
+
+- The root viewport shows the empty state ("No Documents") or quit prompts.
+  Each document is a native deferred viewport with a 640×400 minimum; the
+  Settings and About windows are deferred viewports too. The menu bar is drawn
+  inside each viewport (a documented deviation from the macOS system menu bar).
+- `FileWorkflow` handles New, Open, Open Recent, Save, Save As, Revert, Export,
+  Duplicate, close prompts and quit. Autosave waits 800 ms after a change and
+  never autosaves large files.
+- A large file opened at or above the configured threshold uses the mapped
+  source. The window shows indexing progress, the large-mode explanation, a
+  stale-file Reload banner and a streaming-save progress bar with Cancel.
+
+### Grid and chrome
+
+- The grid is virtualized by row and column: a frame reads only the visible
+  cells plus one row of overscan, and the row-number gutter sticks to the left
+  while the header sticks to the top.
+- Selection supports rows, columns and ranges; the focused cell draws the 2 pt
+  focus ring. Arrow keys, Tab/Shift+Tab, Enter, Escape, Home/End and the
+  platform select-all modifier are dispatched through one action enum.
+- Cells edit in place through egui's `TextEdit`, so the platform IME composes
+  Latin, Cyrillic and CJK text. An IME commit does not commit the cell on the
+  same Enter. Column widths resize by dragging the header edge.
+- The context menus disable unavailable commands instead of hiding them.
+  Structural commands, sorting and filtering obey the document capabilities:
+  filtered rows cannot be inserted or moved, and large mode disables
+  structural edits, sorting, filters, Export, decimal-mark changes and Select
+  All.
+- The toolbar, format bar, filter bar, status line, needs-attention banner,
+  save error, format alert, reparse confirmation and read-error overlay are
+  the ports of the Apple chrome. Toolbar and format-bar strings come from the
+  catalog.
+
+### Files, export and preferences
+
+- Open and Save As use the platform file dialogs; dropping files on a window
+  opens them. Export writes a converted copy through the export panel and
+  confirms an ambiguous decimal conversion.
+- Settings has the four Apple tabs (General, New Document, Grid, Large Files)
+  with the documented defaults and immediate application. About shows the
+  version, descriptions, website, review link and the bundled MIT license.
+- Language switching re-renders every open view in the same tick. Native file
+  dialogs are created after the switch and use the platform locale.
+
+### Visual and performance verification
+
+- `apps/tabtool-desktop/tests/visual.rs` renders 22 states at 1200×800 and
+  640×400 in light and dark: the empty root, new document, CSV header, row and
+  column selection, cell editor, format bar, filter bar, needs-attention,
+  read-error, save-error, format-alert, reparse, large indexing, saving,
+  stale, the four Settings tabs, About and Export. That is 88 committed
+  baselines under `apps/tabtool-desktop/tests/snapshots/`.
+- The granular UI tests keep their own baselines under
+  `crates/tabtool-ui/tests/snapshots/`. Both sets compare on macOS only;
+  Linux and Windows run the scenario, interaction and accessibility tests.
+  Set `TABTOOL_SKIP_SNAPSHOTS=1` to skip images, `UPDATE_SNAPSHOTS=1` to
+  regenerate after review.
+- Grid virtualization is proven with a counting `RowSource`: at 640×400 a
+  100,000-row scroll reads 119 cells (17 rows × 7 columns) in 78 µs in a
+  release build on an Apple M4 Pro (1.36 ms in the debug test build); the
+  large-document case reads 48 cells (16 rows × 3 columns) and never asks for
+  a row past the published index. These are observations, not CI gates.
+- The manual Windows/Linux parity checklist, known deviations, per-OS baseline
+  plan and full performance notes are in `docs/desktop-ui.md`.
+
+### Plan 4 boundary
+
+Delivered: the desktop shell, grid, chrome, files/export, filters, settings,
+About, language switching, visual baselines, performance tests and CI
+coverage for Windows/Linux/macOS.
+
+Not in Plan 4: the Android UI and navigation, SAF, share sheets, store
+packaging, installers and signed distribution.
 
 ## Large-file benchmark
 
@@ -769,11 +904,11 @@ Not in Plan 1 (later plans):
 ## Layer rules
 
 - Dependency direction: `core` ← `large` ← `document`; `document` ← `app`;
-  `i18n`, `platform` and `ui` ← `app`. App crates stay thin.
-- `core`, `large` and `document` contain no egui, winit, platform code or
-  async runtime. `core` also forbids `unsafe`; `unsafe` is allowed only in the
-  large-file mmap code and platform FFI, each block with a `// SAFETY:`
-  comment.
+  `i18n`, `settings`, `platform` and `ui` ← `app`. App crates stay thin.
+- `core`, `large`, `document` and `settings` contain no egui, winit, platform
+  code or async runtime. `core` also forbids `unsafe`; `unsafe` is allowed
+  only in the large-file mmap code and platform FFI, each block with a
+  `// SAFETY:` comment. `tabtool-ui` contains no platform services.
 - No user-visible strings in the core. Localization starts with the i18n plan.
 - `app/apple` is read-only here. Behavior and visuals follow the Apple app;
   deliberate differences must be listed in the design's §14 and approved.
