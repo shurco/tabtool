@@ -8,6 +8,7 @@ use tabtool_core::{CsvConfiguration, CsvTable, CsvWriteIssue, RowSource};
 
 use crate::filter_model::RowFilterModel;
 use crate::io;
+use crate::large_save::LargeSaveJob;
 use crate::large_state::LargeState;
 use crate::snapshot::DocumentSnapshot;
 use crate::storage::Storage;
@@ -48,6 +49,9 @@ pub struct Document {
     pub(crate) snapshot_cache: Option<(u64, Arc<DocumentSnapshot>)>,
     /// Whether a transactional re-read currently owns the document.
     pub(crate) rereading: bool,
+    /// The streaming save in flight, if any. Its shared state survives even
+    /// when the caller drops the returned [`LargeSaveJob`].
+    pub(crate) large_save: Option<LargeSaveJob>,
     /// A one-shot message the window should present.
     ///
     /// A [`Cell`] lets the read-only copy commands raise the copy-limit
@@ -82,6 +86,7 @@ impl Document {
             saved_revision: 0,
             snapshot_cache: None,
             rereading: false,
+            large_save: None,
             notice: Cell::new(None),
             large_status: LargeStatus::None,
         }
@@ -312,7 +317,15 @@ impl Document {
     }
 
     /// Where a large file stands.
+    ///
+    /// While a streaming save runs, the reported fraction is read from the
+    /// job, so callers see the writer's progress without polling a setter.
     pub fn large_status(&self) -> LargeStatus {
+        if let LargeStatus::Saving(_) = self.large_status
+            && let Some(job) = &self.large_save
+        {
+            return LargeStatus::Saving(job.progress());
+        }
         self.large_status
     }
 

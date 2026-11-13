@@ -172,16 +172,16 @@ impl Document {
     /// Rows are readable through [`Document::row_source`] throughout, but
     /// [`Document::can_edit_cells`] only turns true when the index is complete.
     pub fn poll_large_indexing(&mut self) {
-        let Some(large) = self.large.as_ref() else {
-            self.large_status = LargeStatus::None;
-            return;
-        };
         if matches!(
             self.large_status,
             LargeStatus::Stale { .. } | LargeStatus::Saving(_)
         ) {
             return;
         }
+        let Some(large) = self.large.as_ref() else {
+            self.large_status = LargeStatus::None;
+            return;
+        };
         let status = if large.indexer.is_finished() {
             LargeStatus::Ready
         } else {
