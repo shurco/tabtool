@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tabtool_core::{ColumnId, CsvConfiguration};
 use tabtool_large::{
     CellKey, CellOverlay, LargeCSVSource, LargeFileIndexer, LargeFileSaveError, LargeFileSaver,
-    LargeSaveSnapshot, MappedFile, RowIndex, volume_capacity,
+    LargeSaveSnapshot, MappedFile, PreparedSave, RowIndex, volume_capacity,
 };
 
 use crate::large_save::{LargeSaveAdoption, LargeSaveJobOutcome};
@@ -57,13 +57,17 @@ pub(crate) struct WorkerOutcome {
 /// Runs one save to completion.
 ///
 /// `before_install` runs after every reference to the original mapping has been
-/// dropped and before the target is replaced. It exists so a unit test can
-/// assert the Windows constraint without a Windows build.
+/// dropped and before the target is replaced. `install` is normally
+/// [`PreparedSave::install`]; the parameter lets a unit test inject a failing
+/// post-swap directory sync without hiding the adoption path. Both hooks exist
+/// so the Windows mapping constraint and the adopt-after-replace rule can be
+/// tested without a Windows build.
 pub(crate) fn execute_save(
     inputs: SaveInputs,
     cancelled: &AtomicBool,
     progress: impl Fn(f64),
     before_install: impl FnOnce(),
+    install: impl FnOnce(PreparedSave) -> Result<(), LargeFileSaveError>,
 ) -> WorkerOutcome {
     let SaveInputs {
         original,
@@ -128,7 +132,7 @@ pub(crate) fn execute_save(
     drop(original);
     before_install();
 
-    match prepared.install() {
+    match install(prepared) {
         Ok(()) => match index_target(&target, &configuration) {
             Ok((file, indexer)) => {
                 let source = Arc::new(LargeCSVSource::new(
@@ -204,8 +208,19 @@ fn index_target(
         INDEX_PROGRESS_INTERVAL,
     ));
     indexer.start(|_| {});
-    indexer.wait();
+    finish_index(&indexer)?;
     Ok((file, indexer))
+}
+
+/// Joins the indexer and refuses to adopt an incomplete index.
+fn finish_index(indexer: &LargeFileIndexer) -> io::Result<()> {
+    indexer.wait();
+    if !indexer.is_finished() {
+        return Err(io::Error::other(
+            "the written file could not be indexed completely",
+        ));
+    }
+    Ok(())
 }
 
 /// The overlay the adopted source starts with: every saved edit is gone from
@@ -242,5 +257,35 @@ fn failure_outcome(error: LargeFileSaveError, cancelled: &AtomicBool) -> LargeSa
         LargeSaveJobOutcome::Cancelled
     } else {
         LargeSaveJobOutcome::Failed(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use tabtool_core::CsvConfiguration;
+
+    use super::*;
+
+    #[test]
+    fn finish_index_refuses_an_index_that_never_finished() {
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let path = directory.path().join("big.csv");
+        std::fs::write(&path, b"a,b\n1,2\n").expect("fixture file is written");
+        let file = Arc::new(MappedFile::open(&path).expect("fixture opens"));
+        let indexer = Arc::new(LargeFileIndexer::new(
+            Arc::clone(&file),
+            CsvConfiguration::default(),
+            4_096,
+            Duration::ZERO,
+        ));
+
+        let error = finish_index(&indexer).expect_err("an unstarted index is incomplete");
+        assert_eq!(error.kind(), io::ErrorKind::Other);
+
+        indexer.start(|_| {});
+        finish_index(&indexer).expect("the complete index is accepted");
     }
 }

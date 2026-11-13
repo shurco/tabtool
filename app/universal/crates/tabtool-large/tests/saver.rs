@@ -522,6 +522,27 @@ fn prepare_refuses_without_twice_the_free_space() {
 }
 
 #[test]
+fn install_keeps_the_swap_when_the_directory_sync_fails() {
+    let directory = TempDirectory::new();
+    let source = make_source(&directory, b"a,b\n1,2\n", &configuration());
+    source.set_cell("9", 1, 1).expect("row 1 is editable");
+    let target = directory.path().join("source.csv");
+    let prepared = prepare_with_capacity(&source.save_snapshot(), &target, AMPLE_CAPACITY)
+        .expect("the save prepares");
+    drop(source);
+
+    prepared
+        .install_with_directory_sync(|_| Err(io::Error::other("injected sync failure")))
+        .expect("a failed directory sync does not undo the swap");
+
+    assert_eq!(
+        fs::read(&target).expect("the target reads"),
+        b"a,b\n\"1\",\"9\"\n"
+    );
+    assert_eq!(entries(directory.path()), ["source.csv"]);
+}
+
+#[test]
 fn save_replaces_the_original() {
     let directory = TempDirectory::new();
     let source = make_source(&directory, b"a,b\n1,2\n", &configuration());

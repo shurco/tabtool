@@ -136,9 +136,10 @@ fn create_and_stream(
 /// reference, the replacement fails with a typed I/O error; there is no
 /// in-place fallback.
 ///
-/// On Unix the parent directory is synced after the swap. If that sync fails,
-/// the error is returned although `replacing` already holds the saved bytes;
-/// `Err` does not always mean the old file is still on disk.
+/// On Unix the parent directory is synced after the swap. A failing sync is
+/// reported to the error stream and does not fail the save: the target already
+/// holds the saved bytes, so the caller must adopt them instead of restoring
+/// the old state.
 ///
 /// A caller that needs to drop its own mapping between writing and replacing
 /// uses [`LargeFileSaver::prepare`] and [`PreparedSave::install`] instead.
@@ -245,16 +246,34 @@ pub struct PreparedSave {
 }
 
 impl PreparedSave {
-    /// Replaces `target` with the prepared file and syncs its parent on Unix.
+    /// Replaces `target` with the prepared file and syncs its parent.
     ///
     /// An existing target is replaced atomically where the platform allows; a
-    /// missing target is created by a plain rename. On Unix a failed parent
-    /// sync is returned although the target already holds the saved bytes:
-    /// `Err` does not always mean the old file is still on disk.
-    pub fn install(mut self) -> Result<(), LargeFileSaveError> {
+    /// missing target is created by a plain rename. The target is replaced
+    /// before the parent sync, so a failed sync is reported to the error stream
+    /// and does not fail the save; the written bytes are already in place.
+    pub fn install(self) -> Result<(), LargeFileSaveError> {
+        self.install_with_directory_sync(sync_directory)
+    }
+
+    /// Replaces `target` and syncs its parent with `sync`.
+    ///
+    /// This is the testable form of [`PreparedSave::install`]. Only a failure
+    /// before the replace is returned as `Err`; a failing sync after the
+    /// replace is logged, because the target already holds the saved bytes and
+    /// the caller must adopt them.
+    #[doc(hidden)]
+    pub fn install_with_directory_sync(
+        mut self,
+        sync: impl FnOnce(&Path) -> io::Result<()>,
+    ) -> Result<(), LargeFileSaveError> {
         install_file(&self.temporary, &self.target)?;
-        #[cfg(unix)]
-        sync_directory(parent_of(&self.target))?;
+        if let Err(error) = sync(parent_of(&self.target)) {
+            eprintln!(
+                "tabtool: saved {} but could not sync its directory: {error}",
+                self.target.display()
+            );
+        }
         self.directory.take();
         Ok(())
     }
@@ -329,6 +348,12 @@ fn copy_permissions(source: &Path, target: &Path) -> io::Result<()> {
 #[cfg(unix)]
 fn sync_directory(path: &Path) -> io::Result<()> {
     File::open(path)?.sync_all()
+}
+
+/// Directory syncs are a Unix durability step; other platforms have none.
+#[cfg(not(unix))]
+fn sync_directory(_path: &Path) -> io::Result<()> {
+    Ok(())
 }
 
 fn ensure_ready(snapshot: &LargeSaveSnapshot) -> Result<(), LargeFileSaveError> {

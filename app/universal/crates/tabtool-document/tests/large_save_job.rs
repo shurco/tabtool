@@ -123,7 +123,7 @@ fn edits_are_refused_while_saving() {
     let fixture = Fixture::new();
     let path = fixture.csv(300);
     let mut document = open_without_header(&path);
-    let before = source(&document);
+    let before = Arc::downgrade(&source(&document));
     let copy = fixture.copy_path();
     let _job = document
         .start_large_save(Some(&copy))
@@ -142,7 +142,11 @@ fn edits_are_refused_while_saving() {
     document.cancel_large_save();
     document.wait_for_large_save().expect("settle the save");
     let after = source(&document);
-    assert!(Arc::ptr_eq(&before, &after));
+    assert!(
+        before
+            .upgrade()
+            .is_some_and(|before| Arc::ptr_eq(&before, &after))
+    );
     assert!(after.overlay.is_empty());
 }
 
@@ -151,7 +155,7 @@ fn cancel_before_the_writer_starts_restores_the_original() {
     let fixture = Fixture::new();
     let path = fixture.large_csv(2_000_000);
     let mut document = open_without_header(&path);
-    let before = source(&document);
+    let before = Arc::downgrade(&source(&document));
     document.set_large_cell("X", 2, 1).expect("edit the cell");
     let copy = fixture.copy_path();
 
@@ -165,7 +169,11 @@ fn cancel_before_the_writer_starts_restores_the_original() {
 
     assert!(!copy.exists(), "a cancelled save leaves no target file");
     let after = source(&document);
-    assert!(Arc::ptr_eq(&before, &after));
+    assert!(
+        before
+            .upgrade()
+            .is_some_and(|before| Arc::ptr_eq(&before, &after))
+    );
     assert_eq!(after.cell(2, 1), "X");
     assert_eq!(after.overlay.count(), 1);
     assert_eq!(document.undo_action(), Some(UndoAction::EditCell));
@@ -180,7 +188,7 @@ fn cancel_mid_copy_restores_the_original() {
     let path = fixture.large_csv(2_000_000);
     let mut document = open_without_header(&path);
     let before_inode = inode(&path);
-    let before = source(&document);
+    let before = Arc::downgrade(&source(&document));
     document.set_large_cell("X", 2, 1).expect("edit the cell");
     let _job = document
         .start_large_save(None)
@@ -204,7 +212,11 @@ fn cancel_mid_copy_restores_the_original() {
 
     assert_eq!(inode(&path), before_inode, "the original file is untouched");
     let after = source(&document);
-    assert!(Arc::ptr_eq(&before, &after));
+    assert!(
+        before
+            .upgrade()
+            .is_some_and(|before| Arc::ptr_eq(&before, &after))
+    );
     assert_eq!(after.cell(2, 1), "X");
     assert_eq!(after.overlay.count(), 1);
     assert!(document.can_undo());
@@ -217,7 +229,7 @@ fn a_failed_save_restores_the_edits_and_undo() {
     let fixture = Fixture::new();
     let path = fixture.csv(300);
     let mut document = open_without_header(&path);
-    let before = source(&document);
+    let before = Arc::downgrade(&source(&document));
     document.set_large_cell("X", 2, 1).expect("edit the cell");
     // A missing parent makes the streaming writer fail before it installs.
     let destination = fixture.directory().join("missing").join("copy.csv");
@@ -232,7 +244,11 @@ fn a_failed_save_restores_the_edits_and_undo() {
     assert!(matches!(error, LargeFileSaveError::Io(_)));
     assert!(!destination.exists());
     let after = source(&document);
-    assert!(Arc::ptr_eq(&before, &after));
+    assert!(
+        before
+            .upgrade()
+            .is_some_and(|before| Arc::ptr_eq(&before, &after))
+    );
     assert_eq!(after.cell(2, 1), "X");
     assert_eq!(after.overlay.count(), 1);
     assert_eq!(document.undo_action(), Some(UndoAction::EditCell));
@@ -251,7 +267,7 @@ fn job_wait_reports_the_adopted_source_before_the_document_applies_it() {
     let fixture = Fixture::new();
     let path = fixture.csv(300);
     let mut document = open_without_header(&path);
-    let before = source(&document);
+    let before = Arc::downgrade(&source(&document));
     document.set_large_cell("X", 2, 1).expect("edit the cell");
     let copy = fixture.copy_path();
 
@@ -263,7 +279,7 @@ fn job_wait_reports_the_adopted_source_before_the_document_applies_it() {
     let LargeSaveJobOutcome::Saved(adoption) = outcome else {
         panic!("expected the adopted source, got {outcome:?}");
     };
-    assert!(!Arc::ptr_eq(&before, &adoption.source));
+    assert!(before.upgrade().is_none());
     assert_eq!(adoption.source.cell(2, 1), "X");
     assert!(adoption.indexer.is_finished());
 
@@ -272,7 +288,7 @@ fn job_wait_reports_the_adopted_source_before_the_document_applies_it() {
     document
         .wait_for_large_save()
         .expect("apply the cached outcome");
-    assert!(!Arc::ptr_eq(&before, &source(&document)));
+    assert!(before.upgrade().is_none());
     assert_eq!(document.file_path(), Some(copy.as_path()));
     assert_eq!(document.large_status(), LargeStatus::Ready);
     assert!(!document.is_dirty());

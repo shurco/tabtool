@@ -11,7 +11,9 @@ use support::{
     Fixture, inode, lines, open_indexing, open_without_header, saving, source, start_error,
 };
 use tabtool_core::{CsvConfiguration, CsvError};
-use tabtool_document::{DocumentError, DocumentNotice, LargeStatus, StdStorage, UndoAction};
+use tabtool_document::{
+    DocumentError, DocumentNotice, LargeSaveJobOutcome, LargeStatus, StdStorage, UndoAction,
+};
 use tabtool_large::{LargeFileSaveError, Staleness};
 
 #[test]
@@ -20,8 +22,14 @@ fn save_writes_the_edits_and_adopts_the_written_file() {
     let path = fixture.csv(300);
     let mut document = open_without_header(&path);
     let original = lines(&path);
-    let before = source(&document);
-    let before_ids = before.column_ids();
+    // Keep only a weak reference: a live source would hold the mapping that
+    // the install must be able to replace on Windows.
+    let before = Arc::downgrade(&source(&document));
+    let before_ids = document
+        .large_state()
+        .expect("large state")
+        .source
+        .column_ids();
     document.selection_mut().rows.insert(2);
     document.set_large_cell("X", 2, 1).expect("edit the cell");
 
@@ -39,7 +47,10 @@ fn save_writes_the_edits_and_adopts_the_written_file() {
             .all(|(row, line)| row == 2 || *line == original[row])
     );
     let after = source(&document);
-    assert!(!Arc::ptr_eq(&before, &after));
+    assert!(
+        before.upgrade().is_none(),
+        "the old source and its mapping are gone"
+    );
     assert_eq!(after.column_ids(), before_ids);
     assert!(after.overlay.is_empty());
     assert_eq!(after.cell(2, 1), "X");
@@ -70,6 +81,30 @@ fn save_without_edits_leaves_the_file_alone() {
     assert!(document.is_large_mode());
     assert!(!document.is_dirty());
     assert_eq!(document.large_save_progress(), None);
+}
+
+#[test]
+fn a_second_wait_for_large_save_is_a_no_op() {
+    let fixture = Fixture::new();
+    let path = fixture.csv(300);
+    let mut document = open_without_header(&path);
+    document.set_large_cell("X", 2, 1).expect("edit the cell");
+
+    let job = document
+        .start_large_save(None)
+        .expect("start the in-place save");
+    document
+        .wait_for_large_save()
+        .expect("apply the save outcome");
+    let after = source(&document);
+
+    document
+        .wait_for_large_save()
+        .expect("a second wait is a no-op");
+
+    assert!(Arc::ptr_eq(&after, &source(&document)));
+    assert_eq!(document.large_status(), LargeStatus::Ready);
+    assert!(matches!(job.wait(), LargeSaveJobOutcome::Applied));
 }
 
 #[test]
@@ -138,8 +173,12 @@ fn save_as_writes_the_new_file_and_keeps_the_original() {
     let path = fixture.csv(300);
     let mut document = open_without_header(&path);
     let original = std::fs::read(&path).expect("fixture is readable");
-    let before = source(&document);
-    let before_ids = before.column_ids();
+    let before = Arc::downgrade(&source(&document));
+    let before_ids = document
+        .large_state()
+        .expect("large state")
+        .source
+        .column_ids();
     document.set_large_cell("X", 2, 1).expect("edit the cell");
     let copy = fixture.copy_path();
 
@@ -151,7 +190,10 @@ fn save_as_writes_the_new_file_and_keeps_the_original() {
     assert_eq!(lines(&copy)[2], "\"r2\",\"X\",\"q 2\"");
     assert_eq!(document.file_path(), Some(copy.as_path()));
     let after = source(&document);
-    assert!(!Arc::ptr_eq(&before, &after));
+    assert!(
+        before.upgrade().is_none(),
+        "the old source and its mapping are gone"
+    );
     assert_eq!(after.column_ids(), before_ids);
     assert!(after.overlay.is_empty());
     assert_eq!(after.cell(2, 1), "X");

@@ -19,7 +19,9 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
 
-use tabtool_large::{LargeCSVSource, LargeFileIndexer, LargeFileSaveError, MappedFile};
+use tabtool_large::{
+    LargeCSVSource, LargeFileIndexer, LargeFileSaveError, MappedFile, PreparedSave,
+};
 
 use crate::Document;
 use crate::large_save_worker::{SaveInputs, WorkerOutcome, execute_save};
@@ -35,6 +37,9 @@ use crate::types::{DocumentPhase, LargeStatus};
 pub enum LargeSaveJobOutcome {
     /// The file was written and is ready to replace the source on screen.
     Saved(LargeSaveAdoption),
+    /// The document already adopted this save, so the job no longer holds the
+    /// target mapping. A later waiter gets this instead of [`Self::Saved`].
+    Applied,
     /// The save was cancelled; the original state was restored.
     Cancelled,
     /// The save failed; the original state was restored when possible.
@@ -88,7 +93,12 @@ impl LargeSaveJob {
     ///
     /// Every handle receives the same cached outcome, including the original
     /// typed [`LargeFileSaveError`]. The document applies the outcome only in
-    /// [`Document::wait_for_large_save`].
+    /// [`Document::wait_for_large_save`]. After that call installs the adopted
+    /// source, it replaces the cached value with [`LargeSaveJobOutcome::Applied`]
+    /// so a job handle kept by the caller cannot keep the target mapped and
+    /// block the next in-place save on Windows. A [`LargeSaveJobOutcome::Saved`]
+    /// value returned to the caller still owns the target mapping: drop it
+    /// before another in-place save.
     pub fn wait(self) -> LargeSaveJobOutcome {
         wait_shared(&self.shared)
     }
@@ -185,6 +195,7 @@ impl Document {
                             .store(fraction.to_bits(), Ordering::Release);
                     },
                     || {},
+                    PreparedSave::install,
                 )
             });
 
@@ -248,6 +259,10 @@ impl Document {
     /// and failed saves restore the original mapping, overlay and undo history;
     /// a failure returns its typed error. A second call after the job settled
     /// does nothing.
+    ///
+    /// After adoption the job cache holds [`LargeSaveJobOutcome::Applied`]
+    /// instead of the source, so a [`LargeSaveJob`] handle kept by the caller
+    /// cannot keep the target mapping alive for the next in-place save.
     pub fn wait_for_large_save(&mut self) -> Result<(), LargeFileSaveError> {
         let Some(job) = self.large_save.take() else {
             return Ok(());
@@ -259,8 +274,10 @@ impl Document {
             LargeSaveJobOutcome::Saved(adoption) => {
                 self.adopt_large(adoption, shared.destination.clone());
                 self.saved_revision = shared.revision;
+                lock(&shared.inner).cached = Some(LargeSaveJobOutcome::Applied);
                 Ok(())
             }
+            LargeSaveJobOutcome::Applied => Ok(()),
             LargeSaveJobOutcome::Cancelled => {
                 self.restore_or_clear(restored);
                 Ok(())
@@ -299,6 +316,11 @@ impl Document {
         if !state.indexer.is_finished() {
             return Err(LargeFileSaveError::IndexingNotFinished);
         }
+        // `is_finished` is published before the worker's final callback and
+        // thread exit. Join it here so no indexer thread can keep an
+        // `Arc<MappedFile>` alive past the mapping release that the install
+        // needs on Windows.
+        state.indexer.wait();
         let source_path = self
             .file_path
             .clone()
@@ -331,6 +353,10 @@ impl Document {
 
     /// Puts the written file on screen with the same columns and overlay.
     fn adopt_large(&mut self, adoption: LargeSaveAdoption, path: PathBuf) {
+        debug_assert!(
+            adoption.indexer.is_finished(),
+            "the adopted index must be complete"
+        );
         self.table = None;
         self.large = Some(LargeState {
             source: adoption.source,
@@ -410,10 +436,14 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 mod tests {
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
+    use std::sync::mpsc;
+    use std::time::Duration;
 
     use tabtool_core::CsvConfiguration;
+    use tabtool_large::{CellOverlay, LargeCSVSource, LargeFileIndexer, MappedFile};
 
     use super::*;
+    use crate::types::LargeStatus;
 
     /// The Windows constraint, checked without a Windows build: no reference
     /// to the original mapping may survive until the install.
@@ -458,10 +488,160 @@ mod tests {
                     "the original mapping is released before install"
                 );
             },
+            PreparedSave::install,
         );
 
         assert!(matches!(outcome.outcome, LargeSaveJobOutcome::Saved(_)));
         assert!(weak.upgrade().is_none());
+        let saved = std::fs::read_to_string(&copy).expect("the copy is readable");
+        assert_eq!(saved.lines().nth(2), Some("\"r2\",\"X\",\"q 2\""));
+    }
+
+    /// `is_finished` is published before the indexer thread exits. The save
+    /// must join that thread before the mapping release, or the thread can keep
+    /// an `Arc<MappedFile>` alive until the Windows install fails.
+    #[test]
+    fn the_indexer_thread_is_joined_before_the_mapping_is_released() {
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let path = directory.path().join("big.csv");
+        let text = (0..300)
+            .map(|row| format!("r{row},v{},\"q {row}\"", row % 7))
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::write(&path, text).expect("fixture file is written");
+        let configuration = CsvConfiguration::default();
+
+        let file = Arc::new(MappedFile::open(&path).expect("fixture opens"));
+        let indexer = Arc::new(LargeFileIndexer::new(
+            Arc::clone(&file),
+            configuration.clone(),
+            4_096,
+            Duration::ZERO,
+        ));
+        let (entered_sender, entered) = mpsc::channel();
+        let (release, released) = mpsc::channel::<()>();
+        indexer.start(move |progress| {
+            if progress.is_finished {
+                entered_sender
+                    .send(())
+                    .expect("the test waits for the final callback");
+                released.recv().expect("the test releases the callback");
+            }
+        });
+        entered
+            .recv_timeout(Duration::from_secs(10))
+            .expect("the final callback runs");
+        assert!(
+            indexer.is_finished(),
+            "the finished flag is set before the callback returns"
+        );
+
+        let source = Arc::new(LargeCSVSource::new(
+            Arc::clone(&file),
+            configuration.clone(),
+            Arc::clone(&indexer),
+            CellOverlay::new(),
+            Vec::new(),
+        ));
+        let mut document = Document::new(configuration.clone());
+        document.table = None;
+        document.large = Some(LargeState {
+            source,
+            indexer: Arc::clone(&indexer),
+            file: Arc::clone(&file),
+        });
+        document.file_path = Some(path.clone());
+        document.phase = DocumentPhase::Ready;
+        document.bump_revision();
+        document.saved_revision = document.revision;
+        document.large_status = LargeStatus::Ready;
+        document.set_large_cell("X", 2, 1).expect("edit the cell");
+        let weak = Arc::downgrade(&file);
+        drop(indexer);
+        drop(file);
+        let copy = directory.path().join("copy.csv");
+        let (inputs_sender, inputs) = mpsc::channel();
+
+        std::thread::scope(|scope| {
+            scope.spawn(move || {
+                let prepared = document
+                    .prepare_save(Some(&copy))
+                    .expect("the synchronous half starts");
+                inputs_sender
+                    .send(prepared)
+                    .expect("the test receives the inputs");
+            });
+            std::thread::sleep(Duration::from_millis(100));
+            assert!(
+                matches!(inputs.try_recv(), Err(mpsc::TryRecvError::Empty)),
+                "prepare_save waits for the indexer thread"
+            );
+            release.send(()).expect("release the indexer callback");
+            let inputs = inputs
+                .recv_timeout(Duration::from_secs(10))
+                .expect("prepare_save finishes");
+            let outcome = execute_save(
+                inputs,
+                &AtomicBool::new(false),
+                |_| {},
+                || {
+                    assert!(
+                        weak.upgrade().is_none(),
+                        "the indexer thread ended and the mapping is released"
+                    );
+                },
+                PreparedSave::install,
+            );
+            assert!(matches!(outcome.outcome, LargeSaveJobOutcome::Saved(_)));
+        });
+    }
+
+    /// A directory sync after the swap may fail; the target already holds the
+    /// new bytes, so the worker must adopt it instead of restoring the old
+    /// seeded index.
+    #[test]
+    fn a_post_swap_sync_failure_is_adopted() {
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let path = directory.path().join("big.csv");
+        let text = (0..300)
+            .map(|row| format!("r{row},v{},\"q {row}\"", row % 7))
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::write(&path, text).expect("fixture file is written");
+
+        let mut document = Document::new(CsvConfiguration::default());
+        document
+            .open_large(&path, None, false, 0)
+            .expect("open the fixture");
+        document.large_state().expect("large state").indexer.wait();
+        document.poll_large_indexing();
+        if document.configuration().first_row_as_header {
+            document.set_large_header_enabled(false);
+        }
+        document.set_large_cell("X", 2, 1).expect("edit the cell");
+        let copy = directory.path().join("copy.csv");
+
+        let inputs = document
+            .prepare_save(Some(&copy))
+            .expect("the synchronous half starts");
+        let outcome = execute_save(
+            inputs,
+            &AtomicBool::new(false),
+            |_| {},
+            || {},
+            |prepared| {
+                prepared.install_with_directory_sync(|_| {
+                    Err(io::Error::other("injected directory sync failure"))
+                })
+            },
+        );
+
+        let LargeSaveJobOutcome::Saved(adoption) = outcome.outcome else {
+            panic!("a post-swap sync failure must keep the adopted file");
+        };
+        assert!(outcome.restored.is_none(), "the old index is not restored");
+        assert!(adoption.indexer.is_finished());
+        assert_eq!(adoption.source.cell(2, 1), "X");
         let saved = std::fs::read_to_string(&copy).expect("the copy is readable");
         assert_eq!(saved.lines().nth(2), Some("\"r2\",\"X\",\"q 2\""));
     }

@@ -48,7 +48,7 @@ impl Document {
     /// Returns [`DocumentError::RequiresConfirmation`] while a re-read is in
     /// flight, [`DocumentError::NotReady`] before a table loads or when the
     /// document has no path (Save As is the way to bind one), and
-    /// and [`DocumentError::Csv`] for the typed write issue. A blocked gate or a
+    /// [`DocumentError::Csv`] for the typed write issue. A blocked gate or a
     /// failed write leaves the document dirty and the previous file untouched.
     /// A streaming large save in flight reports [`DocumentError::Busy`].
     pub fn save(&mut self, storage: &dyn Storage) -> Result<(), DocumentError> {
