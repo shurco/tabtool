@@ -6,6 +6,7 @@ fn the_catalog_has_the_translated_keys() {
     assert!(key_count() > 0, "the catalog is not empty");
     assert!(keys().any(|key| key == "Decimal"));
     assert!(keys().any(|key| key == "Saving… %lld%%"));
+    assert!(keys().any(|key| key == "CSV"));
 }
 
 #[test]
@@ -77,7 +78,12 @@ fn runtime_strings_resolve_in_french() {
 fn system_and_unknown_languages_fall_back_to_english() {
     assert_eq!(tr(Language::System, "Cancel"), "Cancel");
     assert_eq!(tr(Language::En, "Cancel"), "Cancel");
-    assert_eq!(tr(Language::De, "no such key"), "");
+    assert_eq!(tr(Language::De, "no such key"), "no such key");
+}
+
+#[test]
+fn an_unknown_key_reads_as_itself() {
+    assert_eq!(tr(Language::Fr, "Not a catalog key"), "Not a catalog key");
 }
 
 #[test]
@@ -92,6 +98,10 @@ fn the_language_list_is_system_first_and_unique() {
     codes.dedup();
     assert_eq!(codes.len(), 11);
     assert_eq!(LOCALES.len(), 11);
+}
+
+#[test]
+fn locales_cannot_drift_from_the_language_enum() {
     let ordered: Vec<_> = Language::ALL[1..]
         .iter()
         .map(|language| language.code().expect("every offered language has a code"))

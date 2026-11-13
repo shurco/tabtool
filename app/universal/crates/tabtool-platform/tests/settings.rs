@@ -338,6 +338,61 @@ fn saved_json_uses_the_app_language_code_and_the_recent_documents_key() {
     assert_eq!(value[keys::NEW_DOCUMENT_QUOTE_STYLE], "doubled");
 }
 
+#[cfg(unix)]
+#[test]
+fn non_utf8_recent_paths_round_trip() {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+
+    let path = PathBuf::from(OsString::from_vec(vec![
+        b'/', b't', b'm', b'p', b'/', 0xFF, b'.', b'c', b's', b'v',
+    ]));
+    let settings = Settings {
+        recent_documents: vec![path.clone()],
+        ..Settings::default()
+    };
+    let dir = TempDir::new().expect("temp dir");
+    let file = path_in(&dir);
+    settings.save(&file).expect("save");
+
+    assert_eq!(Settings::load(&file).recent_documents, vec![path]);
+    let value: serde_json::Value =
+        serde_json::from_slice(&fs::read(&file).expect("read")).expect("json");
+    assert!(
+        value[keys::RECENT_DOCUMENTS][0].is_object(),
+        "a non-UTF-8 path is stored without lossy text"
+    );
+}
+
+#[cfg(windows)]
+#[test]
+fn non_utf8_recent_paths_round_trip() {
+    use std::ffi::OsString;
+    use std::os::windows::ffi::OsStringExt;
+
+    let path = PathBuf::from(OsString::from_wide(&[
+        b'C' as u16,
+        b':' as u16,
+        b'\\' as u16,
+        0xD800,
+    ]));
+    let settings = Settings {
+        recent_documents: vec![path.clone()],
+        ..Settings::default()
+    };
+    let dir = TempDir::new().expect("temp dir");
+    let file = path_in(&dir);
+    settings.save(&file).expect("save");
+
+    assert_eq!(Settings::load(&file).recent_documents, vec![path]);
+    let value: serde_json::Value =
+        serde_json::from_slice(&fs::read(&file).expect("read")).expect("json");
+    assert!(
+        value[keys::RECENT_DOCUMENTS][0].is_object(),
+        "a non-UTF-8 path is stored without lossy text"
+    );
+}
+
 #[test]
 fn recent_documents_are_capped_at_ten() {
     let paths: Vec<String> = (0..12).map(|index| format!("/tmp/{index}.csv")).collect();
@@ -385,9 +440,23 @@ fn the_settings_path_is_in_the_platform_config_directory() {
         path.file_name().and_then(|name| name.to_str()),
         Some("settings.json")
     );
+    let components: Vec<String> = path
+        .iter()
+        .map(|component| component.to_string_lossy().to_lowercase())
+        .collect();
     assert!(
-        path.to_string_lossy().to_lowercase().contains("tabtool"),
+        components
+            .iter()
+            .any(|component| component == "tabtool" || component == "app.shurco.tabtool"),
         "{} is in the TabTool directory",
+        path.display()
+    );
+    #[cfg(target_os = "macos")]
+    assert!(
+        components
+            .iter()
+            .any(|component| component == "app.shurco.tabtool"),
+        "{} uses the bundle identifier",
         path.display()
     );
 }

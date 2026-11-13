@@ -3464,7 +3464,6 @@ dependencies = [
 name = "tabtool-platform"
 version = "0.1.0"
 dependencies = [
- "arboard",
  "directories",
  "icu_decimal",
  "icu_locale_core",

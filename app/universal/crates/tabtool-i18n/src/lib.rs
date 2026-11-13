@@ -9,10 +9,7 @@
 
 mod catalog;
 
-/// The 11 interface languages, in the order the settings offer them.
-pub const LOCALES: [&str; 11] = [
-    "en", "fr", "es", "de", "it", "pl", "be", "uk", "zh-Hans", "ja", "ko",
-];
+include!("../strings/locales.rs");
 
 /// An interface language, or following the system.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -120,16 +117,28 @@ impl Language {
 
 /// The translation of `key` for `language`, falling back to English.
 ///
-/// An unknown key reads as an empty string; the generated catalog is checked
-/// against the source by `xtask i18n --check`.
-pub fn tr(language: Language, key: &str) -> &'static str {
-    tr_in(language, key).unwrap_or("")
+/// A locale entry that is missing falls back to the English translation; a
+/// key that is not in the catalog reads as itself, so a typo is visible
+/// instead of an empty label. The generated catalog is checked against the
+/// source by `xtask i18n --check`.
+pub fn tr(language: Language, key: &str) -> &str {
+    resolve(language, key, tr_in)
 }
 
 /// The translation of `key` for `language`, without falling back to English.
 pub fn tr_in(language: Language, key: &str) -> Option<&'static str> {
     let code = language.code().unwrap_or("en");
     catalog::translation(key, code)
+}
+
+fn resolve(
+    language: Language,
+    key: &str,
+    lookup: impl Fn(Language, &str) -> Option<&'static str>,
+) -> &str {
+    lookup(language, key)
+        .or_else(|| lookup(Language::En, key))
+        .unwrap_or(key)
 }
 
 /// The language with every catalog key.
@@ -164,5 +173,31 @@ pub fn language_from_system(tags: &[String]) -> Language {
         "ja" => Language::Ja,
         "ko" => Language::Ko,
         _ => Language::En,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Language, resolve};
+
+    #[test]
+    fn a_missing_locale_entry_falls_back_to_english() {
+        let lookup = |language: Language, key: &str| match (language, key) {
+            (Language::En, "Only English") => Some("Only English"),
+            _ => None,
+        };
+        assert_eq!(
+            resolve(Language::Fr, "Only English", lookup),
+            "Only English"
+        );
+    }
+
+    #[test]
+    fn a_key_missing_from_english_reads_as_itself() {
+        let lookup = |_: Language, _: &str| None;
+        assert_eq!(
+            resolve(Language::Fr, "Not in the catalog", lookup),
+            "Not in the catalog"
+        );
     }
 }

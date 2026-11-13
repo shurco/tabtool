@@ -1,1 +1,15 @@
-{}
+{
+  "CSV": {
+    "en": "CSV",
+    "fr": "CSV",
+    "es": "CSV",
+    "de": "CSV",
+    "it": "CSV",
+    "pl": "CSV",
+    "be": "CSV",
+    "uk": "CSV",
+    "zh-Hans": "CSV",
+    "ja": "CSV",
+    "ko": "CSV"
+  }
+}

@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-pub use crate::locale::{SystemInfo, decimal_separator, system_locale};
+pub use crate::locale::{SystemInfo, SystemLocale, decimal_separator, system_locale};
 
 /// The file dialogs a view needs. Tests use a fake; the app uses [`DesktopPlatform`].
 pub trait FileDialogs {
@@ -33,6 +33,11 @@ pub trait OpenUrl {
 /// File dialogs use the platform's native panels. On Linux they go through
 /// the XDG desktop portal (`rfd`'s `xdg-portal` backend), so the build needs
 /// no GTK development packages and works in CI.
+///
+/// The clipboard is owned by egui in the desktop app: views call
+/// `egui::Context::copy_text` and read paste events. [`DesktopPlatform`]'s
+/// clipboard is a documented empty fallback so the trait also serves Android,
+/// whose clipboard bridge is Plan 5.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DesktopPlatform;
 
@@ -42,9 +47,10 @@ impl FileDialogs for DesktopPlatform {
     }
 
     fn save_file(&self, suggested_name: &str, extension: &str) -> Option<PathBuf> {
+        let language = tabtool_i18n::language_from_system(&SystemLocale.languages());
         rfd::FileDialog::new()
             .set_file_name(suggested_name)
-            .add_filter(extension.to_uppercase(), &[extension])
+            .add_filter(tabtool_i18n::tr(language, "CSV"), &[extension])
             .save_file()
     }
 
@@ -54,17 +60,13 @@ impl FileDialogs for DesktopPlatform {
 }
 
 impl Clipboard for DesktopPlatform {
+    /// The desktop app copies and pastes through egui; this fallback is empty.
     fn get(&self) -> Option<String> {
-        arboard::Clipboard::new()
-            .ok()
-            .and_then(|mut clipboard| clipboard.get_text().ok())
+        None
     }
 
-    fn set(&self, text: &str) {
-        if let Ok(mut clipboard) = arboard::Clipboard::new() {
-            let _ = clipboard.set_text(text);
-        }
-    }
+    /// The desktop app copies through egui; this fallback keeps no state.
+    fn set(&self, _text: &str) {}
 }
 
 impl OpenUrl for DesktopPlatform {

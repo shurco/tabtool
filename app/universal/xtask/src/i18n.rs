@@ -6,10 +6,7 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 
-/// The interface languages, in the settings order.
-const LOCALES: [&str; 11] = [
-    "en", "fr", "es", "de", "it", "pl", "be", "uk", "zh-Hans", "ja", "ko",
-];
+include!("../../crates/tabtool-i18n/strings/locales.rs");
 
 pub fn run(check: bool) -> Result<(), String> {
     let generated = render_catalog()?;
@@ -104,7 +101,18 @@ fn read_overlay() -> Result<Overlay, String> {
 
 fn merged_catalog() -> Result<BTreeMap<String, BTreeMap<String, String>>, String> {
     let mut strings = read_catalog()?;
-    for (key, translations) in read_overlay()? {
+    merge_overlay(&mut strings, read_overlay()?)?;
+    validate_complete(&strings)?;
+    Ok(strings)
+}
+
+/// Applies the overlay: a value replaces the String Catalog translation, and
+/// a new key adds a string the Apple catalog does not have.
+fn merge_overlay(
+    strings: &mut BTreeMap<String, BTreeMap<String, String>>,
+    overlay: Overlay,
+) -> Result<(), String> {
+    for (key, translations) in overlay {
         for (locale, value) in translations {
             if !LOCALES.contains(&locale.as_str()) {
                 return Err(format!("{key}: unknown overlay locale {locale}"));
@@ -115,9 +123,12 @@ fn merged_catalog() -> Result<BTreeMap<String, BTreeMap<String, String>>, String
                 .insert(locale, value);
         }
     }
+    Ok(())
+}
 
+fn validate_complete(strings: &BTreeMap<String, BTreeMap<String, String>>) -> Result<(), String> {
     let mut missing = Vec::new();
-    for (key, translations) in &strings {
+    for (key, translations) in strings {
         for locale in LOCALES {
             if translations.get(locale).is_none_or(String::is_empty) {
                 missing.push(format!("{locale}: {key}"));
@@ -131,7 +142,7 @@ fn merged_catalog() -> Result<BTreeMap<String, BTreeMap<String, String>>, String
             missing.join("\n")
         ));
     }
-    Ok(strings)
+    Ok(())
 }
 
 fn render_catalog() -> Result<String, String> {
@@ -176,14 +187,62 @@ fn render_catalog() -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{LOCALES, render_catalog};
+    use std::collections::{BTreeMap, BTreeSet};
+
+    use super::{LOCALES, Overlay, merge_overlay, render_catalog, validate_complete};
 
     #[test]
     fn the_generated_catalog_covers_every_key_in_every_locale() {
         let catalog = render_catalog().expect("the source catalog is complete");
         assert!(catalog.contains("(\"Cancel\", &["));
+        assert!(catalog.contains("(\"CSV\", &["));
         for locale in LOCALES {
             assert!(catalog.contains(&format!("({locale:?}, ")), "{locale}");
         }
+    }
+
+    #[test]
+    fn the_shared_locale_list_is_unique() {
+        let unique: BTreeSet<_> = LOCALES.iter().collect();
+        assert_eq!(unique.len(), 11);
+    }
+
+    #[test]
+    fn an_overlay_replaces_a_translation_and_adds_a_key() {
+        let mut catalog = BTreeMap::new();
+        let cancel = LOCALES
+            .iter()
+            .map(|locale| (locale.to_string(), "Cancel".to_string()))
+            .collect();
+        catalog.insert("Cancel".to_string(), cancel);
+
+        let mut overlay: Overlay = BTreeMap::new();
+        overlay.insert(
+            "Cancel".to_string(),
+            BTreeMap::from([("fr".to_string(), "Annuler !".to_string())]),
+        );
+        overlay.insert(
+            "CSV".to_string(),
+            LOCALES
+                .iter()
+                .map(|locale| (locale.to_string(), "CSV".to_string()))
+                .collect(),
+        );
+
+        merge_overlay(&mut catalog, overlay).expect("the overlay is valid");
+        assert_eq!(catalog["Cancel"]["fr"], "Annuler !");
+        assert_eq!(catalog["Cancel"]["de"], "Cancel");
+        assert_eq!(catalog["CSV"]["zh-Hans"], "CSV");
+        validate_complete(&catalog).expect("the merged catalog is complete");
+    }
+
+    #[test]
+    fn an_incomplete_catalog_is_rejected() {
+        let mut catalog = BTreeMap::new();
+        catalog.insert(
+            "Only English".to_string(),
+            BTreeMap::from([("en".to_string(), "Only English".to_string())]),
+        );
+        assert!(validate_complete(&catalog).is_err());
     }
 }

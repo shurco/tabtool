@@ -7,7 +7,6 @@ license.workspace = true
 description = "Desktop services, settings and system locale for TabTool."
 
 [dependencies]
-arboard = { version = "3.7", default-features = false }
 directories = "6"
 icu_decimal = { version = "2.4", features = ["alloc"] }
 icu_locale_core = "2.4"

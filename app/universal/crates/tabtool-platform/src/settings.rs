@@ -176,7 +176,10 @@ pub(crate) fn valid_row_height(value: f32) -> f32 {
 }
 
 /// The settings file in the platform config directory.
+///
+/// The identifier matches the bundle id `app.shurco.tabtool`: on macOS that
+/// yields `~/Library/Application Support/app.shurco.tabtool/settings.json`.
 pub fn settings_path() -> Option<PathBuf> {
-    directories::ProjectDirs::from("app", "shurco", "TabTool")
+    directories::ProjectDirs::from("app", "shurco", "tabtool")
         .map(|directories| directories.config_dir().join("settings.json"))
 }
