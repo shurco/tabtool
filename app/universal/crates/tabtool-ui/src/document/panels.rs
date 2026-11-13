@@ -4,7 +4,9 @@ use egui::{Align, Frame, Layout, RichText, Ui};
 use tabtool_document::{Document, DocumentPhase, LargeStatus};
 use tabtool_i18n::{Language, tr};
 
-use crate::grid::{GridAction, GridMenuOptions, GridOptions, GridPresenter, GridView, SortSpec};
+use crate::grid::{
+    GridAction, GridAppearance, GridMenuOptions, GridOptions, GridPresenter, GridView, SortSpec,
+};
 use crate::theme::current;
 use crate::widgets::{AlertAction, ButtonKind, modal};
 
@@ -52,13 +54,7 @@ impl DocumentView<'_> {
         let Some(source) = self.document.row_source() else {
             return Vec::new();
         };
-        let options = grid_options(
-            self.document,
-            self.language,
-            self.row_height,
-            self.alternating_rows,
-            self.shows_row_numbers,
-        );
+        let options = grid_options(self.document, self.language, self.appearance);
         let visible = self.document.row_filter().visible_rows.as_deref();
         let presenter = GridPresenter::new(source, visible);
         GridView {
@@ -273,9 +269,7 @@ impl DocumentView<'_> {
 fn grid_options(
     document: &Document,
     language: Language,
-    row_height: f32,
-    alternating_rows: bool,
-    shows_row_numbers: bool,
+    appearance: GridAppearance,
 ) -> GridOptions {
     let sort = document.active_sort().and_then(|sort| {
         document.row_source().and_then(|source| {
@@ -296,9 +290,9 @@ fn grid_options(
         0
     };
     GridOptions {
-        row_height,
-        alternating_rows,
-        shows_row_numbers,
+        row_height: appearance.row_height,
+        alternating_rows: appearance.alternating_rows,
+        shows_row_numbers: appearance.shows_row_numbers,
         decimal_mark: document.configuration().decimal_mark.clone(),
         editable: document.can_edit_cells(),
         sort,

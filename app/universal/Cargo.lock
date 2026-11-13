@@ -3677,7 +3677,16 @@ dependencies = [
  "tabtool-core",
  "tabtool-i18n",
  "tabtool-large",
+ "tabtool-settings",
  "tempfile",
+]
+
+[[package]]
+name = "tabtool-settings"
+version = "0.1.0"
+dependencies = [
+ "tabtool-core",
+ "tabtool-i18n",
 ]
 
 [[package]]
@@ -3698,7 +3707,7 @@ dependencies = [
  "tabtool-core",
  "tabtool-document",
  "tabtool-i18n",
- "tabtool-platform",
+ "tabtool-settings",
  "tabtool-ui",
  "tempfile",
 ]

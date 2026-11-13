@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use tabtool_core::Encoding;
 use tabtool_i18n::{Language, tr_in};
-use tabtool_platform::{QuoteStyle, Settings};
+use tabtool_settings::{QuoteStyle, Settings};
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::settings::{SettingsForm, SettingsTab, show};
 use tabtool_ui::{Theme, UiHarness};

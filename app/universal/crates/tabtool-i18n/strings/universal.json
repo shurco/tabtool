@@ -193,5 +193,18 @@
     "zh-Hans": "%lld GiB",
     "ja": "%lld GiB",
     "ko": "%lld GiB"
+  },
+  "A simple CSV editor.": {
+    "en": "A simple CSV editor.",
+    "fr": "Un éditeur CSV simple.",
+    "es": "Un editor de CSV sencillo.",
+    "de": "Ein einfacher CSV-Editor.",
+    "it": "Un semplice editor CSV.",
+    "pl": "Prosty edytor CSV.",
+    "be": "Просты рэдактар CSV.",
+    "uk": "Простий редактор CSV.",
+    "zh-Hans": "简单的 CSV 编辑器。",
+    "ja": "シンプルなCSVエディタ。",
+    "ko": "간단한 CSV 편집기."
   }
 }

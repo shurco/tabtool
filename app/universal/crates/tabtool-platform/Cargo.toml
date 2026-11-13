@@ -17,4 +17,5 @@ sys-locale = "0.3"
 tabtool-core = { path = "../tabtool-core" }
 tabtool-i18n = { path = "../tabtool-i18n" }
 tabtool-large = { path = "../tabtool-large" }
+tabtool-settings = { path = "../tabtool-settings" }
 tempfile = "3"

@@ -8,6 +8,7 @@ members = [
     "crates/tabtool-i18n",
     "crates/tabtool-large",
     "crates/tabtool-platform",
+    "crates/tabtool-settings",
     "crates/tabtool-testdata",
     "crates/tabtool-ui",
     "xtask",

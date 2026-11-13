@@ -23,7 +23,7 @@ use tabtool_core::{CsvConfiguration, Locale};
 use tabtool_document::{Document, DocumentError, DocumentNotice, DocumentPhase};
 use tabtool_i18n::Language;
 
-use crate::grid::{Clipboard, GridAction, GridState};
+use crate::grid::{Clipboard, GridAction, GridAppearance, GridState};
 use crate::theme::current;
 
 pub use dispatch::{apply_grid_action, sync_selection_to_document, sync_selection_to_grid};
@@ -142,12 +142,8 @@ pub struct DocumentView<'a> {
     pub decimal_separator: &'a str,
     /// Whether the format bar is visible.
     pub show_format_bar: bool,
-    /// The height of every grid row.
-    pub row_height: f32,
-    /// Whether grid rows alternate their background.
-    pub alternating_rows: bool,
-    /// Whether the grid shows row numbers.
-    pub shows_row_numbers: bool,
+    /// The grid row height, alternating rows and row numbers.
+    pub appearance: GridAppearance,
     /// A failed save the window wants to explain.
     pub save_error: Option<DocumentError>,
 }

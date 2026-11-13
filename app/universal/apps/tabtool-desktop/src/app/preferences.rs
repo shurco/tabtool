@@ -1,6 +1,6 @@
 //! Merging the Settings window into the app and persisting the result.
 
-use tabtool_platform::OpenUrl;
+use tabtool_platform::{OpenUrl, save_settings};
 
 use crate::about_window::{AboutAction, REVIEW_URL, WEBSITE_URL};
 
@@ -31,7 +31,7 @@ impl DesktopApp {
         }
         self.settings_dirty = false;
         if let Some(path) = &self.settings_path {
-            let _ = self.settings.save(path);
+            let _ = save_settings(&self.settings, path);
         }
     }
 

@@ -176,9 +176,7 @@ impl Fixture {
                 locale: &locale,
                 decimal_separator: ".",
                 show_format_bar,
-                row_height: 24.0,
-                alternating_rows: false,
-                shows_row_numbers: true,
+                appearance: tabtool_ui::grid::GridAppearance::default(),
                 save_error,
             }
             .show(ui);

@@ -66,7 +66,7 @@ pub use geometry::{
     MIN_COLUMN_WIDTH, RESIZE_HANDLE_WIDTH, ROW_OVERSCAN, SORT_ARROW_WIDTH, gutter_width,
 };
 pub use keyboard::{EditorKeyAction, MoveDirection};
-pub use options::{GridOptions, SortSpec};
+pub use options::{GridAppearance, GridOptions, SortSpec};
 pub use presenter::GridPresenter;
 pub use selection::{
     GridAnchor, GridElement, GridFocus, GridSelection, GridTapOutcome, move_focus, resolve_tap,

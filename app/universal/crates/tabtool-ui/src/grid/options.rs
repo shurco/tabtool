@@ -15,6 +15,27 @@ pub struct SortSpec {
     pub direction: SortDirection,
 }
 
+/// The user's grid presentation settings.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GridAppearance {
+    /// The height of every data row.
+    pub row_height: f32,
+    /// Whether odd rows use a tinted background.
+    pub alternating_rows: bool,
+    /// Whether the row-number gutter is visible.
+    pub shows_row_numbers: bool,
+}
+
+impl Default for GridAppearance {
+    fn default() -> Self {
+        Self {
+            row_height: 24.0,
+            alternating_rows: false,
+            shows_row_numbers: true,
+        }
+    }
+}
+
 /// The grid presentation settings.
 #[derive(Clone, Debug, PartialEq)]
 pub struct GridOptions {
@@ -51,10 +72,11 @@ pub struct GridOptions {
 
 impl Default for GridOptions {
     fn default() -> Self {
+        let appearance = GridAppearance::default();
         Self {
-            row_height: 24.0,
-            alternating_rows: false,
-            shows_row_numbers: true,
+            row_height: appearance.row_height,
+            alternating_rows: appearance.alternating_rows,
+            shows_row_numbers: appearance.shows_row_numbers,
             header_offset: 0,
             editable: true,
             decimal_mark: ".".to_string(),

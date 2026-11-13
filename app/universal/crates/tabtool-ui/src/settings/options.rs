@@ -2,7 +2,7 @@
 
 use tabtool_core::Encoding;
 use tabtool_i18n::{Language, tr};
-use tabtool_platform::LARGE_FILE_THRESHOLDS_MIB;
+use tabtool_settings::LARGE_FILE_THRESHOLDS_MIB;
 
 use crate::format_options::{DECIMALS, SEPARATORS};
 

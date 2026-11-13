@@ -4,7 +4,9 @@ use core::cell::RefCell;
 use std::rc::Rc;
 
 use tabtool_i18n::{Language, tr_in};
-use tabtool_ui::about::{AboutAction, COPYRIGHT_KEY, DESCRIPTION_KEY, LICENSE_KEY, NAME_KEY, show};
+use tabtool_ui::about::{
+    AboutAction, COPYRIGHT_KEY, DESCRIPTION_KEY, LICENSE_KEY, NAME_KEY, SHORT_DESCRIPTION_KEY, show,
+};
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::{Theme, UiHarness};
 
@@ -28,6 +30,7 @@ fn the_about_view_shows_identity_version_description_and_license() {
 
     assert!(harness.query_by_label("TabTool").is_some());
     assert!(harness.query_by_label("Version 1.2.3").is_some());
+    assert!(harness.query_by_label(SHORT_DESCRIPTION_KEY).is_some());
     assert!(harness.query_by_label(DESCRIPTION_KEY).is_some());
     assert!(harness.query_by_label("tabtool.shurco.app").is_some());
     assert!(harness.query_by_label("Rate TabTool").is_some());
@@ -36,12 +39,6 @@ fn the_about_view_shows_identity_version_description_and_license() {
     assert!(
         harness.query_by_label(LICENSE).is_some(),
         "the bundled license text is shown"
-    );
-    #[cfg(target_os = "macos")]
-    assert!(
-        harness
-            .query_by_label(tabtool_ui::about::PLATFORM_DESCRIPTION_KEY)
-            .is_some()
     );
 }
 
@@ -74,6 +71,7 @@ fn every_about_string_is_in_all_eleven_locales() {
     for language in Language::ALL.into_iter().skip(1) {
         for key in [
             NAME_KEY,
+            SHORT_DESCRIPTION_KEY,
             DESCRIPTION_KEY,
             LICENSE_KEY,
             COPYRIGHT_KEY,

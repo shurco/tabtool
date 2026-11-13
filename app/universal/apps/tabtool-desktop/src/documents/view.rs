@@ -63,9 +63,7 @@ impl crate::documents::WindowState {
             locale: &locale,
             decimal_separator: &decimal_separator,
             show_format_bar: self.show_format_bar,
-            row_height: self.row_height,
-            alternating_rows: self.alternating_rows,
-            shows_row_numbers: self.shows_row_numbers,
+            appearance: self.appearance,
             save_error,
         }
         .show(ui);

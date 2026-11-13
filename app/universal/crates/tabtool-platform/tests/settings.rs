@@ -6,7 +6,7 @@ use tabtool_core::{CsvConfiguration, Encoding};
 use tabtool_i18n::Language;
 use tabtool_platform::{
     LARGE_FILE_THRESHOLDS_MIB, QuoteStyle, RECENT_DOCUMENTS_LIMIT, ROW_HEIGHTS, Settings, keys,
-    settings_path,
+    load_settings, save_settings, settings_path,
 };
 use tempfile::TempDir;
 
@@ -90,7 +90,7 @@ fn empty_defaults_give_the_documented_defaults() {
 #[test]
 fn missing_file_gives_the_defaults() {
     let dir = TempDir::new().expect("temp dir");
-    assert_eq!(Settings::load(&path_in(&dir)), Settings::default());
+    assert_eq!(load_settings(&path_in(&dir)), Settings::default());
 }
 
 #[test]
@@ -98,9 +98,9 @@ fn malformed_file_gives_the_defaults() {
     let dir = TempDir::new().expect("temp dir");
     let path = path_in(&dir);
     fs::write(&path, b"not json").expect("write");
-    assert_eq!(Settings::load(&path), Settings::default());
+    assert_eq!(load_settings(&path), Settings::default());
     fs::write(&path, b"[]").expect("write");
-    assert_eq!(Settings::load(&path), Settings::default());
+    assert_eq!(load_settings(&path), Settings::default());
 }
 
 #[test]
@@ -131,7 +131,7 @@ fn stored_values_are_read() {
         }),
     );
 
-    let settings = Settings::load(&path);
+    let settings = load_settings(&path);
     assert!(!settings.show_format_bar);
     assert_eq!(settings.app_language, Language::Fr);
     assert_eq!(settings.new_document_encoding, Encoding::Windows1251);
@@ -182,7 +182,7 @@ fn unknown_or_mistyped_values_fall_back_to_defaults() {
             keys::REVIEW_ACTIVE_DAYS: -1
         }),
     );
-    assert_eq!(Settings::load(&path), Settings::default());
+    assert_eq!(load_settings(&path), Settings::default());
 }
 
 #[test]
@@ -192,7 +192,7 @@ fn invalid_thresholds_fall_back_to_the_default() {
         let path = path_in(&dir);
         write_json(&path, json!({ keys::LARGE_FILE_THRESHOLD_MIB: invalid }));
         assert_eq!(
-            Settings::load(&path).large_file_threshold_bytes(),
+            load_settings(&path).large_file_threshold_bytes(),
             100 * 1_048_576,
             "{invalid} falls back"
         );
@@ -202,7 +202,7 @@ fn invalid_thresholds_fall_back_to_the_default() {
         let path = path_in(&dir);
         write_json(&path, json!({ keys::LARGE_FILE_THRESHOLD_MIB: valid }));
         assert_eq!(
-            Settings::load(&path).large_file_threshold_bytes(),
+            load_settings(&path).large_file_threshold_bytes(),
             u64::from(valid) * 1_048_576
         );
     }
@@ -231,7 +231,7 @@ fn other_row_heights_fall_back_to_the_default() {
     let dir = TempDir::new().expect("temp dir");
     let path = path_in(&dir);
     write_json(&path, json!({ keys::GRID_ROW_HEIGHT: 99 }));
-    assert_eq!(Settings::load(&path).row_height(), 24.0);
+    assert_eq!(load_settings(&path).row_height(), 24.0);
 }
 
 #[test]
@@ -270,27 +270,31 @@ fn settings_round_trip_through_the_file() {
         review_last_prompted_version: Some("1.0.1".to_string()),
         review_last_prompted_at: Some("2026-01-05T00:00:00Z".to_string()),
     };
-    settings.save(&path).expect("save");
-    assert_eq!(Settings::load(&path), settings);
+    save_settings(&settings, &path).expect("save");
+    assert_eq!(load_settings(&path), settings);
 }
 
 #[test]
 fn saving_overwrites_and_creates_the_parent_directory() {
     let dir = TempDir::new().expect("temp dir");
     let path = dir.path().join("nested").join("settings.json");
-    Settings {
-        grid_row_height: 32.0,
-        ..Settings::default()
-    }
-    .save(&path)
+    save_settings(
+        &Settings {
+            grid_row_height: 32.0,
+            ..Settings::default()
+        },
+        &path,
+    )
     .expect("first save");
-    Settings {
-        grid_row_height: 20.0,
-        ..Settings::default()
-    }
-    .save(&path)
+    save_settings(
+        &Settings {
+            grid_row_height: 20.0,
+            ..Settings::default()
+        },
+        &path,
+    )
     .expect("second save");
-    assert_eq!(Settings::load(&path).grid_row_height, 20.0);
+    assert_eq!(load_settings(&path).grid_row_height, 20.0);
     let entries: Vec<_> = fs::read_dir(dir.path().join("nested"))
         .expect("read the settings directory")
         .map(|entry| entry.expect("entry").file_name())
@@ -303,11 +307,13 @@ fn saved_json_uses_the_persisted_keys_and_foundation_encoding_ids() {
     for (encoding, id) in FOUNDATION_IDS {
         let dir = TempDir::new().expect("temp dir");
         let path = path_in(&dir);
-        Settings {
-            new_document_encoding: encoding,
-            ..Settings::default()
-        }
-        .save(&path)
+        save_settings(
+            &Settings {
+                new_document_encoding: encoding,
+                ..Settings::default()
+            },
+            &path,
+        )
         .expect("save");
         let value: serde_json::Value =
             serde_json::from_slice(&fs::read(&path).expect("read")).expect("json");
@@ -316,7 +322,7 @@ fn saved_json_uses_the_persisted_keys_and_foundation_encoding_ids() {
             id,
             "{encoding:?} keeps Foundation's raw value"
         );
-        assert_eq!(Settings::load(&path).new_document_encoding, encoding);
+        assert_eq!(load_settings(&path).new_document_encoding, encoding);
     }
 }
 
@@ -324,12 +330,14 @@ fn saved_json_uses_the_persisted_keys_and_foundation_encoding_ids() {
 fn saved_json_uses_the_app_language_code_and_the_recent_documents_key() {
     let dir = TempDir::new().expect("temp dir");
     let path = path_in(&dir);
-    Settings {
-        app_language: Language::De,
-        recent_documents: vec![PathBuf::from("/tmp/recent.csv")],
-        ..Settings::default()
-    }
-    .save(&path)
+    save_settings(
+        &Settings {
+            app_language: Language::De,
+            recent_documents: vec![PathBuf::from("/tmp/recent.csv")],
+            ..Settings::default()
+        },
+        &path,
+    )
     .expect("save");
     let value: serde_json::Value =
         serde_json::from_slice(&fs::read(&path).expect("read")).expect("json");
@@ -353,9 +361,9 @@ fn non_utf8_recent_paths_round_trip() {
     };
     let dir = TempDir::new().expect("temp dir");
     let file = path_in(&dir);
-    settings.save(&file).expect("save");
+    save_settings(&settings, &file).expect("save");
 
-    assert_eq!(Settings::load(&file).recent_documents, vec![path]);
+    assert_eq!(load_settings(&file).recent_documents, vec![path]);
     let value: serde_json::Value =
         serde_json::from_slice(&fs::read(&file).expect("read")).expect("json");
     assert!(
@@ -382,9 +390,9 @@ fn non_utf8_recent_paths_round_trip() {
     };
     let dir = TempDir::new().expect("temp dir");
     let file = path_in(&dir);
-    settings.save(&file).expect("save");
+    save_settings(&settings, &file).expect("save");
 
-    assert_eq!(Settings::load(&file).recent_documents, vec![path]);
+    assert_eq!(load_settings(&file).recent_documents, vec![path]);
     let value: serde_json::Value =
         serde_json::from_slice(&fs::read(&file).expect("read")).expect("json");
     assert!(
@@ -399,7 +407,7 @@ fn recent_documents_are_capped_at_ten() {
     let dir = TempDir::new().expect("temp dir");
     let path = path_in(&dir);
     write_json(&path, json!({ keys::RECENT_DOCUMENTS: paths }));
-    let loaded = Settings::load(&path);
+    let loaded = load_settings(&path);
     assert_eq!(loaded.recent_documents.len(), 10);
     assert_eq!(loaded.recent_documents[0], PathBuf::from("/tmp/0.csv"));
 
@@ -409,8 +417,8 @@ fn recent_documents_are_capped_at_ten() {
             .collect(),
         ..Settings::default()
     };
-    settings.save(&path).expect("save");
-    assert_eq!(Settings::load(&path).recent_documents.len(), 10);
+    save_settings(&settings, &path).expect("save");
+    assert_eq!(load_settings(&path).recent_documents.len(), 10);
 }
 
 #[test]

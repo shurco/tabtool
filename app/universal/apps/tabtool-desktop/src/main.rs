@@ -2,7 +2,7 @@
 
 use eframe::egui;
 use tabtool_desktop::app::DesktopApp;
-use tabtool_platform::{DesktopPlatform, Settings, settings_path};
+use tabtool_platform::{DesktopPlatform, load_settings, settings_path};
 
 fn main() -> eframe::Result {
     if smoke_requested(std::env::args().skip(1)) {
@@ -11,7 +11,7 @@ fn main() -> eframe::Result {
     }
 
     let settings = settings_path()
-        .map(|path| Settings::load(&path))
+        .map(|path| load_settings(&path))
         .unwrap_or_default();
     let launch = tabtool_desktop::files::launch_path(std::env::args().skip(1));
     let options = eframe::NativeOptions {

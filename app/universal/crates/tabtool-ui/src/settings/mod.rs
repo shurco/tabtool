@@ -9,7 +9,7 @@ mod tabs;
 
 use egui::Ui;
 use tabtool_i18n::{Language, tr};
-use tabtool_platform::Settings;
+use tabtool_settings::Settings;
 
 use crate::widgets::tab_bar;
 

@@ -12,9 +12,8 @@ use crate::widgets::{ButtonKind, PushButton};
 /// The catalog key of the product name.
 pub const NAME_KEY: &str = "TabTool";
 
-/// The short platform description.
-#[cfg(target_os = "macos")]
-pub const PLATFORM_DESCRIPTION_KEY: &str = "A simple CSV editor for macOS.";
+/// The short platform-neutral description.
+pub const SHORT_DESCRIPTION_KEY: &str = "A simple CSV editor.";
 
 /// The feature description, shown with the platform line.
 pub const DESCRIPTION_KEY: &str = "Opens, edits, and saves CSV, TSV, and plain text tables. Detects the encoding and \
@@ -63,8 +62,7 @@ pub fn show(ui: &mut Ui, language: Language, version: &str, license: &str) -> Op
                 );
                 ui.add_space(10.0);
 
-                #[cfg(target_os = "macos")]
-                ui.label(tr(language, PLATFORM_DESCRIPTION_KEY));
+                ui.label(tr(language, SHORT_DESCRIPTION_KEY));
                 ui.label(tr(language, DESCRIPTION_KEY));
 
                 ui.add_space(12.0);

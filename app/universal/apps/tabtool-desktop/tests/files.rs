@@ -11,7 +11,7 @@ use tabtool_desktop::files::{
 };
 use tabtool_desktop::platform::{SharedDialogs, SharedStorage};
 use tabtool_document::{Document, DocumentError, DocumentPhase, StdStorage};
-use tabtool_platform::Settings;
+use tabtool_platform::{Settings, load_settings};
 
 use support::{FakeDialogs, MemoryStorage};
 
@@ -196,7 +196,7 @@ fn recent_keeps_ten_newest_and_drops_missing_paths() {
     assert_eq!(recent[0], newest);
     assert!(!recent.contains(&directory.path().join("missing.csv")));
 
-    let persisted = Settings::load(&settings_path);
+    let persisted = load_settings(&settings_path);
     assert_eq!(persisted.recent_documents, recent);
 }
 

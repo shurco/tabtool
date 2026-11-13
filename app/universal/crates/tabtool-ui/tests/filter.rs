@@ -331,6 +331,42 @@ fn applying_a_filter_commits_the_open_cell_editor_first() {
 }
 
 #[test]
+fn the_advertised_filter_shortcuts_are_bound() {
+    let mut fixture = open(fixture());
+    type_value(&mut fixture, 0, "ap");
+
+    fixture.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::Enter);
+    fixture.run();
+    assert_eq!(visible_rows(&fixture), Some(vec![0, 2]));
+
+    fixture.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::I);
+    fixture.run();
+    assert_eq!(
+        fixture.with_document(|document| document.row_filter().criteria.len()),
+        2
+    );
+
+    fixture.key_press_modifiers(
+        egui::Modifiers::COMMAND.plus(egui::Modifiers::SHIFT),
+        egui::Key::Backspace,
+    );
+    fixture.run();
+    assert_eq!(
+        fixture.with_document(|document| document.row_filter().criteria.len()),
+        1
+    );
+
+    fixture.get_by_label("Apply All").focus();
+    fixture.run();
+    fixture.key_press(egui::Key::Escape);
+    fixture.run();
+    assert!(
+        !fixture.with_document(|document| document.row_filter().is_bar_visible),
+        "Escape hides the bar"
+    );
+}
+
+#[test]
 fn a_large_document_never_shows_the_filter_bar() {
     let directory = tempfile::tempdir().expect("temporary directory");
     let path = directory.path().join("large.csv");

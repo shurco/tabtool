@@ -1,6 +1,6 @@
 //! The inline filter bar: one row per criterion and a footer of bar actions.
 
-use egui::{Align, CornerRadius, Key, Layout, RichText, Stroke, StrokeKind, Ui, Vec2};
+use egui::{Align, CornerRadius, Key, Layout, Modifiers, RichText, Stroke, StrokeKind, Ui, Vec2};
 use tabtool_core::{ColumnId, CriterionId, FilterOperator};
 use tabtool_document::Document;
 use tabtool_i18n::{Language, tr};
@@ -71,7 +71,7 @@ pub fn show(ui: &mut Ui, document: &mut Document, language: Language) -> Option<
 
     let theme = current(ui.ctx());
     let mut criteria = document.row_filter().criteria.clone();
-    let mut action = None;
+    let mut action = keyboard_action(ui, &criteria);
     ui.spacing_mut().item_spacing.x = 6.0;
 
     for criterion in &mut criteria {
@@ -231,4 +231,28 @@ fn column_options(document: &Document) -> Vec<(ColumnId, String)> {
         .enumerate()
         .map(|(index, id)| (id, presenter.header(index)))
         .collect()
+}
+
+/// The keyboard shortcuts the footer advertises.
+///
+/// They act on the last criterion, or on the bar itself, and never fire while
+/// a text field has focus.
+fn keyboard_action(ui: &Ui, criteria: &[tabtool_core::FilterCriterion]) -> Option<FilterAction> {
+    let target = criteria.last()?.id;
+    let text_focused = ui.ctx().text_edit_focused();
+    ui.input_mut(|input| {
+        if input.consume_key(Modifiers::COMMAND, Key::I) {
+            Some(FilterAction::Add(target))
+        } else if input.consume_key(Modifiers::COMMAND.plus(Modifiers::SHIFT), Key::Backspace)
+            || input.consume_key(Modifiers::COMMAND.plus(Modifiers::SHIFT), Key::Delete)
+        {
+            Some(FilterAction::Remove(target))
+        } else if input.consume_key(Modifiers::COMMAND, Key::Enter) {
+            Some(FilterAction::ApplyAll)
+        } else if !text_focused && input.consume_key(Modifiers::NONE, Key::Escape) {
+            Some(FilterAction::Hide)
+        } else {
+            None
+        }
+    })
 }

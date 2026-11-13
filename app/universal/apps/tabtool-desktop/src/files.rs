@@ -24,7 +24,7 @@ use std::path::{Path, PathBuf};
 use tabtool_document::{Document, DocumentPhase};
 use tabtool_i18n::Language;
 pub use tabtool_platform::TABLE_EXTENSIONS;
-use tabtool_platform::{RECENT_DOCUMENTS_LIMIT, Settings};
+use tabtool_platform::{RECENT_DOCUMENTS_LIMIT, Settings, save_settings};
 
 use crate::platform::{SharedDialogs, SharedStorage};
 
@@ -286,7 +286,7 @@ impl FileWorkflow {
         if let Some(path) = &self.settings_path {
             let mut settings = self.policy.settings.clone();
             settings.recent_documents = self.recent.clone();
-            let _ = settings.save(path);
+            let _ = save_settings(&settings, path);
         }
     }
 }

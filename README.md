@@ -73,7 +73,7 @@ TabTool runs on both iPhone Duo displays and follows the system pose rules:
 
 ## Settings
 
-On macOS, `TabTool > Settings…` (`⌘,`) opens one window with four tabs: General, New Document, Grid, and Large Files. The window fits the selected tab and reopens on the tab used last. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the language the next launch. A stored value that is not one of the offered options falls back to the default.
+On macOS, `TabTool > Settings…` (`⌘,`) opens one window with four tabs: General, New Document, Grid, and Large Files. The window fits the selected tab and opens on General. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the interface language applies as soon as it is picked. A stored value that is not one of the offered options falls back to the default. The defaults in this table follow `Preferences.Default` in the Swift app and its `tabtool-settings` counterpart in the Rust port; that model is the source of truth when the two disagree.
 
 On iOS, Settings is a sheet opened from the gear on the Documents screen or from the document's overflow menu: one form with sections for General, New Document, Grid, Large Files, and About. It writes the same defaults at once, and the row height options are the iOS ones in the table.
 
@@ -88,7 +88,8 @@ The interface language applies as soon as it is picked on both platforms: every 
 | New Document | Quote | `newDocumentQuoteStyle` | Doubled |
 | New Document | Decimal Mark | `newDocumentDecimalMark` | Dot (.) |
 | New Document | First Row as Header | `newDocumentFirstRowAsHeader` | off |
-| Grid | Alternating Row Colors | `gridAlternatingRows` | on |
+| Grid | Alternating Row Colors | `gridAlternatingRows` | off |
+| Grid | Show Row Numbers | `gridShowsRowNumbers` | on |
 | Grid | Row Height: macOS Compact 20 pt, Default 24 pt, Comfortable 32 pt; iOS Compact 32 pt, Default 44 pt, Comfortable 56 pt | `gridRowHeight` | Default (macOS 24 pt, iOS 44 pt) |
 | Large Files | Large File Threshold: 25, 50, 100, 250, 500, or 1024 MiB | `largeFileThresholdMiB` | 100 MiB |
 
