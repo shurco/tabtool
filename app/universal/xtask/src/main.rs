@@ -6,6 +6,7 @@
 //! release.
 
 mod bench;
+mod i18n;
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -157,6 +158,14 @@ fn main() -> ExitCode {
                 return ExitCode::from(2);
             }
         },
+        "i18n" => match arguments.next().as_deref() {
+            None => i18n::run(false),
+            Some("--check") => i18n::run(true),
+            _ => {
+                usage();
+                return ExitCode::from(2);
+            }
+        },
         "bench-large" => {
             let size = arguments.next();
             if arguments.next().is_some() {
@@ -182,5 +191,6 @@ fn main() -> ExitCode {
 
 fn usage() {
     eprintln!("usage: xtask golden [--check]");
+    eprintln!("       xtask i18n [--check]");
     eprintln!("       xtask bench-large [GiB]");
 }

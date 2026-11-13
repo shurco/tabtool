@@ -1,0 +1,12 @@
+[package]
+name = "tabtool-i18n"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The TabTool interface catalog generated from the String Catalog."
+
+[dependencies]
+
+[dev-dependencies]
+regex = "1"
