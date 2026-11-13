@@ -65,6 +65,9 @@ impl DocumentWindow {
         } = services;
         let autosave = Autosave::new(&document);
         let viewport_id_for_state = viewport_id;
+        let row_height = settings.row_height();
+        let alternating_rows = settings.grid_alternating_rows;
+        let shows_row_numbers = settings.grid_shows_row_numbers;
         let state = WindowState {
             viewport_id: viewport_id_for_state,
             document,
@@ -75,6 +78,9 @@ impl DocumentWindow {
             file_ops: FilePolicy::new(dialogs, storage, settings),
             language,
             show_format_bar,
+            row_height,
+            alternating_rows,
+            shows_row_numbers,
             has_recent: false,
             locale: system_locale(&platform),
             decimal_separator: decimal_separator(&platform),

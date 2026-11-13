@@ -14,6 +14,20 @@ pub fn text_field(ui: &mut Ui, name: &str, text: &mut String, hint: &str) -> Res
     field(ui, name, text, hint, width, theme.typography.body)
 }
 
+/// A single-line text field of `width` logical points.
+///
+/// `hint` is the placeholder and must already be localized by the caller.
+pub fn text_field_sized(
+    ui: &mut Ui,
+    name: &str,
+    text: &mut String,
+    hint: &str,
+    width: f32,
+) -> Response {
+    let theme = current(ui.ctx());
+    field(ui, name, text, hint, width, theme.typography.body)
+}
+
 /// A search field: a magnifier plus a text field.
 pub fn search_field(ui: &mut Ui, name: &str, text: &mut String) -> Response {
     let theme = current(ui.ctx());

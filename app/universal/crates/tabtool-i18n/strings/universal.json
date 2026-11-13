@@ -167,5 +167,31 @@
     "zh-Hans": "表格文件",
     "ja": "テーブルファイル",
     "ko": "표 파일"
+  },
+  "%lld MiB": {
+    "en": "%lld MiB",
+    "fr": "%lld MiB",
+    "es": "%lld MiB",
+    "de": "%lld MiB",
+    "it": "%lld MiB",
+    "pl": "%lld MiB",
+    "be": "%lld MiB",
+    "uk": "%lld MiB",
+    "zh-Hans": "%lld MiB",
+    "ja": "%lld MiB",
+    "ko": "%lld MiB"
+  },
+  "%lld GiB": {
+    "en": "%lld GiB",
+    "fr": "%lld GiB",
+    "es": "%lld GiB",
+    "de": "%lld GiB",
+    "it": "%lld GiB",
+    "pl": "%lld GiB",
+    "be": "%lld GiB",
+    "uk": "%lld GiB",
+    "zh-Hans": "%lld GiB",
+    "ja": "%lld GiB",
+    "ko": "%lld GiB"
   }
 }

@@ -4,6 +4,8 @@
 
 #[rustfmt::skip]
 pub(crate) static ENTRIES: &[(&str, &[(&str, &str)])] = &[
+    ("%lld GiB", &[("en", "%lld GiB"), ("fr", "%lld GiB"), ("es", "%lld GiB"), ("de", "%lld GiB"), ("it", "%lld GiB"), ("pl", "%lld GiB"), ("be", "%lld GiB"), ("uk", "%lld GiB"), ("zh-Hans", "%lld GiB"), ("ja", "%lld GiB"), ("ko", "%lld GiB")]),
+    ("%lld MiB", &[("en", "%lld MiB"), ("fr", "%lld MiB"), ("es", "%lld MiB"), ("de", "%lld MiB"), ("it", "%lld MiB"), ("pl", "%lld MiB"), ("be", "%lld MiB"), ("uk", "%lld MiB"), ("zh-Hans", "%lld MiB"), ("ja", "%lld MiB"), ("ko", "%lld MiB")]),
     ("%lld columns", &[("en", "%lld columns"), ("fr", "%lld colonnes"), ("es", "%lld columnas"), ("de", "%lld Spalten"), ("it", "%lld colonne"), ("pl", "Kolumny: %lld"), ("be", "Слупкоў: %lld"), ("uk", "Стовпців: %lld"), ("zh-Hans", "%lld 列"), ("ja", "%lld列"), ("ko", "열 %lld개")]),
     ("%lld of %lld rows", &[("en", "%1$lld of %2$lld rows"), ("fr", "%1$lld sur %2$lld lignes"), ("es", "%1$lld de %2$lld filas"), ("de", "%1$lld von %2$lld Zeilen"), ("it", "%1$lld di %2$lld righe"), ("pl", "%1$lld z %2$lld wierszy"), ("be", "%1$lld з %2$lld радкоў"), ("uk", "%1$lld з %2$lld рядків"), ("zh-Hans", "共 %2$lld 行，显示 %1$lld 行"), ("ja", "%2$lld行中%1$lld行"), ("ko", "행 %2$lld개 중 %1$lld개")]),
     ("%lld rows", &[("en", "%lld rows"), ("fr", "%lld lignes"), ("es", "%lld filas"), ("de", "%lld Zeilen"), ("it", "%lld righe"), ("pl", "Wiersze: %lld"), ("be", "Радкоў: %lld"), ("uk", "Рядків: %lld"), ("zh-Hans", "%lld 行"), ("ja", "%lld行"), ("ko", "행 %lld개")]),

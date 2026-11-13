@@ -3698,6 +3698,7 @@ dependencies = [
  "tabtool-core",
  "tabtool-document",
  "tabtool-i18n",
+ "tabtool-platform",
  "tabtool-ui",
  "tempfile",
 ]

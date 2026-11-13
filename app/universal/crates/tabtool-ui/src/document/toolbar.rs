@@ -61,6 +61,13 @@ pub fn show(
     let export_enabled = editable_for_export(document, has_content);
     let filter_enabled = document.can_filter();
     let filter_visible = document.row_filter().is_bar_visible;
+    let filter_count = document.row_filter().applied.as_ref().map_or(0, |filter| {
+        filter
+            .criteria
+            .iter()
+            .filter(|criterion| criterion.is_enabled)
+            .count()
+    });
 
     toolbar(ui, |ui| {
         if tool_button(ui, "\u{2191}+", tr(language, "Add Row Above"), add_above).clicked() {
@@ -86,7 +93,12 @@ pub fn show(
             } else {
                 tr(language, "Show Filter")
             };
-            if PushButton::new(filter_label, ButtonKind::Plain)
+            let filter_label = if filter_count > 0 {
+                format!("{filter_label} ({filter_count})")
+            } else {
+                filter_label.to_owned()
+            };
+            if PushButton::new(&filter_label, ButtonKind::Plain)
                 .selected(filter_visible)
                 .enabled(filter_enabled)
                 .show(ui)

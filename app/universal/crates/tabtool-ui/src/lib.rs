@@ -21,13 +21,16 @@
 //! dependencies. This crate's own tests enable the feature through a self
 //! dev-dependency.
 
+pub mod about;
 pub mod document;
 pub mod export;
+pub mod filter;
 pub mod fonts;
 mod format_options;
 pub mod grid;
 #[cfg(feature = "test-support")]
 pub mod harness;
+pub mod settings;
 pub mod theme;
 pub mod widgets;
 

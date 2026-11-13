@@ -2,6 +2,7 @@
 
 mod dispatch;
 mod files;
+mod preferences;
 mod quit;
 mod recent;
 mod viewports;
@@ -9,6 +10,7 @@ mod welcome;
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 
@@ -17,11 +19,13 @@ use tabtool_document::Document;
 use tabtool_i18n::Language;
 use tabtool_platform::{DesktopPlatform, Settings, settings_path};
 
+use crate::about_window::AboutAction;
 use crate::documents::DocumentWindow;
 use crate::files::FileWorkflow;
 use crate::platform::{
     SharedDialogs, SharedStorage, interface_language, standard_dialogs, standard_storage,
 };
+use crate::settings_window::SettingsWindow;
 
 pub use quit::{QuitDecision, QuitResponse, quit_decision};
 
@@ -41,13 +45,16 @@ pub struct DesktopApp {
     pub files: FileWorkflow,
     storage: SharedStorage,
     dialogs: SharedDialogs,
+    settings_path: Option<PathBuf>,
+    settings_window_state: Option<SettingsWindow>,
+    settings_dirty: bool,
     next_window: u64,
     untitled_count: usize,
     language: Language,
     recent_picker: bool,
     root_visible: Option<bool>,
     about_closed: Arc<AtomicBool>,
-    settings_closed: Arc<AtomicBool>,
+    about_action: Arc<Mutex<Option<AboutAction>>>,
     quit: quit::QuitState,
 }
 
@@ -84,6 +91,18 @@ impl DesktopApp {
         Self::build(settings, platform, storage, dialogs, None)
     }
 
+    /// Creates an empty app that persists settings at `path`.
+    ///
+    /// Tests use a temporary path so a preference change can be read back.
+    pub fn with_settings_path(
+        settings: Settings,
+        platform: DesktopPlatform,
+        storage: SharedStorage,
+        path: PathBuf,
+    ) -> Self {
+        Self::build(settings, platform, storage, standard_dialogs(), Some(path))
+    }
+
     fn build(
         mut settings: Settings,
         platform: DesktopPlatform,
@@ -96,7 +115,7 @@ impl DesktopApp {
             Arc::clone(&dialogs),
             Arc::clone(&storage),
             settings.clone(),
-            settings_path,
+            settings_path.clone(),
         );
         files.set_language(language);
         // The workflow owns the canonical recent list; settings keeps a mirror
@@ -111,13 +130,16 @@ impl DesktopApp {
             files,
             storage,
             dialogs,
+            settings_path,
+            settings_window_state: None,
+            settings_dirty: false,
             next_window: 0,
             untitled_count: 0,
             language,
             recent_picker: false,
             root_visible: None,
             about_closed: Arc::new(AtomicBool::new(false)),
-            settings_closed: Arc::new(AtomicBool::new(false)),
+            about_action: Arc::new(Mutex::new(None)),
             quit: quit::QuitState::default(),
         }
     }
@@ -153,6 +175,10 @@ impl DesktopApp {
 
     /// Opens the Settings window.
     pub fn open_settings(&mut self) {
+        if self.settings_window {
+            return;
+        }
+        self.settings_window_state = Some(SettingsWindow::new(self.settings.clone()));
         self.settings_window = true;
     }
 
@@ -163,12 +189,14 @@ impl DesktopApp {
 
     /// Advances timers, dispatches window requests and registers viewports.
     pub fn tick(&mut self, ctx: &Context) {
+        self.sync_settings_window();
         self.sync_language();
         self.files.set_settings(self.settings.clone());
         self.files.set_language(self.language);
         self.sync_recent();
         self.handle_root_close(ctx);
         self.close_finished_aux_windows();
+        self.take_about_action();
 
         let now = Instant::now();
         let has_recent = self.files.has_recent();
@@ -216,6 +244,7 @@ impl DesktopApp {
         self.remove_closed(ctx);
         self.register_viewports(ctx);
         self.sync_root_visibility(ctx);
+        self.persist_settings();
         self.schedule_repaint(ctx, now);
     }
 

@@ -142,6 +142,12 @@ pub struct DocumentView<'a> {
     pub decimal_separator: &'a str,
     /// Whether the format bar is visible.
     pub show_format_bar: bool,
+    /// The height of every grid row.
+    pub row_height: f32,
+    /// Whether grid rows alternate their background.
+    pub alternating_rows: bool,
+    /// Whether the grid shows row numbers.
+    pub shows_row_numbers: bool,
     /// A failed save the window wants to explain.
     pub save_error: Option<DocumentError>,
 }
@@ -179,6 +185,7 @@ impl DocumentView<'_> {
             if response.export {
                 actions.push(DocumentAction::Export);
             }
+            self.show_filter_bar(ui);
         }
 
         self.show_status(ui, &mut actions);

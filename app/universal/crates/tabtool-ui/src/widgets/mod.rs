@@ -24,7 +24,7 @@ pub use segmented::segmented;
 pub use sheet::{SheetResponse, sheet};
 pub use status_line::status_line;
 pub use tabs::tab_bar;
-pub use text_field::{search_field, text_field};
+pub use text_field::{search_field, text_field, text_field_sized};
 pub use toggle::{toggle, toggle_enabled};
 pub use toolbar::{toolbar, toolbar_separator};
 

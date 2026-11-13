@@ -38,6 +38,9 @@ pub(crate) struct WindowState {
     pub(crate) file_ops: FilePolicy,
     pub(crate) language: Language,
     pub(crate) show_format_bar: bool,
+    pub(crate) row_height: f32,
+    pub(crate) alternating_rows: bool,
+    pub(crate) shows_row_numbers: bool,
     pub(crate) has_recent: bool,
     pub(crate) locale: Locale,
     pub(crate) decimal_separator: String,
@@ -56,9 +59,13 @@ pub(crate) struct WindowState {
 }
 
 impl DocumentWindow {
-    /// Updates the New Document format and large-file threshold.
+    /// Updates the New Document format, large-file threshold and grid appearance.
     pub fn set_settings(&self, settings: Settings) {
-        self.lock().file_ops.set_settings(settings);
+        let mut state = self.lock();
+        state.row_height = settings.row_height();
+        state.alternating_rows = settings.grid_alternating_rows;
+        state.shows_row_numbers = settings.grid_shows_row_numbers;
+        state.file_ops.set_settings(settings);
     }
 }
 

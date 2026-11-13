@@ -10,6 +10,7 @@ use tabtool_platform::OpenUrl;
 use crate::documents::{DocumentWindow, WindowServices};
 use crate::menu::MenuAction;
 use crate::platform::interface_language;
+use crate::settings_window::SettingsWindow;
 
 use super::{DesktopApp, QuitDecision, quit_decision};
 
@@ -37,7 +38,7 @@ impl DesktopApp {
     pub(crate) fn perform(&mut self, action: MenuAction, ctx: &Context) {
         match action {
             MenuAction::About => self.about = true,
-            MenuAction::Settings => self.settings_window = true,
+            MenuAction::Settings => self.open_settings(),
             MenuAction::Quit => self.request_quit(ctx),
             MenuAction::New => self.new_document(),
             MenuAction::Open => self.open_from_dialog(),
@@ -48,6 +49,7 @@ impl DesktopApp {
             }
             MenuAction::ToggleFormatBar => {
                 self.settings.show_format_bar = !self.settings.show_format_bar;
+                self.settings_dirty = true;
             }
             MenuAction::Website => self.platform.open("https://tabtool.shurco.app"),
             MenuAction::License => self
@@ -88,8 +90,14 @@ impl DesktopApp {
         if self.about_closed.swap(false, Ordering::SeqCst) {
             self.about = false;
         }
-        if self.settings_closed.swap(false, Ordering::SeqCst) {
+        if self
+            .settings_window_state
+            .as_ref()
+            .is_some_and(SettingsWindow::take_closed)
+        {
             self.settings_window = false;
+            self.settings_window_state = None;
+            self.settings_dirty = true;
         }
     }
 

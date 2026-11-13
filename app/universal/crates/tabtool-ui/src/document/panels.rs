@@ -52,7 +52,13 @@ impl DocumentView<'_> {
         let Some(source) = self.document.row_source() else {
             return Vec::new();
         };
-        let options = grid_options(self.document, self.language, ui);
+        let options = grid_options(
+            self.document,
+            self.language,
+            self.row_height,
+            self.alternating_rows,
+            self.shows_row_numbers,
+        );
         let visible = self.document.row_filter().visible_rows.as_deref();
         let presenter = GridPresenter::new(source, visible);
         GridView {
@@ -85,6 +91,25 @@ impl DocumentView<'_> {
         {
             actions.push(DocumentAction::Large(LargeUiAction::CancelSave));
         }
+    }
+
+    pub(super) fn show_filter_bar(&mut self, ui: &mut Ui) {
+        if !self.document.can_filter() || !self.document.row_filter().is_bar_visible {
+            return;
+        }
+        let theme = current(ui.ctx());
+        egui::Panel::top("document-filter-bar")
+            .frame(
+                Frame::new()
+                    .fill(theme.colors.header_background)
+                    .inner_margin(egui::Margin::symmetric(10, 6)),
+            )
+            .show_separator_line(true)
+            .show(ui, |ui| {
+                if let Some(action) = crate::filter::show(ui, self.document, self.language) {
+                    self.apply_filter_action(action);
+                }
+            });
     }
 
     pub(super) fn show_format_bar(&mut self, ui: &mut Ui) {
@@ -245,8 +270,13 @@ impl DocumentView<'_> {
     }
 }
 
-fn grid_options(document: &Document, language: Language, ui: &Ui) -> GridOptions {
-    let theme = current(ui.ctx());
+fn grid_options(
+    document: &Document,
+    language: Language,
+    row_height: f32,
+    alternating_rows: bool,
+    shows_row_numbers: bool,
+) -> GridOptions {
     let sort = document.active_sort().and_then(|sort| {
         document.row_source().and_then(|source| {
             source
@@ -266,7 +296,9 @@ fn grid_options(document: &Document, language: Language, ui: &Ui) -> GridOptions
         0
     };
     GridOptions {
-        row_height: theme.metrics.row_height,
+        row_height,
+        alternating_rows,
+        shows_row_numbers,
         decimal_mark: document.configuration().decimal_mark.clone(),
         editable: document.can_edit_cells(),
         sort,

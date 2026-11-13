@@ -203,6 +203,13 @@ fn bundled_fonts_shape_latin_cjk_and_emoji() {
             !glyph.uv_rect.is_nothing(),
             "the CJK glyph must be rasterized, not a tofu box"
         );
+
+        let galley = fonts.layout_no_wrap("한".to_owned(), body.clone(), Color32::WHITE);
+        let glyph = &galley.rows[0].row.glyphs[0];
+        assert!(
+            !glyph.uv_rect.is_nothing(),
+            "the Korean glyph must be rasterized, not a tofu box"
+        );
     });
 }
 
@@ -216,6 +223,7 @@ fn fonts_fall_back_in_a_deterministic_order() {
     let proportional = &families[&egui::FontFamily::Proportional];
     assert_eq!(proportional.first().map(String::as_str), Some("Inter"));
     assert!(proportional.iter().any(|name| name == "Noto Sans SC"));
+    assert!(proportional.iter().any(|name| name == "Noto Sans KR"));
     assert!(
         !proportional.iter().any(|name| name == "Noto Emoji"),
         "emoji must come from the color system font when the platform has one; \
@@ -231,6 +239,10 @@ fn fonts_fall_back_in_a_deterministic_order() {
     );
     assert_eq!(
         families[&egui::FontFamily::Name("Inter Semibold".into())],
-        vec!["Inter Semibold".to_owned(), "Noto Sans SC".to_owned()]
+        vec![
+            "Inter Semibold".to_owned(),
+            "Noto Sans SC".to_owned(),
+            "Noto Sans KR".to_owned()
+        ]
     );
 }

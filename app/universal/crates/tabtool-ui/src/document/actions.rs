@@ -9,6 +9,7 @@ use tabtool_document::{
 };
 use tabtool_i18n::{Language, tr};
 
+use crate::filter::FilterAction;
 use crate::grid::{ActionOutcome, GridAction};
 
 use super::dispatch::apply_grid_action;
@@ -86,6 +87,39 @@ impl DocumentView<'_> {
             Ok(ActionOutcome::Applied) | Err(_) => true,
             Ok(ActionOutcome::NeedsPasteText) => false,
         }
+    }
+
+    pub(super) fn apply_filter_action(&mut self, action: FilterAction) {
+        if action.changes_rows() {
+            self.commit_active_editor();
+        }
+        match action {
+            FilterAction::ApplyAll => self.document.apply_all_filters(),
+            FilterAction::Apply(id) => self.document.apply_filter(id),
+            FilterAction::Clear => self.document.clear_filter(),
+            FilterAction::Add(id) => self.document.row_filter_mut().add_criterion(id),
+            FilterAction::Remove(id) => self.document.row_filter_mut().remove_criterion(id),
+            FilterAction::Hide => self.document.row_filter_mut().is_bar_visible = false,
+        }
+    }
+
+    /// Writes an open cell editor before a filter changes the visible rows.
+    ///
+    /// The commit uses the display row under the filter that is still applied,
+    /// so it lands on the row the user was editing, not on whatever row takes
+    /// that display position afterwards.
+    fn commit_active_editor(&mut self) {
+        let Some(editing) = self.state.editing.take() else {
+            return;
+        };
+        let _ = apply_grid_action(
+            self.document,
+            self.state,
+            editing.commit_action(),
+            self.clipboard,
+            self.locale,
+            self.decimal_separator,
+        );
     }
 
     pub(super) fn apply_format_action(&mut self, action: FormatBarAction) {

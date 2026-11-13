@@ -1,12 +1,11 @@
 //! Registering the deferred viewports and keeping the root visibility in sync.
 
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
-use egui::{Context, Ui, ViewportBuilder, ViewportCommand, ViewportId};
-use tabtool_i18n::tr;
+use egui::{Context, ViewportBuilder, ViewportCommand};
 
+use crate::about_window;
 use crate::app::DesktopApp;
 use crate::documents::DOCUMENT_MIN_INNER_SIZE;
 
@@ -25,33 +24,18 @@ impl DesktopApp {
         }
 
         if self.about {
-            let language = self.language;
-            let closed = Arc::clone(&self.about_closed);
-            let builder = ViewportBuilder::default()
-                .with_title(tr(language, "About TabTool"))
-                .with_inner_size([420.0, 320.0])
-                .with_min_inner_size([320.0, 200.0]);
-            ctx.show_viewport_deferred(about_viewport_id(), builder, move |ui, _class| {
-                if ui.ctx().input(|input| input.viewport().close_requested()) {
-                    closed.store(true, Ordering::SeqCst);
-                }
-                placeholder_window(ui, tr(language, "About TabTool"));
-            });
+            about_window::show_viewport(
+                ctx,
+                self.language,
+                Arc::clone(&self.about_closed),
+                Arc::clone(&self.about_action),
+            );
         }
 
-        if self.settings_window {
-            let language = self.language;
-            let closed = Arc::clone(&self.settings_closed);
-            let builder = ViewportBuilder::default()
-                .with_title(tr(language, "Settings"))
-                .with_inner_size([520.0, 420.0])
-                .with_min_inner_size([360.0, 240.0]);
-            ctx.show_viewport_deferred(settings_viewport_id(), builder, move |ui, _class| {
-                if ui.ctx().input(|input| input.viewport().close_requested()) {
-                    closed.store(true, Ordering::SeqCst);
-                }
-                placeholder_window(ui, tr(language, "Settings"));
-            });
+        if self.settings_window
+            && let Some(window) = &self.settings_window_state
+        {
+            window.show_viewport(ctx, self.language);
         }
     }
 
@@ -87,22 +71,4 @@ impl DesktopApp {
             ctx.request_repaint_after(after);
         }
     }
-}
-
-fn about_viewport_id() -> ViewportId {
-    ViewportId::from_hash_of("tabtool-about")
-}
-
-fn settings_viewport_id() -> ViewportId {
-    ViewportId::from_hash_of("tabtool-settings")
-}
-
-fn placeholder_window(ui: &mut Ui, title: &str) {
-    let theme = tabtool_ui::theme::current(ui.ctx());
-    egui::Frame::new()
-        .fill(theme.colors.window_background)
-        .inner_margin(theme.metrics.window_padding)
-        .show(ui, |ui| {
-            ui.heading(title);
-        });
 }
