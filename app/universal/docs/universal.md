@@ -5,8 +5,10 @@ The Apple app in `app/apple` stays the source of truth for behavior and looks;
 this tree follows it and never invents a second product.
 
 Plan 1 delivers the pure CSV core and the platform input proof. Plan 2 adds
-the memory-mapped large-file layer. Neither plan is a usable editor yet: see
-[Plan 1 boundary](#plan-1-boundary) and [Plan 2 boundary](#plan-2-boundary).
+the memory-mapped large-file layer. Plan 3 adds the document model, undo,
+filters and saves. No plan adds a usable editor yet: see
+[Plan 1 boundary](#plan-1-boundary), [Plan 2 boundary](#plan-2-boundary) and
+[Plan 3 boundary](#plan-3-boundary).
 
 ## Workspace layout
 
@@ -18,6 +20,7 @@ app/universal/
 ├── crates/
 │   ├── tabtool-core/          # pure CSV engine
 │   ├── tabtool-large/         # mmap, scanner/index, sniffer, source, saver
+│   ├── tabtool-document/      # document state, undo, filters and saves
 │   └── tabtool-testdata/      # dev-only fixtures, manifest and generators
 ├── apps/
 │   ├── tabtool-desktop/       # desktop shell and `--smoke` entry point
@@ -36,9 +39,9 @@ helpers, sorting, filters, clipboard helpers, export, numeric classification
 and decimal-mark conversion. It has no UI, platform, async-runtime or `unsafe`
 code (`#![forbid(unsafe_code)]`).
 
-Plan 2 adds `tabtool-large`. Later plans add the other crates from the design:
-`tabtool-document`, `tabtool-platform`, `tabtool-i18n`, `tabtool-ui` and
-`tabtool-app`, plus the real desktop and Android UIs.
+Plan 2 adds `tabtool-large`. Plan 3 adds `tabtool-document`. Later plans add
+the other crates from the design: `tabtool-platform`, `tabtool-i18n`,
+`tabtool-ui` and `tabtool-app`, plus the real desktop and Android UIs.
 
 ## Toolchain
 
@@ -70,7 +73,7 @@ cargo build -p tabtool-desktop --release
 
 `--smoke` is the headless check used by CI. It prints the core version and
 returns without opening a window. The desktop app itself is only a shell in
-Plans 1 and 2; it has no table, document model or file UI.
+Plans 1–3; it has no table, document model or file UI.
 
 ## Tests
 
@@ -81,6 +84,8 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo test -p tabtool-large               # fast large-file suite
+cargo test -p tabtool-document            # document layer
+cargo test -p tabtool-document --test parity  # ported-test inventory
 cargo check -p tabtool-large --features bench   # compiles the benchmark binary
 cargo test -p tabtool-core --test golden   # macOS only
 ```
@@ -113,6 +118,16 @@ and block scanner paths and their parity, chunk boundaries, index publication
 and cancellation, sniffer refusals, the block cache and overlay, header-row
 mapping, and the saver's terminator, BOM, permission, free-space, cancel and
 atomic-replace rules.
+
+The document suite covers loading and phases, snapshots, editing and undo,
+structural operations, format changes and transactional re-reads, revert,
+clipboard and sorting, renaming, the filter model, saves and write gates, and
+the large-document open, edit, save, adoption and cancel paths. Its cases are
+ported from the Apple `CSVDocument*`, `RowFilterModel`, `FormatChangePlanner`
+and `RevertCoordinator` tests. `crates/tabtool-document/tests/parity.rs` is the
+checked inventory: it names the ported Swift files and cases, requires each
+mapped Rust test function to exist, and records UI-only waivers and known gaps
+with reasons. A renamed or removed Rust test fails that check.
 
 ## Large-file mode
 
@@ -263,6 +278,322 @@ Not in Plan 2:
 
 `tabtool-desktop` is still a shell; no user can open a large file through it
 yet.
+
+## Document layer
+
+Plan 3 adds `tabtool-document`, the UI-free document model above
+`tabtool-core` and `tabtool-large`. One `Document` owns the table, phase,
+selection, sort, filter, undo history and save state. Exactly one content mode
+is active: an in-memory `Arc<CsvTable>`, a mapped `LargeState`, or neither
+while nothing has loaded. The crate has no UI, platform code, async runtime or
+`unsafe` code, and it never reads the operating-system locale.
+
+### Phases and write gates
+
+| Phase | Meaning | Editing | Save |
+| --- | --- | --- | --- |
+| `Loading` | Bytes are not parsed yet; the untitled placeholder is not saveable. | No | No |
+| `Ready` | The table or mapped source is displayed. | Yes | Gated by the write issue |
+| `ReadFailed(CsvError)` | Parsing failed; the table is empty. Change the format and re-read. | No | No |
+| `UnreadableFile` | The bytes could not be read; the path stays bound for a retry. | No | No |
+| `NeedsAttention(CsvWriteIssue)` | The table loaded but the current format cannot write it safely. | Yes | No |
+
+The write issue is `UnencodableText` or `AmbiguousOutput`; it is recomputed
+after every content change and undo, and it also drives `save_error`. A save
+while the issue exists returns it as a typed `DocumentError::Csv` error and
+never writes a partial file. `can_save` additionally requires a bound path, a
+table, no re-read in flight and a `Ready` or `NeedsAttention` phase.
+`save_as` works without an existing path; it binds the new path only after the
+write succeeds.
+
+The other document errors are `NotReady` (no table or no path), `Busy` (a
+streaming large save owns the document), `RequiresConfirmation` (a dirty
+re-read or an overlapping one) and `CannotWriteFile` / `CannotReadFile` for
+I/O failures.
+
+### Load, new documents and snapshots
+
+- `Document::new` starts in `Loading` with the blank 1×3 placeholder table.
+  `new_document` publishes a ready 1×3 table; with First Row as Header the
+  three columns get empty headers. An untitled document stays dirty until
+  `save_as` binds a path.
+- `load_from_bytes` / `load_from_path` take an optional configuration: `None`
+  detects the format, `Some` parses explicitly. A detection preference for
+  Chinese is passed in; the crate never reads the system language.
+- A parse error publishes `ReadFailed` with the typed `CsvError` and no table.
+  An I/O error publishes `UnreadableFile`; the path stays bound, so a retry
+  can re-read it. Success strips and remembers a UTF-8 BOM and publishes
+  `Ready`.
+- `snapshot` captures the table `Arc`, configuration and BOM flag for saving.
+  It refuses `Loading`, `ReadFailed` and `UnreadableFile` documents.
+
+### Undo actions and boundaries
+
+Undo is an application-level stack owned by the document, never a system undo
+manager. `UndoAction::key` is stable English text for the UI to map to a
+localized name:
+
+| Action | Key | Restores |
+| --- | --- | --- |
+| `EditCell` | `editCell` | The previous and next text of one cell |
+| `AddRow` | `addRow` | A full state snapshot |
+| `AddColumn` | `addColumn` | A full state snapshot |
+| `DeleteRows` | `deleteRows` | A full state snapshot |
+| `DeleteColumns` | `deleteColumns` | A full state snapshot |
+| `MoveRows` | `moveRows` | A full state snapshot |
+| `MoveColumn` | `moveColumn` | A full state snapshot |
+| `PasteData` | `pasteData` | A full state snapshot |
+| `ChangeFormat` | `changeFormat` | A full state snapshot |
+| `ToggleHeader` | `toggleHeader` | A full state snapshot |
+| `RenameColumn` | `renameColumn` | A full state snapshot |
+| `SortRows` | `sortRows` | A full state snapshot |
+| `RemoveSort` | `removeSort` | A full state snapshot |
+| `RevertToSaved` | `revertToSaved` | A full state snapshot |
+
+A full snapshot holds the table `Arc`, configuration, BOM flag, active sort and
+selection; the table is shared, so an entry does not copy cells. One user
+action is one step. A cell edit is targeted. A new action clears redo; a
+no-op command records nothing and leaves redo alone, and a selection-only
+change is neither a step nor a revision. Undo and redo bump the revision,
+refresh the write issue and re-evaluate an applied filter. Structural changes
+clear the active sort, except column moves, which keep it. Cell edits keep the
+sort.
+
+Large documents use targeted cell entries keyed by the physical file row and
+header-toggle entries; their action names are the same `EditCell` and
+`ToggleHeader`. A refused large undo or redo leaves the entry on its stack and
+raises `DocumentNotice::EditRejected` with the typed error.
+
+### Format changes, re-reads and revert
+
+- `plan_format_change` maps a configuration diff to `None`, `DecimalMark`,
+  `Header` or `Reparse`. Encoding, separator, quote and escape changes re-read
+  the file; decimal-mark and header changes transform the table in memory. A
+  parsing change wins when several fields change at once.
+- A file-backed parsing change re-reads through `Storage`. A dirty document
+  requires `force`; without it the call reports `RequiresConfirmation` and
+  changes nothing. Only one re-read may run at a time; a second one is
+  rejected.
+- The re-read is transactional. The document captures its revision before
+  reading, parses the bytes, and applies the candidate only while the revision
+  is unchanged and the document is not loading, large or saving. An edit,
+  format change, undo or Save As that lands during the parse therefore wins;
+  the stale candidate is ignored.
+- A failed read or parse keeps the previous table, configuration and undo
+  history and records no step. A successful re-read replaces table,
+  configuration and BOM with one `ChangeFormat` step (when the content
+  changed), clears the sort, trims the selection and marks the document clean
+  because it now matches disk. A document that had been read-failed can be
+  recovered this way without an undo entry.
+- `detect_format_from_disk` returns the detector's configuration without
+  applying it; a large document sniffs the head of its mapping instead of
+  reading the whole file.
+- `set_decimal_mark` converts only cells that are numeric by the old mark,
+  preserving leading zeros and exponents, and updates the configuration in one
+  `ChangeFormat` step. `set_header_enabled` moves the first row across the
+  header boundary, with one `ToggleHeader` step; it enables headers without
+  consuming the first data row. Renaming a column on a headerless table does
+  the same.
+- `plan_revert` answers `Revert`, `NeedsConfirmation` or `Unavailable`.
+  `revert_to_saved` re-reads the current path with the current configuration,
+  records one `RevertToSaved` step and never writes the file. A failed read or
+  parse keeps the previous state. A large document instead clears its overlay
+  and undo history without re-reading; the header mapping stays as it is.
+
+### Row filters
+
+The `RowFilterModel` mirrors the Swift filter state machine:
+
+- `criteria` is the draft being edited, `applied` is the last applied
+  `RowFilter`, and `visible_rows` is the snapshot of model row indexes that
+  pass it. Draft edits affect nothing until an apply.
+- Apply-all combines every enabled criterion with AND. Apply-one uses only
+  that criterion and enables it even when its checkbox was off. Clear removes
+  the filter and resets the draft to one empty row. Add inserts after a
+  criterion; remove always keeps one row. Criteria without a column are filled
+  from the document's column set.
+- Evaluation uses the document decimal mark for numeric comparisons and a
+  fixed `en-US` locale for text, matching Foundation's locale-independent
+  case-insensitive matching. The crate has no system locale.
+- `visible_rows` is a snapshot: a cell edit never re-evaluates it, so a row
+  does not vanish while it is being typed into. Undo/redo, sort, re-read,
+  revert and structural changes refresh it. A refresh re-evaluates the applied
+  filter, detaches draft criteria from deleted columns, drops applied criteria
+  whose column is gone, and ends the filter when none is active. A reload that
+  replaces every column identity remaps criteria by position when the column
+  count is unchanged.
+- Filters are view state: they are not undoable and do not bump the revision.
+  An applied filter blocks row insertion, deletion and moves, and therefore
+  also blocks paste, which inserts rows. Column edits and column deletion stay
+  available. Sorting still applies to the whole table and then refreshes the
+  visible set. Applying or refreshing trims the selection to visible rows.
+- Export reads `visible_table`, which contains only the visible rows with
+  their edits; without a filter it is the whole table.
+- A large document cannot filter and cannot show the filter bar.
+
+### Saves
+
+- Dirty is revision-based, matching the Rust design: `save` records
+  `saved_revision = revision`, and any later content, format, sort or
+  file-binding change bumps the revision. Undoing back to the saved text still
+  reports dirty. The document never re-reads the file to compare bytes, so a
+  change made outside the document is not detected here; last writer wins.
+  A large document is dirty while its overlay holds an edit, and becomes clean
+  when an edit is written back to the file's own text.
+- `can_save` requires a path, a table, no re-read in flight, a writable phase
+  and no write issue. `save` writes the current path; `save_as` writes the new
+  path, then binds it. A failed write leaves the previous file, path and dirty
+  state untouched. `Storage::write_atomic` writes a temporary file and
+  replaces atomically; a new file gets mode 0644 on Unix and an existing file
+  keeps its permissions.
+- Saving encodes a `DocumentSnapshot` before touching the file, so a gate
+  failure cannot truncate anything. The snapshot cache is keyed by revision
+  and holds an `Arc`; every revision bump clears it, and repeated saves of an
+  unchanged document reuse it.
+- Large documents never use the `Storage` save path. Their status is `None`,
+  `Indexing(fraction)`, `Ready`, `Stale { appended }` or `Saving(fraction)`.
+
+### Large documents
+
+- `uses_large_mode(size, threshold)` opens a file large when
+  `size >= threshold`; `open_file` routes by the file size, and a file below
+  the threshold stays in memory. `open_large` on a below-threshold file
+  returns `NotReady` without changing the document.
+- Opening maps the file, checks an explicit format or sniffs the head, and
+  starts the indexer on its worker thread (8 MiB steps, 100 ms progress
+  reports). Rows are readable while the index grows; cell editing requires
+  `LargeStatus::Ready`. A refused format publishes `ReadFailed`, a missing
+  file `UnreadableFile`, both without a table.
+- `poll_large_indexing` publishes `Indexing(fraction)` and then `Ready`. The
+  caller decides the polling cadence; the UI uses 4 Hz.
+- `refresh_large_staleness` reports `Stale { appended: true }` for a file that
+  only grew and `Stale { appended: false }` for a replaced or truncated one.
+  A stale document refuses edits and saving until it is reloaded.
+  `reload_large` re-maps the path with the current format and keeps the
+  overlay, selection and undo history. `reopen_large` with a new format
+  requires confirmation when the overlay is dirty, then drops the overlay and
+  undo; a refused format, including UTF-16, leaves the source unchanged.
+- A cell edit goes to the source overlay, validated by trial serialization, so
+  ambiguous output and unencodable text fail before anything changes. Writing
+  the same text is a no-op. The undo entry is keyed by physical row, so it
+  survives a header toggle. The header toggle is a row-mapping change with one
+  `ToggleHeader` step; bytes and overlay are untouched. Revert clears the
+  overlay and the undo history without re-reading.
+- Copy produces TSV and is capped at 1,000,000 cells. A refusal (no source,
+  nothing valid selected, or over the limit) reports
+  `CsvError::RowNotEditable`; the limit case also raises
+  `DocumentNotice::CopyLimitExceeded`.
+
+### Large saves, adoption and cancel
+
+- `start_large_save` requires a ready, fully indexed, non-stale document; a
+  second start is refused, as are stale files and unfinished indexes, with a
+  typed `LargeFileSaveError`. `save_large_blocking` is start plus wait, for
+  tests and callers without a progress UI.
+- The saver runs in two phases. `prepare` applies the gates, checks free space
+  and writes the temporary file while the original mapping is still alive.
+  Then the document gives up its `LargeState`: rows become unavailable,
+  `can_edit_cells` is false and the status is `Saving(fraction)`. The worker
+  drops the snapshot and the original mapping before `install` replaces the
+  target, which is required on Windows.
+- A successful save adopts a new mapping and a complete index of the written
+  file, with the same overlay entries (minus the edits that were written),
+  the same column identities and the retained undo history. Save As binds the
+  new path only after success; the saved revision is recorded.
+- A cancel or pre-install failure restores the original mapping from the saved
+  row index with a seeded indexer (no rescan), and returns the same overlay,
+  column identities and undo history. A plain save with no edits writes
+  nothing and reuses the mapping.
+- While a save runs, every document-replacing operation (`open_file`,
+  `open_large`, `load_*`, `new_document`, `reload_large`, `reopen_large`,
+  `apply_parsing_configuration`, `revert_to_saved`, `save`, `save_as`)
+  returns `DocumentError::Busy`. A second `wait_for_large_save` is a no-op;
+  a `Saved` value obtained directly from `LargeSaveJob::wait` still owns the
+  target mapping until it is dropped.
+- Edits made during the save are not possible: the document releases the
+  mapping when the save starts, so rows are unavailable while `Saving`. This
+  is the Windows-safe behavior the design pins in §7.1. The overlay from
+  before the save is preserved and adopted.
+
+### What the UI still owns
+
+The document layer exposes state and commands; it schedules nothing and
+renders nothing.
+
+- **Autosave.** The UI saves 0.8 s after a change, on leaving the cell editor
+  (mobile) and on backgrounding. It consults `is_dirty`, `can_save`,
+  `write_issue` and `save_error`, and it never autosaves a large document.
+  The crate has no timer.
+- **Prompts and banners.** The UI asks before a dirty re-read, a dirty revert
+  or closing; it renders the dirty dot, the reload banner, the typed error and
+  `DocumentNotice`. `plan_revert`, `write_issue`, `save_error`,
+  `large_status` and `take_notice` supply the decisions and values.
+- **Locale and decimal separator.** The caller passes the system locale to
+  sorting and the decimal separator to copy and paste. The document layer
+  never reads either from the OS; filters use a fixed `en-US` locale because
+  the matching is locale-independent.
+- **Editor session and field commit.** The grid owns the text field. The UI
+  commits the active cell before a sort, rename, filter apply/clear, export or
+  save; the crate has no field editor and no notion of an uncommitted value.
+- **Settings and presentation.** The large-file threshold is an argument
+  (100 MiB default), not a setting read here. Save panels, menus, shortcuts,
+  the first-responder chain, scroll position, selection rendering and
+  accessibility are UI work (Plans 4–5).
+
+### Known deviations and minors
+
+- Opening a document is not a general "replace": the in-memory `load_from_path`
+  (and therefore `open_file` for a small file) is a no-op when the document is
+  already `Ready` or `NeedsAttention`, while `open_file` for a large file calls
+  `open_large` and replaces it. The in-memory no-op keeps a late duplicate load
+  from replacing edits. A caller that opens a different file starts a new
+  `Document`.
+- `open_large` on a below-threshold file returns `NotReady` without touching
+  the document. Use `open_file` for size routing.
+- Large copy has no distinct "nothing selected" error: every refusal is
+  `CsvError::RowNotEditable`, and only the 1,000,000-cell limit also raises
+  `CopyLimitExceeded`.
+- A failed large open (`ReadFailed`, `UnreadableFile`) leaves no source but
+  `can_edit_cells` answers true and the document reports dirty, because the
+  path is bound and the revision moved. The phase is the authoritative block;
+  the UI must not offer editing in that state.
+- Dirty is revision-based, not a byte comparison. The Swift
+  `hasUnsavedChangesTracksDiskBytes` behavior is deliberately not ported:
+  external edits to an in-memory document are not detected, and undoing back
+  to the saved text still reports dirty.
+- The Rust load is synchronous and has no cancellation. The port keeps the
+  "a cancelled or duplicate load never publishes" invariant with a no-op
+  second load, not with a cancel API.
+- A data-only failed load does not retain the supplied bytes. The caller can
+  call `load_from_bytes` again with the same bytes; a file-backed document can
+  retry from its bound path.
+- If the written file is installed but cannot be re-indexed, the document
+  reports the typed I/O error and has no source to restore, because the target
+  already holds the new bytes. A pre-install failure restores the original
+  state instead.
+- `plan_format_change` handles a quote-character change, but no dedicated Rust
+  test pins that single field; the parity inventory records it as a gap.
+
+### Plan 3 boundary
+
+Delivered:
+
+- `tabtool-document`: phases, write gates, load and snapshots, editing,
+  structural operations and undo, format changes and transactional re-reads,
+  revert, clipboard, sorting, renaming, filters, small-file saves, large-file
+  open and editing, and the two-phase large save with adoption and cancel;
+- the document test suite and the checked parity inventory in
+  `crates/tabtool-document/tests/parity.rs`.
+
+Not in Plan 3:
+
+- every screen and dialog: grid, status line, toolbar, menus, banners, save
+  panels, autosave scheduling, prompts and the large-file window;
+- localization, settings UI, packaging and installers;
+- `tabtool-platform`, `tabtool-i18n`, `tabtool-ui` and `tabtool-app`.
+
+`tabtool-desktop` is still a shell; no user can open or edit a document
+through it yet.
 
 ## Large-file benchmark
 
