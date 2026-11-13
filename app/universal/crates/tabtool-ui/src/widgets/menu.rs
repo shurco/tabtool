@@ -2,6 +2,8 @@
 
 use egui::{Button, MenuBar, Ui};
 
+use crate::theme::current;
+
 /// One menu item.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct MenuItem<'a> {
@@ -66,6 +68,7 @@ impl<'a> Menu<'a> {
 
 /// Show the in-window menu bar; returns the id of the chosen item.
 pub fn menu_bar<'a>(ui: &mut Ui, menus: &'a [Menu<'a>]) -> Option<&'a str> {
+    let theme = current(ui.ctx());
     let mut chosen = None;
     MenuBar::new().ui(ui, |ui| {
         for menu in menus {
@@ -73,7 +76,7 @@ pub fn menu_bar<'a>(ui: &mut Ui, menus: &'a [Menu<'a>]) -> Option<&'a str> {
                 for item in menu.items {
                     let mut button = Button::new(item.label)
                         .selected(item.selected)
-                        .min_size(egui::Vec2::new(140.0, 0.0));
+                        .min_size(egui::Vec2::new(140.0, theme.metrics.menu_item_height));
                     if let Some(shortcut) = item.shortcut {
                         button = button.shortcut_text(shortcut);
                     }

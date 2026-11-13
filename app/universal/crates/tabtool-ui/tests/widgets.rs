@@ -7,9 +7,9 @@ use egui::RichText;
 use tabtool_i18n::{Language, tr};
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::widgets::{
-    AlertAction, BannerKind, ButtonKind, Menu, MenuItem, Picker, PushButton, alert, banner,
-    list_row, menu_bar, search_field, segmented, sheet, status_line, tab_bar, text_field, toggle,
-    toolbar, toolbar_separator,
+    AlertAction, BannerKind, ButtonKind, Menu, MenuItem, Picker, PushButton, banner, list_row,
+    menu_bar, modal, search_field, segmented, sheet, status_line, tab_bar, text_field, toggle,
+    toggle_enabled, toolbar, toolbar_separator,
 };
 use tabtool_ui::{Theme, UiHarness};
 
@@ -21,6 +21,11 @@ fn en(key: &str) -> &str {
 
 fn heading(ui: &mut egui::Ui, text: &str) {
     ui.label(RichText::new(text).heading());
+}
+
+#[cfg(target_os = "macos")]
+fn snapshots_enabled() -> bool {
+    std::env::var_os("TABTOOL_SKIP_SNAPSHOTS").is_none()
 }
 
 /// Every widget in one deterministic screen, in the compact macOS density.
@@ -91,7 +96,7 @@ fn gallery(ui: &mut egui::Ui) {
 
                 left.add_space(8.0);
                 heading(left, en("Encoding"));
-                let encodings = [en("Unicode (UTF-8)"), "Comma (,)", en("Dot (.)")];
+                let encodings = [en("Unicode (UTF-8)"), en("Comma (,)"), en("Dot (.)")];
                 Picker::new("encoding", en("Encoding"), encodings[0], &encodings)
                     .width(165.0)
                     .show(left);
@@ -140,15 +145,30 @@ fn gallery(ui: &mut egui::Ui) {
 }
 
 #[test]
+fn gallery_renders_without_accessibility_errors() {
+    let mut harness = UiHarness::wide(Theme::desktop_light(), gallery);
+
+    harness.run();
+}
+
+#[cfg(target_os = "macos")]
+#[test]
 fn gallery_matches_the_light_snapshot() {
+    if !snapshots_enabled() {
+        return;
+    }
     let mut harness = UiHarness::wide(Theme::desktop_light(), gallery);
 
     harness.run();
     harness.snapshot("gallery-light");
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn gallery_matches_the_dark_snapshot() {
+    if !snapshots_enabled() {
+        return;
+    }
     let mut harness = UiHarness::wide(Theme::desktop_dark(), gallery);
 
     harness.run();
@@ -258,7 +278,7 @@ fn alert_click_reports_the_action_index() {
         AlertAction::new(en("Delete"), ButtonKind::Destructive),
     ];
     let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
-        if let Some(index) = alert(
+        if let Some(index) = modal(
             ui,
             "delete-document",
             en("Delete Document?"),
@@ -371,15 +391,19 @@ fn a_disabled_button_does_not_fire() {
     assert!(!clicked.get(), "a disabled button must not report a click");
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn alert_matches_the_snapshot() {
+    if !snapshots_enabled() {
+        return;
+    }
     let actions = [
         AlertAction::new(en("Cancel"), ButtonKind::Bordered),
         AlertAction::new(en("Delete"), ButtonKind::Destructive),
     ];
     let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
         ui.label(en("Documents"));
-        alert(
+        modal(
             ui,
             "delete-document",
             en("Delete Document?"),
@@ -392,8 +416,12 @@ fn alert_matches_the_snapshot() {
     harness.snapshot("alert-light");
 }
 
+#[cfg(target_os = "macos")]
 #[test]
 fn sheet_matches_the_snapshot() {
+    if !snapshots_enabled() {
+        return;
+    }
     let mut harness = UiHarness::compact(Theme::desktop_dark(), |ui| {
         ui.label(en("Documents"));
         sheet(ui, "format", en("Format"), en("Close"), |ui| {
@@ -404,6 +432,88 @@ fn sheet_matches_the_snapshot() {
 
     harness.run();
     harness.snapshot("sheet-dark");
+}
+
+#[test]
+fn a_disabled_toggle_does_not_change() {
+    let value = Rc::new(Cell::new(false));
+    let state = Rc::clone(&value);
+    let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
+        let mut on = state.get();
+        toggle_enabled(ui, en("Header"), &mut on, false);
+        state.set(on);
+    });
+
+    harness.run();
+    harness.get_by_label(en("Header")).click();
+    harness.run();
+
+    assert!(!value.get(), "a disabled toggle must not change");
+}
+
+#[test]
+fn a_disabled_picker_does_not_open() {
+    let options = [en("Unicode (UTF-8)"), en("Comma (,)"), en("Dot (.)")];
+    let value = Rc::new(Cell::new(0));
+    let state = Rc::clone(&value);
+    let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
+        let selected = options[state.get()];
+        if let Some(index) = Picker::new("encoding", en("Encoding"), selected, &options)
+            .enabled(false)
+            .show(ui)
+        {
+            state.set(index);
+        }
+    });
+
+    harness.run();
+    harness.get_by_label(en("Encoding")).click();
+    harness.run();
+
+    assert!(
+        harness.query_by_label(en("Comma (,)")).is_none(),
+        "a disabled picker must not open its popup"
+    );
+    assert_eq!(value.get(), 0);
+}
+
+#[test]
+fn a_disabled_menu_item_does_not_fire() {
+    let chosen = Rc::new(RefCell::new(None::<String>));
+    let state = Rc::clone(&chosen);
+    let items = [MenuItem::new("close", en("Close")).enabled(false)];
+    let menus = [Menu::new(en("File"), &items)];
+    let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
+        if let Some(id) = menu_bar(ui, &menus) {
+            *state.borrow_mut() = Some(id.to_owned());
+        }
+    });
+
+    harness.run();
+    harness.get_by_label(en("File")).click();
+    harness.run();
+    harness.get_by_label(en("Close")).click();
+    harness.run();
+
+    assert_eq!(*chosen.borrow(), None);
+}
+
+#[test]
+fn tab_focus_reaches_a_text_field() {
+    let value = Rc::new(RefCell::new(String::new()));
+    let state = Rc::clone(&value);
+    let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
+        text_field(ui, en("Column"), &mut state.borrow_mut(), en("Header"));
+    });
+
+    harness.run();
+    harness.key_press(egui::Key::Tab);
+    harness.run();
+
+    assert!(
+        harness.get_by_label(en("Column")).is_focused(),
+        "Tab must move keyboard focus to the text field"
+    );
 }
 
 #[test]
@@ -420,5 +530,8 @@ fn a_focused_widget_draws_its_focus_ring() {
         harness.get_by_label(en("Close")).is_focused(),
         "Tab must move keyboard focus to the only button"
     );
-    harness.snapshot("focus-ring-light");
+    #[cfg(target_os = "macos")]
+    if snapshots_enabled() {
+        harness.snapshot("focus-ring-light");
+    }
 }

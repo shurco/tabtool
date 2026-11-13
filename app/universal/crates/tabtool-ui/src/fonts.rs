@@ -15,8 +15,8 @@
 use std::sync::Arc;
 
 use egui::{
-    Context, FallbackRequest, FontData, FontDefinitions, FontFamily, FontInsert, FontPriority,
-    FontProvider, FontTweak, InsertFontFamily, epaint::text::VariationCoords,
+    Context, FallbackRequest, FontData, FontDefinitions, FontFamily, FontId, FontInsert,
+    FontPriority, FontProvider, FontTweak, InsertFontFamily, epaint::text::VariationCoords,
 };
 
 /// The interface font.
@@ -84,6 +84,11 @@ pub fn install_fonts(ctx: &Context) {
 
     ctx.set_fonts(fonts);
     ctx.add_font_provider(Arc::new(BundledEmoji));
+}
+
+/// A semibold font at `size`, for titles that are not using `TextStyle::Heading`.
+pub fn semibold_font(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name(SEMIBOLD_FAMILY.into()))
 }
 
 /// Supplies Noto Emoji for emoji clusters no configured font covers.

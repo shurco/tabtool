@@ -7,9 +7,8 @@ license.workspace = true
 description = "Design tokens, widgets and the deterministic egui test harness for TabTool."
 
 [features]
-default = ["test-support"]
-# The kittest harness is only needed by tests. Production builds can opt out
-# with `default-features = false`.
+default = []
+# The kittest harness is only needed by tests.
 test-support = ["dep:egui_kittest"]
 
 [dependencies]
@@ -20,4 +19,7 @@ egui_kittest = { workspace = true, optional = true, default-features = false, fe
 ] }
 
 [dev-dependencies]
+# Enables `test-support` for this package's own tests without enabling it for
+# downstream consumers.
+tabtool-ui = { path = ".", features = ["test-support"] }
 tabtool-i18n = { path = "../tabtool-i18n" }

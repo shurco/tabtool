@@ -3690,6 +3690,7 @@ dependencies = [
  "egui",
  "egui_kittest",
  "tabtool-i18n",
+ "tabtool-ui",
 ]
 
 [[package]]

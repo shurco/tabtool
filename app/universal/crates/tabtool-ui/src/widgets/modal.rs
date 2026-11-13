@@ -38,9 +38,9 @@ impl<'a> AlertAction<'a> {
 /// Show a modal alert; returns the index of the pressed action.
 ///
 /// The alert stays visible until the caller hides it after receiving an index.
-pub fn alert(
+pub fn modal(
     ui: &mut Ui,
-    id_salt: impl Hash + std::fmt::Debug + std::fmt::Debug,
+    id_salt: impl Hash + std::fmt::Debug,
     title: &str,
     message: &str,
     actions: &[AlertAction<'_>],
@@ -53,18 +53,17 @@ pub fn alert(
         .fill(colors.control_background)
         .stroke(Stroke::new(1.0, colors.separator))
         .corner_radius(CornerRadius::same(theme.metrics.large_corner_radius))
-        .inner_margin(Margin::same(16))
+        .inner_margin(Margin::same(theme.metrics.alert_padding as i8))
         .shadow(ui.style().visuals.popup_shadow);
 
     egui::Modal::new(Id::unique(id_salt))
         .frame(frame)
         .backdrop_color(Color32::from_black_alpha(60))
         .show(ui.ctx(), |ui| {
-            ui.set_width(340.0);
+            ui.set_width(theme.metrics.alert_width);
             ui.label(
                 RichText::new(title)
-                    .size(theme.typography.title)
-                    .strong()
+                    .font(crate::fonts::semibold_font(theme.typography.title))
                     .color(colors.label),
             );
             ui.add_space(6.0);

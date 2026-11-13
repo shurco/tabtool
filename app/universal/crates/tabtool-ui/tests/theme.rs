@@ -39,6 +39,7 @@ fn light_palette_pins_the_system_colors() {
     assert_eq!(theme.colors.tertiary_label, rgb(0x8E8E93));
     assert_eq!(theme.colors.separator, rgb(0xE5E5E7));
     assert_eq!(theme.colors.control_background, rgb(0xFFFFFF));
+    assert_eq!(theme.colors.raised_background, rgb(0xFFFFFF));
     assert_eq!(theme.colors.control_border, rgb(0xD1D1D6));
     assert_eq!(theme.colors.window_background, rgb(0xFFFFFF));
     assert_eq!(theme.colors.content_background, rgb(0xFFFFFF));
@@ -63,6 +64,7 @@ fn dark_palette_pins_the_system_colors() {
     assert_eq!(theme.colors.tertiary_label, rgb(0x8E8E93));
     assert_eq!(theme.colors.separator, rgb(0x3A3A3C));
     assert_eq!(theme.colors.control_background, rgb(0x1C1C1E));
+    assert_eq!(theme.colors.raised_background, rgb(0x48484A));
     assert_eq!(theme.colors.control_border, rgb(0x48484A));
     assert_eq!(theme.colors.window_background, rgb(0x1E1E1E));
     assert_eq!(theme.colors.content_background, rgb(0x1E1E1E));
@@ -102,7 +104,16 @@ fn metrics_pin_the_desktop_control_sizes() {
     assert_eq!(metrics.menu_item_height, 22.0);
     assert_eq!(metrics.focus_ring_width, 2.0);
     assert_eq!(metrics.toolbar_height, 32.0);
+    assert_eq!(metrics.toolbar_padding_x, 10.0);
+    assert_eq!(metrics.toolbar_padding_y, 5.0);
     assert_eq!(metrics.status_line_height, 22.0);
+    assert_eq!(metrics.status_padding_x, 10.0);
+    assert_eq!(metrics.status_padding_y, 3.0);
+    assert_eq!(metrics.alert_padding, 16.0);
+    assert_eq!(metrics.alert_width, 340.0);
+    assert_eq!(metrics.sheet_padding, 16.0);
+    assert_eq!(metrics.sheet_width, 440.0);
+    assert_eq!(metrics.banner_padding, 10.0);
 }
 
 #[test]
@@ -132,6 +143,10 @@ fn apply_theme_writes_the_tokens_into_the_egui_style() {
     );
     assert_eq!(style.text_styles[&TextStyle::Body].size, 13.0);
     assert_eq!(style.text_styles[&TextStyle::Heading].size, 15.0);
+    assert_eq!(
+        style.text_styles[&TextStyle::Name(tabtool_ui::theme::WINDOW_TITLE_STYLE.into())].size,
+        17.0
+    );
     assert_eq!(style.spacing.interact_size.y, 22.0);
     assert_eq!(style.visuals.strong_text_color(), theme.colors.label);
     assert_eq!(style.visuals.text_color(), theme.colors.label);
@@ -203,6 +218,10 @@ fn fonts_fall_back_in_a_deterministic_order() {
         !proportional.iter().any(|name| name == "Noto Emoji"),
         "emoji must come from the color system font when the platform has one; \
          the bundled monochrome font is only a provider fallback"
+    );
+    assert!(
+        proportional.iter().any(|name| name == "egui-icons"),
+        "egui/default_fonts must stay enabled so the harness and app share the icon fallbacks"
     );
     assert_eq!(
         families[&egui::FontFamily::Name("Emoji".into())],

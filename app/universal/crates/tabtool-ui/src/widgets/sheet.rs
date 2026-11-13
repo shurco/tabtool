@@ -18,7 +18,7 @@ pub struct SheetResponse<R> {
 /// Show a modal sheet with a title row and a close button.
 pub fn sheet<R>(
     ui: &mut Ui,
-    id_salt: impl Hash + std::fmt::Debug + std::fmt::Debug,
+    id_salt: impl Hash + std::fmt::Debug,
     title: &str,
     close_label: &str,
     add_contents: impl FnOnce(&mut Ui) -> R,
@@ -31,19 +31,18 @@ pub fn sheet<R>(
         .fill(colors.control_background)
         .stroke(Stroke::new(1.0, colors.separator))
         .corner_radius(CornerRadius::same(theme.metrics.large_corner_radius))
-        .inner_margin(Margin::same(16))
+        .inner_margin(Margin::same(theme.metrics.sheet_padding as i8))
         .shadow(ui.style().visuals.popup_shadow);
 
     let response = egui::Modal::new(Id::unique(id_salt))
         .frame(frame)
         .backdrop_color(Color32::from_black_alpha(60))
         .show(ui.ctx(), |ui| {
-            ui.set_width(440.0);
+            ui.set_width(theme.metrics.sheet_width);
             ui.horizontal(|ui| {
                 ui.label(
                     RichText::new(title)
-                        .size(theme.typography.title)
-                        .strong()
+                        .font(crate::fonts::semibold_font(theme.typography.title))
                         .color(colors.label),
                 );
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {

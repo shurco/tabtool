@@ -45,7 +45,7 @@ pub fn banner(
         .fill(background)
         .stroke(Stroke::new(1.0, foreground.gamma_multiply(0.35)))
         .corner_radius(CornerRadius::same(theme.metrics.large_corner_radius))
-        .inner_margin(Margin::same(10))
+        .inner_margin(Margin::same(theme.metrics.banner_padding as i8))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
@@ -57,8 +57,7 @@ pub fn banner(
                 ui.vertical(|ui| {
                     ui.label(
                         RichText::new(title)
-                            .size(theme.typography.body)
-                            .strong()
+                            .font(crate::fonts::semibold_font(theme.typography.body))
                             .color(colors.label),
                     );
                     if !message.is_empty() {

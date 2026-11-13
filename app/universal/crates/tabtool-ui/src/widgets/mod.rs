@@ -18,7 +18,7 @@ pub use banner::{BannerKind, BannerResponse, banner};
 pub use button::{ButtonKind, PushButton, primary_button, push_button};
 pub use list_row::list_row;
 pub use menu::{Menu, MenuItem, menu_bar};
-pub use modal::{AlertAction, alert};
+pub use modal::{AlertAction, modal};
 pub use picker::Picker;
 pub use segmented::segmented;
 pub use sheet::{SheetResponse, sheet};

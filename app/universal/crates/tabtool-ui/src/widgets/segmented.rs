@@ -27,13 +27,13 @@ pub fn segmented(ui: &mut Ui, options: &[&str], selected: &mut usize) -> Respons
                     let is_selected = index == *selected;
                     let mut style = ui.style().as_ref().clone();
                     style.visuals.widgets.inactive.weak_bg_fill = if is_selected {
-                        colors.control_background
+                        colors.raised_background
                     } else {
                         Color32::TRANSPARENT
                     };
                     style.visuals.widgets.inactive.bg_stroke = Stroke::NONE;
                     style.visuals.widgets.hovered.weak_bg_fill = if is_selected {
-                        colors.control_background
+                        colors.raised_background
                     } else {
                         colors.hover_background
                     };

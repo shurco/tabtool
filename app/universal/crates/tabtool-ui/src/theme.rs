@@ -53,6 +53,8 @@ pub struct Colors {
     pub separator: Color32,
     /// The fill of a text field or an inactive push button.
     pub control_background: Color32,
+    /// The raised surface of a selected segment, lighter than its track.
+    pub raised_background: Color32,
     /// The border of a text field or a bordered push button.
     pub control_border: Color32,
     /// The window and panel background.
@@ -94,6 +96,9 @@ pub struct Typography {
     pub title_large: f32,
 }
 
+/// The named text style for large window titles.
+pub const WINDOW_TITLE_STYLE: &str = "WindowTitle";
+
 /// Desktop control geometry.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Metrics {
@@ -123,8 +128,26 @@ pub struct Metrics {
     pub focus_ring_width: f32,
     /// The height of the toolbar strip, 32 pt.
     pub toolbar_height: f32,
+    /// Horizontal toolbar inset, 10 pt.
+    pub toolbar_padding_x: f32,
+    /// Vertical toolbar inset, 5 pt.
+    pub toolbar_padding_y: f32,
     /// The height of the status line, 22 pt.
     pub status_line_height: f32,
+    /// Horizontal status-line inset, 10 pt.
+    pub status_padding_x: f32,
+    /// Vertical status-line inset, 3 pt.
+    pub status_padding_y: f32,
+    /// Modal alert content inset, 16 pt.
+    pub alert_padding: f32,
+    /// Modal alert width, 340 pt.
+    pub alert_width: f32,
+    /// Sheet content inset, 16 pt.
+    pub sheet_padding: f32,
+    /// Sheet width, 440 pt.
+    pub sheet_width: f32,
+    /// Banner content inset, 10 pt.
+    pub banner_padding: f32,
 }
 
 /// One complete desktop appearance.
@@ -148,6 +171,7 @@ const LIGHT: Colors = Colors {
     tertiary_label: rgb(0x8E8E93),
     separator: rgb(0xE5E5E7),
     control_background: rgb(0xFFFFFF),
+    raised_background: rgb(0xFFFFFF),
     control_border: rgb(0xD1D1D6),
     window_background: rgb(0xFFFFFF),
     content_background: rgb(0xFFFFFF),
@@ -171,6 +195,7 @@ const DARK: Colors = Colors {
     tertiary_label: rgb(0x8E8E93),
     separator: rgb(0x3A3A3C),
     control_background: rgb(0x1C1C1E),
+    raised_background: rgb(0x48484A),
     control_border: rgb(0x48484A),
     window_background: rgb(0x1E1E1E),
     content_background: rgb(0x1E1E1E),
@@ -207,7 +232,16 @@ const METRICS: Metrics = Metrics {
     menu_item_height: 22.0,
     focus_ring_width: 2.0,
     toolbar_height: 32.0,
+    toolbar_padding_x: 10.0,
+    toolbar_padding_y: 5.0,
     status_line_height: 22.0,
+    status_padding_x: 10.0,
+    status_padding_y: 3.0,
+    alert_padding: 16.0,
+    alert_width: 340.0,
+    sheet_padding: 16.0,
+    sheet_width: 440.0,
+    banner_padding: 10.0,
 };
 
 const fn rgb(value: u32) -> Color32 {
@@ -339,15 +373,16 @@ impl Theme {
 
 fn text_styles(typography: Typography) -> std::collections::BTreeMap<TextStyle, FontId> {
     let proportional = |size| FontId::new(size, FontFamily::Proportional);
-    let semibold = FontId::new(
-        typography.title,
-        FontFamily::Name(crate::fonts::SEMIBOLD_FAMILY.into()),
-    );
+    let semibold = |size| FontId::new(size, FontFamily::Name(crate::fonts::SEMIBOLD_FAMILY.into()));
     [
         (TextStyle::Body, proportional(typography.body)),
         (TextStyle::Button, proportional(typography.body)),
         (TextStyle::Small, proportional(typography.caption)),
-        (TextStyle::Heading, semibold),
+        (TextStyle::Heading, semibold(typography.title)),
+        (
+            TextStyle::Name(WINDOW_TITLE_STYLE.into()),
+            semibold(typography.title_large),
+        ),
         (
             TextStyle::Monospace,
             FontId::new(typography.body, FontFamily::Monospace),

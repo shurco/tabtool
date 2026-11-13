@@ -10,10 +10,13 @@ pub fn status_line(ui: &mut Ui, left: &str, right: &str) -> Response {
     let colors = theme.colors;
     let frame = Frame::new()
         .fill(colors.header_background)
-        .inner_margin(Margin::symmetric(10, 3))
+        .inner_margin(Margin::symmetric(
+            theme.metrics.status_padding_x as i8,
+            theme.metrics.status_padding_y as i8,
+        ))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
-            ui.set_height(theme.metrics.status_line_height - 6.0);
+            ui.set_height(theme.metrics.status_line_height - 2.0 * theme.metrics.status_padding_y);
             ui.horizontal(|ui| {
                 ui.label(
                     RichText::new(left)

@@ -10,11 +10,14 @@ pub fn toolbar<R>(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui) -> R) -> Inner
     let colors = theme.colors;
     let frame = Frame::new()
         .fill(colors.window_background)
-        .inner_margin(Margin::symmetric(10, 5))
+        .inner_margin(Margin::symmetric(
+            theme.metrics.toolbar_padding_x as i8,
+            theme.metrics.toolbar_padding_y as i8,
+        ))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                ui.set_height(theme.metrics.toolbar_height - 10.0);
+                ui.set_height(theme.metrics.toolbar_height - 2.0 * theme.metrics.toolbar_padding_y);
                 add_contents(ui)
             })
         });
