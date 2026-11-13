@@ -57,12 +57,13 @@ impl WindowState {
                 RevertDecision::NeedsConfirmation => self.revert_prompt = true,
                 RevertDecision::Unavailable => {}
             },
-            // Export, the inline rename editor and clipboard paste belong to
-            // the document chrome and grid tasks; the shell records them so
-            // those views can consume the same command.
-            MenuAction::Export | MenuAction::RenameColumn | MenuAction::Paste => {
+            // Export and the inline rename editor belong to the document
+            // chrome and grid tasks; the shell records them so those views can
+            // consume the same command.
+            MenuAction::Export | MenuAction::RenameColumn => {
                 self.pending_actions.push(action);
             }
+            MenuAction::Paste => self.chrome.request_paste(ctx, self.viewport_id),
             command => self.perform_document_command(command, ctx),
         }
     }

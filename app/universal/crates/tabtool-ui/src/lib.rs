@@ -21,6 +21,7 @@
 //! dependencies. This crate's own tests enable the feature through a self
 //! dev-dependency.
 
+pub mod document;
 pub mod fonts;
 pub mod grid;
 #[cfg(feature = "test-support")]

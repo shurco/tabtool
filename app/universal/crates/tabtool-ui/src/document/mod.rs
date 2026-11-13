@@ -1,0 +1,182 @@
+//! The document chrome: toolbar, grid, banners, format bar, status line and
+//! the read-failure overlay.
+//!
+//! [`DocumentView`] composes the whole document window below the menu bar. It
+//! owns no document model: every mutation goes through [`Document`], and the
+//! grid's display rows are translated with the shared dispatcher in
+//! [`dispatch`].
+
+mod actions;
+mod banners;
+mod dispatch;
+mod error_overlay;
+mod format_bar;
+mod panels;
+mod progress;
+mod status_line;
+mod toolbar;
+
+use egui::{Context, Frame, Ui, ViewportCommand, ViewportId};
+use tabtool_core::{CsvConfiguration, Locale};
+use tabtool_document::{Document, DocumentError, DocumentNotice, DocumentPhase};
+use tabtool_i18n::Language;
+
+use crate::grid::{Clipboard, GridAction, GridState};
+use crate::theme::current;
+
+pub use dispatch::{apply_grid_action, sync_selection_to_document, sync_selection_to_grid};
+pub use error_overlay::alert_message;
+pub use format_bar::FormatBarAction;
+pub use progress::{indexing_text, saving_text};
+pub use status_line::status_summary;
+
+/// A one-shot message the format bar or a large-file action raises.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ChromeAlert {
+    /// The catalog key used as the title.
+    pub title: &'static str,
+    /// The localized message, including its recovery hint.
+    pub message: String,
+}
+
+/// The persistent interface state of one document window.
+#[derive(Default)]
+pub struct DocumentUiState {
+    /// A menu-initiated paste is waiting for the platform event.
+    pub pending_paste: bool,
+    /// The configuration waiting for the discard confirmation.
+    pub pending_reparse: Option<CsvConfiguration>,
+    /// The failure the format bar must explain.
+    pub alert: Option<ChromeAlert>,
+    /// A document notice the user has not dismissed.
+    pub notice: Option<DocumentNotice>,
+}
+
+impl DocumentUiState {
+    /// Requests one platform paste and remembers that it is outstanding.
+    ///
+    /// A second request while one is pending does nothing, so an empty paste
+    /// event cannot loop.
+    pub fn request_paste(&mut self, ctx: &Context, viewport_id: ViewportId) {
+        if self.pending_paste {
+            return;
+        }
+        self.pending_paste = true;
+        ctx.send_viewport_cmd_to(viewport_id, ViewportCommand::RequestPaste);
+        ctx.request_repaint_of(viewport_id);
+    }
+
+    /// Shows a failure the next frame.
+    pub fn show_alert(&mut self, title: &'static str, message: String) {
+        self.alert = Some(ChromeAlert { title, message });
+    }
+}
+
+/// An app-level action the chrome asks its window to run.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DocumentAction {
+    /// Open the export panel.
+    Export,
+    /// The needs-attention banner asked for the format controls.
+    ShowFormatBar,
+    /// A large-file control routed to the document.
+    Large(LargeUiAction),
+}
+
+/// The controls that change a large document.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum LargeUiAction {
+    /// Stop the streaming save and restore the original state.
+    CancelSave,
+    /// Re-read the changed file, keeping the edits.
+    ReloadStale,
+    /// Rebuild the row index, keeping the edits.
+    RetryIndex,
+}
+
+/// The document window composition.
+pub struct DocumentView<'a> {
+    /// The document the chrome edits.
+    pub document: &'a mut Document,
+    /// The persistent scroll, selection, width and editor state.
+    pub state: &'a mut GridState,
+    /// The chrome's own one-shot state.
+    pub ui_state: &'a mut DocumentUiState,
+    /// The storage a re-read or detection uses.
+    pub storage: &'a dyn tabtool_document::Storage,
+    /// The platform clipboard for copy and paste.
+    pub clipboard: &'a mut dyn Clipboard,
+    /// The interface language.
+    pub language: Language,
+    /// The system locale for clipboard formatting.
+    pub locale: &'a Locale,
+    /// The system decimal separator for clipboard formatting.
+    pub decimal_separator: &'a str,
+    /// Whether the format bar is visible.
+    pub show_format_bar: bool,
+    /// A failed save the window wants to explain.
+    pub save_error: Option<DocumentError>,
+}
+
+impl DocumentView<'_> {
+    /// Draws the document chrome; returns the actions for the window.
+    pub fn show(mut self, ui: &mut Ui) -> Vec<DocumentAction> {
+        let ctx = ui.ctx().clone();
+        let mut actions = Vec::new();
+
+        self.poll_large_state(&ctx);
+        if let Some(notice) = self.document.take_notice() {
+            self.ui_state.notice = Some(notice);
+        }
+
+        let mut paste_attempted = false;
+        if self.ui_state.pending_paste {
+            paste_attempted = true;
+            if self.apply_pending_paste() {
+                self.ui_state.pending_paste = false;
+            }
+        }
+
+        let show_content = matches!(
+            self.document.phase(),
+            DocumentPhase::Ready | DocumentPhase::NeedsAttention(_)
+        ) && self.document.has_content();
+        if show_content {
+            let response = toolbar::show(ui, self.document, self.state, self.language);
+            for action in response.actions {
+                self.run_grid_action(action, &ctx, paste_attempted);
+                paste_attempted = paste_attempted || self.ui_state.pending_paste;
+            }
+            if response.export {
+                actions.push(DocumentAction::Export);
+            }
+        }
+
+        self.show_status(ui, &mut actions);
+        self.show_format_bar(ui);
+        self.show_alert(ui);
+        self.show_notice(ui);
+        self.show_needs_attention(ui, &mut actions);
+        if self.show_stale(ui) {
+            actions.push(DocumentAction::Large(LargeUiAction::ReloadStale));
+        }
+        self.show_large_banner(ui);
+        self.show_save_error(ui);
+
+        let grid_actions = egui::CentralPanel::default()
+            .frame(Frame::new().fill(current(ui.ctx()).colors.content_background))
+            .show(ui, |ui| self.show_content(ui))
+            .inner;
+        for action in grid_actions {
+            if paste_attempted && matches!(action, GridAction::Paste) {
+                continue;
+            }
+            self.run_grid_action(action, &ctx, paste_attempted);
+            paste_attempted = paste_attempted || self.ui_state.pending_paste;
+        }
+
+        self.show_reparse_modal(ui);
+        sync_selection_to_document(self.document, self.state);
+        actions
+    }
+}

@@ -1,0 +1,271 @@
+//! Documents, storage and the kittest fixture for the document chrome tests.
+
+use core::cell::{Cell, RefCell};
+use std::io;
+use std::path::Path;
+use std::rc::Rc;
+
+use tabtool_core::{CsvConfiguration, Locale};
+use tabtool_document::{Document, Storage};
+use tabtool_ui::document::{DocumentAction, DocumentUiState, DocumentView};
+use tabtool_ui::grid::{Clipboard, GridState};
+use tabtool_ui::harness::kittest::{NodeT, Queryable};
+use tabtool_ui::{Theme, UiHarness};
+
+/// An in-memory [`Storage`] that records reads and can fail them.
+pub struct MemoryStorage {
+    bytes: RefCell<Vec<u8>>,
+    fail_reads: Cell<bool>,
+}
+
+impl MemoryStorage {
+    /// A storage holding `bytes`.
+    pub fn new(bytes: &[u8]) -> Self {
+        Self {
+            bytes: RefCell::new(bytes.to_vec()),
+            fail_reads: Cell::new(false),
+        }
+    }
+
+    /// Makes every read fail.
+    pub fn fail_reads(&self) {
+        self.fail_reads.set(true);
+    }
+}
+
+impl Storage for MemoryStorage {
+    fn read(&self, _path: &Path) -> io::Result<Vec<u8>> {
+        if self.fail_reads.get() {
+            return Err(io::Error::other("the file is unavailable"));
+        }
+        Ok(self.bytes.borrow().clone())
+    }
+
+    fn write_atomic(&self, _path: &Path, data: &[u8]) -> io::Result<()> {
+        *self.bytes.borrow_mut() = data.to_vec();
+        Ok(())
+    }
+}
+
+/// A clipboard that holds no text; the chrome tests never paste.
+#[derive(Default)]
+pub struct TestClipboard;
+
+impl Clipboard for TestClipboard {
+    fn copy(&mut self, _text: &str) {}
+
+    fn paste(&mut self) -> Option<String> {
+        None
+    }
+}
+
+/// A document loaded from `/virtual/document.csv` with `configuration`.
+pub fn loaded(storage: &MemoryStorage, configuration: CsvConfiguration) -> Document {
+    let mut document = Document::new(configuration.clone());
+    document
+        .load_from_path(
+            Path::new("/virtual/document.csv"),
+            storage,
+            Some(configuration),
+            false,
+        )
+        .expect("load the fixture");
+    document
+}
+
+/// A ready document with no file path.
+pub fn untitled(configuration: CsvConfiguration) -> Document {
+    let mut document = Document::new(configuration.clone());
+    document
+        .new_document(configuration)
+        .expect("create a new document");
+    document
+}
+
+/// A document whose initial read failed with `bytes` but whose storage holds
+/// valid text, so Detect Automatically can recover it.
+pub fn read_failed(_storage: &MemoryStorage, configuration: CsvConfiguration) -> Document {
+    let mut document = Document::new(configuration.clone());
+    document
+        .load_from_bytes(
+            b"\xFF",
+            Some(Path::new("/virtual/document.csv")),
+            Some(configuration),
+            false,
+        )
+        .expect_err("the invalid bytes fail to decode");
+    document
+}
+
+/// Opens `path` through the large-file path and waits for its index.
+pub fn large_ready(path: &Path) -> Document {
+    let mut document = Document::new(CsvConfiguration::default());
+    document
+        .open_large(path, None, false, 0)
+        .expect("open the large fixture");
+    if let Some(state) = document.large_state() {
+        state.indexer.wait();
+    }
+    document.poll_large_indexing();
+    document
+}
+
+/// The chrome and document rendered by the deterministic kittest harness.
+pub struct Fixture {
+    ui: UiHarness<'static>,
+    document: Rc<RefCell<Document>>,
+    state: Rc<RefCell<GridState>>,
+    ui_state: Rc<RefCell<DocumentUiState>>,
+    actions: Rc<RefCell<Vec<DocumentAction>>>,
+    storage: Rc<MemoryStorage>,
+    /// A large fixture's file lives as long as the harness does.
+    _directory: Option<tempfile::TempDir>,
+}
+
+impl Fixture {
+    /// Builds a fixture at the default window size.
+    pub fn new(document: Document, storage: MemoryStorage, ui_state: DocumentUiState) -> Self {
+        Self::new_with(document, storage, ui_state, UiHarness::WIDE, true, None)
+    }
+
+    /// Builds a fixture at `size`.
+    pub fn sized(
+        document: Document,
+        storage: MemoryStorage,
+        ui_state: DocumentUiState,
+        size: [f32; 2],
+    ) -> Self {
+        Self::new_with(document, storage, ui_state, size, true, None)
+    }
+
+    /// Builds a fixture with every option the tests vary.
+    pub fn new_with(
+        document: Document,
+        storage: MemoryStorage,
+        ui_state: DocumentUiState,
+        size: [f32; 2],
+        show_format_bar: bool,
+        save_error: Option<tabtool_document::DocumentError>,
+    ) -> Self {
+        let document = Rc::new(RefCell::new(document));
+        let state = Rc::new(RefCell::new(GridState::default()));
+        let ui_state = Rc::new(RefCell::new(ui_state));
+        let actions = Rc::new(RefCell::new(Vec::new()));
+        let storage = Rc::new(storage);
+        let locale = Locale::try_from_str("en").expect("English is a valid locale");
+
+        let ui_document = Rc::clone(&document);
+        let ui_state_rc = Rc::clone(&ui_state);
+        let ui_actions = Rc::clone(&actions);
+        let ui_storage = Rc::clone(&storage);
+        let ui_grid = Rc::clone(&state);
+        let ui = UiHarness::new(Theme::desktop_light(), size, move |ui| {
+            let mut document = ui_document.borrow_mut();
+            let mut state = ui_grid.borrow_mut();
+            let mut ui_state = ui_state_rc.borrow_mut();
+            let mut clipboard = TestClipboard;
+            let shown = DocumentView {
+                document: &mut document,
+                state: &mut state,
+                ui_state: &mut ui_state,
+                storage: &*ui_storage,
+                clipboard: &mut clipboard,
+                language: tabtool_i18n::Language::En,
+                locale: &locale,
+                decimal_separator: ".",
+                show_format_bar,
+                save_error,
+            }
+            .show(ui);
+            ui_actions.borrow_mut().extend(shown);
+        });
+
+        Self {
+            ui,
+            document,
+            state,
+            ui_state,
+            actions,
+            storage,
+            _directory: None,
+        }
+    }
+
+    /// Keeps a large fixture's temporary directory alive with the harness.
+    pub fn keep(mut self, directory: tempfile::TempDir) -> Self {
+        self._directory = Some(directory);
+        self
+    }
+
+    /// Runs one frame.
+    pub fn run(&mut self) {
+        self.ui.run();
+    }
+
+    /// Runs two frames so a status line drawn before a bottom control updates.
+    pub fn settle(&mut self) {
+        self.run();
+        self.run();
+    }
+
+    /// The actions the view produced since the last call.
+    pub fn take_actions(&self) -> Vec<DocumentAction> {
+        std::mem::take(&mut *self.actions.borrow_mut())
+    }
+
+    /// Looks at the document immutably.
+    pub fn with_document<T>(&self, f: impl FnOnce(&Document) -> T) -> T {
+        f(&self.document.borrow())
+    }
+
+    /// Looks at the document mutably.
+    pub fn with_document_mut<T>(&self, f: impl FnOnce(&mut Document) -> T) -> T {
+        f(&mut self.document.borrow_mut())
+    }
+
+    /// Looks at the chrome state.
+    pub fn with_ui_state<T>(&self, f: impl FnOnce(&mut DocumentUiState) -> T) -> T {
+        f(&mut self.ui_state.borrow_mut())
+    }
+
+    /// Looks at the grid state.
+    pub fn grid(&self) -> core::cell::Ref<'_, GridState> {
+        self.state.borrow()
+    }
+
+    /// Changes the grid selection.
+    pub fn set_selection(&self, selection: tabtool_ui::grid::GridSelection) {
+        self.state.borrow_mut().selection = selection;
+    }
+
+    /// The storage behind the fixture.
+    pub fn storage(&self) -> &MemoryStorage {
+        &self.storage
+    }
+
+    /// Takes a snapshot.
+    #[cfg(target_os = "macos")]
+    pub fn snapshot(&mut self, name: impl Into<String>) {
+        self.ui.snapshot(name);
+    }
+}
+
+impl core::ops::Deref for Fixture {
+    type Target = UiHarness<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.ui
+    }
+}
+
+impl core::ops::DerefMut for Fixture {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ui
+    }
+}
+
+/// Whether the node labelled `label` is disabled.
+pub fn is_disabled(ui: &UiHarness<'_>, label: &str) -> bool {
+    let node = ui.get_by_label(label);
+    node.accesskit_node().is_disabled()
+}

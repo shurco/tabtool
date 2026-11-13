@@ -5,12 +5,8 @@ use tabtool_document::DocumentError;
 use tabtool_i18n::{Language, tr};
 
 /// The localized "Saving…" label with a rounded percentage.
-///
-/// A catalog locale may put a no-break space between `%lld` and `%%` (German
-/// does), so the value is substituted first and every `%%` becomes `%`.
 pub(crate) fn saving_text(language: Language, fraction: f64) -> String {
-    let percent = (fraction.clamp(0.0, 1.0) * 100.0).round() as i64;
-    fill_percent(tr(language, "Saving… %lld%%"), percent)
+    tabtool_ui::document::saving_text(language, fraction)
 }
 
 /// The localized explanation for a failed save.
@@ -46,31 +42,11 @@ pub(crate) fn issue_message(language: Language, error: DocumentError) -> String 
     }
 }
 
-/// Replaces the value and the escaped percent sign in a progress template.
-fn fill_percent(template: &str, percent: i64) -> String {
-    template
-        .replace("%lld", &percent.to_string())
-        .replace("%%", "%")
-}
-
 #[cfg(test)]
 mod tests {
     use tabtool_core::CsvError;
 
-    use super::{fill_percent, issue_message, saving_text};
-
-    #[test]
-    fn a_plain_progress_template_is_filled() {
-        assert_eq!(fill_percent("Saving… %lld%%", 42), "Saving… 42%");
-    }
-
-    #[test]
-    fn a_no_break_space_progress_template_is_filled() {
-        assert_eq!(
-            fill_percent("Wird gesichert … %lld\u{a0}%%", 42),
-            "Wird gesichert … 42\u{a0}%"
-        );
-    }
+    use super::{issue_message, saving_text};
 
     #[test]
     fn the_german_progress_string_keeps_its_no_break_space() {

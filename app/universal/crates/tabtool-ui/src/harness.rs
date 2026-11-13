@@ -9,6 +9,7 @@ use core::ops::{Deref, DerefMut};
 use egui::{Context, Ui, Vec2};
 use egui_kittest::Harness;
 
+pub use egui_kittest::SnapshotResults;
 pub use egui_kittest::kittest;
 
 use crate::{Theme, apply_theme, install_fonts};

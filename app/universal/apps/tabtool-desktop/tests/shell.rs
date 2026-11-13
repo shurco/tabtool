@@ -177,7 +177,7 @@ fn the_shell_renders_the_empty_state_and_new_document_command() {
 }
 
 #[test]
-fn the_shell_renders_the_document_placeholder() {
+fn the_shell_renders_the_document_chrome() {
     let handle = app_handle();
     {
         let storage = MemoryStorage::new(b"a,b\n1,2\n");
@@ -191,7 +191,12 @@ fn the_shell_renders_the_document_placeholder() {
 
     assert!(harness.query_by_label("File").is_some());
     assert!(harness.query_all_by_label("document.csv").next().is_some());
-    assert!(harness.query_by_label("CSV Table").is_some());
+    assert!(harness.query_by_label("Add Row Below").is_some());
+    assert!(
+        harness
+            .query_by_label("2 rows × 2 columns · Unicode (UTF-8) · Comma")
+            .is_some()
+    );
 }
 
 #[test]

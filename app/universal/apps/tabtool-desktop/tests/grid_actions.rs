@@ -43,12 +43,26 @@ fn window_with(
     storage: &Arc<MemoryStorage>,
     dialogs: &Arc<FakeDialogs>,
 ) -> DocumentWindow {
+    window_at(
+        ViewportId::from_hash_of("grid-actions"),
+        document,
+        storage,
+        dialogs,
+    )
+}
+
+fn window_at(
+    viewport_id: ViewportId,
+    document: Document,
+    storage: &Arc<MemoryStorage>,
+    dialogs: &Arc<FakeDialogs>,
+) -> DocumentWindow {
     let storage_clone = Arc::clone(storage);
     let shared_storage: SharedStorage = storage_clone;
     let dialogs_clone = Arc::clone(dialogs);
     let shared_dialogs: SharedDialogs = dialogs_clone;
     DocumentWindow::new(
-        ViewportId::from_hash_of("grid-actions"),
+        viewport_id,
         document,
         "Untitled".to_owned(),
         Language::En,
@@ -245,4 +259,101 @@ fn a_menu_paste_reports_when_the_platform_text_is_missing() {
         .expect("paste");
     assert_eq!(outcome, ActionOutcome::Applied);
     assert_eq!(window.grid_selection().rows, [2].into_iter().collect());
+}
+
+/// A window rendered by the deterministic harness, with its tick pass.
+fn rendered_window(
+    storage: &Arc<MemoryStorage>,
+    dialogs: &Arc<FakeDialogs>,
+) -> (DocumentWindow, tabtool_ui::UiHarness<'static>) {
+    let document = support::loaded(storage, CsvConfiguration::default());
+    let window = window_at(ViewportId::ROOT, document, storage, dialogs);
+    let handle = window.clone();
+    let ui = tabtool_ui::UiHarness::wide(tabtool_ui::Theme::desktop_light(), move |ui| {
+        window.tick(std::time::Instant::now(), ui.ctx());
+        window.render(ui);
+    });
+    (handle, ui)
+}
+
+fn requested_paste(harness: &tabtool_ui::UiHarness<'_>) -> bool {
+    harness.output().viewport_output.values().any(|output| {
+        output
+            .commands
+            .contains(&egui::ViewportCommand::RequestPaste)
+    })
+}
+
+#[test]
+fn a_menu_paste_requests_the_clipboard_once_and_consumes_the_next_event() {
+    use egui::Event;
+    use tabtool_ui::harness::kittest::Queryable;
+
+    let storage = Arc::new(MemoryStorage::new(b"a,b\n1,2\n"));
+    let dialogs = FakeDialogs::cancelled();
+    let (window, mut harness) = rendered_window(&storage, &dialogs);
+
+    harness.step();
+    harness.get_by_label("Edit").click();
+    harness.step();
+    harness.step();
+    harness.get_by_label("Paste").click();
+
+    let mut requested = false;
+    for _ in 0..8 {
+        harness.step();
+        requested |= requested_paste(&harness);
+    }
+
+    assert!(watch(&window), "the menu paste must be pending");
+    assert!(requested, "the first paste must request text");
+
+    // An empty following frame must not ask again.
+    harness.step();
+    assert!(
+        !requested_paste(&harness),
+        "an outstanding paste must not request the clipboard every frame"
+    );
+
+    harness
+        .input_mut()
+        .events
+        .push(Event::Paste("x\ty".to_owned()));
+    harness.step();
+    harness.step();
+    assert!(
+        !window.has_pending_paste(),
+        "the paste event must clear the flag"
+    );
+    assert_eq!(
+        window.grid_selection().rows,
+        [2].into_iter().collect(),
+        "the event text must be pasted into the table"
+    );
+}
+
+#[test]
+fn a_menu_select_all_is_mirrored_into_the_grid() {
+    use tabtool_ui::harness::kittest::Queryable;
+
+    let storage = Arc::new(MemoryStorage::new(b"a,b\n1,2\n"));
+    let dialogs = FakeDialogs::cancelled();
+    let (window, mut harness) = rendered_window(&storage, &dialogs);
+
+    harness.run();
+    harness.get_by_label("Edit").click();
+    harness.run();
+    harness.get_by_label("Select All").click();
+    harness.run();
+    harness.run();
+
+    assert_eq!(
+        window.grid_selection().rows,
+        [0, 1].into_iter().collect(),
+        "a document selection changed by a menu command must reach the grid"
+    );
+}
+
+fn watch(window: &DocumentWindow) -> bool {
+    window.has_pending_paste()
 }

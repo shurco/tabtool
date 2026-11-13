@@ -19,6 +19,7 @@ use tabtool_core::Locale;
 use tabtool_document::{Document, DocumentError};
 use tabtool_i18n::Language;
 use tabtool_platform::DesktopPlatform;
+use tabtool_ui::document::{DocumentUiState, sync_selection_to_grid};
 use tabtool_ui::grid::GridState;
 
 use crate::autosave::Autosave;
@@ -63,10 +64,13 @@ impl DocumentWindow {
         services: WindowServices,
     ) -> Self {
         let autosave = Autosave::new(&document);
+        let viewport_id_for_state = viewport_id;
         let state = WindowState {
+            viewport_id: viewport_id_for_state,
             document,
             untitled_name,
             grid: GridState::default(),
+            chrome: DocumentUiState::default(),
             autosave,
             storage: services.storage,
             dialogs: services.dialogs,
@@ -141,6 +145,16 @@ impl DocumentWindow {
             // The user chose not to save; autosave and save polling must not
             // write the edits the close discarded.
             return std::mem::take(&mut state.app_actions);
+        }
+
+        sync_selection_to_grid(&state.document, &mut state.grid);
+        // A blocked autosave records the typed write issue. Undoing the edit
+        // that caused it makes the gate clean, so the stale error must not
+        // surface as a failed save.
+        if matches!(state.issue, Some(DocumentError::Csv(_)))
+            && state.document.write_issue().is_none()
+        {
+            state.issue = None;
         }
 
         let outcome = if state.close_prompt || state.revert_prompt || state.saving {
@@ -246,9 +260,11 @@ impl DocumentWindow {
 
 /// The mutable state of one document window.
 pub(crate) struct WindowState {
+    pub(crate) viewport_id: ViewportId,
     pub(crate) document: Document,
     pub(crate) untitled_name: String,
     pub(crate) grid: GridState,
+    pub(crate) chrome: DocumentUiState,
     pub(crate) autosave: Autosave,
     pub(crate) storage: SharedStorage,
     pub(crate) dialogs: SharedDialogs,
