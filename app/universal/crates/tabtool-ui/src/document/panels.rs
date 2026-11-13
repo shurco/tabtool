@@ -31,11 +31,17 @@ impl DocumentView<'_> {
             DocumentPhase::Ready | DocumentPhase::NeedsAttention(_) => {
                 if self.document.has_content() {
                     self.show_grid(ui)
-                } else if let Some(fraction) = self.document.large_save_progress() {
-                    centered_progress(ui, self.language, fraction);
-                    Vec::new()
                 } else {
-                    centered_text(ui, tr(self.language, "Loading…"));
+                    let status_fraction = match self.document.large_status() {
+                        LargeStatus::Saving(fraction) => Some(fraction),
+                        _ => None,
+                    };
+                    if let Some(fraction) = self.document.large_save_progress().or(status_fraction)
+                    {
+                        centered_progress(ui, self.language, fraction);
+                    } else {
+                        centered_text(ui, tr(self.language, "Loading…"));
+                    }
                     Vec::new()
                 }
             }

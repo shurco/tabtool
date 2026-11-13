@@ -9,7 +9,7 @@ description = "Design tokens, widgets and the deterministic egui test harness fo
 [features]
 default = []
 # The kittest harness is only needed by tests.
-test-support = ["dep:egui_kittest"]
+test-support = ["dep:egui_kittest", "tabtool-document/test-support"]
 
 [dependencies]
 egui.workspace = true

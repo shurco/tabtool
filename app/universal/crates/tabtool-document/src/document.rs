@@ -450,6 +450,22 @@ impl Document {
         self.notice.take()
     }
 
+    /// Pins a saving state for deterministic UI snapshots.
+    ///
+    /// Test-only: no worker runs and no file is written. The status reports
+    /// the given fraction until the fixture is dropped.
+    #[cfg(feature = "test-support")]
+    #[doc(hidden)]
+    pub fn force_saving_state_for_test(&mut self, fraction: f64) {
+        self.table = None;
+        self.large = None;
+        self.large_save = None;
+        self.large_intent = true;
+        self.phase = DocumentPhase::Ready;
+        self.large_status = LargeStatus::Saving(fraction.clamp(0.0, 1.0));
+        self.bump_revision();
+    }
+
     /// Recomputes `Ready`/`NeedsAttention` from the current content and format.
     ///
     /// A large document is always [`DocumentPhase::Ready`] while its source is

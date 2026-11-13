@@ -551,12 +551,9 @@ fn document_states_match_their_snapshots() {
         |size| {
             let directory = tempfile::tempdir().expect("temporary directory");
             let path = directory.path().join("large.csv");
-            let copy = directory.path().join("copy.csv");
             std::fs::write(&path, b"a,b\n1,2\n3,4\n").expect("fixture file is written");
             let mut document = crate::support::large_ready(&path);
-            document
-                .start_large_save(Some(&copy))
-                .expect("start the save");
+            document.force_saving_state_for_test(0.42);
             Fixture::sized(document, MemoryStorage::new(b""), Default::default(), size)
                 .keep(directory)
         },

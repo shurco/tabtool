@@ -44,13 +44,13 @@ pub fn progress_bar(ui: &mut Ui, fraction: f64, width: f32) {
 ///
 /// The app does not link an ICU number formatter yet, so the supported
 /// interface languages are mapped explicitly: French narrows the space, the
-/// Italian, Polish, Belarusian and Ukrainian forms use a no-break space, the
-/// German and Spanish forms use a dot, and the remaining forms use a comma.
+/// Italian, German and Spanish forms use a dot, and the remaining forms use a
+/// comma. Polish, Belarusian and Ukrainian use a no-break space.
 pub(crate) fn grouping_separator(locale: &Locale) -> &'static str {
     match locale.id.language.as_str() {
         "fr" => "\u{202F}",
-        "it" | "pl" | "be" | "uk" => "\u{00A0}",
-        "de" | "es" => ".",
+        "pl" | "be" | "uk" => "\u{00A0}",
+        "de" | "es" | "it" => ".",
         _ => ",",
     }
 }
@@ -99,6 +99,7 @@ mod tests {
         assert_eq!(grouped_count(1_000, &locale("en")), "1,000");
         assert_eq!(grouped_count(1_234_567, &locale("en")), "1,234,567");
         assert_eq!(grouped_count(1_234_567, &locale("de")), "1.234.567");
+        assert_eq!(grouped_count(1_234_567, &locale("it")), "1.234.567");
         assert_eq!(
             grouped_count(1_234_567, &locale("fr")),
             "1\u{202F}234\u{202F}567"
@@ -113,6 +114,7 @@ mod tests {
     fn grouping_separator_follows_the_locale() {
         assert_eq!(grouping_separator(&locale("en")), ",");
         assert_eq!(grouping_separator(&locale("de")), ".");
+        assert_eq!(grouping_separator(&locale("it")), ".");
         assert_eq!(grouping_separator(&locale("fr")), "\u{202F}");
         assert_eq!(grouping_separator(&locale("uk")), "\u{00A0}");
     }
