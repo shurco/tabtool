@@ -1,43 +1,64 @@
 //! Background streaming save for large documents.
 //!
 //! [`Document::start_large_save`] takes the mapped state out of the document,
-//! captures a [`tabtool_large::LargeSaveSnapshot`] and runs
-//! [`tabtool_large::save`] on one worker thread. [`LargeSaveJob`] shares its
-//! progress and cancellation flag with the document, and [`LargeSaveJob::wait`]
-//! joins the worker and reports how it ended.
+//! captures a [`tabtool_large::LargeSaveSnapshot`] and runs the two-phase saver
+//! on one worker thread. [`LargeSaveJob`] shares its progress and cancellation
+//! flag with the document, and [`LargeSaveJob::wait`] joins the worker and
+//! reports the adopted source or the typed failure.
 //!
-//! A cancelled or failed save puts the original [`LargeState`] back, so the
-//! mapping, the overlay edits and the undo history stay usable. A successful
-//! save only reports the written destination; adopting the written file is
-//! Task 9b. Until then a successful in-place save leaves the document without
-//! large content because the old mapping no longer matches the file on disk,
-//! while a save to a new path keeps the untouched original state.
+//! The worker prepares the temporary file while the original mapping is still
+//! alive, then drops the mapping and installs the file. A successful save
+//! adopts a fresh mapping, a full index and a source with the same overlay and
+//! column ids. A cancelled or failed save restores the original mapping from a
+//! seeded index, so no rescan is needed and the undo history stays usable.
 
 use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
 
-use tabtool_large::{LargeFileSaveError, Staleness, volume_capacity};
+use tabtool_large::{LargeCSVSource, LargeFileIndexer, LargeFileSaveError, MappedFile};
 
 use crate::Document;
+use crate::large_save_worker::{SaveInputs, WorkerOutcome, execute_save};
 use crate::large_state::LargeState;
 use crate::types::{DocumentPhase, LargeStatus};
 
 /// How a large save ended.
-#[derive(Debug)]
+///
+/// The job caches this value, so a caller may wait on the job before the
+/// document applies the outcome; the document still receives the adopted
+/// source or the same typed failure.
+#[derive(Clone, Debug)]
 pub enum LargeSaveJobOutcome {
-    /// The file was written. Task 9b adopts it into the document.
-    Saved {
-        /// The path the streaming writer wrote.
-        destination: PathBuf,
-    },
+    /// The file was written and is ready to replace the source on screen.
+    Saved(LargeSaveAdoption),
     /// The save was cancelled; the original state was restored.
     Cancelled,
-    /// The save failed; the original state was restored.
+    /// The save failed; the original state was restored when possible.
     Failed(LargeFileSaveError),
+}
+
+/// The source and mapping of a written large file.
+#[derive(Clone)]
+pub struct LargeSaveAdoption {
+    /// The mapping of the written file.
+    pub file: Arc<MappedFile>,
+    /// The completed index of the written file.
+    pub indexer: Arc<LargeFileIndexer>,
+    /// The rows of the written file with the kept overlay and column ids.
+    pub source: Arc<LargeCSVSource>,
+}
+
+impl fmt::Debug for LargeSaveAdoption {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("LargeSaveAdoption")
+            .field("file", &self.file)
+            .finish_non_exhaustive()
+    }
 }
 
 /// A running large save.
@@ -65,10 +86,9 @@ impl LargeSaveJob {
 
     /// Waits for the worker and reports how it ended.
     ///
-    /// The first waiter joins the thread and receives the real error from a
-    /// failed save. A later waiter sees the cached outcome; a failed save is
-    /// then reported with a generic error because the first error value was
-    /// already handed out.
+    /// Every handle receives the same cached outcome, including the original
+    /// typed [`LargeFileSaveError`]. The document applies the outcome only in
+    /// [`Document::wait_for_large_save`].
     pub fn wait(self) -> LargeSaveJobOutcome {
         wait_shared(&self.shared)
     }
@@ -89,24 +109,24 @@ impl fmt::Debug for LargeSaveJob {
 pub(crate) struct Shared {
     progress: AtomicU64,
     cancel: AtomicBool,
+    /// The target the worker writes, also the path adoption binds.
     destination: PathBuf,
+    /// The document revision the snapshot describes.
+    revision: u64,
     inner: Mutex<Inner>,
+    /// Signals a waiter that another handle cached the outcome.
+    finished: Condvar,
 }
 
-/// The worker handle, the state to restore, and the cached outcome.
+/// The worker handle, the pending inputs, the restore state and the cached
+/// outcome.
 struct Inner {
-    handle: Option<JoinHandle<Result<(), LargeFileSaveError>>>,
-    original: Option<LargeState>,
+    handle: Option<JoinHandle<WorkerOutcome>>,
+    /// The inputs wait here only until the worker takes them; a failed spawn
+    /// restores them without starting a thread.
+    pending: Option<SaveInputs>,
     restored: Option<LargeState>,
-    outcome: Option<OutcomeKind>,
-}
-
-/// The kind of a finished save, kept for a second waiter.
-#[derive(Clone, Copy)]
-enum OutcomeKind {
-    Saved,
-    Cancelled,
-    Failed,
+    cached: Option<LargeSaveJobOutcome>,
 }
 
 impl Document {
@@ -116,7 +136,8 @@ impl Document {
     /// must be large, ready and fully indexed. The mapped state leaves the
     /// document while the worker runs, so cells cannot be edited and
     /// [`Document::large_status`] reports [`LargeStatus::Saving`]. A save
-    /// without a destination and without overlay edits does no work.
+    /// without a destination and without overlay edits only rebuilds the
+    /// source, without writing.
     ///
     /// A second start while a save runs is refused, like a stale file
     /// ([`LargeFileSaveError::SourceChanged`]) or a document that is not ready
@@ -125,70 +146,45 @@ impl Document {
         &mut self,
         destination: Option<&Path>,
     ) -> Result<LargeSaveJob, LargeFileSaveError> {
-        if self.rereading || self.large_save.is_some() {
-            return Err(LargeFileSaveError::IndexingNotFinished);
-        }
-        match self.large_status {
-            LargeStatus::Ready => {}
-            LargeStatus::Stale { .. } => return Err(LargeFileSaveError::SourceChanged),
-            LargeStatus::None | LargeStatus::Indexing(_) | LargeStatus::Saving(_) => {
-                return Err(LargeFileSaveError::IndexingNotFinished);
-            }
-        }
-        let Some(state) = self.large.as_ref() else {
-            return Err(LargeFileSaveError::IndexingNotFinished);
-        };
-        if !state.indexer.is_finished() {
-            return Err(LargeFileSaveError::IndexingNotFinished);
-        }
-        let target = destination
-            .map(Path::to_path_buf)
-            .or_else(|| self.file_path.clone())
-            .ok_or(LargeFileSaveError::IndexingNotFinished)?;
-        let snapshot = state.source.save_snapshot();
-        let should_write = destination.is_some() || !snapshot.edits.is_empty();
-        let state = self.large.take().expect("the state was checked above");
-
-        self.table = None;
-        self.large_status = LargeStatus::Saving(0.0);
-
-        let progress = AtomicU64::new(0.0f64.to_bits());
-        let cancel = AtomicBool::new(false);
+        let inputs = self.prepare_save(destination)?;
+        let target = inputs.target.clone();
+        let revision = self.revision;
         let shared = Arc::new(Shared {
-            progress,
-            cancel,
-            destination: target.clone(),
+            progress: AtomicU64::new(0.0f64.to_bits()),
+            cancel: AtomicBool::new(false),
+            destination: target,
+            revision,
             inner: Mutex::new(Inner {
                 handle: None,
-                original: Some(state),
+                pending: Some(inputs),
                 restored: None,
-                outcome: None,
+                cached: None,
             }),
+            finished: Condvar::new(),
         });
 
         let worker_shared = Arc::clone(&shared);
         let spawned = thread::Builder::new()
             .name("tabtool-large-save".to_owned())
             .spawn(move || {
-                if !should_write {
-                    worker_shared
-                        .progress
-                        .store(1.0f64.to_bits(), Ordering::Release);
-                    return Ok(());
-                }
-                if worker_shared.cancel.load(Ordering::Acquire) {
-                    return Err(cancelled_error());
-                }
-                tabtool_large::save(
-                    snapshot,
-                    &target,
-                    volume_capacity,
+                let inputs = lock(&worker_shared.inner).pending.take();
+                let Some(inputs) = inputs else {
+                    return WorkerOutcome {
+                        outcome: LargeSaveJobOutcome::Failed(LargeFileSaveError::Io(
+                            io::Error::other("the large save inputs went missing"),
+                        )),
+                        restored: None,
+                    };
+                };
+                execute_save(
+                    inputs,
+                    &worker_shared.cancel,
                     |fraction| {
                         worker_shared
                             .progress
-                            .store(fraction.to_bits(), Ordering::Release)
+                            .store(fraction.to_bits(), Ordering::Release);
                     },
-                    &worker_shared.cancel,
+                    || {},
                 )
             });
 
@@ -201,10 +197,10 @@ impl Document {
                 Ok(LargeSaveJob { shared })
             }
             Err(error) => {
-                let state = lock(&shared.inner).original.take();
-                match state {
-                    Some(state) => self.restore_large_state(state),
-                    None => self.large_status = LargeStatus::Ready,
+                let inputs = lock(&shared.inner).pending.take();
+                match inputs {
+                    Some(inputs) => self.restore_large_state(inputs.original),
+                    None => self.clear_large_content(),
                 }
                 Err(LargeFileSaveError::Io(error))
             }
@@ -232,13 +228,26 @@ impl Document {
         }
     }
 
+    /// Saves a large document and applies the outcome before returning.
+    ///
+    /// This is [`Document::start_large_save`] followed by
+    /// [`Document::wait_for_large_save`]; the UI uses the job form so it can
+    /// render progress.
+    pub fn save_large_blocking(
+        &mut self,
+        destination: Option<&Path>,
+    ) -> Result<(), LargeFileSaveError> {
+        self.start_large_save(destination)?;
+        self.wait_for_large_save()
+    }
+
     /// Waits for the save in flight and applies its outcome.
     ///
-    /// Cancelled and failed saves restore the original mapping, edits and undo
-    /// history; a failure returns its error. A successful save keeps the
-    /// original state only when it still matches the file, as after a no-edit
-    /// save or Save As. A successful in-place save drops the stale mapping and
-    /// leaves [`LargeStatus::None`]; Task 9b adopts the written file.
+    /// A successful save adopts the written file, updates the path for Save As,
+    /// marks the snapshot revision saved and keeps the undo history. Cancelled
+    /// and failed saves restore the original mapping, overlay and undo history;
+    /// a failure returns its typed error. A second call after the job settled
+    /// does nothing.
     pub fn wait_for_large_save(&mut self) -> Result<(), LargeFileSaveError> {
         let Some(job) = self.large_save.take() else {
             return Ok(());
@@ -247,13 +256,9 @@ impl Document {
         let outcome = job.wait();
         let restored = lock(&shared.inner).restored.take();
         match outcome {
-            LargeSaveJobOutcome::Saved { .. } => {
-                match restored {
-                    Some(state) if state.source.staleness() == Staleness::Unchanged => {
-                        self.restore_large_state(state);
-                    }
-                    _ => self.clear_large_content(),
-                }
+            LargeSaveJobOutcome::Saved(adoption) => {
+                self.adopt_large(adoption, shared.destination.clone());
+                self.saved_revision = shared.revision;
                 Ok(())
             }
             LargeSaveJobOutcome::Cancelled => {
@@ -265,6 +270,76 @@ impl Document {
                 Err(error)
             }
         }
+    }
+
+    /// Takes the saved state out of the document and captures what the worker
+    /// needs.
+    ///
+    /// This is the synchronous first half of [`Document::start_large_save`]:
+    /// it applies every gate, then leaves the document in
+    /// [`LargeStatus::Saving`] without a source. A `Saving` document refuses
+    /// edits and document-replacing operations until the outcome is applied.
+    pub(crate) fn prepare_save(
+        &mut self,
+        destination: Option<&Path>,
+    ) -> Result<SaveInputs, LargeFileSaveError> {
+        if self.rereading || self.large_save.is_some() {
+            return Err(LargeFileSaveError::IndexingNotFinished);
+        }
+        match self.large_status {
+            LargeStatus::Ready => {}
+            LargeStatus::Stale { .. } => return Err(LargeFileSaveError::SourceChanged),
+            LargeStatus::None | LargeStatus::Indexing(_) | LargeStatus::Saving(_) => {
+                return Err(LargeFileSaveError::IndexingNotFinished);
+            }
+        }
+        let Some(state) = self.large.as_ref() else {
+            return Err(LargeFileSaveError::IndexingNotFinished);
+        };
+        if !state.indexer.is_finished() {
+            return Err(LargeFileSaveError::IndexingNotFinished);
+        }
+        let source_path = self
+            .file_path
+            .clone()
+            .ok_or(LargeFileSaveError::IndexingNotFinished)?;
+        let target = destination
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| source_path.clone());
+        let snapshot = state.source.save_snapshot();
+        let should_write = destination.is_some() || !snapshot.edits.is_empty();
+        let configuration = self.configuration.clone();
+        let column_ids = state.source.column_ids();
+        let overlay = state.source.overlay.copy();
+        let saved_edits = snapshot.edits.clone();
+
+        let state = self.large.take().expect("the state was checked above");
+        self.table = None;
+        self.large_status = LargeStatus::Saving(0.0);
+        Ok(SaveInputs {
+            original: state,
+            snapshot,
+            target,
+            source_path,
+            configuration,
+            column_ids,
+            overlay,
+            saved_edits,
+            should_write,
+        })
+    }
+
+    /// Puts the written file on screen with the same columns and overlay.
+    fn adopt_large(&mut self, adoption: LargeSaveAdoption, path: PathBuf) {
+        self.table = None;
+        self.large = Some(LargeState {
+            source: adoption.source,
+            indexer: adoption.indexer,
+            file: adoption.file,
+        });
+        self.file_path = Some(path);
+        self.large_status = LargeStatus::Ready;
+        self.phase = DocumentPhase::Ready;
     }
 
     /// Puts a restored mapping back and reports it as ready.
@@ -297,64 +372,97 @@ fn wait_shared(shared: &Arc<Shared>) -> LargeSaveJobOutcome {
     let Some(handle) = handle else {
         return cached_outcome(shared);
     };
-    let result = handle.join().unwrap_or_else(|_| {
-        Err(LargeFileSaveError::Io(io::Error::other(
+    let worker = handle.join().unwrap_or_else(|_| WorkerOutcome {
+        outcome: LargeSaveJobOutcome::Failed(LargeFileSaveError::Io(io::Error::other(
             "the large save thread panicked",
-        )))
+        ))),
+        restored: None,
     });
-    let kind = match &result {
-        Ok(()) => OutcomeKind::Saved,
-        Err(_) if is_cancelled(shared, &result) => OutcomeKind::Cancelled,
-        Err(_) => OutcomeKind::Failed,
-    };
     {
         let mut inner = lock(&shared.inner);
-        inner.outcome = Some(kind);
-        inner.restored = inner.original.take();
+        inner.restored = worker.restored;
+        inner.cached = Some(worker.outcome.clone());
+        shared.finished.notify_all();
     }
-    match result {
-        Ok(()) => LargeSaveJobOutcome::Saved {
-            destination: shared.destination.clone(),
-        },
-        Err(_) if matches!(kind, OutcomeKind::Cancelled) => LargeSaveJobOutcome::Cancelled,
-        Err(error) => LargeSaveJobOutcome::Failed(error),
-    }
+    worker.outcome
 }
 
 /// The outcome of a save another handle already joined.
-fn cached_outcome(shared: &Shared) -> LargeSaveJobOutcome {
-    loop {
-        let kind = lock(&shared.inner).outcome;
-        if let Some(kind) = kind {
-            return match kind {
-                OutcomeKind::Saved => LargeSaveJobOutcome::Saved {
-                    destination: shared.destination.clone(),
-                },
-                OutcomeKind::Cancelled => LargeSaveJobOutcome::Cancelled,
-                OutcomeKind::Failed => LargeSaveJobOutcome::Failed(LargeFileSaveError::Io(
-                    io::Error::other("the large save failed before this waiter joined"),
-                )),
-            };
-        }
-        thread::yield_now();
-    }
-}
-
-/// Whether a failure is the writer answering the cancel flag.
-fn is_cancelled(shared: &Shared, result: &Result<(), LargeFileSaveError>) -> bool {
-    shared.cancel.load(Ordering::Acquire)
-        && matches!(
-            result,
-            Err(LargeFileSaveError::Io(error)) if error.kind() == io::ErrorKind::Interrupted
-        )
-}
-
-fn cancelled_error() -> LargeFileSaveError {
-    LargeFileSaveError::Io(io::Error::new(io::ErrorKind::Interrupted, "save cancelled"))
+fn cached_outcome(shared: &Arc<Shared>) -> LargeSaveJobOutcome {
+    let inner = lock(&shared.inner);
+    let inner = shared
+        .finished
+        .wait_while(inner, |inner| inner.cached.is_none())
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    inner
+        .cached
+        .clone()
+        .expect("the waiter was notified with a cached outcome")
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
+
+    use tabtool_core::CsvConfiguration;
+
+    use super::*;
+
+    /// The Windows constraint, checked without a Windows build: no reference
+    /// to the original mapping may survive until the install.
+    #[test]
+    fn the_original_mapping_is_released_before_install() {
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let path = directory.path().join("big.csv");
+        let text = (0..300)
+            .map(|row| format!("r{row},v{},\"q {row}\"", row % 7))
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::fs::write(&path, text).expect("fixture file is written");
+
+        let mut document = Document::new(CsvConfiguration::default());
+        document
+            .open_large(&path, None, false, 0)
+            .expect("open the fixture");
+        document.large_state().expect("large state").indexer.wait();
+        document.poll_large_indexing();
+        if document.configuration().first_row_as_header {
+            document.set_large_header_enabled(false);
+        }
+        document.set_large_cell("X", 2, 1).expect("edit the cell");
+        let weak = Arc::downgrade(&document.large_state().expect("large state").file);
+        let copy = directory.path().join("copy.csv");
+
+        let inputs = document
+            .prepare_save(Some(&copy))
+            .expect("the synchronous half starts");
+        assert!(
+            weak.upgrade().is_some(),
+            "the mapping is alive while preparing"
+        );
+
+        let outcome = execute_save(
+            inputs,
+            &AtomicBool::new(false),
+            |_| {},
+            || {
+                assert!(
+                    weak.upgrade().is_none(),
+                    "the original mapping is released before install"
+                );
+            },
+        );
+
+        assert!(matches!(outcome.outcome, LargeSaveJobOutcome::Saved(_)));
+        assert!(weak.upgrade().is_none());
+        let saved = std::fs::read_to_string(&copy).expect("the copy is readable");
+        assert_eq!(saved.lines().nth(2), Some("\"r2\",\"X\",\"q 2\""));
+    }
 }

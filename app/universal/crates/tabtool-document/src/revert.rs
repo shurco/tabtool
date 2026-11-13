@@ -55,11 +55,10 @@ impl Document {
     /// The caller asks the user first when [`plan_revert`] reports
     /// [`RevertDecision::NeedsConfirmation`]. The in-memory replacement is one
     /// [`UndoAction::RevertToSaved`] step and leaves the file untouched. A
-    /// failed read or parse keeps the previous table and records no undo.
+    /// failed read or parse keeps the previous table and records no undo. A
+    /// streaming large save in flight reports [`DocumentError::Busy`].
     pub fn revert_to_saved(&mut self, storage: &dyn Storage) -> Result<(), DocumentError> {
-        if matches!(self.large_status(), LargeStatus::Saving(_)) {
-            return Err(DocumentError::RequiresConfirmation);
-        }
+        self.ensure_not_saving()?;
         if self.is_large_mode() {
             self.revert_large_edits();
             return Ok(());

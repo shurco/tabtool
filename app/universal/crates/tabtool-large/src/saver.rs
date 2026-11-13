@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::{self, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use tabtool_core::{CsvError, CsvTable, CsvWriter};
@@ -45,6 +45,20 @@ impl From<CsvError> for LargeFileSaveError {
 impl From<io::Error> for LargeFileSaveError {
     fn from(error: io::Error) -> Self {
         Self::Io(error)
+    }
+}
+
+impl Clone for LargeFileSaveError {
+    /// Rebuilds the typed value. An I/O error keeps its kind and message but
+    /// not its platform error code, because [`io::Error`] is not cloneable.
+    fn clone(&self) -> Self {
+        match self {
+            Self::IndexingNotFinished => Self::IndexingNotFinished,
+            Self::SourceChanged => Self::SourceChanged,
+            Self::InsufficientDiskSpace => Self::InsufficientDiskSpace,
+            Self::Csv(error) => Self::Csv(*error),
+            Self::Io(error) => Self::Io(io::Error::new(error.kind(), error.to_string())),
+        }
     }
 }
 
@@ -125,6 +139,9 @@ fn create_and_stream(
 /// On Unix the parent directory is synced after the swap. If that sync fails,
 /// the error is returned although `replacing` already holds the saved bytes;
 /// `Err` does not always mean the old file is still on disk.
+///
+/// A caller that needs to drop its own mapping between writing and replacing
+/// uses [`LargeFileSaver::prepare`] and [`PreparedSave::install`] instead.
 pub fn save(
     snapshot: LargeSaveSnapshot,
     replacing: &Path,
@@ -132,49 +149,124 @@ pub fn save(
     progress: impl Fn(f64),
     cancelled: &AtomicBool,
 ) -> Result<(), LargeFileSaveError> {
-    if snapshot.index.scanned_bytes < snapshot.file.size() {
-        return Err(LargeFileSaveError::IndexingNotFinished);
-    }
-    let required = u64::try_from(snapshot.file.size())
-        .unwrap_or(u64::MAX)
-        .saturating_mul(2);
-    if let Some(free) = available_capacity(replacing)
-        && free < required
-    {
-        return Err(LargeFileSaveError::InsufficientDiskSpace);
-    }
-
-    let parent = match replacing.parent() {
-        Some(parent) if !parent.as_os_str().is_empty() => parent,
-        _ => Path::new("."),
-    };
-    let name = replacing.file_name().ok_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "the save target has no file name",
-        )
-    })?;
-    let directory = tempfile::Builder::new()
-        .prefix(TEMPORARY_DIRECTORY_PREFIX)
-        .tempdir_in(parent)?;
-    let temporary = directory.path().join(name);
-
-    let (output, _) = create_and_stream(
+    let prepared = LargeFileSaver::prepare(
         &snapshot,
-        &temporary,
-        COPY_BUFFER_BYTES,
-        &progress,
+        replacing,
+        available_capacity,
+        progress,
         cancelled,
     )?;
-    output.sync_all()?;
-    drop(output);
-    #[cfg(unix)]
-    copy_permissions(replacing, &temporary)?;
+    // The snapshot holds a mapping of the file being replaced; Windows rejects
+    // the swap while it is alive.
     drop(snapshot);
-    install(&temporary, replacing)?;
-    #[cfg(unix)]
-    sync_directory(parent)?;
-    Ok(())
+    prepared.install()
+}
+
+/// The streaming saver's two-phase API.
+pub struct LargeFileSaver;
+
+impl LargeFileSaver {
+    /// Validates the save, writes the temporary file next to `target` and
+    /// returns it without replacing `target`.
+    ///
+    /// The caller must keep the original mapping alive while this runs, then
+    /// release it before calling [`PreparedSave::install`]: Windows cannot
+    /// replace a mapped file. A dropped [`PreparedSave`] removes the temporary
+    /// file and leaves the target untouched.
+    ///
+    /// The checks and the temporary file match [`save`]: the index must be
+    /// complete, the mapped source unchanged, and the target volume must have
+    /// twice the file's size free. `available_capacity` receives the target
+    /// path; its nearest existing ancestor reports the volume for a Save As
+    /// target that does not exist yet.
+    pub fn prepare(
+        snapshot: &LargeSaveSnapshot,
+        target: &Path,
+        available_capacity: impl Fn(&Path) -> Option<u64>,
+        progress: impl Fn(f64),
+        cancelled: &AtomicBool,
+    ) -> Result<PreparedSave, LargeFileSaveError> {
+        ensure_ready(snapshot)?;
+        let required = u64::try_from(snapshot.file.size())
+            .unwrap_or(u64::MAX)
+            .saturating_mul(2);
+        if let Some(free) = available_capacity(target)
+            && free < required
+        {
+            return Err(LargeFileSaveError::InsufficientDiskSpace);
+        }
+        if cancelled.load(Ordering::Acquire) {
+            return Err(cancelled_error());
+        }
+
+        let parent = parent_of(target);
+        let name = target.file_name().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "the save target has no file name",
+            )
+        })?;
+        let directory = tempfile::Builder::new()
+            .prefix(TEMPORARY_DIRECTORY_PREFIX)
+            .tempdir_in(parent)?;
+        let temporary = directory.path().join(name);
+
+        let (output, _) = create_and_stream(
+            snapshot,
+            &temporary,
+            COPY_BUFFER_BYTES,
+            &progress,
+            cancelled,
+        )?;
+        output.sync_all()?;
+        drop(output);
+        #[cfg(unix)]
+        copy_permissions(target, &temporary)?;
+
+        Ok(PreparedSave {
+            target: target.to_path_buf(),
+            temporary,
+            directory: Some(directory),
+        })
+    }
+}
+
+/// A fully written save that has not replaced the target yet.
+///
+/// [`PreparedSave::install`] moves the temporary file onto the target. Dropping
+/// the handle instead removes the temporary file, so a cancelled or failed
+/// save never leaves one behind. The target is untouched until `install`.
+#[derive(Debug)]
+pub struct PreparedSave {
+    target: PathBuf,
+    temporary: PathBuf,
+    /// Removed on drop; holds the temporary file until `install` renames it out.
+    directory: Option<tempfile::TempDir>,
+}
+
+impl PreparedSave {
+    /// Replaces `target` with the prepared file and syncs its parent on Unix.
+    ///
+    /// An existing target is replaced atomically where the platform allows; a
+    /// missing target is created by a plain rename. On Unix a failed parent
+    /// sync is returned although the target already holds the saved bytes:
+    /// `Err` does not always mean the old file is still on disk.
+    pub fn install(mut self) -> Result<(), LargeFileSaveError> {
+        install_file(&self.temporary, &self.target)?;
+        #[cfg(unix)]
+        sync_directory(parent_of(&self.target))?;
+        self.directory.take();
+        Ok(())
+    }
+}
+
+impl Drop for PreparedSave {
+    fn drop(&mut self) {
+        // The guard removes the private directory and any file still in it.
+        // `install` renames the file out first, so on success only the empty
+        // directory is removed.
+        self.directory.take();
+    }
 }
 
 /// Free bytes available to the current user on the volume holding `path`.
@@ -201,8 +293,16 @@ pub fn volume_capacity(path: &Path) -> Option<u64> {
     }
 }
 
+/// The directory holding `target`, or `.` for a bare file name.
+fn parent_of(target: &Path) -> &Path {
+    match target.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    }
+}
+
 /// Moves `temporary` onto `target`, replacing an existing file atomically.
-fn install(temporary: &Path, target: &Path) -> io::Result<()> {
+fn install_file(temporary: &Path, target: &Path) -> io::Result<()> {
     if target.try_exists()? {
         platform::replace_file(target, temporary)
     } else {

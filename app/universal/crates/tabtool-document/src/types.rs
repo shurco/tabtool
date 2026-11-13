@@ -31,6 +31,9 @@ pub enum DocumentError {
     CannotReadFile,
     /// The new bytes could not be written; the previous file is untouched.
     CannotWriteFile,
+    /// Another operation owns the document, such as a streaming save in
+    /// flight. Try again after that operation finishes.
+    Busy,
     /// Serializing the table failed with a typed CSV error, such as
     /// [`CsvError::AmbiguousOutput`] or [`CsvError::UnencodableText`].
     Csv(CsvError),

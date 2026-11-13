@@ -96,8 +96,11 @@ impl Document {
     ///
     /// The table is one row by three columns. When the configuration names the
     /// first row as headers, the three columns get empty headers and the data
-    /// row stays, exactly as a new document in the Swift app.
-    pub fn new_document(&mut self, configuration: CsvConfiguration) {
+    /// row stays, exactly as a new document in the Swift app. A streaming save
+    /// in flight owns the document, so this reports [`DocumentError::Busy`]
+    /// until it finishes.
+    pub fn new_document(&mut self, configuration: CsvConfiguration) -> Result<(), DocumentError> {
+        self.ensure_not_saving()?;
         let mut table = CsvTable::new_document(1, 3);
         if configuration.first_row_as_header {
             table.set_headers(Some(vec![String::new(); table.columns.len()]));
@@ -116,6 +119,7 @@ impl Document {
         self.phase = DocumentPhase::Ready;
         self.bump_revision();
         self.refresh_phase();
+        Ok(())
     }
 
     /// Loads initial bytes and publishes the whole outcome at once.
@@ -126,7 +130,8 @@ impl Document {
     /// not trigger detection). `prefers_chinese` changes the detector's
     /// encoding order. A parse error leaves the table empty and reports
     /// [`DocumentPhase::ReadFailed`]; a completed document ignores a repeated
-    /// load so edits cannot be replaced by a late duplicate.
+    /// load so edits cannot be replaced by a late duplicate. A streaming save
+    /// in flight reports [`DocumentError::Busy`] instead of replacing it.
     pub fn load_from_bytes(
         &mut self,
         bytes: &[u8],
@@ -134,6 +139,7 @@ impl Document {
         configuration: Option<CsvConfiguration>,
         prefers_chinese: bool,
     ) -> Result<(), DocumentError> {
+        self.ensure_not_saving()?;
         if matches!(
             self.phase,
             DocumentPhase::Ready | DocumentPhase::NeedsAttention(_)
@@ -181,6 +187,7 @@ impl Document {
         configuration: Option<CsvConfiguration>,
         prefers_chinese: bool,
     ) -> Result<(), DocumentError> {
+        self.ensure_not_saving()?;
         if matches!(
             self.phase,
             DocumentPhase::Ready | DocumentPhase::NeedsAttention(_)
@@ -356,8 +363,12 @@ impl Document {
     }
 
     /// Whether cells can be edited now: always in memory, and in large mode
-    /// once the index is complete.
+    /// once the index is complete. A streaming save owns the document while it
+    /// runs, so no rows are available and the answer is `false`.
     pub fn can_edit_cells(&self) -> bool {
+        if self.large_save.is_some() || matches!(self.large_status, LargeStatus::Saving(_)) {
+            return false;
+        }
         match &self.large {
             Some(_) => self.large_status == LargeStatus::Ready,
             None => true,
@@ -409,6 +420,19 @@ impl Document {
     pub(crate) fn clear_large_state(&mut self) {
         self.large = None;
         self.large_status = LargeStatus::None;
+    }
+
+    /// Refuses an operation that would replace the document while a streaming
+    /// save owns it.
+    ///
+    /// The save keeps the original state out of the document until it settles,
+    /// so letting another operation open, load or revert would publish a
+    /// second state that the save outcome then overwrites.
+    pub(crate) fn ensure_not_saving(&self) -> Result<(), DocumentError> {
+        if self.large_save.is_some() || matches!(self.large_status, LargeStatus::Saving(_)) {
+            return Err(DocumentError::Busy);
+        }
+        Ok(())
     }
 
     /// Counts one content or file-binding change.

@@ -13,7 +13,6 @@
 
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Duration;
 
 use tabtool_core::{ColumnId, CsvConfiguration, CsvError};
 use tabtool_large::{
@@ -22,15 +21,9 @@ use tabtool_large::{
 
 use crate::Document;
 use crate::filter_model::RowFilterModel;
-use crate::large_state::LargeState;
+use crate::large_state::{INDEX_PROGRESS_INTERVAL, INDEX_STEP_BYTES, LargeState};
 use crate::storage::Storage;
 use crate::types::{DocumentError, DocumentNotice, DocumentPhase, GridSelection, LargeStatus};
-
-/// Bytes the indexer scans per step, matching the Apple default.
-const INDEX_STEP_BYTES: usize = 8 * 1_048_576;
-
-/// How often the indexer reports progress, matching the Apple default.
-const INDEX_PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
 
 /// Why a file could not be mapped or sniffed.
 enum MapFailure {
@@ -57,7 +50,8 @@ impl Document {
     /// than `threshold_bytes` is refused with [`DocumentError::NotReady`]; call
     /// [`Document::open_file`] to route by size instead. On success the table is
     /// dropped, the phase becomes [`DocumentPhase::Ready`] and the indexer
-    /// starts on its worker thread.
+    /// starts on its worker thread. A streaming save in flight reports
+    /// [`DocumentError::Busy`].
     pub fn open_large(
         &mut self,
         path: &Path,
@@ -65,6 +59,7 @@ impl Document {
         prefers_chinese: bool,
         threshold_bytes: u64,
     ) -> Result<(), DocumentError> {
+        self.ensure_not_saving()?;
         match Self::map_large_file(path, configuration.as_ref(), prefers_chinese) {
             Ok((file, configuration)) => {
                 if !Self::uses_large_mode(file.size() as u64, threshold_bytes) {
@@ -103,6 +98,7 @@ impl Document {
         prefers_chinese: bool,
         threshold_bytes: u64,
     ) -> Result<(), DocumentError> {
+        self.ensure_not_saving()?;
         let size = std::fs::metadata(path)
             .map(|metadata| metadata.len())
             .unwrap_or(0);
@@ -121,6 +117,7 @@ impl Document {
     /// directly, so `storage` is only accepted for call-site symmetry with
     /// every other document open.
     pub fn reload_large(&mut self, _storage: &dyn Storage) -> Result<(), DocumentError> {
+        self.ensure_not_saving()?;
         let Some(path) = self.file_path().map(Path::to_path_buf) else {
             return Err(DocumentError::NotReady);
         };
@@ -147,6 +144,7 @@ impl Document {
         new: CsvConfiguration,
         force: bool,
     ) -> Result<(), DocumentError> {
+        self.ensure_not_saving()?;
         if self.large.is_none() {
             return Err(DocumentError::NotReady);
         }

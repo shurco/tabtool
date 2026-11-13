@@ -98,6 +98,39 @@ impl LargeFileIndexer {
         }
     }
 
+    /// Rebuilds an indexer over `file` with an index that was already scanned.
+    ///
+    /// The result is immediately finished and has no worker: [`start`] does
+    /// nothing and [`wait`] returns at once. The document uses this to restore
+    /// a large source after a failed install without rescanning the file.
+    ///
+    /// [`start`]: LargeFileIndexer::start
+    /// [`wait`]: LargeFileIndexer::wait
+    pub fn seeded(
+        file: Arc<MappedFile>,
+        configuration: CsvConfiguration,
+        index: RowIndex,
+    ) -> Arc<Self> {
+        Arc::new(Self {
+            file,
+            configuration,
+            step_bytes: 1,
+            progress_interval: Duration::ZERO,
+            published: Mutex::new(index),
+            finished: AtomicBool::new(true),
+            cancelled: AtomicBool::new(false),
+            // Mark the scan as started so `start` cannot launch a worker, and
+            // the completion as done so `wait` does not block on a missing one.
+            started: AtomicBool::new(true),
+            completion: Mutex::new(Completion {
+                done: true,
+                failure: None,
+            }),
+            completion_signal: Condvar::new(),
+            worker: Mutex::new(None),
+        })
+    }
+
     /// Starts scanning once. `on_progress` runs on the scanning thread: right
     /// after the first step, then at most every `progress_interval`, and at the
     /// end. Later calls do nothing. Do not call [`LargeFileIndexer::wait`] from

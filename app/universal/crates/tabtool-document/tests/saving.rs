@@ -82,7 +82,9 @@ fn windows_1252() -> CsvConfiguration {
 #[test]
 fn untitled_documents_are_dirty_until_save_as() {
     let mut document = Document::new(CsvConfiguration::default());
-    document.new_document(CsvConfiguration::default());
+    document
+        .new_document(CsvConfiguration::default())
+        .expect("replace with a new document");
 
     assert!(document.file_path().is_none());
     assert!(document.is_dirty());
@@ -163,7 +165,9 @@ fn save_preserves_the_utf8_bom_of_the_loaded_file() {
 fn save_without_a_path_is_not_ready() {
     let storage = MemoryStorage::new(b"");
     let mut document = Document::new(CsvConfiguration::default());
-    document.new_document(CsvConfiguration::default());
+    document
+        .new_document(CsvConfiguration::default())
+        .expect("replace with a new document");
 
     assert!(!document.can_save());
     assert_eq!(document.save(&storage), Err(DocumentError::NotReady));
@@ -176,7 +180,9 @@ fn save_as_writes_a_new_file_binds_the_path_and_clears_dirty() {
     let directory = tempfile::tempdir().expect("a temporary directory");
     let path = directory.path().join("saved.csv");
     let mut document = Document::new(CsvConfiguration::default());
-    document.new_document(CsvConfiguration::default());
+    document
+        .new_document(CsvConfiguration::default())
+        .expect("replace with a new document");
     let expected = document.encoded_data().expect("encoded data");
 
     document.save_as(&path, &StdStorage).expect("Save As");

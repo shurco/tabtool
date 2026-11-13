@@ -91,7 +91,9 @@ fn decimal_change_converts_numeric_cells_and_undoes() {
 fn new_document_decimal_and_header_transform_typed_table() {
     let configuration = CsvConfiguration::default();
     let mut document = Document::new(configuration.clone());
-    document.new_document(configuration);
+    document
+        .new_document(configuration)
+        .expect("replace with a new document");
 
     document.set_cell(0, 0, "1.50");
     document.set_decimal_mark(",");
@@ -490,7 +492,9 @@ fn a_candidate_at_the_current_revision_applies_with_one_undo() {
 fn has_unsaved_changes_marks_untitled_documents_and_tracks_revisions() {
     let mut untitled = Document::new(CsvConfiguration::default());
     assert!(untitled.has_unsaved_changes());
-    untitled.new_document(CsvConfiguration::default());
+    untitled
+        .new_document(CsvConfiguration::default())
+        .expect("replace with a new document");
     assert!(untitled.has_unsaved_changes());
 
     let (_directory, path) = temp_file(b"a\n");

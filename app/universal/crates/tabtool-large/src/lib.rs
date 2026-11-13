@@ -31,7 +31,7 @@ pub use indexer::{IndexCounters, IndexProgress, LargeFileIndexer};
 pub use mapped::{FileIdentity, MappedFile, Staleness};
 pub use overlay::{CellKey, CellOverlay};
 pub use platform::{available_space, replace_file};
-pub use saver::{LargeFileSaveError, save, volume_capacity, write};
+pub use saver::{LargeFileSaveError, LargeFileSaver, PreparedSave, save, volume_capacity, write};
 pub use scanner::{RowScanner, ScanMode, row_ranges};
 pub use sniffer::{check, is_byte_scannable, sniff, validate};
 pub use source::{LargeCSVSource, LargeSaveSnapshot};

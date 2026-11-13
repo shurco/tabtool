@@ -285,7 +285,9 @@ fn a_failed_load_does_not_publish_a_partial_table() {
 fn new_document_is_three_columns_by_one_row_and_ready() {
     let mut document = Document::new(CsvConfiguration::default());
 
-    document.new_document(CsvConfiguration::default());
+    document
+        .new_document(CsvConfiguration::default())
+        .expect("replace with a new document");
 
     assert_eq!(document.phase(), &DocumentPhase::Ready);
     let table = document.table().expect("table");
@@ -304,7 +306,9 @@ fn new_document_with_a_header_preference_gets_three_empty_headers() {
     };
     let mut document = Document::new(CsvConfiguration::default());
 
-    document.new_document(configuration.clone());
+    document
+        .new_document(configuration.clone())
+        .expect("replace with a new document");
 
     assert_eq!(document.configuration(), &configuration);
     assert_eq!(document.phase(), &DocumentPhase::Ready);
@@ -325,7 +329,9 @@ fn new_document_uses_the_injected_configuration() {
     };
     let mut document = Document::new(CsvConfiguration::default());
 
-    document.new_document(configuration.clone());
+    document
+        .new_document(configuration.clone())
+        .expect("replace with a new document");
 
     assert_eq!(document.configuration(), &configuration);
     assert_eq!(document.phase(), &DocumentPhase::Ready);

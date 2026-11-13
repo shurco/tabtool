@@ -194,7 +194,9 @@ fn new_document_clears_the_large_mode() {
     let mut document = open_ready(&fixture.csv(20), None);
     assert!(document.is_large_mode());
 
-    document.new_document(CsvConfiguration::default());
+    document
+        .new_document(CsvConfiguration::default())
+        .expect("replace with a new document");
 
     assert!(!document.is_large_mode());
     assert!(document.large_state().is_none());

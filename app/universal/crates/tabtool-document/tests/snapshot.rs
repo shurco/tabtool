@@ -168,7 +168,9 @@ fn a_new_document_snapshots_its_blank_table_and_empty_headers() {
         ..supplied()
     };
     let mut document = Document::new(CsvConfiguration::default());
-    document.new_document(configuration.clone());
+    document
+        .new_document(configuration.clone())
+        .expect("replace with a new document");
 
     let snapshot = document.snapshot().expect("snapshot");
 

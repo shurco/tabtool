@@ -9,7 +9,10 @@ use std::time::Duration;
 
 use support::{LargeCsvFixture, large_file_indexer, scan_index};
 use tabtool_core::CsvConfiguration;
-use tabtool_large::{IndexCounters, IndexProgress, LargeFileIndexer, MappedFile};
+use tabtool_large::{
+    CellKey, CellOverlay, IndexCounters, IndexProgress, LargeCSVSource, LargeFileIndexer,
+    MappedFile,
+};
 
 const STEP_BYTES: usize = 4096;
 const MIB: usize = 1 << 20;
@@ -26,6 +29,58 @@ fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
     } else {
         "non-string panic payload".to_string()
     }
+}
+
+#[test]
+fn a_seeded_indexer_is_finished_and_never_scans() {
+    let fixture = LargeCsvFixture::new();
+    let scanned = indexer(&fixture);
+    scanned.start(|_| {});
+    scanned.wait();
+    let index = scanned.snapshot();
+
+    let seeded = LargeFileIndexer::seeded(
+        Arc::clone(&fixture.file),
+        CsvConfiguration::default(),
+        index.clone(),
+    );
+
+    assert!(seeded.is_finished());
+    assert!(seeded.counters().is_finished);
+    assert_eq!(seeded.snapshot(), index);
+    // A seeded indexer has no worker: both calls are no-ops.
+    seeded.start(|_| panic!("a seeded indexer must not scan"));
+    seeded.wait();
+    assert_eq!(seeded.snapshot(), index);
+}
+
+#[test]
+fn a_seeded_indexer_serves_a_source_with_its_overlay() {
+    let fixture = LargeCsvFixture::new();
+    let scanned = indexer(&fixture);
+    scanned.start(|_| {});
+    scanned.wait();
+    let index = scanned.snapshot();
+    let configuration = CsvConfiguration::default();
+    let seeded = LargeFileIndexer::seeded(
+        Arc::clone(&fixture.file),
+        configuration.clone(),
+        index.clone(),
+    );
+    let overlay = CellOverlay::new();
+    overlay.set("X".to_string(), CellKey { row: 1, column: 0 });
+    let source = LargeCSVSource::new(
+        Arc::clone(&fixture.file),
+        configuration,
+        seeded,
+        overlay,
+        Vec::new(),
+    );
+
+    assert!(source.is_indexed());
+    assert_eq!(source.row_count(), fixture.rows);
+    assert_eq!(source.cell(1, 0), "X");
+    assert_eq!(source.column_ids().len(), source.column_count());
 }
 
 #[test]

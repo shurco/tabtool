@@ -15,8 +15,8 @@ use std::time::Duration;
 use support::{SplitMix64, TempDirectory};
 use tabtool_core::{CsvConfiguration, CsvError, CsvTable, CsvWriter, Encoding};
 use tabtool_large::{
-    CellKey, CellOverlay, LargeCSVSource, LargeFileIndexer, LargeFileSaveError, LargeSaveSnapshot,
-    MappedFile, save, volume_capacity, write,
+    CellKey, CellOverlay, LargeCSVSource, LargeFileIndexer, LargeFileSaveError, LargeFileSaver,
+    LargeSaveSnapshot, MappedFile, PreparedSave, save, volume_capacity, write,
 };
 
 const STEP_BYTES: usize = 4096;
@@ -100,6 +100,16 @@ fn save_with_capacity(
 ) -> Result<(), LargeFileSaveError> {
     let cancelled = AtomicBool::new(false);
     save(snapshot, target, |_| Some(capacity), |_| {}, &cancelled)
+}
+
+/// Prepares a save without installing it, so the two phases can be inspected.
+fn prepare_with_capacity(
+    snapshot: &LargeSaveSnapshot,
+    target: &Path,
+    capacity: u64,
+) -> Result<PreparedSave, LargeFileSaveError> {
+    let cancelled = AtomicBool::new(false);
+    LargeFileSaver::prepare(snapshot, target, |_| Some(capacity), |_| {}, &cancelled)
 }
 
 /// The sorted names in `path`.
@@ -410,6 +420,104 @@ fn empty_file_writes_an_empty_file() {
     assert_eq!(
         fs::read(&output).expect("the output reads"),
         Vec::<u8>::new()
+    );
+}
+
+#[test]
+fn prepare_writes_beside_the_target_without_replacing_it() {
+    let directory = TempDirectory::new();
+    let source = make_source(&directory, b"a,b\n1,2\n", &configuration());
+    source.set_cell("9", 1, 1).expect("row 1 is editable");
+    let target = directory.path().join("source.csv");
+    let original = fs::read(&target).expect("the source reads");
+
+    let prepared = prepare_with_capacity(&source.save_snapshot(), &target, AMPLE_CAPACITY)
+        .expect("the first phase writes the temporary file");
+
+    assert_eq!(
+        fs::read(&target).expect("the target still reads"),
+        original,
+        "prepare does not replace the target"
+    );
+    assert!(
+        entries(directory.path())
+            .iter()
+            .any(|name| name.starts_with(".tabtool-save-")),
+        "the temporary directory sits next to the target"
+    );
+
+    drop(prepared);
+    assert_eq!(
+        entries(directory.path()),
+        ["source.csv"],
+        "dropping the handle removes the temporary file"
+    );
+    assert_eq!(fs::read(&target).expect("the target still reads"), original);
+}
+
+#[test]
+fn install_replaces_an_existing_file() {
+    let directory = TempDirectory::new();
+    let source = make_source(&directory, b"a,b\n1,2\n", &configuration());
+    source.set_cell("9", 1, 1).expect("row 1 is editable");
+    let target = directory.path().join("source.csv");
+    let snapshot = source.save_snapshot();
+    let prepared =
+        prepare_with_capacity(&snapshot, &target, AMPLE_CAPACITY).expect("the save prepares");
+
+    // The document layer releases its mapping between the phases; simulate
+    // that here so the swap sees only the prepared handle.
+    drop(snapshot);
+    drop(source);
+    prepared.install().expect("the prepared file is installed");
+
+    assert_eq!(
+        fs::read(&target).expect("the target reads"),
+        b"a,b\n\"1\",\"9\"\n"
+    );
+    assert_eq!(entries(directory.path()), ["source.csv"]);
+}
+
+#[test]
+fn install_creates_a_new_file() {
+    let directory = TempDirectory::new();
+    let source = make_source(&directory, b"a,b\n1,2\n", &configuration());
+    source.set_cell("9", 1, 1).expect("row 1 is editable");
+    let target = directory.path().join("copy.csv");
+    let prepared = prepare_with_capacity(&source.save_snapshot(), &target, AMPLE_CAPACITY)
+        .expect("the save prepares");
+
+    prepared.install().expect("the new file is installed");
+
+    assert_eq!(
+        fs::read(&target).expect("the target reads"),
+        b"a,b\n\"1\",\"9\"\n"
+    );
+    assert_eq!(entries(directory.path()), ["copy.csv", "source.csv"]);
+}
+
+#[test]
+fn prepare_refuses_without_twice_the_free_space() {
+    let directory = TempDirectory::new();
+    let original = b"a,b\n1,2\n";
+    let source = make_source(&directory, original, &configuration());
+    let target = directory.path().join("source.csv");
+
+    let error = prepare_with_capacity(
+        &source.save_snapshot(),
+        &target,
+        (original.len() * 2 - 1) as u64,
+    )
+    .expect_err("the volume is too small");
+
+    assert!(
+        matches!(error, LargeFileSaveError::InsufficientDiskSpace),
+        "unexpected error: {error:?}"
+    );
+    assert_eq!(entries(directory.path()), ["source.csv"]);
+    assert_eq!(
+        fs::read(&target).expect("the target is untouched"),
+        original
     );
 }
 

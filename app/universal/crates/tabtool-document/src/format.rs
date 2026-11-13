@@ -47,13 +47,15 @@ impl Document {
     ///
     /// An untitled document has nothing to re-read, so only its configuration
     /// changes. A failed read or parse keeps the previous table, configuration
-    /// and undo history.
+    /// and undo history. A streaming large save in flight reports
+    /// [`DocumentError::Busy`].
     pub fn apply_parsing_configuration(
         &mut self,
         new: CsvConfiguration,
         force: bool,
         storage: &dyn Storage,
     ) -> Result<(), DocumentError> {
+        self.ensure_not_saving()?;
         if matches!(self.phase, crate::DocumentPhase::Loading) {
             return Err(DocumentError::NotReady);
         }
@@ -277,6 +279,8 @@ impl Document {
     fn apply_candidate(&mut self, candidate: ParsedTable, action: UndoAction) -> bool {
         if self.revision != candidate.expected_revision
             || self.large.is_some()
+            || self.large_save.is_some()
+            || matches!(self.large_status, crate::LargeStatus::Saving(_))
             || matches!(self.phase, crate::DocumentPhase::Loading)
         {
             return false;

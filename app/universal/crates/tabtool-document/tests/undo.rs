@@ -60,7 +60,9 @@ fn starting_a_new_document_clears_the_history() {
     document.set_cell(0, 0, "x");
     assert!(document.can_undo());
 
-    document.new_document(CsvConfiguration::default());
+    document
+        .new_document(CsvConfiguration::default())
+        .expect("replace with a new document");
 
     assert!(!document.can_undo());
     assert!(!document.can_redo());
