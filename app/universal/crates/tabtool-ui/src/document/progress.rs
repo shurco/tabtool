@@ -1,6 +1,7 @@
 //! Large-file progress wording and the compact progress bar.
 
 use egui::{CornerRadius, Sense, Ui, Vec2};
+use tabtool_core::Locale;
 use tabtool_i18n::{Language, tr};
 
 use crate::theme::current;
@@ -11,16 +12,11 @@ pub fn percent(fraction: f64) -> i64 {
 }
 
 /// The localized "Indexing…" line with the scanned share and known rows.
-pub fn indexing_text(
-    language: Language,
-    fraction: f64,
-    rows: usize,
-    decimal_separator: &str,
-) -> String {
+pub fn indexing_text(language: Language, fraction: f64, rows: usize, locale: &Locale) -> String {
     fill(
         tr(language, "Indexing… %lld%% · %@ rows so far"),
         percent(fraction),
-        &grouped_count(rows, decimal_separator),
+        &grouped_count(rows, locale),
     )
 }
 
@@ -44,19 +40,29 @@ pub fn progress_bar(ui: &mut Ui, fraction: f64, width: f32) {
     }
 }
 
-/// Groups a row count for the status line.
+/// The grouping separator the locale uses for digit groups.
 ///
-/// The catalog supplies the sentence; the number uses the interface grouping
-/// convention: a comma decimal separator groups with dots, everything else
-/// groups with commas. That matches the English, German and Spanish status
-/// lines without depending on Apple's number formatter.
-pub(crate) fn grouped_count(value: usize, decimal_separator: &str) -> String {
+/// The app does not link an ICU number formatter yet, so the supported
+/// interface languages are mapped explicitly: French narrows the space, the
+/// Italian, Polish, Belarusian and Ukrainian forms use a no-break space, the
+/// German and Spanish forms use a dot, and the remaining forms use a comma.
+pub(crate) fn grouping_separator(locale: &Locale) -> &'static str {
+    match locale.id.language.as_str() {
+        "fr" => "\u{202F}",
+        "it" | "pl" | "be" | "uk" => "\u{00A0}",
+        "de" | "es" => ".",
+        _ => ",",
+    }
+}
+
+/// Groups a row count for the status line and the indexing banner.
+pub(crate) fn grouped_count(value: usize, locale: &Locale) -> String {
     let text = value.to_string();
-    let grouping = if decimal_separator == "," { '.' } else { ',' };
+    let grouping = grouping_separator(locale);
     let mut grouped = String::with_capacity(text.len() + text.len() / 3);
     for (index, character) in text.chars().enumerate() {
         if index > 0 && (text.len() - index).is_multiple_of(3) {
-            grouped.push(grouping);
+            grouped.push_str(grouping);
         }
         grouped.push(character);
     }
@@ -78,15 +84,37 @@ fn fill(template: &str, percent: i64, rows: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{grouped_count, percent};
+    use tabtool_core::Locale;
+
+    use super::{grouped_count, grouping_separator, percent};
+
+    fn locale(code: &str) -> Locale {
+        Locale::try_from_str(code).expect("a valid test locale")
+    }
 
     #[test]
     fn counts_group_by_threes() {
-        assert_eq!(grouped_count(0, "."), "0");
-        assert_eq!(grouped_count(999, "."), "999");
-        assert_eq!(grouped_count(1_000, "."), "1,000");
-        assert_eq!(grouped_count(1_234_567, "."), "1,234,567");
-        assert_eq!(grouped_count(1_234_567, ","), "1.234.567");
+        assert_eq!(grouped_count(0, &locale("en")), "0");
+        assert_eq!(grouped_count(999, &locale("en")), "999");
+        assert_eq!(grouped_count(1_000, &locale("en")), "1,000");
+        assert_eq!(grouped_count(1_234_567, &locale("en")), "1,234,567");
+        assert_eq!(grouped_count(1_234_567, &locale("de")), "1.234.567");
+        assert_eq!(
+            grouped_count(1_234_567, &locale("fr")),
+            "1\u{202F}234\u{202F}567"
+        );
+        assert_eq!(
+            grouped_count(1_234_567, &locale("pl")),
+            "1\u{00A0}234\u{00A0}567"
+        );
+    }
+
+    #[test]
+    fn grouping_separator_follows_the_locale() {
+        assert_eq!(grouping_separator(&locale("en")), ",");
+        assert_eq!(grouping_separator(&locale("de")), ".");
+        assert_eq!(grouping_separator(&locale("fr")), "\u{202F}");
+        assert_eq!(grouping_separator(&locale("uk")), "\u{00A0}");
     }
 
     #[test]

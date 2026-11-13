@@ -78,7 +78,7 @@ impl crate::documents::WindowState {
                     }
                 }
                 DocumentAction::Large(LargeUiAction::CancelSave) => self.cancel_save(),
-                DocumentAction::Large(LargeUiAction::ReloadStale | LargeUiAction::RetryIndex) => {
+                DocumentAction::Large(LargeUiAction::ReloadStale) => {
                     if let Err(error) = self.document.reload_large(&*self.storage) {
                         self.chrome.show_alert(
                             "The file could not be read",

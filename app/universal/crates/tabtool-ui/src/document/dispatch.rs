@@ -105,7 +105,9 @@ pub fn sync_selection_to_grid(document: &Document, state: &mut GridState) {
 /// Copies the grid selection into the document as model rows.
 ///
 /// The view calls this after drawing so toolbar enablement and menu commands
-/// see the rows the user clicked.
+/// see the rows the user clicked. The grid holds display rows only, so model
+/// rows hidden by the filter are dropped, matching the macOS filter's
+/// `keepSelectionVisible` behavior.
 pub fn sync_selection_to_document(document: &mut Document, state: &GridState) {
     let mapped = DocumentSelection {
         rows: display_rows_to_model(document, &state.selection.rows),
@@ -173,5 +175,42 @@ fn display_insertion_to_model(document: &Document, slot: usize) -> usize {
             .copied()
             .unwrap_or_else(|| row_count(document)),
         None => slot.min(row_count(document)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use tabtool_core::CsvConfiguration;
+
+    use super::sync_selection_to_document;
+    use crate::grid::{GridSelection, GridState};
+
+    #[test]
+    fn syncing_a_filtered_grid_drops_hidden_model_rows() {
+        let configuration = CsvConfiguration::default();
+        let mut document = tabtool_document::Document::new(configuration.clone());
+        document
+            .load_from_bytes(b"a\nb\nc\n", None, Some(configuration), false)
+            .expect("load the fixture");
+        document.row_filter_mut().visible_rows = Some(vec![0, 2]);
+        document.selection_mut().rows = BTreeSet::from([0, 1]);
+
+        let state = GridState {
+            selection: GridSelection {
+                rows: BTreeSet::from([0]),
+                columns: BTreeSet::new(),
+            },
+            ..Default::default()
+        };
+
+        sync_selection_to_document(&mut document, &state);
+
+        assert_eq!(
+            document.selection().rows,
+            BTreeSet::from([0]),
+            "row 1 is hidden by the filter and must not stay selected"
+        );
     }
 }

@@ -2,7 +2,7 @@
 //! one-shot notice and a failed save.
 
 use egui::{Frame, Margin, RichText, Ui};
-use tabtool_core::CsvWriteIssue;
+use tabtool_core::{CsvWriteIssue, Locale};
 use tabtool_document::{DocumentError, DocumentNotice, LargeStatus};
 use tabtool_i18n::{Language, tr};
 
@@ -19,7 +19,7 @@ pub fn large_file(
     language: Language,
     status: LargeStatus,
     rows: usize,
-    decimal_separator: &str,
+    locale: &Locale,
 ) {
     let theme = current(ui.ctx());
     Frame::new()
@@ -55,7 +55,7 @@ pub fn large_file(
                             language,
                             fraction,
                             rows,
-                            decimal_separator,
+                            locale,
                         ))
                         .size(theme.typography.caption)
                         .color(theme.colors.secondary_label),

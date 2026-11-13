@@ -22,16 +22,16 @@ use super::DocumentWindow;
 /// the event arrives.
 pub struct EguiClipboard<'a> {
     ctx: &'a Context,
-    paste: Option<String>,
 }
 
 impl<'a> EguiClipboard<'a> {
-    /// Wraps this frame's clipboard events.
+    /// Wraps this frame's clipboard context.
+    ///
+    /// Construction does not take a paste event: only an actual paste attempt
+    /// consumes it, so a focused text field can still receive the event when
+    /// the document did not ask for a paste.
     pub fn new(ctx: &'a Context) -> Self {
-        Self {
-            ctx,
-            paste: take_paste(ctx),
-        }
+        Self { ctx }
     }
 }
 
@@ -41,7 +41,7 @@ impl Clipboard for EguiClipboard<'_> {
     }
 
     fn paste(&mut self) -> Option<String> {
-        self.paste.take()
+        take_paste(self.ctx)
     }
 }
 
@@ -114,5 +114,64 @@ impl DocumentWindow {
     /// Whether a platform paste is still waiting for its event.
     pub fn has_pending_paste(&self) -> bool {
         self.lock().chrome.pending_paste
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use egui::{Context, Event, OutputCommand};
+    use tabtool_ui::grid::Clipboard;
+
+    use super::EguiClipboard;
+
+    #[test]
+    fn paste_reads_and_consumes_the_event() {
+        let ctx = Context::default();
+        ctx.begin_pass(egui::RawInput {
+            events: vec![Event::Paste("x\ty".to_owned())],
+            ..Default::default()
+        });
+        let mut clipboard = EguiClipboard::new(&ctx);
+
+        assert_eq!(clipboard.paste().as_deref(), Some("x\ty"));
+        assert_eq!(clipboard.paste(), None);
+        let mut output = ctx.end_pass();
+        output.textures_delta.clear();
+    }
+
+    #[test]
+    fn constructing_the_clipboard_leaves_the_paste_event() {
+        let ctx = Context::default();
+        ctx.begin_pass(egui::RawInput {
+            events: vec![Event::Paste("keep".to_owned())],
+            ..Default::default()
+        });
+        let _clipboard = EguiClipboard::new(&ctx);
+
+        assert!(
+            ctx.input(|input| input
+                .events
+                .iter()
+                .any(|event| matches!(event, Event::Paste(text) if text == "keep"))),
+            "an unused clipboard must not consume a field's paste event"
+        );
+
+        let mut output = ctx.end_pass();
+        output.textures_delta.clear();
+    }
+
+    #[test]
+    fn copy_queues_an_egui_output_command() {
+        let ctx = Context::default();
+        ctx.begin_pass(egui::RawInput::default());
+        EguiClipboard::new(&ctx).copy("a\tb");
+        let commands = ctx.output(|output| output.commands.clone());
+        let mut output = ctx.end_pass();
+        output.textures_delta.clear();
+
+        assert!(matches!(
+            commands.first(),
+            Some(OutputCommand::CopyText(text)) if text == "a\tb"
+        ));
     }
 }

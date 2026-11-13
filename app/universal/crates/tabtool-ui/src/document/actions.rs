@@ -14,15 +14,26 @@ use crate::grid::{ActionOutcome, GridAction};
 use super::dispatch::apply_grid_action;
 use super::{DocumentView, FormatBarAction, alert_message};
 
+/// How often a large document rechecks the file at rest.
+pub(crate) const STALE_CHECK_INTERVAL: Duration = Duration::from_secs(1);
+
+/// The next repaint delay for a large document, or `None` when it is idle.
+pub(crate) fn repaint_interval(is_large: bool, status: LargeStatus) -> Option<Duration> {
+    match status {
+        LargeStatus::Indexing(_) | LargeStatus::Saving(_) => Some(Duration::from_millis(100)),
+        LargeStatus::Ready if is_large => Some(STALE_CHECK_INTERVAL),
+        LargeStatus::None | LargeStatus::Ready | LargeStatus::Stale { .. } => None,
+    }
+}
+
 impl DocumentView<'_> {
     pub(super) fn poll_large_state(&mut self, ctx: &Context) {
         self.document.poll_large_indexing();
         self.document.refresh_large_staleness();
-        if matches!(
-            self.document.large_status(),
-            LargeStatus::Indexing(_) | LargeStatus::Saving(_)
-        ) {
-            ctx.request_repaint_after(Duration::from_millis(100));
+        if let Some(interval) =
+            repaint_interval(self.document.is_large_mode(), self.document.large_status())
+        {
+            ctx.request_repaint_after(interval);
         }
     }
 
@@ -50,12 +61,12 @@ impl DocumentView<'_> {
             }
             Ok(ActionOutcome::Applied) => {
                 if is_paste {
-                    self.ui_state.pending_paste = false;
+                    self.ui_state.clear_pending_paste();
                 }
             }
             Err(_) => {
                 if is_paste {
-                    self.ui_state.pending_paste = false;
+                    self.ui_state.clear_pending_paste();
                 }
             }
         }
@@ -158,5 +169,33 @@ impl DocumentView<'_> {
                 LargeStatus::Indexing(_) | LargeStatus::Saving(_)
             )
             || self.ui_state.pending_reparse.is_some()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{STALE_CHECK_INTERVAL, repaint_interval};
+    use std::time::Duration;
+    use tabtool_document::LargeStatus;
+
+    #[test]
+    fn only_large_documents_poll_at_rest() {
+        assert_eq!(repaint_interval(false, LargeStatus::Ready), None);
+        assert_eq!(
+            repaint_interval(true, LargeStatus::Ready),
+            Some(STALE_CHECK_INTERVAL)
+        );
+        assert_eq!(
+            repaint_interval(true, LargeStatus::Stale { appended: true }),
+            None
+        );
+        assert_eq!(
+            repaint_interval(true, LargeStatus::Indexing(0.5)),
+            Some(Duration::from_millis(100))
+        );
+        assert_eq!(
+            repaint_interval(true, LargeStatus::Saving(0.5)),
+            Some(Duration::from_millis(100))
+        );
     }
 }

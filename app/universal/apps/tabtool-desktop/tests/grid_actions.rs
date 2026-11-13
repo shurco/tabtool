@@ -300,9 +300,12 @@ fn a_menu_paste_requests_the_clipboard_once_and_consumes_the_next_event() {
     harness.get_by_label("Paste").click();
 
     let mut requested = false;
-    for _ in 0..8 {
+    for _ in 0..4 {
         harness.step();
-        requested |= requested_paste(&harness);
+        if requested_paste(&harness) {
+            requested = true;
+            break;
+        }
     }
 
     assert!(watch(&window), "the menu paste must be pending");

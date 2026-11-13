@@ -1,7 +1,7 @@
 //! Format-bar values, changes, re-read confirmation and failure reporting.
 
 use egui::accesskit::Role;
-use tabtool_core::CsvConfiguration;
+use tabtool_core::{CsvConfiguration, Locale};
 use tabtool_ui::document::{DocumentAction, LargeUiAction};
 use tabtool_ui::harness::kittest::{NodeT, Queryable};
 
@@ -21,7 +21,7 @@ fn summary(fixture: &Fixture) -> Option<String> {
                 document.configuration(),
                 document.row_filter().visible_rows.as_ref().map(Vec::len),
                 document.large_status(),
-                ".",
+                &Locale::try_from_str("en").expect("English is a valid locale"),
             )
         })
     })

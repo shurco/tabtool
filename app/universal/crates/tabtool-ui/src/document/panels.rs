@@ -63,12 +63,11 @@ impl DocumentView<'_> {
         if !show {
             return;
         }
-        let summary =
-            status_line::document_summary(self.document, self.language, self.decimal_separator)
-                .unwrap_or_else(|| match status {
-                    LargeStatus::Saving(fraction) => saving_text(self.language, fraction),
-                    _ => String::new(),
-                });
+        let summary = status_line::document_summary(self.document, self.language, self.locale)
+            .unwrap_or_else(|| match status {
+                LargeStatus::Saving(fraction) => saving_text(self.language, fraction),
+                _ => String::new(),
+            });
         let panel = egui::Panel::bottom("document-status")
             .frame(Frame::NONE)
             .show_separator_line(false);
@@ -191,7 +190,7 @@ impl DocumentView<'_> {
             .frame(Frame::NONE)
             .show_separator_line(false)
             .show(ui, |ui| {
-                banners::large_file(ui, self.language, status, rows, self.decimal_separator);
+                banners::large_file(ui, self.language, status, rows, self.locale);
             });
     }
 

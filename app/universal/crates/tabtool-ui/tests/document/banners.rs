@@ -4,7 +4,7 @@ use std::io::Write;
 
 use egui::accesskit::Role;
 use tabtool_core::{CsvConfiguration, Encoding};
-use tabtool_document::{DocumentNotice, LargeStatus};
+use tabtool_document::{DocumentError, DocumentNotice, LargeStatus};
 use tabtool_ui::UiHarness;
 use tabtool_ui::document::{DocumentAction, LargeUiAction};
 use tabtool_ui::harness::SnapshotResults;
@@ -35,6 +35,40 @@ fn large_mode_explains_what_stays_available() {
             .query_by_label_contains("Large file mode. You can browse and edit cells.")
             .is_some(),
         "the large-file banner must be visible"
+    );
+}
+
+#[test]
+fn a_large_ready_document_requests_a_periodic_staleness_poll() {
+    let (_directory, mut fixture) = large_fixture();
+    fixture.run();
+
+    let delay = fixture.output().viewport_output[&egui::ViewportId::ROOT].repaint_delay;
+    assert!(
+        delay > std::time::Duration::ZERO && delay <= std::time::Duration::from_secs(1),
+        "a large document at rest must poll for staleness, got {delay:?}"
+    );
+}
+
+#[test]
+fn an_external_change_is_seen_without_a_user_action() {
+    let (directory, mut fixture) = large_fixture();
+    fixture.run();
+
+    std::fs::OpenOptions::new()
+        .append(true)
+        .open(directory.path().join("large.csv"))
+        .expect("open the fixture for append")
+        .write_all(b"7,8\n")
+        .expect("append a row");
+
+    fixture.run();
+
+    assert!(
+        fixture
+            .query_by_label("New rows were appended. Reload to see them.")
+            .is_some(),
+        "the periodic poll must reveal the changed file"
     );
 }
 
@@ -447,6 +481,84 @@ fn document_states_match_their_snapshots() {
                 ui_state,
                 size,
             )
+        },
+        &mut results,
+    );
+
+    snapshot_pair(
+        "save-error",
+        |size| {
+            let storage = MemoryStorage::new(b"a,b\n1,2\n");
+            Fixture::new_with(
+                loaded(&storage, configuration()),
+                MemoryStorage::new(b""),
+                Default::default(),
+                size,
+                true,
+                Some(DocumentError::CannotWriteFile),
+            )
+        },
+        &mut results,
+    );
+
+    snapshot_pair(
+        "format-alert",
+        |size| {
+            let storage = MemoryStorage::new(b"a,b\n1,2\n");
+            let ui_state = tabtool_ui::document::DocumentUiState {
+                alert: Some(tabtool_ui::document::ChromeAlert {
+                    title: "Format Not Applied",
+                    message: tabtool_ui::document::alert_message(
+                        tabtool_i18n::Language::En,
+                        DocumentError::CannotReadFile,
+                    ),
+                }),
+                ..Default::default()
+            };
+            Fixture::sized(
+                loaded(&storage, configuration()),
+                MemoryStorage::new(b""),
+                ui_state,
+                size,
+            )
+        },
+        &mut results,
+    );
+
+    snapshot_pair(
+        "reparse",
+        |size| {
+            let storage = MemoryStorage::new(b"a,b\n1,2\n");
+            let ui_state = tabtool_ui::document::DocumentUiState {
+                pending_reparse: Some(CsvConfiguration {
+                    column_separator: ";".to_owned(),
+                    ..configuration()
+                }),
+                ..Default::default()
+            };
+            Fixture::sized(
+                loaded(&storage, configuration()),
+                MemoryStorage::new(b""),
+                ui_state,
+                size,
+            )
+        },
+        &mut results,
+    );
+
+    snapshot_pair(
+        "saving",
+        |size| {
+            let directory = tempfile::tempdir().expect("temporary directory");
+            let path = directory.path().join("large.csv");
+            let copy = directory.path().join("copy.csv");
+            std::fs::write(&path, b"a,b\n1,2\n3,4\n").expect("fixture file is written");
+            let mut document = crate::support::large_ready(&path);
+            document
+                .start_large_save(Some(&copy))
+                .expect("start the save");
+            Fixture::sized(document, MemoryStorage::new(b""), Default::default(), size)
+                .keep(directory)
         },
         &mut results,
     );

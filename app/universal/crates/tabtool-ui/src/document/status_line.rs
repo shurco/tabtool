@@ -2,7 +2,7 @@
 //! progress with Cancel.
 
 use egui::{Align, Frame, Layout, Margin, RichText, Stroke, Ui};
-use tabtool_core::CsvConfiguration;
+use tabtool_core::{CsvConfiguration, Locale};
 use tabtool_document::{Document, LargeStatus};
 use tabtool_i18n::{Language, tr};
 
@@ -21,17 +21,17 @@ pub fn status_summary(
     configuration: &CsvConfiguration,
     visible_rows: Option<usize>,
     status: LargeStatus,
-    decimal_separator: &str,
+    locale: &Locale,
 ) -> String {
     match status {
         LargeStatus::Indexing(fraction) => {
-            return super::progress::indexing_text(language, fraction, rows, decimal_separator);
+            return super::progress::indexing_text(language, fraction, rows, locale);
         }
         LargeStatus::Saving(fraction) => return saving_text(language, fraction),
         LargeStatus::None | LargeStatus::Ready | LargeStatus::Stale { .. } => {}
     }
-    let rows_text = rows_text(language, rows, visible_rows, decimal_separator);
-    let columns_text = columns_text(language, columns, decimal_separator);
+    let rows_text = rows_text(language, rows, visible_rows, locale);
+    let columns_text = columns_text(language, columns, locale);
     format!(
         "{rows_text} × {columns_text} · {} · {}",
         tr(language, configuration.encoding.display_name()),
@@ -43,7 +43,7 @@ pub fn status_summary(
 pub fn document_summary(
     document: &Document,
     language: Language,
-    decimal_separator: &str,
+    locale: &Locale,
 ) -> Option<String> {
     let source = document.row_source()?;
     Some(status_summary(
@@ -53,7 +53,7 @@ pub fn document_summary(
         document.configuration(),
         document.row_filter().visible_rows.as_ref().map(Vec::len),
         document.large_status(),
-        decimal_separator,
+        locale,
     ))
 }
 
@@ -102,33 +102,25 @@ pub fn show(ui: &mut Ui, language: Language, summary: &str, status: LargeStatus)
     cancel
 }
 
-fn rows_text(
-    language: Language,
-    rows: usize,
-    visible: Option<usize>,
-    decimal_separator: &str,
-) -> String {
+fn rows_text(language: Language, rows: usize, visible: Option<usize>, locale: &Locale) -> String {
     match visible {
         Some(visible) => fill_pair(
             tr(language, "%lld of %lld rows"),
-            &grouped_count(visible, decimal_separator),
-            &grouped_count(rows, decimal_separator),
+            &grouped_count(visible, locale),
+            &grouped_count(rows, locale),
         ),
         None if rows == 1 => tr(language, "1 row").to_owned(),
-        None => fill_one(
-            tr(language, "%lld rows"),
-            &grouped_count(rows, decimal_separator),
-        ),
+        None => fill_one(tr(language, "%lld rows"), &grouped_count(rows, locale)),
     }
 }
 
-fn columns_text(language: Language, columns: usize, decimal_separator: &str) -> String {
+fn columns_text(language: Language, columns: usize, locale: &Locale) -> String {
     if columns == 1 {
         tr(language, "1 column").to_owned()
     } else {
         fill_one(
             tr(language, "%lld columns"),
-            &grouped_count(columns, decimal_separator),
+            &grouped_count(columns, locale),
         )
     }
 }
