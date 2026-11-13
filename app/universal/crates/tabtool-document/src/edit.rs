@@ -377,6 +377,10 @@ impl Document {
                 return false;
             }
         }
+        // A save leaves the snapshot cache holding a second `Arc` of this
+        // table. Drop that reference first, so `make_mut` mutates the owned
+        // table instead of deep-copying it on the first edit after a save.
+        self.snapshot_cache = None;
         Arc::make_mut(table).set_cell(text.to_owned(), row, column);
         self.bump_revision();
         self.refresh_phase();

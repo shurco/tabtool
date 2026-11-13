@@ -45,13 +45,17 @@ impl Document {
     /// Opens `path` large, detecting the format from its head unless
     /// `configuration` is supplied.
     ///
-    /// The file is mapped and checked before anything in the document changes,
-    /// so a refused format leaves the previous state untouched. A file smaller
-    /// than `threshold_bytes` is refused with [`DocumentError::NotReady`]; call
-    /// [`Document::open_file`] to route by size instead. On success the table is
-    /// dropped, the phase becomes [`DocumentPhase::Ready`] and the indexer
-    /// starts on its worker thread. A streaming save in flight reports
-    /// [`DocumentError::Busy`].
+    /// The size is checked before anything is mapped, and the file is mapped
+    /// and checked before any document state changes. A refused format leaves
+    /// a document that already has content untouched and reports the typed
+    /// error. A file smaller than `threshold_bytes` is refused with
+    /// [`DocumentError::NotReady`] without touching the document; call
+    /// [`Document::open_file`] to route by size instead. On success the table
+    /// is dropped, the phase becomes [`DocumentPhase::Ready`] and the indexer
+    /// starts on its worker thread. After a failed open of an empty document
+    /// the large intent stays set, so a later format change reopens the file
+    /// large instead of reading it into memory. A streaming save in flight
+    /// reports [`DocumentError::Busy`].
     pub fn open_large(
         &mut self,
         path: &Path,
@@ -60,6 +64,16 @@ impl Document {
         threshold_bytes: u64,
     ) -> Result<(), DocumentError> {
         self.ensure_not_saving()?;
+        let size = match std::fs::metadata(path) {
+            Ok(metadata) => metadata.len(),
+            Err(_) => {
+                self.fail_large_open(path, DocumentPhase::UnreadableFile);
+                return Err(DocumentError::CannotReadFile);
+            }
+        };
+        if !Self::uses_large_mode(size, threshold_bytes) {
+            return Err(DocumentError::NotReady);
+        }
         match Self::map_large_file(path, configuration.as_ref(), prefers_chinese) {
             Ok((file, configuration)) => {
                 if !Self::uses_large_mode(file.size() as u64, threshold_bytes) {
@@ -352,6 +366,7 @@ impl Document {
             indexer,
             file,
         });
+        self.large_intent = true;
         self.configuration = configuration;
         self.file_path = Some(path.to_path_buf());
         self.phase = DocumentPhase::Ready;
@@ -361,11 +376,21 @@ impl Document {
         self.poll_large_indexing();
     }
 
-    /// Clears the document after a failed large open and binds the path for a
-    /// retry.
+    /// Records a failed large open on a document that has nothing to preserve.
+    ///
+    /// A document that already shows a table or a large source keeps its
+    /// content, path, phase and undo history; the caller only receives the
+    /// typed error. An empty or still-loading document adopts the failure
+    /// instead: the path is bound for a retry, the phase reports it, and the
+    /// sticky large intent stays set so recovery never reads the file into
+    /// memory.
     fn fail_large_open(&mut self, path: &Path, phase: DocumentPhase) {
+        if self.has_content() && !matches!(self.phase, DocumentPhase::Loading) {
+            return;
+        }
         self.clear_large_state();
         self.table = None;
+        self.large_intent = true;
         self.file_path = Some(path.to_path_buf());
         self.phase = phase;
         self.active_sort = None;

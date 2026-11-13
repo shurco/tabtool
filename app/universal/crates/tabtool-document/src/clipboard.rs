@@ -23,6 +23,8 @@ impl Document {
     /// and line breaks inside cells flattened. The locale is accepted for API
     /// parity with the callers that also sort; the separator is supplied
     /// explicitly because the document layer has no locale decimal data.
+    /// A column selection copies only the visible rows (the applied filter's
+    /// snapshot, or every row without a filter), never hidden rows.
     pub fn copy_selection(&self, locale: &Locale, decimal_separator: &str) -> Option<String> {
         let source = self.row_source()?;
 
@@ -70,8 +72,10 @@ impl Document {
 
     /// The given rows as TSV in visual column order.
     ///
-    /// Returns `None` when no requested row exists or the copy would exceed
-    /// [`LargeFile::MAX_COPY_CELLS`].
+    /// Returns `None` when no requested row exists. A large document also
+    /// returns `None` (and raises [`DocumentNotice::CopyLimitExceeded`]) when
+    /// the copy would exceed [`LargeFile::MAX_COPY_CELLS`]; an in-memory
+    /// document has no such limit.
     pub fn copy_rows(
         &self,
         rows: &BTreeSet<usize>,
@@ -242,8 +246,12 @@ impl Document {
 
     /// Whether a copy of `cells` cells is allowed; a refused copy raises a
     /// notice.
+    ///
+    /// The limit protects the mapped-file reader: an in-memory document already
+    /// holds its cells and copies without the large-file cap, matching
+    /// `CSVDocumentClipboard`'s `largeSource != nil` check.
     fn fits_copy_limit(&self, cells: usize) -> bool {
-        if cells <= LargeFile::MAX_COPY_CELLS {
+        if self.large.is_none() || cells <= LargeFile::MAX_COPY_CELLS {
             return true;
         }
         self.set_notice(DocumentNotice::CopyLimitExceeded);

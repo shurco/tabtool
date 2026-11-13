@@ -348,10 +348,31 @@ fn setting_a_path_binds_the_document_and_none_makes_it_untitled() {
     let table = document.table().expect("table").clone();
     assert_eq!(document.file_path(), Some(path));
 
-    document.set_file_path(None);
+    document
+        .set_file_path(None)
+        .expect("unbind the loaded path");
 
     assert!(document.file_path().is_none());
     assert_eq!(document.table(), Some(&table));
+}
+
+#[test]
+fn binding_a_path_is_refused_while_a_reread_owns_the_document() {
+    let configuration = CsvConfiguration::default();
+    let mut document = Document::new(configuration.clone());
+    document
+        .load_from_bytes(b"a\n", None, Some(configuration), false)
+        .expect("load the fixture");
+
+    assert!(document.begin_reread());
+    assert_eq!(
+        document.set_file_path(Some(Path::new("fixture.csv"))),
+        Err(DocumentError::RequiresConfirmation)
+    );
+    document.end_reread();
+    document
+        .set_file_path(Some(Path::new("fixture.csv")))
+        .expect("the path binds once the reread ends");
 }
 
 #[test]

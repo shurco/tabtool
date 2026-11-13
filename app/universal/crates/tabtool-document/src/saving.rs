@@ -142,7 +142,7 @@ impl Document {
             .write_atomic(path, &data)
             .map_err(|_| DocumentError::CannotWriteFile)?;
         if rebind && self.file_path() != Some(path) {
-            self.set_file_path(Some(path));
+            self.set_file_path(Some(path))?;
         }
         self.saved_revision = self.revision;
         // The gate passed above, but a stale phase must not keep reporting a
@@ -176,6 +176,7 @@ mod tests {
     use tabtool_core::CsvConfiguration;
 
     use super::*;
+    use crate::storage::StdStorage;
 
     /// A ready file-backed document; the path never has to exist for these
     /// unit tests because no save is performed.
@@ -234,5 +235,27 @@ mod tests {
 
         let reused = document.write_snapshot().expect("reused snapshot");
         assert!(Arc::ptr_eq(&cached, &reused));
+    }
+
+    #[test]
+    fn the_first_edit_after_a_save_keeps_the_owned_table_allocation() {
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let path = directory.path().join("document.csv");
+        let configuration = CsvConfiguration::default();
+        let mut document = Document::new(configuration.clone());
+        document
+            .load_from_bytes(b"a\n", Some(&path), Some(configuration), false)
+            .expect("load the fixture");
+        document.save(&StdStorage).expect("save the fixture");
+
+        let allocation = Arc::as_ptr(document.table().expect("table"));
+        document.set_cell(0, 0, "b");
+
+        assert_eq!(
+            Arc::as_ptr(document.table().expect("table")),
+            allocation,
+            "the saved snapshot must not force a copy of the whole table"
+        );
+        assert!(document.snapshot_cache.is_none());
     }
 }

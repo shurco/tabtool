@@ -10,7 +10,7 @@
 use std::collections::BTreeSet;
 
 use tabtool_core::{CsvConfiguration, Locale, SortDirection};
-use tabtool_document::{Document, DocumentNotice, GridSelection, UndoAction};
+use tabtool_document::{Document, GridSelection, UndoAction};
 
 fn locale(id: &str) -> Locale {
     id.parse().expect("test locale is valid")
@@ -180,36 +180,35 @@ fn copy_uses_the_supplied_decimal_separator() {
 }
 
 #[test]
-fn copy_is_capped_at_one_million_cells() {
+fn an_in_memory_copy_has_no_cell_limit() {
     let mut document = wide_document(1_000, 1_001);
     let en = locale("en-US");
 
     select_columns(&mut document, 0..1_000);
     let copied = document
         .copy_selection(&en, ".")
-        .expect("exactly one million cells is allowed");
+        .expect("in-memory columns are not capped");
     assert_eq!(copied.len(), 1_999_999);
     assert_eq!(document.notice(), None);
 
     select_rows(&mut document, 0..1_000);
-    assert_eq!(document.copy_selection(&en, "."), None);
-    assert_eq!(document.notice(), Some(DocumentNotice::CopyLimitExceeded));
-
-    assert_eq!(
-        document.take_notice(),
-        Some(DocumentNotice::CopyLimitExceeded)
+    assert!(
+        document.copy_selection(&en, ".").is_some(),
+        "in-memory rows are not capped"
     );
     assert_eq!(document.notice(), None);
-    assert_eq!(document.take_notice(), None);
 }
 
 #[test]
-fn copy_rows_is_capped_at_one_million_cells() {
+fn in_memory_row_copy_is_not_capped() {
     let document = wide_document(1_000, 1_001);
     let rows: BTreeSet<usize> = (0..1_000).collect();
 
-    assert_eq!(document.copy_rows(&rows, &locale("en-US"), "."), None);
-    assert_eq!(document.notice(), Some(DocumentNotice::CopyLimitExceeded));
+    assert!(
+        document.copy_rows(&rows, &locale("en-US"), ".").is_some(),
+        "in-memory rows are not capped"
+    );
+    assert_eq!(document.notice(), None);
 }
 
 #[test]

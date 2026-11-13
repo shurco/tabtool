@@ -47,8 +47,10 @@ impl Document {
     ///
     /// An untitled document has nothing to re-read, so only its configuration
     /// changes. A failed read or parse keeps the previous table, configuration
-    /// and undo history. A streaming large save in flight reports
-    /// [`DocumentError::Busy`].
+    /// and undo history. A large document reopens its mapping; after a refused
+    /// open with no source, a supported format is checked against a fresh
+    /// mapping instead of reading the file into memory. A streaming large save
+    /// in flight reports [`DocumentError::Busy`].
     pub fn apply_parsing_configuration(
         &mut self,
         new: CsvConfiguration,
@@ -61,9 +63,11 @@ impl Document {
         }
 
         // A large document re-reads its mapping with the new format; it never
-        // materializes a table.
+        // materializes a table. After a failed open there is no source yet, so
+        // the new format is checked against a fresh mapping, which is also the
+        // documented recovery path for a refused large file.
         if self.is_large_mode() {
-            return self.reopen_large(new, force);
+            return self.apply_large_format(new, force);
         }
 
         if self.file_path().is_none() {
@@ -83,6 +87,28 @@ impl Document {
         result
     }
 
+    /// Reopens a large document with `new`, mapping the bound file when a
+    /// previous open left no source.
+    ///
+    /// A document that already has a source goes through the normal
+    /// [`Document::reopen_large`] dirty gate. After a failed open there is
+    /// nothing to discard, so the new format is checked against a fresh
+    /// mapping; success installs it, failure records the refusal again. The
+    /// file is never read through [`Storage`] here.
+    fn apply_large_format(
+        &mut self,
+        new: CsvConfiguration,
+        force: bool,
+    ) -> Result<(), DocumentError> {
+        if self.large.is_some() {
+            return self.reopen_large(new, force);
+        }
+        let Some(path) = self.file_path().map(PathBuf::from) else {
+            return Err(DocumentError::NotReady);
+        };
+        self.open_large(&path, Some(new), false, 0)
+    }
+
     /// Applies a re-parsed candidate only when its revision is still current.
     ///
     /// A stale candidate is ignored, so an asynchronous caller cannot replace
@@ -94,9 +120,10 @@ impl Document {
     /// Runs the format detector over the current bytes of the file on disk.
     ///
     /// A large document sniffs the head of its mapped file instead of reading
-    /// the whole file into memory. The configuration is returned without
-    /// changing the document. An untitled document has no bytes to read and
-    /// returns its configuration.
+    /// the whole file into memory; this also covers a file whose large open was
+    /// refused, where no source is installed yet. The configuration is returned
+    /// without changing the document. An untitled document has no bytes to
+    /// read and returns its configuration.
     pub fn detect_format_from_disk(
         &self,
         storage: &dyn Storage,

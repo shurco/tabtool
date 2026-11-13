@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use tabtool_core::{CsvConfiguration, CsvError};
 use tabtool_document::{
-    Document, DocumentError, DocumentPhase, GridSelection, LargeStatus, StdStorage,
+    Document, DocumentError, DocumentPhase, GridSelection, LargeStatus, StdStorage, Storage,
 };
 use tabtool_large::LargeFile;
 
@@ -514,4 +514,111 @@ fn a_failed_reload_keeps_the_current_source() {
         &document.large_state().expect("large").source
     ));
     assert_eq!(document.large_status(), LargeStatus::Ready);
+}
+
+/// Storage that proves a large document never falls back to reading the whole
+/// file into memory.
+struct PanickingStorage;
+
+impl Storage for PanickingStorage {
+    fn read(&self, _path: &Path) -> std::io::Result<Vec<u8>> {
+        panic!("Storage::read must not run for a large document")
+    }
+
+    fn write_atomic(&self, _path: &Path, _data: &[u8]) -> std::io::Result<()> {
+        panic!("Storage::write_atomic must not run in this test")
+    }
+}
+
+#[test]
+fn a_refused_open_keeps_the_large_intent_and_format_changes_stay_on_the_large_path() {
+    let fixture = Fixture::new();
+    let mut bytes = vec![0xFF, 0xFE];
+    bytes.extend("a,b\n1,2\n".encode_utf16().flat_map(u16::to_le_bytes));
+    let path = fixture.write(&bytes);
+    let mut document = Document::new(CsvConfiguration::default());
+
+    assert_eq!(
+        document.open_large(&path, None, false, 0),
+        Err(DocumentError::Csv(CsvError::UnsupportedLargeFileEncoding))
+    );
+    assert!(document.is_large_mode());
+    assert!(document.table().is_none());
+    assert!(!document.can_edit_cells());
+    assert_eq!(
+        document.revert_to_saved(&PanickingStorage),
+        Err(DocumentError::NotReady)
+    );
+
+    // The documented recovery is a format change. It must reopen through the
+    // large sniffer, never through `Storage::read`.
+    assert_eq!(
+        document.apply_parsing_configuration(CsvConfiguration::default(), true, &PanickingStorage),
+        Err(DocumentError::Csv(CsvError::UnsupportedLargeFileEncoding))
+    );
+    assert!(document.is_large_mode());
+    assert!(!document.can_edit_cells());
+    assert!(matches!(
+        document.detect_format_from_disk(&PanickingStorage, false),
+        Err(DocumentError::Csv(CsvError::UnsupportedLargeFileEncoding))
+    ));
+}
+
+#[test]
+fn a_refused_open_over_loaded_content_preserves_the_table_and_undo() {
+    let fixture = Fixture::new();
+    let mut bytes = vec![0xFF, 0xFE];
+    bytes.extend("x,y\n".encode_utf16().flat_map(u16::to_le_bytes));
+    let refused = fixture.write(&bytes);
+    let mut document = Document::new(CsvConfiguration::default());
+    document
+        .load_from_bytes(
+            b"a,b\nc,d\n",
+            None,
+            Some(CsvConfiguration::default()),
+            false,
+        )
+        .expect("load the in-memory fixture");
+    document.set_cell(0, 0, "X");
+    let table = document.table().expect("table").clone();
+    let revision = document.revision();
+    let phase = *document.phase();
+
+    assert_eq!(
+        document.open_large(&refused, None, false, 0),
+        Err(DocumentError::Csv(CsvError::UnsupportedLargeFileEncoding))
+    );
+
+    assert_eq!(document.table(), Some(&table));
+    assert_eq!(document.revision(), revision);
+    assert_eq!(document.phase(), &phase);
+    assert!(document.file_path().is_none());
+    assert!(document.can_undo());
+    assert!(!document.is_large_mode());
+    assert!(document.can_edit_cells());
+}
+
+#[test]
+fn a_below_threshold_invalid_file_changes_nothing() {
+    let fixture = Fixture::new();
+    let mut bytes = vec![0xFF, 0xFE];
+    bytes.extend("a,b\n".encode_utf16().flat_map(u16::to_le_bytes));
+    let path = fixture.write(&bytes);
+    let size = std::fs::metadata(&path).expect("fixture metadata").len();
+    let mut document = Document::new(CsvConfiguration::default());
+    document
+        .load_from_bytes(b"a\n", None, Some(CsvConfiguration::default()), false)
+        .expect("load the in-memory fixture");
+    let table = document.table().expect("table").clone();
+    let revision = document.revision();
+
+    assert_eq!(
+        document.open_large(&path, None, false, size + 1),
+        Err(DocumentError::NotReady)
+    );
+
+    assert_eq!(document.table(), Some(&table));
+    assert_eq!(document.revision(), revision);
+    assert!(!document.is_large_mode());
+    assert!(document.file_path().is_none());
 }

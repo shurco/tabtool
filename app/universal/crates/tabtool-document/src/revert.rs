@@ -60,6 +60,9 @@ impl Document {
     pub fn revert_to_saved(&mut self, storage: &dyn Storage) -> Result<(), DocumentError> {
         self.ensure_not_saving()?;
         if self.is_large_mode() {
+            if self.large.is_none() {
+                return Err(DocumentError::NotReady);
+            }
             self.revert_large_edits();
             return Ok(());
         }

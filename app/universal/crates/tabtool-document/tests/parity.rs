@@ -405,7 +405,8 @@ const PORTED: &[SwiftFile] = &[
                 "copy_uses_the_supplied_decimal_separator",
                 "paste_does_not_trim_or_interpret_quotes",
                 "paste_preserves_empty_fields_and_missing_trailing_cells",
-                "copy_is_capped_at_one_million_cells",
+                "an_in_memory_copy_has_no_cell_limit",
+                "in_memory_row_copy_is_not_capped",
             ],
         }],
     },
@@ -761,6 +762,10 @@ const WAIVED: &[Waived] = &[
         reason: "the whole file exercises the filter bar's displayed state",
     },
     Waived {
+        case: "GridInteractionTests.swift",
+        reason: "the suite drives the AppKit grid, pasteboard and menu validation; the document-side copy, paste and delete behavior is covered by tests/clipboard.rs and tests/structural.rs, the rest is UI",
+    },
+    Waived {
         case: "LargeDocumentWindowTests.swift",
         reason: "the whole file exercises the AppKit large-document window",
     },
@@ -827,6 +832,7 @@ fn read(path: &Path) -> String {
 
 fn qualified(file: &str, case: &str) -> String {
     let name = file.rsplit('/').next().unwrap_or(file);
+    let name = name.strip_suffix(".swift").unwrap_or(name);
     format!("{name}.{case}")
 }
 

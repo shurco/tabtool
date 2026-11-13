@@ -70,8 +70,28 @@ impl Storage for StdStorage {
             let _ = fs::remove_file(&temporary);
             return Err(error);
         }
+        // The bytes are in place; a directory-sync failure is a durability
+        // warning like the large saver's, not a reason to report a failed save.
+        if let Err(error) = sync_directory(parent) {
+            eprintln!(
+                "tabtool: saved {} but could not sync its directory: {error}",
+                path.display()
+            );
+        }
         Ok(())
     }
+}
+
+/// Flushes a directory entry change (a rename) to disk.
+#[cfg(unix)]
+fn sync_directory(path: &Path) -> io::Result<()> {
+    fs::File::open(path)?.sync_all()
+}
+
+/// Directory syncs are a Unix durability step; other platforms have none.
+#[cfg(not(unix))]
+fn sync_directory(_path: &Path) -> io::Result<()> {
+    Ok(())
 }
 
 /// Moves `temporary` onto `target`, replacing an existing file atomically.

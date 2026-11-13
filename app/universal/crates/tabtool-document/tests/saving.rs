@@ -538,6 +538,8 @@ fn can_save_requires_a_path_a_table_and_a_writable_phase() {
     let mut document = loaded(&storage, CsvConfiguration::default());
     assert!(document.can_save());
 
-    document.set_file_path(None);
+    document
+        .set_file_path(None)
+        .expect("unbind the loaded path");
     assert!(!document.can_save(), "an untitled document needs Save As");
 }

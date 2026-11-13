@@ -343,6 +343,10 @@ fn a_document_replacing_operation_during_save_is_busy() {
         document.open_file(&other, &StdStorage, None, false, 0),
         Err(DocumentError::Busy)
     );
+    assert_eq!(
+        document.set_file_path(Some(&other)),
+        Err(DocumentError::Busy)
+    );
     assert_eq!(document.reload_large(&StdStorage), Err(DocumentError::Busy));
     assert_eq!(
         document.reopen_large(configuration.clone(), true),
@@ -380,6 +384,7 @@ fn can_edit_cells_is_false_while_saving() {
         .start_large_save(Some(&copy))
         .expect("start the save as");
     assert!(saving(&document));
+    assert!(document.is_large_mode());
     assert!(!document.can_edit_cells());
     document
         .wait_for_large_save()

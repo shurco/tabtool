@@ -23,11 +23,25 @@ use crate::undo::UndoEntry;
 /// snapshots, editing, structural changes, selections, undo and saving all land
 /// here. Exactly one content mode is active: an in-memory table, a mapped
 /// large-file state, or neither while nothing has loaded.
+///
+/// A document routed to the large path keeps that intent even when no source is
+/// installed (a refused format or an unreadable file). Recovery then goes
+/// through a format change that reopens the file large; it must never fall back
+/// to reading a multi-gigabyte file into memory.
+///
+/// Dropping a document does not cancel or join a streaming save. A caller that
+/// owns a document with a save in flight must cancel and wait before dropping
+/// it; the close flow in Plan 4 owns that order.
 pub struct Document {
     pub(crate) phase: DocumentPhase,
     pub(crate) table: Option<Arc<CsvTable>>,
     /// The mapped state of a large file; `table` is `None` in this mode.
     pub(crate) large: Option<LargeState>,
+    /// Whether this document took, or was routed to take, the large-file path.
+    ///
+    /// Sticky across a failed open and a streaming save. It selects the large
+    /// reopen path and keeps cells read-only when no source was installed.
+    pub(crate) large_intent: bool,
     pub(crate) configuration: CsvConfiguration,
     pub(crate) selection: GridSelection,
     pub(crate) active_sort: Option<ActiveSort>,
@@ -72,6 +86,7 @@ impl Document {
             // before a load; `new_document` replaces it with loaded state.
             table: Some(Arc::new(CsvTable::new_document(1, 3))),
             large: None,
+            large_intent: false,
             configuration,
             selection: GridSelection::default(),
             active_sort: None,
@@ -108,6 +123,7 @@ impl Document {
 
         self.table = Some(Arc::new(table));
         self.clear_large_state();
+        self.large_intent = false;
         self.configuration = configuration;
         self.had_utf8_bom = false;
         self.file_path = None;
@@ -150,6 +166,7 @@ impl Document {
         let configuration = configuration.unwrap_or_else(|| io::detect(bytes, prefers_chinese));
         self.file_path = path.map(Path::to_path_buf);
         self.clear_large_state();
+        self.large_intent = false;
 
         match io::parse(bytes, &configuration) {
             Ok(outcome) => {
@@ -199,6 +216,7 @@ impl Document {
             Ok(bytes) => self.load_from_bytes(&bytes, Some(path), configuration, prefers_chinese),
             Err(_) => {
                 self.clear_large_state();
+                self.large_intent = false;
                 self.table = None;
                 self.file_path = Some(path.to_path_buf());
                 self.phase = DocumentPhase::UnreadableFile;
@@ -210,14 +228,23 @@ impl Document {
 
     /// Binds the document to a file, or makes it untitled with `None`.
     ///
-    /// The table and format are left untouched.
-    pub fn set_file_path(&mut self, path: Option<&Path>) {
+    /// The table and format are left untouched; the binding is a revision
+    /// change. A streaming save owns the document and a transactional re-read
+    /// is replacing it, so binding a new path during either reports
+    /// [`DocumentError::Busy`] or [`DocumentError::RequiresConfirmation`]
+    /// instead of racing them.
+    pub fn set_file_path(&mut self, path: Option<&Path>) -> Result<(), DocumentError> {
+        self.ensure_not_saving()?;
+        if self.rereading {
+            return Err(DocumentError::RequiresConfirmation);
+        }
         let path = path.map(Path::to_path_buf);
         if path == self.file_path {
-            return;
+            return Ok(());
         }
         self.file_path = path;
         self.bump_revision();
+        Ok(())
     }
 
     /// Captures the table, format and BOM state for saving.
@@ -342,8 +369,12 @@ impl Document {
     }
 
     /// Whether this document opens its file through the memory-mapped path.
+    ///
+    /// The answer stays true after a refused or failed open and while a
+    /// streaming save holds the mapping, so callers never route the file
+    /// through the in-memory reader.
     pub fn is_large_mode(&self) -> bool {
-        self.large.is_some()
+        self.large_intent
     }
 
     /// Whether a table or a large-file source is loaded.
@@ -362,16 +393,18 @@ impl Document {
         self.table.as_deref().map(|table| table as &dyn RowSource)
     }
 
-    /// Whether cells can be edited now: always in memory, and in large mode
-    /// once the index is complete. A streaming save owns the document while it
-    /// runs, so no rows are available and the answer is `false`.
+    /// Whether cells can be edited now: in memory with a table, and in large
+    /// mode once a source is installed and its index is complete. A failed
+    /// large open leaves no source, so cells stay read-only. A streaming save
+    /// owns the document while it runs, so no rows are available and the answer
+    /// is `false`.
     pub fn can_edit_cells(&self) -> bool {
         if self.large_save.is_some() || matches!(self.large_status, LargeStatus::Saving(_)) {
             return false;
         }
         match &self.large {
             Some(_) => self.large_status == LargeStatus::Ready,
-            None => true,
+            None => !self.large_intent && self.table.is_some(),
         }
     }
 
@@ -417,6 +450,10 @@ impl Document {
     }
 
     /// Drops the mapped state and its status, leaving the in-memory mode.
+    ///
+    /// The sticky [`Document::is_large_mode`] intent is not cleared here; the
+    /// sites that switch to a new in-memory document reset it themselves, and a
+    /// failed large open keeps it.
     pub(crate) fn clear_large_state(&mut self) {
         self.large = None;
         self.large_status = LargeStatus::None;

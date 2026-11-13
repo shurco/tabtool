@@ -369,11 +369,17 @@ impl Document {
     }
 
     /// Puts a restored mapping back and reports it as ready.
+    ///
+    /// The file may have changed while the save ran without a prior staleness
+    /// poll (the worker reports `SourceChanged` itself), so the restored state
+    /// is checked immediately and the banner is raised before the caller sees
+    /// `Ready`.
     fn restore_large_state(&mut self, state: LargeState) {
         self.table = None;
         self.large = Some(state);
         self.large_status = LargeStatus::Ready;
         self.phase = DocumentPhase::Ready;
+        self.refresh_large_staleness();
     }
 
     /// Restores the original state, or clears the mode when it is gone.
@@ -644,5 +650,32 @@ mod tests {
         assert_eq!(adoption.source.cell(2, 1), "X");
         let saved = std::fs::read_to_string(&copy).expect("the copy is readable");
         assert_eq!(saved.lines().nth(2), Some("\"r2\",\"X\",\"q 2\""));
+    }
+
+    /// The worker can report `SourceChanged` without a prior poll. Restoring
+    /// the mapping then must not publish `Ready` for a file that no longer
+    /// matches; the stale banner has to appear immediately.
+    #[test]
+    fn a_restored_source_is_checked_for_staleness_immediately() {
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let path = directory.path().join("big.csv");
+        std::fs::write(&path, b"a,b\n1,2\n3,4\n").expect("fixture file is written");
+        let mut document = Document::new(CsvConfiguration::default());
+        document
+            .open_large(&path, None, false, 0)
+            .expect("open the fixture");
+        document.large_state().expect("large state").indexer.wait();
+        document.poll_large_indexing();
+        let state = document.large.take().expect("the mapping is taken");
+
+        std::fs::write(&path, b"x\n").expect("the fixture is truncated");
+
+        document.restore_large_state(state);
+
+        assert_eq!(
+            document.large_status(),
+            LargeStatus::Stale { appended: false }
+        );
+        assert_eq!(document.phase(), &DocumentPhase::Ready);
     }
 }
