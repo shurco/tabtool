@@ -9,4 +9,14 @@ description = "TabTool desktop application."
 [dependencies]
 # X11 and Wayland are required for winit to build on Linux; eframe's defaults are off.
 eframe = { version = "=0.37.0", default-features = false, features = ["default_fonts", "system_fonts", "wgpu", "accesskit", "x11", "wayland"] }
+egui.workspace = true
 tabtool-core = { path = "../../crates/tabtool-core" }
+tabtool-document = { path = "../../crates/tabtool-document" }
+tabtool-i18n = { path = "../../crates/tabtool-i18n" }
+tabtool-platform = { path = "../../crates/tabtool-platform" }
+tabtool-ui = { path = "../../crates/tabtool-ui", default-features = false }
+
+[dev-dependencies]
+# The kittest harness is a test-only feature of `tabtool-ui`.
+tabtool-ui = { path = "../../crates/tabtool-ui", features = ["test-support"] }
+tempfile = "3"

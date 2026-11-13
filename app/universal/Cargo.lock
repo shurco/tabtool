@@ -3624,7 +3624,13 @@ name = "tabtool-desktop"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "egui",
  "tabtool-core",
+ "tabtool-document",
+ "tabtool-i18n",
+ "tabtool-platform",
+ "tabtool-ui",
+ "tempfile",
 ]
 
 [[package]]
