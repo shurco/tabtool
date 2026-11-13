@@ -92,8 +92,6 @@ jobs:
             ${{ runner.os }}-cargo-1.99.1-
       - name: Run tests including the macOS image baselines
         run: cargo test --workspace
-      - name: Verify the consolidated desktop baselines
-        run: cargo test -p tabtool-desktop --test visual
       - run: cargo run -p xtask -- i18n --check
       - run: cargo test -p tabtool-core --test golden
       - run: cargo clippy -p tabtool-large --features bench --all-targets -- -D warnings

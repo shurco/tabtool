@@ -34,9 +34,13 @@ pub fn settings_harness(theme: tabtool_ui::Theme, size: [f32; 2], tab: &str) -> 
     harness.run();
     if tab != "General" {
         harness.get_by_label(tab).click();
+        // Selecting a tab asks the window to resize. Restore the requested
+        // baseline size so the 1200×800 and 640×400 images stay distinct.
         harness.run();
+        harness.set_size(Vec2::new(size[0], size[1]));
         harness.run();
     }
+    harness.set_size(Vec2::new(size[0], size[1]));
     harness.remove_cursor();
     harness.run();
     harness

@@ -17,7 +17,11 @@ Every state is stored as `<state>-<size>-<theme>.png`:
 
 The Settings, About and Export images are component-window baselines: the
 content is rendered inside a `1200×800` or `640×400` harness so the layout can
-be compared at both documented sizes, not inside an OS-drawn window frame.
+be compared at both documented sizes, not inside an OS-drawn window frame. A
+Settings tab click requests a content resize, so the harness restores the
+requested baseline size; the 640×400 and 1200×800 Settings files must not be
+byte-identical. The `format-bar` state uses a semicolon separator and a decimal
+comma so it is distinct from `csv-grid-header`.
 
 `../../kittest.toml` sets the comparison budget (threshold 2.0, at most 4
 different pixels). Do not raise it to hide a layout change.

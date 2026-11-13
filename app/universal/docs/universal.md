@@ -728,7 +728,9 @@ Apple app remains the visual source of truth; the reference screenshots are
   100,000-row scroll reads 119 cells (17 rows × 7 columns) in 78 µs in a
   release build on an Apple M4 Pro (1.36 ms in the debug test build); the
   large-document case reads 48 cells (16 rows × 3 columns) and never asks for
-  a row past the published index. These are observations, not CI gates.
+  a row past the published index. A partial publication of 120 of 5,000 rows
+  reads the same 48 cells and never crosses the 120-row boundary. These are
+  observations, not CI gates.
 - The manual Windows/Linux parity checklist, known deviations, per-OS baseline
   plan and full performance notes are in `docs/desktop-ui.md`.
 

@@ -59,9 +59,18 @@ pub fn editing_cell(theme: tabtool_ui::Theme, size: [f32; 2]) -> DocumentFixture
     fixture
 }
 
-/// The format bar under the grid.
+/// The format bar with non-default controls: a semicolon separator and a
+/// decimal comma, so this state is distinct from the plain header grid.
 pub fn format_bar(theme: tabtool_ui::Theme, size: [f32; 2]) -> DocumentFixture {
-    csv_with_header(theme, size)
+    let storage = MemoryStorage::new(b"name;amount;note\nApple;1,5;Fruit\nBanana;0,5;Fruit\n");
+    let configuration = CsvConfiguration {
+        first_row_as_header: true,
+        column_separator: ";".to_owned(),
+        decimal_mark: ",".to_owned(),
+        ..CsvConfiguration::default()
+    };
+    let document = loaded(&storage, configuration);
+    DocumentFixture::new(theme, size, document, settings(), true, None)
 }
 
 /// The filter bar open with its default criterion.

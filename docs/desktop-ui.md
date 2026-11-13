@@ -43,121 +43,129 @@ a release. Record the OS, display scale and compositor next to each result.
 The automated suites cover the same behavior headlessly; this pass is for the
 native window, IME and compositor behavior they cannot reach.
 
-### Launch and window lifecycle
+**Verification status: NOT RUN on Windows 10/11; NOT RUN on Linux/X11; NOT RUN
+on Linux/Wayland.** Every item below is unexecuted and explicitly marked
+`NOT RUN`. The GitHub Actions workflow described here has not been run on
+GitHub from this machine; its YAML is configuration, not execution evidence.
+The macOS automated suites were run locally in this task.
 
-- [ ] Launch with no arguments: the root window shows “No Documents”, the
+### Launch and window lifecycle — NOT RUN
+
+- [ ] **NOT RUN** — Launch with no arguments: the root window shows “No Documents”, the
       New Document button, and the full menu bar.
-- [ ] Launch with a CSV path: one document window opens with the file name and
+- [ ] **NOT RUN** — Launch with a CSV path: one document window opens with the file name and
       the detected format; the root window stays hidden.
-- [ ] New, Open, Open Recent, Save, Save As, Revert, Duplicate and Export open
+- [ ] **NOT RUN** — New, Open, Open Recent, Save, Save As, Revert, Duplicate and Export open
       the expected dialogs and update the title/dirty state.
-- [ ] Closing a dirty document asks Save / Don’t Save / Cancel; closing a clean
+- [ ] **NOT RUN** — Closing a dirty document asks Save / Don’t Save / Cancel; closing a clean
       document closes at once; quitting with several documents follows the same
       prompts.
-- [ ] Settings and About open as separate native windows, resize with their
+- [ ] **NOT RUN** — Settings and About open as separate native windows, resize with their
       content and close without leaving the app in a busy state.
-- [ ] X11 and Wayland both create, move, focus and close the deferred document
+- [ ] **NOT RUN** — X11 and Wayland both create, move, focus and close the deferred document
       windows. If a compositor cannot create child viewports, confirm the
       embedded fallback still renders a usable document window and record it.
 
-### Menus and shortcuts
+### Menus and shortcuts — NOT RUN
 
-- [ ] Menu bar order matches the Apple app: TabTool, File, Edit, Table, View,
+- [ ] **NOT RUN** — Menu bar order matches the Apple app: TabTool, File, Edit, Table, View,
       Help, with the documented items in each menu.
-- [ ] Unavailable commands are disabled and stay disabled after a state change
+- [ ] **NOT RUN** — Unavailable commands are disabled and stay disabled after a state change
       (empty document, read error, large mode, filtered rows, running save).
-- [ ] Cmd on macOS and Ctrl on Windows/Linux activate New, Open, Save, Save As,
+- [ ] **NOT RUN** — Cmd on macOS and Ctrl on Windows/Linux activate New, Open, Save, Save As,
       Undo, Redo, Cut, Copy, Paste, Select All, Find/Filter, Export and Quit.
-- [ ] Menu-initiated Paste still asks the platform for the clipboard text and
+- [ ] **NOT RUN** — Menu-initiated Paste still asks the platform for the clipboard text and
       applies it when the paste event arrives.
-- [ ] Large mode disables Select All, structural rows/columns, Sort, Filter,
+- [ ] **NOT RUN** — Large mode disables Select All, structural rows/columns, Sort, Filter,
       decimal-mark changes, Export and Duplicate.
 
-### IME and text entry
+### IME and text entry — NOT RUN
 
-- [ ] Type Latin, Cyrillic and CJK text into a cell, a column header rename and
+- [ ] **NOT RUN** — Type Latin, Cyrillic and CJK text into a cell, a column header rename and
       the filter value field.
-- [ ] The IME candidate window follows the caret; composition text is visible
+- [ ] **NOT RUN** — The IME candidate window follows the caret; composition text is visible
       and committing with Enter does not also move to the next cell.
-- [ ] Escape cancels the cell edit; clicking another cell commits exactly once;
+- [ ] **NOT RUN** — Escape cancels the cell edit; clicking another cell commits exactly once;
       Tab/Shift+Tab commit and move.
-- [ ] Paste multi-cell TSV from a spreadsheet; undo restores the previous cells.
-- [ ] Filter values, settings fields and the About window accept the same input
+- [ ] **NOT RUN** — Paste multi-cell TSV from a spreadsheet; undo restores the previous cells.
+- [ ] **NOT RUN** — Filter values, settings fields and the About window accept the same input
       methods.
 
-### Grid, chrome and panels
+### Grid, chrome and panels — NOT RUN
 
-- [ ] Row and column selection, range selection, the 2 pt focus ring and the
+- [ ] **NOT RUN** — Row and column selection, range selection, the 2 pt focus ring and the
       row-number gutter match `app-grid` and `app-columns`.
-- [ ] Header sort chevrons, alternating rows, row height and hidden row numbers
+- [ ] **NOT RUN** — Header sort chevrons, alternating rows, row height and hidden row numbers
       follow the Grid settings.
-- [ ] Column resize, row/column drag inside the grid, and drag cancellation
+- [ ] **NOT RUN** — Column resize, row/column drag inside the grid, and drag cancellation
       outside the grid behave as documented.
-- [ ] The filter bar shows one row per criterion, Add/Remove keep at least one
+- [ ] **NOT RUN** — The filter bar shows one row per criterion, Add/Remove keep at least one
       row, Clear resets, Apply/Apply All change rows, Hide keeps the draft.
-- [ ] The format bar order is Encoding, Separator, Quote, Decimal, Header and
+- [ ] **NOT RUN** — The format bar order is Encoding, Separator, Quote, Decimal, Header and
       the controls disable while busy or in large mode.
-- [ ] Needs-attention, save-error, format-alert, reparse confirmation, notice
+- [ ] **NOT RUN** — Needs-attention, save-error, format-alert, reparse confirmation, notice
       and read-error overlay match their committed baselines.
-- [ ] Settings shows all four tabs with the documented defaults and applies a
+- [ ] **NOT RUN** — Settings shows all four tabs with the documented defaults and applies a
       change immediately. About shows the version, license, website and Rate
       button. Export shows the format options and the header note.
 
-### Files, drag and drop
+### Files, drag and drop — NOT RUN
 
-- [ ] Drop one CSV on the root window and on a document window: each opens a
+- [ ] **NOT RUN** — Drop one CSV on the root window and on a document window: each opens a
       document.
-- [ ] Drop several files: each opens in its own window.
-- [ ] Drop a directory or an unreadable file: the typed error is shown without
+- [ ] **NOT RUN** — Drop several files: each opens in its own window.
+- [ ] **NOT RUN** — Drop a directory or an unreadable file: the typed error is shown without
       losing the current document.
-- [ ] Drag a row or column inside the grid: the drop indicator appears and the
+- [ ] **NOT RUN** — Drag a row or column inside the grid: the drop indicator appears and the
       move lands in the expected slot.
-- [ ] Drag out of the window: known deviation, only internal drags are
+- [ ] **NOT RUN** — Drag out of the window: known deviation, only internal drags are
       accepted.
-- [ ] Save As to an existing file asks before replacing it; Export writes the
+- [ ] **NOT RUN** — Save As to an existing file asks before replacing it; Export writes the
       converted copy and reports the write error on failure.
 
-### Large files (1 GiB)
+### Large files (1 GiB) — NOT RUN
 
-- [ ] Open a 1 GiB CSV: the window appears before indexing completes, shows
+- [ ] **NOT RUN** — Open a 1 GiB CSV: the window appears before indexing completes, shows
       “Indexing…”, the known row count and the large-mode banner, then settles
       at 100%.
-- [ ] Scroll and jump to the end: no blocking, no rows beyond the indexed
+- [ ] **NOT RUN** — Scroll and jump to the end: no blocking, no rows beyond the indexed
       region, and memory stays well below the file size.
-- [ ] Edit cells, save, and confirm the progress bar and Cancel; cancel leaves
+- [ ] **NOT RUN** — Edit cells, save, and confirm the progress bar and Cancel; cancel leaves
       the original file untouched.
-- [ ] Append a row outside the app: the stale banner appears without a user
+- [ ] **NOT RUN** — Append a row outside the app: the stale banner appears without a user
       action; Reload shows the new row.
-- [ ] Confirm the unavailable commands are disabled in large mode.
+- [ ] **NOT RUN** — Confirm the unavailable commands are disabled in large mode.
 
-### Themes and languages
+### Themes and languages — NOT RUN
 
-- [ ] Light and dark appearance match the committed baselines on every
+- [ ] **NOT RUN** — Light and dark appearance match the committed baselines on every
       surface: grid, banners, format bar, filter bar, Settings, About, Export.
-- [ ] Switching appearance while a document is open repaints it immediately.
-- [ ] Every one of the 11 languages (`en`, `fr`, `es`, `de`, `it`, `pl`,
+- [ ] **NOT RUN** — Switching appearance while a document is open repaints it immediately.
+- [ ] **NOT RUN** — Every one of the 11 languages (`en`, `fr`, `es`, `de`, `it`, `pl`,
       `be`, `uk`, `zh-Hans`, `ja`, `ko`) renders the menu bar, toolbar,
       banners, dialogs, Settings, About and Export with no clipped label and no
       leftover English except product names, URLs and the untitled name.
-- [ ] System language follows the OS locale; an explicit choice survives a
+- [ ] **NOT RUN** — System language follows the OS locale; an explicit choice survives a
       restart.
 
-### Accessibility basics
+### Accessibility basics — NOT RUN
 
-- [ ] Tab reaches every control in document order and the focus ring is
+- [ ] **NOT RUN** — Tab reaches every control in document order and the focus ring is
       visible; Shift+Tab reverses; Escape leaves menus and modals.
-- [ ] A screen reader announces each button, toggle, picker and text field
+- [ ] **NOT RUN** — A screen reader announces each button, toggle, picker and text field
       with its visible or accessible name; disabled controls report disabled.
-- [ ] Grid headers, cells, the row-number gutter, the filter bar and the
+- [ ] **NOT RUN** — Grid headers, cells, the row-number gutter, the filter bar and the
       Settings tabs expose row/column and role information.
-- [ ] High-contrast/system accessibility settings keep text and focus visible.
+- [ ] **NOT RUN** — High-contrast/system accessibility settings keep text and focus visible.
 
 ## Snapshot baselines
 
 The consolidated Plan 4 images live in
 `app/universal/apps/tabtool-desktop/tests/snapshots/` and are named
 `<state>-<size>-<theme>.png`. There are 88 images: 22 states × 2 sizes
-(1200×800, 640×400) × 2 appearances (light, dark).
+(1200×800, 640×400) × 2 appearances (light, dark), about 3.9 MB in total. They
+are macOS/Metal baselines only; the GitHub Actions workflow has not been run on
+GitHub from this machine. The comparison was run locally on macOS.
 
 | State | What the image pins |
 | --- | --- |
@@ -167,7 +175,7 @@ The consolidated Plan 4 images live in
 | `selected-row` | Row selection highlight |
 | `selected-column` | Column selection highlight |
 | `editing-cell` | Inline cell editor and caret |
-| `format-bar` | Encoding/separator/quote/decimal/header controls |
+| `format-bar` | Semicolon separator and decimal-comma controls, distinct from the default header grid |
 | `filter-bar` | Criterion row, hints, Clear/Apply All |
 | `needs-attention` | Write-gate banner with Undo/Format Controls |
 | `read-error` | Full-area overlay and Detect Automatically |
@@ -183,7 +191,9 @@ The consolidated Plan 4 images live in
 
 Settings, About and Export are component-window baselines: the content is
 rendered in a 1200×800 or 640×400 harness so both documented sizes are pinned;
-the OS-drawn window frame is not part of the image.
+the OS-drawn window frame is not part of the image. Selecting a Settings tab
+requests a content size, so the harness restores the requested baseline size
+before the snapshot; the 640×400 and 1200×800 files are not interchangeable.
 
 Commands, from `app/universal`:
 
@@ -235,6 +245,7 @@ wall-clock gates: CI does not fail on a slow machine.
 | --- | --- | --- | --- | --- |
 | Scroll to row 99,000, 100k rows × 12 columns | 640×400 | 119 (17 rows × 7 columns) | 1.36 ms | 78 µs |
 | Large document, 5,000 indexed rows × 3 columns | 640×400 | 48 (16 rows × 3 columns) | 741 µs | 59 µs |
+| Partial publication, 120 of 5,000 rows | 640×400 | 48 (16 rows × 3 columns) | 882 µs | 48 µs |
 
 The first-frame 1M-row × 20-column case reads exactly 112 cells (16×7) in the
 same deterministic test; it asserts the bounds rather than a duration.
@@ -246,45 +257,75 @@ grid keeps one row of overscan above the viewport; the viewport itself is
 17 rows × 7 columns = 119 cells, and the test fails if the count or the bounds
 change. No wall-clock assertion is made.
 
-The large-document test also asserts that every requested row is inside the
+The large-document test asserts that every requested row is inside the
 published index (`max_row < row_count`) and every requested column is inside
-the widest scanned row (`max_column < max_field_count`). The large source
-reports only rows whose end is known: while indexing, the last row still being
-scanned is hidden, and `row_count` is derived from the indexer's
-`scanned_bytes`/`row_count` counters. The UI therefore cannot request a row
-that the scan has not published.
+the widest scanned row (`max_column < max_field_count`). A second test models a
+partial publication by wrapping the same real mapped source and reporting only
+120 of its 5,000 rows as published; it asserts that the grid reads only rows
+`0..=15` and never crosses the 120-row boundary. This is a fake partial index
+(the test wrapper publishes the shorter row count), not a paused real indexer.
+The source-level rule — the row still being scanned stays hidden — is pinned
+separately by `tabtool-large`'s
+`partial_index_hides_the_row_still_being_scanned`. The grid only asks for
+indexes below the `row_count` it is given, and the large source derives that
+count from `scanned_bytes`/`row_count`.
 
 Run the evidence:
 
 ```sh
 cargo test -p tabtool-ui --test grid render:: -- --nocapture
 cargo test --release -p tabtool-ui --test grid render::a_hundred -- --nocapture
+cargo test --release -p tabtool-ui --test grid render::a_partially -- --nocapture
 ```
 
 The benchmark for real files (`cargo run -p xtask -- bench-large 1`) remains
 the place for file-scoped throughput and memory numbers; see
 `app/universal/docs/universal.md`.
 
-## Known deviations
+## Design deviations (design §14)
 
-These are deliberate and reviewed. A new deviation needs a design note and a
-test or a manual checklist item.
+These are the deliberate differences in design §14. A new deliberate difference
+requires a design note and approval before implementation. The only item here
+without completed approval is §14.18, which is implemented but pending user
+approval.
 
-| Area | Deviation |
-| --- | --- |
-| Menu bar | The menu is drawn inside each viewport instead of using the macOS system menu bar. Windows/Linux need an in-window menu, and one implementation keeps the platforms consistent. |
-| Drag out | Dragging rows out of the window is not implemented; internal row/column drags carry TSV but only internal drops are accepted. |
-| Drop target | There is no blue drop-target highlight while files are dragged over a window. |
-| Header rename | Double-clicking a header does not start renaming; the context menu entry is the only path (the brief specifies the menu). |
-| Select All | Select All is disabled in large mode. The Apple app can materialize an enormous selection; the port refuses it (design §14.18). |
-| Filter hints | The filter-bar shortcut hints show ⌘ glyphs on every platform even where the bound modifier is Ctrl. The shortcuts themselves follow the platform modifier. |
-| Collation | Sorting uses ICU4X, so a small number of strings order differently from Apple's Foundation. The cases are pinned in `testdata/golden/known_divergences.json`. |
-| Settings timing | Settings apply immediately; the Apple README mentions a restart for some preferences. |
-| Native viewports | Deferred viewports depend on the Linux compositor. The embedded fallback keeps a document usable if child viewports are unavailable; the manual pass records which path was used. |
-| Rate link | About opens the App Store review URL on every platform; the desktop release has no store listing yet. |
-| Dialogs | Native file dialogs use the platform locale; the app language applies to the in-app chrome created after a language switch. |
-| Status line | A grid mutation is reflected in the status line on the next frame because the bottom panel is laid out before the central grid. It settles immediately and is covered by tests. |
+| §14 | Deliberate difference | Status |
+| --- | --- | --- |
+| 14.1 | In-window menu bar on Windows/Linux instead of a native OS menu bar; shortcuts use Ctrl instead of Cmd. | Approved |
+| 14.2 | No drag-out of rows to other applications; internal drags carry a TSV payload but only internal drops are accepted. | Approved |
+| 14.3 | No StoreKit review prompt; About keeps a Rate link to the App Store listing. | Approved |
+| 14.4 | Desktop autosave uses the iOS 0.8 s debounce instead of system-driven macOS autosave; save gates, banners and dirty semantics are identical. | Approved |
+| 14.5 | Document type names, `Untitled` and `-export` stay English. | Approved |
+| 14.6 | Emoji may render monochrome on Android when no system color rasterizer is available; glyphs and layout are unchanged. | Approved (Android) |
+| 14.7 | Accessibility exposes roles, names and keyboard navigation, but does not claim VoiceOver-grade table semantics on desktop/Android in v1. | Approved |
+| 14.8 | Multi-window uses eframe viewports; the fallback is one window with document tabs if a Linux compositor makes them unreliable. The fallback requires re-approval before implementation. | Approved |
+| 14.9 | No native menu role integration, system Services or Finder/Dock behavior. | Approved (Apple-only) |
+| 14.10 | Alternating row colors default is off, following the code and tests rather than the README table. | Approved |
+| 14.11 | Android Save As writes a copy through SAF and keeps the editor on its private working file; iOS rebinds the document. | Approved (Android) |
+| 14.12 | No bidi reordering or complex-script shaping (Arabic, Hebrew, Indic, Thai) in v1; text is stored and saved unchanged. | Approved |
+| 14.13 | Fixed visual baseline is the compact macOS look from `web/static/img/app-*.webp`, not a system-version-dependent style. | Approved |
+| 14.14 | Android text entry uses a native `EditText` overlay; desktop uses egui's `TextEdit`. | Approved 2026-11-12 |
+| 14.15 | Sorting uses ICU4X collation; small locale-specific order differences from Foundation are pinned as known divergences. | Approved 2026-11-12 |
+| 14.16 | A no-quote save whose first field begins with U+FEFF is blocked as ambiguous output instead of allowing silent data loss. | Approved 2026-11-12 |
+| 14.17 | ISO-2022-JP decoding is stricter than Foundation for malformed input; the exact byte set is pinned by a golden test. | Approved 2026-11-12 |
+| 14.18 | Select All is disabled in large-file mode because a `BTreeSet` of tens of millions of rows would freeze or exhaust memory; in-memory documents keep Select All. | **Pending user approval** |
 
 Large mode also keeps the Apple capability restrictions: no structural edits,
 sorting, filters, Export, decimal-mark changes, or Cut/Paste/Delete; Copy is
 limited to 1,000,000 cells.
+
+## Known gaps and observations (not §14)
+
+These are not approved design differences. They are implementation gaps or
+notes for the manual pass and must be fixed or promoted to §14 before release.
+
+| Area | Gap or observation |
+| --- | --- |
+| Drop target | No blue drop-target highlight while files are dragged over a window. This is a visual-parity gap, not a design difference. |
+| Header rename | Double-clicking a header does not start renaming; only the context-menu entry does. The brief specifies the menu, but this is still a macOS parity gap. |
+| Filter hints | The filter-bar shortcut hints show ⌘ glyphs on every platform even where the bound modifier is Ctrl. The shortcuts themselves follow the platform modifier. |
+| Settings timing | Settings apply immediately; the Apple README mentions a restart for some preferences. This behavior is not in §14. |
+| Native dialogs | Native file dialogs use the platform locale; the app language applies to in-app chrome created after a language switch. |
+| Status line | A grid mutation reaches the status line on the next frame because the bottom panel is laid out before the central grid; it settles immediately and is covered by tests. |
+| Linux viewports | Deferred viewport behavior on X11/Wayland is unverified manually. The embedded fallback keeps a document usable if child viewports are unavailable; the manual pass records which path was used. |
+| Baselines | The 88 consolidated images are macOS/Metal only (about 3.9 MB). Linux/Windows must not compare them until per-OS baselines exist. |

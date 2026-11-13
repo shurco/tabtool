@@ -18,6 +18,7 @@ use crate::support::{CountingSource, GridFixture, sample_table};
 /// published or columns beyond the widest scanned row.
 struct GuardedSource<'a> {
     inner: &'a dyn RowSource,
+    published_rows: Option<usize>,
     out_of_bounds: AtomicUsize,
     calls: AtomicUsize,
     min_row: AtomicUsize,
@@ -28,8 +29,14 @@ struct GuardedSource<'a> {
 
 impl<'a> GuardedSource<'a> {
     fn new(inner: &'a dyn RowSource) -> Self {
+        Self::with_row_limit(inner, None)
+    }
+
+    /// Serves only `rows` published rows, the shape of a partial index.
+    fn with_row_limit(inner: &'a dyn RowSource, rows: Option<usize>) -> Self {
         Self {
             inner,
+            published_rows: rows,
             out_of_bounds: AtomicUsize::new(0),
             calls: AtomicUsize::new(0),
             min_row: AtomicUsize::new(usize::MAX),
@@ -70,7 +77,9 @@ impl<'a> GuardedSource<'a> {
 
 impl RowSource for GuardedSource<'_> {
     fn row_count(&self) -> usize {
-        self.inner.row_count()
+        self.published_rows
+            .unwrap_or_else(|| self.inner.row_count())
+            .min(self.inner.row_count())
     }
 
     fn column_count(&self) -> usize {
@@ -181,11 +190,9 @@ fn a_hundred_thousand_row_scroll_stays_inside_the_viewport() {
     eprintln!("100k row scroll: read {calls} cells in {elapsed:?}, viewport {viewport:?}");
 }
 
-#[test]
-fn a_large_document_reads_only_rows_inside_its_published_index() {
+fn large_document(rows: usize) -> (tempfile::TempDir, Document) {
     let directory = tempfile::tempdir().expect("temporary directory");
     let path = directory.path().join("large.csv");
-    let rows = 5_000;
     let text: String = (0..rows)
         .map(|row| format!("r{row},v{row},q{row}\n"))
         .collect();
@@ -195,12 +202,19 @@ fn a_large_document_reads_only_rows_inside_its_published_index() {
         ..CsvConfiguration::default()
     };
     let document = open_large(&path, configuration);
+    (directory, document)
+}
+
+#[test]
+fn a_large_document_reads_only_rows_inside_its_published_index() {
+    let (_directory, document) = large_document(5_000);
     let state = document.large_state().expect("large state");
     let counters = state.indexer.counters();
     let source = document.row_source().expect("large row source");
+    let scanned = u128::try_from(counters.scanned_bytes).expect("scanned bytes fit");
+    let file_size = u128::try_from(state.file.size()).expect("file size fits");
     assert_eq!(
-        counters.scanned_bytes,
-        std::fs::metadata(&path).expect("metadata").len() as usize,
+        scanned, file_size,
         "the fixture's index covers the whole file"
     );
     assert_eq!(source.row_count(), counters.row_count);
@@ -231,6 +245,45 @@ fn a_large_document_reads_only_rows_inside_its_published_index() {
     eprintln!(
         "large document: {} rows indexed, {} columns, read {calls} cells in {elapsed:?} in rows {min_row}..={max_row} and columns {min_column}..={max_column}",
         counters.row_count, counters.max_field_count
+    );
+
+    let viewport = fixture.state.borrow().viewport;
+    assert_eq!(viewport.min, pos2(0.0, 0.0));
+    assert_eq!(viewport.size(), vec2(624.0, 384.0));
+}
+
+#[test]
+fn a_partially_indexed_large_source_never_reads_unpublished_rows() {
+    let (_directory, document) = large_document(5_000);
+    let source = document.row_source().expect("large row source");
+    // A partial publication: only the first 120 of 5,000 rows have known ends.
+    let guarded = GuardedSource::with_row_limit(source, Some(120));
+    assert_eq!(guarded.row_count(), 120);
+    assert!(guarded.row_count() < source.row_count());
+
+    let mut fixture = GridFixture::new(
+        &guarded,
+        GridState::default(),
+        GridOptions::default(),
+        [640.0, 400.0],
+    );
+    fixture.run();
+    fixture.run();
+    guarded.reset();
+    let started = Instant::now();
+    fixture.run();
+    let elapsed = started.elapsed();
+    let (min_row, max_row, min_column, max_column) =
+        guarded.read_bounds().expect("the grid read cells");
+
+    assert_eq!(guarded.out_of_bounds(), 0);
+    assert!(max_row < 120, "read row {max_row} past the partial index");
+    assert!(max_column < source.column_count());
+    assert_eq!((min_row, max_row, min_column, max_column), (0, 15, 0, 2));
+    assert_eq!(guarded.calls(), 16 * 3);
+    eprintln!(
+        "partial index: 120 of {} rows published, read {min_column}..={max_column} in rows {min_row}..={max_row} in {elapsed:?}",
+        source.row_count()
     );
 
     let viewport = fixture.state.borrow().viewport;
