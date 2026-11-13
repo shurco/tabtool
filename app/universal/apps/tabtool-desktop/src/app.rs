@@ -85,7 +85,7 @@ impl DesktopApp {
     }
 
     fn build(
-        settings: Settings,
+        mut settings: Settings,
         platform: DesktopPlatform,
         storage: SharedStorage,
         dialogs: SharedDialogs,
@@ -99,6 +99,9 @@ impl DesktopApp {
             settings_path,
         );
         files.set_language(language);
+        // The workflow owns the canonical recent list; settings keeps a mirror
+        // so the persisted JSON always matches what the UI shows.
+        settings.recent_documents = files.recent().to_vec();
         Self {
             documents: Vec::new(),
             settings,
@@ -163,6 +166,7 @@ impl DesktopApp {
         self.sync_language();
         self.files.set_settings(self.settings.clone());
         self.files.set_language(self.language);
+        self.sync_recent();
         self.handle_root_close(ctx);
         self.close_finished_aux_windows();
 

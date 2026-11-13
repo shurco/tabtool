@@ -9,6 +9,7 @@ use tabtool_ui::document::DocumentUiState;
 use tabtool_ui::grid::GridState;
 
 use crate::autosave::Autosave;
+use crate::files::FilePolicy;
 use crate::menu::MenuAction;
 use crate::platform::{SharedDialogs, SharedStorage};
 
@@ -34,9 +35,7 @@ pub(crate) struct WindowState {
     pub(crate) grid: GridState,
     pub(crate) chrome: DocumentUiState,
     pub(crate) autosave: Autosave,
-    pub(crate) storage: SharedStorage,
-    pub(crate) dialogs: SharedDialogs,
-    pub(crate) settings: Settings,
+    pub(crate) file_ops: FilePolicy,
     pub(crate) language: Language,
     pub(crate) show_format_bar: bool,
     pub(crate) has_recent: bool,
@@ -59,7 +58,7 @@ pub(crate) struct WindowState {
 impl DocumentWindow {
     /// Updates the New Document format and large-file threshold.
     pub fn set_settings(&self, settings: Settings) {
-        self.lock().settings = settings;
+        self.lock().file_ops.set_settings(settings);
     }
 }
 

@@ -123,9 +123,9 @@ fn the_launch_argument_opens_a_document() {
     let dialogs = FakeDialogs::cancelled();
     let mut workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
 
-    let opened = workflow
-        .open_launch(["--windowed".to_owned(), path.to_string_lossy().into_owned()])
-        .expect("the launch path opens");
+    let launch = launch_path(["--windowed".to_owned(), path.to_string_lossy().into_owned()])
+        .expect("the launch path is a file");
+    let opened = workflow.open_path(&launch);
 
     assert!(opened.loaded);
     assert_eq!(opened.document.file_path(), Some(path.as_path()));
@@ -280,7 +280,7 @@ fn save_uses_the_current_path_without_a_panel() {
     let directory = tempfile::tempdir().expect("temporary directory");
     let path = write_file(directory.path(), "save.csv", b"a,b\n1,2\n");
     let dialogs = FakeDialogs::cancelled();
-    let mut workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
+    let workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
     let mut document = load_defaults(&path);
     document.set_cell(0, 0, "edited");
 
@@ -303,7 +303,7 @@ fn save_as_uses_the_panel_and_binds_the_path_after_success() {
     let directory = tempfile::tempdir().expect("temporary directory");
     let path = directory.path().join("Report.csv");
     let dialogs = FakeDialogs::scripted([Some(path.clone())]);
-    let mut workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
+    let workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
     let mut document = workflow.new_document();
     document.set_cell(0, 0, "edited");
 
@@ -323,7 +323,7 @@ fn a_failed_save_as_keeps_the_document_dirty_and_untitled() {
     let storage = Arc::new(MemoryStorage::new(b""));
     let dialogs = FakeDialogs::scripted([Some(PathBuf::from("/virtual/report.csv"))]);
     let shared: SharedStorage = storage.clone();
-    let mut workflow = workflow(&dialogs, shared, Settings::default(), None);
+    let workflow = workflow(&dialogs, shared, Settings::default(), None);
     let mut document = workflow.new_document();
     document.set_cell(0, 0, "edited");
     storage.fail_writes();
@@ -340,7 +340,7 @@ fn cancelling_the_save_panel_keeps_the_document_dirty() {
     let storage = Arc::new(MemoryStorage::new(b""));
     let dialogs = FakeDialogs::cancelled();
     let shared: SharedStorage = storage.clone();
-    let mut workflow = workflow(&dialogs, shared, Settings::default(), None);
+    let workflow = workflow(&dialogs, shared, Settings::default(), None);
     let mut document = workflow.new_document();
     document.set_cell(0, 0, "edited");
 
@@ -368,7 +368,7 @@ fn a_large_document_save_starts_the_streaming_job() {
         .set_large_cell("edited", 0, 0)
         .expect("edit the overlay");
     let dialogs = FakeDialogs::cancelled();
-    let mut workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
+    let workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
 
     let outcome = workflow.save(&mut document, "large.csv");
 
@@ -390,7 +390,7 @@ fn revert_asks_when_dirty_and_restores_one_undo_step() {
     let path = write_file(directory.path(), "revert.csv", b"a,b\n1,2\n");
     let before = std::fs::read(&path).expect("the fixture is readable");
     let dialogs = FakeDialogs::cancelled();
-    let mut workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
+    let workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
     let mut document = load_defaults(&path);
     document.set_cell(0, 0, "edited");
 
@@ -416,7 +416,7 @@ fn revert_asks_when_dirty_and_restores_one_undo_step() {
 #[test]
 fn revert_is_unavailable_for_an_untitled_document() {
     let dialogs = FakeDialogs::cancelled();
-    let mut workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
+    let workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
     let mut document = workflow.new_document();
 
     assert_eq!(
@@ -572,7 +572,7 @@ fn a_failed_export_write_keeps_the_document_unchanged() {
         )
         .expect("load the fixture");
     let dialogs = FakeDialogs::scripted([Some(PathBuf::from("/virtual/out.csv"))]);
-    let mut workflow = workflow(&dialogs, shared, Settings::default(), None);
+    let workflow = workflow(&dialogs, shared, Settings::default(), None);
     let session = workflow
         .export_session(&document)
         .expect("an export session");
@@ -704,6 +704,34 @@ fn replace_with_a_failed_save_does_not_open_the_new_file() {
         ReplaceOutcome::Failed(DocumentError::CannotWriteFile)
     );
     assert_eq!(document.file_path(), Some(Path::new("/virtual/old.csv")));
+}
+
+#[test]
+fn replace_with_save_starts_the_large_save_and_reports_busy() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let old = write_file(directory.path(), "old-large.csv", b"a,b\n1,2\n3,4\n");
+    let new = write_file(directory.path(), "new.csv", b"x,y\n3,4\n");
+    let mut document = support::large_ready(&old);
+    document
+        .set_large_cell("edited", 0, 0)
+        .expect("edit the overlay");
+    let dialogs = FakeDialogs::cancelled();
+    let mut workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
+
+    let outcome = workflow.replace_with(
+        &mut document,
+        &new,
+        Some(UnsavedChoice::Save),
+        "old-large.csv",
+    );
+
+    assert_eq!(outcome, ReplaceOutcome::Busy);
+    assert!(matches!(
+        document.large_status(),
+        tabtool_document::LargeStatus::Saving(_)
+    ));
+    document.cancel_large_save();
+    let _ = document.wait_for_large_save();
 }
 
 #[test]

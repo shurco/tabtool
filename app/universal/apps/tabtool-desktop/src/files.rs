@@ -3,14 +3,18 @@
 //!
 //! The workflow owns the recent-document list and the settings it persists. It
 //! uses the injected [`FileDialogs`] and [`Storage`], so it is testable without
-//! a window and the app never calls `rfd` outside `DesktopPlatform`.
+//! a window and the app never calls `rfd` outside `DesktopPlatform`. Document
+//! windows use the same [`FilePolicy`], so save, revert, replace and export
+//! have one implementation.
 
 mod export;
+mod policy;
 mod replace;
 mod revert;
 mod save;
 
 pub use export::{ExportOutcome, ExportSession, export_session, run_export};
+pub(crate) use policy::FilePolicy;
 pub use replace::{ReplaceOutcome, UnsavedChoice};
 pub use revert::RevertOutcome;
 pub use save::{SaveMode, SaveOutcome, save_document};
@@ -46,7 +50,7 @@ pub fn launch_path(args: impl IntoIterator<Item = String>) -> Option<PathBuf> {
 /// A failed read still returns its document with the error phase, so both the
 /// app and a window can show the read-error overlay. The caller decides
 /// whether the path joins the recent list.
-pub fn load_document(
+pub(crate) fn load_document(
     path: &Path,
     storage: &dyn tabtool_document::Storage,
     settings: &Settings,
@@ -87,13 +91,13 @@ impl core::fmt::Debug for OpenedDocument {
     }
 }
 
-/// The recent-document list and the injected file services.
+/// The recent-document list and the settings it persists.
 pub struct FileWorkflow {
-    dialogs: SharedDialogs,
-    storage: SharedStorage,
-    settings: Settings,
+    policy: FilePolicy,
     settings_path: Option<PathBuf>,
     language: Language,
+    /// The canonical recent list; the settings mirror is rebuilt from it.
+    recent: Vec<PathBuf>,
 }
 
 impl FileWorkflow {
@@ -110,15 +114,25 @@ impl FileWorkflow {
             Language::System => Language::En,
             language => language,
         };
+        let mut settings = settings;
+        let recent = std::mem::take(&mut settings.recent_documents);
         let mut workflow = Self {
-            dialogs,
-            storage,
-            settings,
+            policy: FilePolicy::new(dialogs, storage, settings),
             settings_path,
             language,
+            recent,
         };
         workflow.prune_recent();
         workflow
+    }
+
+    /// Replaces the non-recent settings and drops disappeared recent paths.
+    ///
+    /// The recent list belongs to the workflow; the incoming settings mirror
+    /// cannot overwrite it.
+    pub fn set_settings(&mut self, settings: Settings) {
+        self.policy.set_settings(settings);
+        self.prune_recent();
     }
 
     /// Updates the interface language used for format detection.
@@ -126,36 +140,28 @@ impl FileWorkflow {
         self.language = language;
     }
 
-    /// Replaces the mirrored settings, dropping recent paths that disappeared.
-    ///
-    /// The app calls this before a frame's file work so a settings change
-    /// cannot be lost when the recent list is persisted.
-    pub fn set_settings(&mut self, settings: Settings) {
-        self.settings = settings;
-    }
-
-    /// Drops recent paths that no longer exist and persists the change.
-    pub fn forget_missing_recent(&mut self) {
-        let before = self.settings.recent_documents.len();
-        self.prune_recent();
-        if self.settings.recent_documents.len() != before {
-            self.persist_recent();
-        }
-    }
-
     /// The existing recent documents, newest first.
     pub fn recent(&self) -> &[PathBuf] {
-        &self.settings.recent_documents
+        &self.recent
     }
 
     /// Whether any recent document remains.
     pub fn has_recent(&self) -> bool {
-        !self.settings.recent_documents.is_empty()
+        !self.recent.is_empty()
+    }
+
+    /// Drops recent paths that no longer exist and persists the change.
+    pub fn forget_missing_recent(&mut self) {
+        let before = self.recent.len();
+        self.prune_recent();
+        if self.recent.len() != before {
+            self.persist_recent();
+        }
     }
 
     /// A blank untitled document in the New Document format.
     pub fn new_document(&self) -> Document {
-        let configuration = self.settings.new_document_configuration();
+        let configuration = self.policy.settings.new_document_configuration();
         let mut document = Document::new(configuration.clone());
         document
             .new_document(configuration)
@@ -166,7 +172,7 @@ impl FileWorkflow {
     /// Opens `path` through the size router; a failed read still returns the
     /// document so the window can show the read-error overlay.
     pub fn open_path(&mut self, path: &Path) -> OpenedDocument {
-        let opened = load_document(path, &*self.storage, &self.settings, self.language);
+        let opened = self.policy.load(path, self.language);
         if opened.loaded {
             self.remember(path);
         }
@@ -175,7 +181,7 @@ impl FileWorkflow {
 
     /// Shows the open panel and loads every table file it returns.
     pub fn open_dialog(&mut self) -> Vec<OpenedDocument> {
-        let paths = self.dialogs.open_files();
+        let paths = self.policy.dialogs.open_files();
         self.open_paths(&paths)
     }
 
@@ -184,22 +190,14 @@ impl FileWorkflow {
         self.open_paths(paths)
     }
 
-    /// Opens the first launch argument, if it names a file.
-    pub fn open_launch(
-        &mut self,
-        args: impl IntoIterator<Item = String>,
-    ) -> Option<OpenedDocument> {
-        launch_path(args).map(|path| self.open_path(&path))
-    }
-
     /// Opens the recent document at `index`.
     ///
     /// A path deleted since it was remembered is dropped from the list and the
     /// call returns `None`.
     pub fn open_recent(&mut self, index: usize) -> Option<OpenedDocument> {
-        let path = self.settings.recent_documents.get(index).cloned()?;
+        let path = self.recent.get(index).cloned()?;
         if !path.exists() {
-            self.settings.recent_documents.remove(index);
+            self.recent.remove(index);
             self.persist_recent();
             return None;
         }
@@ -209,50 +207,67 @@ impl FileWorkflow {
     /// Adds `path` to the recent documents, newest first and at most ten.
     pub fn remember(&mut self, path: &Path) {
         self.prune_recent();
-        self.settings
-            .recent_documents
-            .retain(|recent| recent != path);
-        self.settings.recent_documents.insert(0, path.to_path_buf());
-        self.settings
-            .recent_documents
-            .truncate(RECENT_DOCUMENTS_LIMIT);
+        self.recent.retain(|recent| recent != path);
+        self.recent.insert(0, path.to_path_buf());
+        self.recent.truncate(RECENT_DOCUMENTS_LIMIT);
         self.persist_recent();
     }
 
     /// Saves the document in place, or through the save panel when it has no
     /// path yet.
-    pub fn save(&mut self, document: &mut Document, suggested_name: &str) -> SaveOutcome {
-        self.save_with_mode(document, suggested_name, SaveMode::Save)
+    pub fn save(&self, document: &mut Document, suggested_name: &str) -> SaveOutcome {
+        self.policy.save(document, suggested_name)
     }
 
     /// Saves the document through the save panel.
-    pub fn save_as(&mut self, document: &mut Document, suggested_name: &str) -> SaveOutcome {
-        self.save_with_mode(document, suggested_name, SaveMode::SaveAs)
+    pub fn save_as(&self, document: &mut Document, suggested_name: &str) -> SaveOutcome {
+        self.policy.save_as(document, suggested_name)
     }
 
-    fn save_with_mode(
+    /// Reverts the document to the file on disk.
+    ///
+    /// A dirty document requires `confirm`; otherwise the call only reports
+    /// that the UI must ask first. The file is never written.
+    pub fn revert(&self, document: &mut Document, confirm: bool) -> RevertOutcome {
+        self.policy.revert(document, confirm)
+    }
+
+    /// Replaces `document` with `path` after the unsaved-change decision.
+    ///
+    /// `None` asks first for a dirty document and opens directly for a clean
+    /// one. A running or newly started large save reports
+    /// [`ReplaceOutcome::Busy`] so the window can show the progress and cancel
+    /// it.
+    pub fn replace_with(
         &mut self,
         document: &mut Document,
+        path: &Path,
+        decision: Option<UnsavedChoice>,
         suggested_name: &str,
-        mode: SaveMode,
-    ) -> SaveOutcome {
-        save_document(
-            document,
-            &*self.storage,
-            &*self.dialogs,
-            suggested_name,
-            mode,
-        )
+    ) -> ReplaceOutcome {
+        let outcome =
+            self.policy
+                .replace_with(document, path, decision, suggested_name, self.language);
+        let opened_path = match &outcome {
+            ReplaceOutcome::Opened(opened) if opened.loaded => {
+                opened.document.file_path().map(Path::to_path_buf)
+            }
+            _ => None,
+        };
+        if let Some(path) = opened_path {
+            self.remember(&path);
+        }
+        outcome
     }
 
     /// Captures the visible table and format for an export panel.
     pub fn export_session(&self, document: &Document) -> Option<ExportSession> {
-        export::export_session(document)
+        self.policy.export_session(document)
     }
 
     /// Runs an export panel's candidate through preflight and the save panel.
-    pub fn export(&mut self, session: &ExportSession, allow_ambiguous: bool) -> ExportOutcome {
-        export::run_export(session, allow_ambiguous, &*self.dialogs, &*self.storage)
+    pub fn export(&self, session: &ExportSession, allow_ambiguous: bool) -> ExportOutcome {
+        self.policy.export(session, allow_ambiguous)
     }
 
     fn open_paths(&mut self, paths: &[PathBuf]) -> Vec<OpenedDocument> {
@@ -264,12 +279,14 @@ impl FileWorkflow {
     }
 
     fn prune_recent(&mut self) {
-        self.settings.recent_documents.retain(|path| path.exists());
+        self.recent.retain(|path| path.exists());
     }
 
     fn persist_recent(&self) {
         if let Some(path) = &self.settings_path {
-            let _ = self.settings.save(path);
+            let mut settings = self.policy.settings.clone();
+            settings.recent_documents = self.recent.clone();
+            let _ = settings.save(path);
         }
     }
 }

@@ -86,25 +86,6 @@ fn the_filename_uses_tsv_for_a_tab_separator() {
 }
 
 #[test]
-fn renaming_swaps_only_the_extension() {
-    let tab = CsvConfiguration {
-        column_separator: "\t".to_owned(),
-        ..CsvConfiguration::default()
-    };
-    let comma = CsvConfiguration::default();
-
-    assert_eq!(
-        ExportPlan::renaming("Sales-export.csv", &tab),
-        "Sales-export.tsv"
-    );
-    assert_eq!(ExportPlan::renaming("My Report", &tab), "My Report.tsv");
-    assert_eq!(
-        ExportPlan::renaming("Sales-export.tsv", &comma),
-        "Sales-export.csv"
-    );
-}
-
-#[test]
 fn converted_decimal_ambiguity_asks_for_confirmation() {
     let table = table(&[&["1.5"]], None);
     let document = document(".");

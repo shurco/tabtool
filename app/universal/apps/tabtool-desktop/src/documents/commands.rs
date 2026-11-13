@@ -4,9 +4,10 @@ use std::collections::BTreeSet;
 
 use egui::Context;
 use tabtool_core::SortDirection;
-use tabtool_document::{GridSelection, RevertDecision, plan_revert};
+use tabtool_document::GridSelection;
 
 use crate::documents::{CloseChoice, WindowRequest, WindowState};
+use crate::files::RevertOutcome;
 use crate::menu::{Capabilities, MenuAction};
 
 impl WindowState {
@@ -53,10 +54,10 @@ impl WindowState {
             MenuAction::SaveAs => {
                 let _ = self.save_with_dialog();
             }
-            MenuAction::RevertToSaved => match plan_revert(&self.document) {
-                RevertDecision::Revert => self.revert_now(),
-                RevertDecision::NeedsConfirmation => self.revert_prompt = true,
-                RevertDecision::Unavailable => {}
+            MenuAction::RevertToSaved => match self.file_ops.revert(&mut self.document, false) {
+                RevertOutcome::NeedsConfirmation => self.revert_prompt = true,
+                RevertOutcome::Failed(error) => self.issue = Some(error),
+                RevertOutcome::Reverted | RevertOutcome::Unavailable => {}
             },
             MenuAction::Export => self.open_export_panel(),
             // The inline rename editor belongs to the grid; the shell records
@@ -71,7 +72,7 @@ impl WindowState {
 
     fn revert_now(&mut self) {
         self.revert_prompt = false;
-        if let Err(error) = self.document.revert_to_saved(&*self.storage) {
+        if let RevertOutcome::Failed(error) = self.file_ops.revert(&mut self.document, true) {
             self.issue = Some(error);
         }
     }

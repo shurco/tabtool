@@ -1,16 +1,14 @@
 //! Opening another file in an existing window: drops, prompts and replacement.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use tabtool_document::LargeStatus;
 use tabtool_ui::document::DocumentUiState;
 use tabtool_ui::grid::GridState;
 
 use crate::autosave::Autosave;
-use crate::documents::{
-    CloseChoice, CloseDecision, CloseSave, DocumentWindow, WindowRequest, WindowState,
-    close_decision,
-};
-use crate::files::{is_table_file, load_document};
+use crate::documents::{CloseChoice, DocumentWindow, WindowRequest, WindowState};
+use crate::files::{OpenedDocument, ReplaceOutcome, UnsavedChoice, is_table_file};
 
 impl DocumentWindow {
     /// Accepts table files dropped on this window.
@@ -81,29 +79,39 @@ impl WindowState {
         self.request_open(first);
     }
 
-    /// Opens `path` now, or asks first when the document is dirty.
+    /// Opens `path` now, asks first when dirty, or queues it behind a large save.
     pub(crate) fn request_open(&mut self, path: PathBuf) {
-        match close_decision(&self.document) {
-            CloseDecision::Close => self.begin_open(path),
-            CloseDecision::Ask => {
+        let suggested_name = self.title();
+        match self.file_ops.replace_with(
+            &mut self.document,
+            &path,
+            None,
+            &suggested_name,
+            self.language,
+        ) {
+            ReplaceOutcome::Opened(opened) => self.adopt(*opened),
+            ReplaceOutcome::NeedsConfirmation => {
                 self.open.prompt = true;
                 self.open.path = Some(path);
             }
-            CloseDecision::Busy => self.busy = true,
+            ReplaceOutcome::Busy => self.queue_open(path),
+            ReplaceOutcome::Cancelled => {}
+            ReplaceOutcome::Failed(error) => self.issue = Some(error),
         }
     }
 
-    /// Replaces this window's document with the file at `path`.
+    /// Resets the window around a newly opened document.
     ///
-    /// A failed read still replaces the document, so the error overlay explains
-    /// the failure. Only a successful read enters the recent list.
-    pub(crate) fn begin_open(&mut self, path: PathBuf) {
-        let opened = load_document(&path, &*self.storage, &self.settings, self.language);
-        if opened.loaded {
+    /// A failed read still replaces the document, so the error overlay
+    /// explains the failure. Only a successful read enters the recent list.
+    pub(crate) fn adopt(&mut self, opened: OpenedDocument) {
+        let opened_path = opened.document.file_path().map(Path::to_path_buf);
+        let loaded = opened.loaded;
+        self.document = opened.document;
+        if loaded && let Some(path) = opened_path {
             self.open.opened_paths.push(path);
         }
 
-        self.document = opened.document;
         self.grid = GridState::default();
         self.chrome = DocumentUiState::default();
         self.export = super::export::ExportState::default();
@@ -129,14 +137,20 @@ impl WindowState {
             return;
         };
         self.open.prompt = false;
-        match self.save_auto() {
-            CloseSave::Saved => self.begin_open(path),
-            CloseSave::Saving => self.open.after_save = Some(path),
-            CloseSave::Cancelled => self.open.path = None,
-            CloseSave::Failed(error) => {
-                self.issue = Some(error);
-                self.open.path = None;
-            }
+        self.open.path = None;
+        let suggested_name = self.title();
+        match self.file_ops.replace_with(
+            &mut self.document,
+            &path,
+            Some(UnsavedChoice::Save),
+            &suggested_name,
+            self.language,
+        ) {
+            ReplaceOutcome::Opened(opened) => self.adopt(*opened),
+            ReplaceOutcome::NeedsConfirmation => {}
+            ReplaceOutcome::Busy => self.queue_open(path),
+            ReplaceOutcome::Cancelled => {}
+            ReplaceOutcome::Failed(error) => self.issue = Some(error),
         }
     }
 
@@ -147,10 +161,31 @@ impl WindowState {
             CloseChoice::Save => self.save_then_open(),
             CloseChoice::DontSave => {
                 if let Some(path) = self.open.path.take() {
-                    self.begin_open(path);
+                    let suggested_name = self.title();
+                    match self.file_ops.replace_with(
+                        &mut self.document,
+                        &path,
+                        Some(UnsavedChoice::DontSave),
+                        &suggested_name,
+                        self.language,
+                    ) {
+                        ReplaceOutcome::Opened(opened) => self.adopt(*opened),
+                        ReplaceOutcome::Busy => self.queue_open(path),
+                        ReplaceOutcome::Failed(error) => self.issue = Some(error),
+                        ReplaceOutcome::NeedsConfirmation | ReplaceOutcome::Cancelled => {}
+                    }
                 }
             }
             CloseChoice::Cancel => self.open.path = None,
         }
+    }
+
+    /// Queues `path` behind a large save.
+    ///
+    /// `poll_save` opens it once the save settles. Cancel clears the queue.
+    fn queue_open(&mut self, path: PathBuf) {
+        self.open.after_save = Some(path);
+        self.saving = matches!(self.document.large_status(), LargeStatus::Saving(_));
+        self.busy = true;
     }
 }

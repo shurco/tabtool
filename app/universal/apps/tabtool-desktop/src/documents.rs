@@ -25,6 +25,7 @@ use tabtool_ui::document::{DocumentUiState, sync_selection_to_grid};
 use tabtool_ui::grid::GridState;
 
 use crate::autosave::Autosave;
+use crate::files::FilePolicy;
 use crate::menu::MenuAction;
 use crate::platform::{decimal_separator, system_locale};
 pub use close::{CloseDecision, CloseSave, close_decision};
@@ -71,9 +72,7 @@ impl DocumentWindow {
             grid: GridState::default(),
             chrome: DocumentUiState::default(),
             autosave,
-            storage,
-            dialogs,
-            settings,
+            file_ops: FilePolicy::new(dialogs, storage, settings),
             language,
             show_format_bar,
             has_recent: false,
@@ -165,7 +164,7 @@ impl DocumentWindow {
             } else {
                 state
                     .autosave
-                    .tick(now, &mut state.document, &*state.storage)
+                    .tick(now, &mut state.document, &*state.file_ops.storage)
             };
         match outcome {
             crate::autosave::AutosaveOutcome::Saved => state.issue = None,

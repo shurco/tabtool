@@ -29,16 +29,6 @@ impl DesktopApp {
         loaded
     }
 
-    /// Opens the first launch argument, if it names a file.
-    pub fn open_launch(&mut self, args: impl IntoIterator<Item = String>) -> bool {
-        let Some(opened) = self.files.open_launch(args) else {
-            return false;
-        };
-        let loaded = opened.loaded;
-        self.push_opened(vec![opened]);
-        loaded
-    }
-
     /// Opens the recent document at `index` as a new window.
     pub fn open_recent(&mut self, index: usize) -> bool {
         let Some(opened) = self.files.open_recent(index) else {

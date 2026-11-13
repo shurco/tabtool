@@ -2,7 +2,7 @@
 
 use tabtool_document::{Document, DocumentError, RevertDecision, plan_revert};
 
-use super::FileWorkflow;
+use super::policy::FilePolicy;
 
 /// How a revert request ended.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -17,12 +17,12 @@ pub enum RevertOutcome {
     Failed(DocumentError),
 }
 
-impl FileWorkflow {
+impl FilePolicy {
     /// Reverts the document to the file on disk.
     ///
     /// A dirty document requires `confirm`; otherwise the call only reports
     /// that the UI must ask first. The file is never written.
-    pub fn revert(&mut self, document: &mut Document, confirm: bool) -> RevertOutcome {
+    pub(crate) fn revert(&self, document: &mut Document, confirm: bool) -> RevertOutcome {
         match plan_revert(document) {
             RevertDecision::Unavailable => RevertOutcome::Unavailable,
             RevertDecision::NeedsConfirmation if !confirm => RevertOutcome::NeedsConfirmation,

@@ -3,8 +3,11 @@
 use std::path::Path;
 
 use tabtool_document::{Document, DocumentError, LargeStatus};
+use tabtool_i18n::Language;
 
-use super::{FileWorkflow, OpenedDocument, SaveOutcome};
+use super::{OpenedDocument, SaveOutcome};
+
+use super::policy::FilePolicy;
 
 /// How a replace request ended.
 #[derive(Debug)]
@@ -50,19 +53,20 @@ pub enum UnsavedChoice {
     Cancel,
 }
 
-impl FileWorkflow {
+impl FilePolicy {
     /// Replaces `document` with `path` after the unsaved-change decision.
     ///
     /// `None` asks first for a dirty document and opens directly for a clean
     /// one. A running or newly started large save reports
     /// [`ReplaceOutcome::Busy`] so the window can show the progress and cancel
-    /// it.
-    pub fn replace_with(
-        &mut self,
+    /// it, or queue the path until the save settles.
+    pub(crate) fn replace_with(
+        &self,
         document: &mut Document,
         path: &Path,
         decision: Option<UnsavedChoice>,
         suggested_name: &str,
+        language: Language,
     ) -> ReplaceOutcome {
         if matches!(document.large_status(), LargeStatus::Saving(_)) {
             return ReplaceOutcome::Busy;
@@ -82,6 +86,6 @@ impl FileWorkflow {
                 SaveOutcome::Failed(error) => return ReplaceOutcome::Failed(error),
             },
         }
-        ReplaceOutcome::Opened(Box::new(self.open_path(path)))
+        ReplaceOutcome::Opened(Box::new(self.load(path, language)))
     }
 }

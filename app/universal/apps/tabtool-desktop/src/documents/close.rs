@@ -3,7 +3,7 @@
 use tabtool_document::{Document, DocumentError, LargeStatus};
 
 use crate::documents::WindowState;
-use crate::files::{SaveMode, SaveOutcome, save_document};
+use crate::files::{ReplaceOutcome, SaveMode, SaveOutcome, UnsavedChoice};
 
 /// What closing a document should do now.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -71,13 +71,10 @@ impl WindowState {
             SaveMode::Save
         };
         let suggested_name = self.title();
-        match save_document(
-            &mut self.document,
-            &*self.storage,
-            &*self.dialogs,
-            &suggested_name,
-            mode,
-        ) {
+        match self
+            .file_ops
+            .save_with_mode(&mut self.document, &suggested_name, mode)
+        {
             SaveOutcome::Saved => {
                 self.issue = None;
                 CloseSave::Saved
@@ -123,7 +120,19 @@ impl WindowState {
                 self.close_after_save = false;
                 self.should_close = true;
             } else if let Some(path) = self.open.after_save.take() {
-                self.begin_open(path);
+                let suggested = self.title();
+                match self.file_ops.replace_with(
+                    &mut self.document,
+                    &path,
+                    Some(UnsavedChoice::DontSave),
+                    &suggested,
+                    self.language,
+                ) {
+                    ReplaceOutcome::Opened(opened) => self.adopt(*opened),
+                    ReplaceOutcome::Busy => self.open.after_save = Some(path),
+                    ReplaceOutcome::Failed(error) => self.issue = Some(error),
+                    ReplaceOutcome::NeedsConfirmation | ReplaceOutcome::Cancelled => {}
+                }
             }
         }
         Some(result)

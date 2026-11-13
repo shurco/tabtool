@@ -57,7 +57,7 @@ impl crate::documents::WindowState {
             document: &mut self.document,
             state: &mut self.grid,
             ui_state: &mut self.chrome,
-            storage: &*self.storage,
+            storage: &*self.file_ops.storage,
             clipboard: &mut clipboard,
             language: self.language,
             locale: &locale,
@@ -79,7 +79,7 @@ impl crate::documents::WindowState {
                 }
                 DocumentAction::Large(LargeUiAction::CancelSave) => self.cancel_save(),
                 DocumentAction::Large(LargeUiAction::ReloadStale) => {
-                    if let Err(error) = self.document.reload_large(&*self.storage) {
+                    if let Err(error) = self.document.reload_large(&*self.file_ops.storage) {
                         self.chrome.show_alert(
                             "The file could not be read",
                             alert_message(self.language, error),

@@ -3,6 +3,8 @@
 use tabtool_document::{Document, DocumentError, Storage};
 use tabtool_platform::FileDialogs;
 
+use super::FilePolicy;
+
 /// Which save command started the write.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SaveMode {
@@ -23,6 +25,34 @@ pub enum SaveOutcome {
     Cancelled,
     /// The save failed; the document stays dirty and keeps its path.
     Failed(DocumentError),
+}
+
+impl FilePolicy {
+    /// Saves the document in place, or through the panel when it has no path.
+    pub(crate) fn save(&self, document: &mut Document, suggested_name: &str) -> SaveOutcome {
+        self.save_with_mode(document, suggested_name, SaveMode::Save)
+    }
+
+    /// Saves the document through the save panel.
+    pub(crate) fn save_as(&self, document: &mut Document, suggested_name: &str) -> SaveOutcome {
+        self.save_with_mode(document, suggested_name, SaveMode::SaveAs)
+    }
+
+    /// Starts the requested save.
+    pub(crate) fn save_with_mode(
+        &self,
+        document: &mut Document,
+        suggested_name: &str,
+        mode: SaveMode,
+    ) -> SaveOutcome {
+        save_document(
+            document,
+            &*self.storage,
+            &*self.dialogs,
+            suggested_name,
+            mode,
+        )
+    }
 }
 
 /// Saves `document` in place or through the save panel.

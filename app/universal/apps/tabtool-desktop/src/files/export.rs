@@ -5,6 +5,8 @@ use tabtool_document::{Document, DocumentError, Storage};
 use tabtool_platform::FileDialogs;
 use tabtool_ui::export::{ExportDecision, ExportOptions, ExportPlan};
 
+use super::FilePolicy;
+
 /// The table and format captured when the export panel opened.
 ///
 /// The table is a copy and the configuration is owned, so export never changes
@@ -46,6 +48,18 @@ pub enum ExportOutcome {
     BlockedUnencodable,
     /// Serializing or writing failed; no partial file was left behind.
     Failed(DocumentError),
+}
+
+impl FilePolicy {
+    /// Captures the visible table and format for the export panel.
+    pub(crate) fn export_session(&self, document: &Document) -> Option<ExportSession> {
+        export_session(document)
+    }
+
+    /// Runs the candidate through preflight, the save panel and the write.
+    pub(crate) fn export(&self, session: &ExportSession, allow_ambiguous: bool) -> ExportOutcome {
+        run_export(session, allow_ambiguous, &*self.dialogs, &*self.storage)
+    }
 }
 
 /// Captures the visible table and format of `document`.

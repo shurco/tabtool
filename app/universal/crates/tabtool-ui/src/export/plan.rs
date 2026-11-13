@@ -49,19 +49,6 @@ impl ExportPlan {
         }
     }
 
-    /// Replaces the extension of `filename` while keeping its stem.
-    pub fn renaming(filename: &str, configuration: &CsvConfiguration) -> String {
-        let stem = Path::new(filename)
-            .file_stem()
-            .map(|stem| stem.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        if stem.is_empty() {
-            filename.to_owned()
-        } else {
-            format!("{stem}.{}", Self::file_extension(configuration))
-        }
-    }
-
     /// What the UI does for `table` converted to the export configuration.
     pub fn decision(
         table: &CsvTable,

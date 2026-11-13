@@ -9,7 +9,7 @@ use tabtool_ui::export::{ExportPanelAction, export_panel};
 use tabtool_ui::widgets::{AlertAction, ButtonKind, modal};
 
 use crate::documents::WindowState;
-use crate::files::{ExportOutcome, ExportSession, run_export};
+use crate::files::{ExportOutcome, ExportSession};
 
 /// The export UI state of one window.
 #[derive(Default)]
@@ -31,7 +31,7 @@ pub(crate) struct ExportAlert {
 impl WindowState {
     /// Opens the export panel for the visible table.
     pub(crate) fn open_export_panel(&mut self) {
-        let Some(session) = crate::files::export_session(&self.document) else {
+        let Some(session) = self.file_ops.export_session(&self.document) else {
             return;
         };
         self.export = ExportState {
@@ -70,9 +70,9 @@ impl WindowState {
     }
 
     fn run_export(&mut self, session: ExportSession, allow_ambiguous: bool) {
-        match run_export(&session, allow_ambiguous, &*self.dialogs, &*self.storage) {
+        match self.file_ops.export(&session, allow_ambiguous) {
             ExportOutcome::Saved => {}
-            ExportOutcome::Cancelled => self.export.session = Some(session),
+            ExportOutcome::Cancelled => {} // Return to the document, like Apple.
             ExportOutcome::NeedsConfirmation => {
                 self.export.session = Some(session);
                 self.export.confirmation = true;

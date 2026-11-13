@@ -6,7 +6,7 @@ use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use egui::{Context, ViewportId};
 use tabtool_core::CsvConfiguration;
@@ -15,7 +15,7 @@ use tabtool_desktop::documents::{CloseChoice, DocumentWindow, WindowServices};
 use tabtool_desktop::platform::{SharedDialogs, SharedStorage};
 use tabtool_i18n::Language;
 use tabtool_platform::{DesktopPlatform, Settings};
-use tabtool_ui::harness::kittest::Queryable;
+use tabtool_ui::harness::kittest::{NodeT, Queryable};
 use tabtool_ui::{Theme, UiHarness};
 
 use support::{FakeDialogs, MemoryStorage};
@@ -267,6 +267,83 @@ fn answering_save_for_an_untitled_document_uses_the_panel_then_opens() {
 }
 
 #[test]
+fn a_drop_during_a_large_save_waits_and_opens_after_it_settles() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let big = write_file(directory.path(), "big.csv", b"a,b\n1,2\n3,4\n");
+    let new = write_file(directory.path(), "after-save.csv", b"a,b\n5,6\n");
+
+    let mut document = support::large_ready(&big);
+    document
+        .set_large_cell("edited", 0, 0)
+        .expect("edit the overlay");
+    document
+        .start_large_save(None)
+        .expect("start the large save");
+    let storage: SharedStorage = Arc::new(tabtool_document::StdStorage);
+    let dialogs: SharedDialogs = FakeDialogs::cancelled();
+    let window = window(document, Settings::default(), storage, dialogs);
+
+    window.drop_files(vec![new.clone()]);
+
+    assert!(window.is_busy(), "the drop must wait for the running save");
+    assert_eq!(window.title(), "big.csv");
+
+    let ctx = Context::default();
+    for _ in 0..400 {
+        window.tick(Instant::now(), &ctx);
+        if window.title() == "after-save.csv" {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+
+    assert_eq!(window.title(), "after-save.csv");
+    assert!(window.take_opened_paths().contains(&new));
+}
+
+#[test]
+fn saving_then_opening_waits_for_the_large_save_to_finish() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let big = write_file(directory.path(), "big-save.csv", b"a,b\n1,2\n3,4\n");
+    let new = write_file(directory.path(), "after-save.csv", b"a,b\n5,6\n");
+
+    let mut document = support::large_ready(&big);
+    document
+        .set_large_cell("edited", 0, 0)
+        .expect("edit the overlay");
+    let storage: SharedStorage = Arc::new(tabtool_document::StdStorage);
+    let dialogs: SharedDialogs = FakeDialogs::cancelled();
+    let window = window(document, Settings::default(), storage, dialogs);
+
+    window.drop_files(vec![new.clone()]);
+    assert!(window.has_open_prompt(), "a dirty large document must ask");
+    window.answer_open_prompt(CloseChoice::Save);
+
+    let ctx = Context::default();
+    window.tick(Instant::now(), &ctx);
+    assert!(
+        window.is_busy() || window.title() == "after-save.csv",
+        "save-then-open must show the save or already have opened"
+    );
+    for _ in 0..400 {
+        window.tick(Instant::now(), &ctx);
+        if window.title() == "after-save.csv" {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+
+    assert_eq!(window.title(), "after-save.csv");
+    assert!(
+        std::fs::read_to_string(&big)
+            .expect("the large save is readable")
+            .contains("edited"),
+        "save-then-open must finish the large save first"
+    );
+    assert!(window.take_opened_paths().contains(&new));
+}
+
+#[test]
 fn extra_dropped_files_are_returned_for_new_windows() {
     let directory = tempfile::tempdir().expect("temporary directory");
     let old = write_file(directory.path(), "old.csv", b"a,b\n1,2\n");
@@ -416,6 +493,39 @@ fn an_ambiguous_export_confirms_before_the_save_panel_and_writes_after() {
 }
 
 #[test]
+fn cancelling_the_export_save_panel_returns_to_the_document() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let source = write_file(directory.path(), "cancel-export.csv", b"a,b\n1,2\n");
+    let storage: SharedStorage = Arc::new(tabtool_document::StdStorage);
+    let dialogs: SharedDialogs = FakeDialogs::cancelled();
+    let mut document = tabtool_document::Document::new(CsvConfiguration::default());
+    document
+        .load_from_path(&source, &*storage, Some(CsvConfiguration::default()), false)
+        .expect("load the fixture");
+    let window = Rc::new(window(document, Settings::default(), storage, dialogs));
+    let shown = Rc::clone(&window);
+    let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
+        shown.render(ui);
+    });
+    harness.run();
+    harness.get_by_label("Export").click();
+    harness.run();
+    harness.run();
+    harness
+        .query_all_by_role_and_label(egui::accesskit::Role::Button, "Export")
+        .last()
+        .expect("the panel has an Export button")
+        .click();
+    harness.run();
+
+    assert!(
+        harness.query_by_label("Write Header Row").is_none(),
+        "cancelling the save panel must close the export sheet"
+    );
+    assert!(harness.query_by_label("Export Not Completed").is_none());
+}
+
+#[test]
 fn an_unencodable_export_shows_the_typed_alert_without_a_save_panel() {
     let directory = tempfile::tempdir().expect("temporary directory");
     let source = write_file(directory.path(), "cyrillic.csv", "ж\n".as_bytes());
@@ -534,4 +644,43 @@ fn the_open_recent_item_lists_the_saved_paths() {
         "the recent chooser lists the file name"
     );
     assert!(handle.borrow().is_recent_picker_visible());
+}
+
+#[test]
+fn a_tick_prunes_missing_recent_paths_and_disables_open_recent() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let path = write_file(directory.path(), "vanished.csv", b"a,b\n1,2\n");
+    let storage: SharedStorage = Arc::new(tabtool_document::StdStorage);
+    let dialogs: SharedDialogs = FakeDialogs::cancelled();
+    let settings = Settings {
+        recent_documents: vec![path.clone()],
+        ..Settings::default()
+    };
+    let app = DesktopApp::with_dialogs(settings, DesktopPlatform, storage, dialogs);
+    std::fs::remove_file(&path).expect("the fixture is removed");
+    let handle = Rc::new(RefCell::new(app));
+    let ui_app = Rc::clone(&handle);
+    let mut harness = UiHarness::wide(Theme::desktop_light(), move |ui| {
+        let mut app = ui_app.borrow_mut();
+        app.tick(ui.ctx());
+        app.show(ui);
+    });
+    harness.run();
+
+    {
+        let app = handle.borrow();
+        assert!(app.files.recent().is_empty());
+        assert!(app.settings.recent_documents.is_empty());
+        assert!(!app.files.has_recent());
+    }
+
+    harness.get_by_label("File").click();
+    harness.run();
+    assert!(
+        harness
+            .get_by_label("Open Recent")
+            .accesskit_node()
+            .is_disabled(),
+        "Open Recent must disable once every recent path is gone"
+    );
 }

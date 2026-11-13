@@ -50,7 +50,7 @@ impl FileDialogs for DesktopPlatform {
     fn open_files(&self) -> Vec<PathBuf> {
         let language = tabtool_i18n::language_from_system(&SystemLocale.languages());
         rfd::FileDialog::new()
-            .add_filter(tabtool_i18n::tr(language, "CSV"), &TABLE_EXTENSIONS)
+            .add_filter(tabtool_i18n::tr(language, "Table Files"), &TABLE_EXTENSIONS)
             .pick_files()
             .unwrap_or_default()
     }
@@ -59,7 +59,7 @@ impl FileDialogs for DesktopPlatform {
         let language = tabtool_i18n::language_from_system(&SystemLocale.languages());
         rfd::FileDialog::new()
             .set_file_name(suggested_name)
-            .add_filter(tabtool_i18n::tr(language, "CSV"), &[extension])
+            .add_filter(tabtool_i18n::tr(language, "Table Files"), &[extension])
             .save_file()
     }
 
