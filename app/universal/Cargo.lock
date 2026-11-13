@@ -3696,6 +3696,7 @@ dependencies = [
  "egui",
  "egui_kittest",
  "tabtool-core",
+ "tabtool-document",
  "tabtool-i18n",
  "tabtool-ui",
 ]

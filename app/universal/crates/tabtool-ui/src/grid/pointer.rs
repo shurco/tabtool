@@ -1,14 +1,12 @@
 //! Pointer input for the grid.
 
-use egui::{
-    Context, Event, Id, Modifiers, PointerButton, Rect, Role, Sense, Ui, WidgetInfo, pos2, vec2,
-};
+use egui::{Context, Event, Id, Modifiers, PointerButton, Rect, Role, Sense, Ui, WidgetInfo, pos2};
 use tabtool_core::RowSource;
 
 use super::geometry::{GridGeometry, HEADER_HEIGHT, RESIZE_HANDLE_WIDTH};
 use super::keyboard::cell_id;
 use super::paint::{Canvas, VisibleCells};
-use super::selection::{GridFocus, GridSelection};
+use super::selection::{GridElement, GridFocus, GridSelection, GridTapOutcome, resolve_tap};
 use super::state::{GridOptions, GridState, header_for};
 
 /// What a pointer gesture requested this frame.
@@ -56,41 +54,53 @@ impl Interaction {
         was_editing: bool,
     ) {
         if let Some((column, delta)) = self.resize.take() {
-            state.resize_column(column, delta, options);
+            state.resize_column(source, column, delta, options);
         }
         let mut clicked = false;
         if let Some((row, column, modifiers)) = self.cell.take() {
             clicked = true;
-            let already = !was_editing
-                && state.focus == Some(GridFocus::new(row, column))
-                && state.selection.rows.contains(&row);
+            let tapped = GridFocus::new(row, column);
+            let outcome = resolve_tap(GridElement::Cell, state.focus, Some(tapped));
             state
                 .selection
                 .select_row(row, modifiers.shift, modifiers.command, &mut state.anchor);
-            state.focus = Some(GridFocus::new(row, column));
-            if already && options.editable && !modifiers.shift && !modifiers.command {
+            state.focus = Some(tapped);
+            if outcome == GridTapOutcome::EditCell
+                && !was_editing
+                && options.editable
+                && !modifiers.shift
+                && !modifiers.command
+            {
                 let text = source.cell(row, column);
                 state.start_editing(row, column, text);
             }
         } else if let Some((column, modifiers)) = self.column.take() {
             clicked = true;
-            state.selection.select_column(
-                column,
-                modifiers.shift,
-                modifiers.command,
-                &mut state.anchor,
-            );
+            if resolve_tap(GridElement::ColumnHeader, state.focus, None)
+                == GridTapOutcome::SelectColumn
+            {
+                state.selection.select_column(
+                    column,
+                    modifiers.shift,
+                    modifiers.command,
+                    &mut state.anchor,
+                );
+            }
             state.focus = None;
             state.editing = None;
         } else if let Some((row, modifiers)) = self.row.take() {
             clicked = true;
-            state
-                .selection
-                .select_row(row, modifiers.shift, modifiers.command, &mut state.anchor);
-            let column = state.focus.map_or(0, |focus| {
-                focus.column.min(source.column_count().saturating_sub(1))
-            });
-            state.focus = (source.column_count() > 0).then_some(GridFocus::new(row, column));
+            if resolve_tap(GridElement::RowNumber, state.focus, None)
+                == GridTapOutcome::SelectRowNumber
+            {
+                state.selection.select_row(
+                    row,
+                    modifiers.shift,
+                    modifiers.command,
+                    &mut state.anchor,
+                );
+            }
+            state.focus = (source.column_count() > 0).then_some(GridFocus::new(row, 0));
             state.editing = None;
         }
         if clicked
@@ -149,18 +159,15 @@ pub(crate) fn interact_headers(
     interaction: &mut Interaction,
 ) {
     let clip = canvas.clip;
-    let content_origin = canvas.origin;
     let viewport = canvas.viewport;
     let header_clip = Rect::from_min_max(
         pos2((clip.min.x + geometry.gutter()).min(clip.max.x), clip.min.y),
         pos2(clip.max.x, (clip.min.y + HEADER_HEIGHT).min(clip.max.y)),
     );
     for column in geometry.visible_columns(viewport) {
-        let x = content_origin.x + geometry.column_x(column);
-        let rect = Rect::from_min_size(
-            pos2(x, clip.min.y),
-            vec2(geometry.column_width(column), HEADER_HEIGHT),
-        );
+        let rect = geometry
+            .pinned_header_rect(column, viewport)
+            .translate(clip.min.to_vec2());
         let interact = rect.intersect(header_clip);
         if interact.width() <= 0.0 {
             continue;
@@ -211,7 +218,6 @@ pub(crate) fn interact_gutter(
     interaction: &mut Interaction,
 ) {
     let clip = canvas.clip;
-    let content_origin = canvas.origin;
     let viewport = canvas.viewport;
     let gutter = geometry.gutter();
     if gutter <= 0.0 {
@@ -222,11 +228,13 @@ pub(crate) fn interact_gutter(
         pos2((clip.min.x + gutter).min(clip.max.x), clip.max.y),
     );
     for row in geometry.visible_rows(viewport) {
-        let top = content_origin.y + HEADER_HEIGHT + row as f32 * geometry.row_height;
-        let rect = Rect::from_min_max(
-            pos2(clip.min.x, top),
-            pos2(gutter_clip.max.x, top + geometry.row_height),
-        );
+        let rect = geometry
+            .pinned_gutter_rect(row, viewport)
+            .translate(clip.min.to_vec2())
+            .intersect(Rect::from_min_max(
+                clip.min,
+                pos2(gutter_clip.max.x, clip.max.y),
+            ));
         let interact = rect.intersect(gutter_clip);
         if interact.width() <= 0.0 || interact.height() <= 0.0 {
             continue;

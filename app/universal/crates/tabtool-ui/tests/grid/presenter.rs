@@ -1,7 +1,8 @@
 //! Presenter projection tests.
 
-use tabtool_core::CsvTable;
-use tabtool_ui::grid::{CellAlignment, GridPresenter};
+use tabtool_core::{ColumnId, CsvTable, RowSource, new_column_id};
+use tabtool_ui::grid::CellAlignment;
+use tabtool_ui::grid::{GridGeometry, GridPresenter};
 
 use crate::support::{CountingSource, sample_table};
 
@@ -128,4 +129,59 @@ fn no_visible_row_shows_an_empty_grid() {
             .display_rows(&[0, 1].into_iter().collect())
             .is_empty()
     );
+}
+
+/// A source whose cell ids add the physical header offset, like
+/// `LargeCSVSource`, while `GridView` still indexes display rows.
+struct OffsetSource {
+    rows: usize,
+    offset: usize,
+}
+
+impl RowSource for OffsetSource {
+    fn row_count(&self) -> usize {
+        self.rows
+    }
+
+    fn column_count(&self) -> usize {
+        1
+    }
+
+    fn column_ids(&self) -> Vec<ColumnId> {
+        vec![new_column_id()]
+    }
+
+    fn headers(&self) -> Option<Vec<String>> {
+        None
+    }
+
+    fn cell(&self, row: usize, column: usize) -> String {
+        if column == 0 {
+            format!("physical {}", row + self.offset)
+        } else {
+            String::new()
+        }
+    }
+}
+
+#[test]
+fn an_offset_source_and_a_filter_mapping_use_display_rows() {
+    let source = OffsetSource { rows: 4, offset: 1 };
+    let visible = [0, 2];
+    let presenter = GridPresenter::new(&source, Some(&visible));
+
+    assert_eq!(presenter.row_count(), 2);
+    assert_eq!(presenter.cell(0, 0), "physical 1");
+    assert_eq!(presenter.cell(1, 0), "physical 3");
+
+    let widths = [100.0];
+    let geometry = GridGeometry {
+        widths: &widths,
+        row_height: 24.0,
+        row_count: 2,
+        shows_row_numbers: true,
+        header_offset: 1,
+    };
+    assert_eq!(geometry.row_number(0), 2);
+    assert_eq!(geometry.row_number(1), 3);
 }

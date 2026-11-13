@@ -1,6 +1,6 @@
 //! Painting of the pinned header row and row-number gutter.
 
-use egui::{Align2, FontId, Painter, Rect, Shape, Stroke, pos2, vec2};
+use egui::{Align2, FontId, Painter, Rect, Shape, Stroke, pos2};
 use tabtool_core::SortDirection;
 
 use crate::theme::{Theme, current};
@@ -18,7 +18,6 @@ pub(crate) fn paint_header(
     headers: Option<&[String]>,
 ) {
     let painter = &canvas.painter;
-    let content_origin = canvas.origin;
     let clip = canvas.clip;
     let viewport = canvas.viewport;
     let theme = current(painter.ctx());
@@ -32,11 +31,9 @@ pub(crate) fn paint_header(
 
     let font = FontId::proportional(theme.typography.caption);
     for column in geometry.visible_columns(viewport) {
-        let x = content_origin.x + geometry.column_x(column);
-        let rect = Rect::from_min_size(
-            pos2(x, clip.min.y),
-            vec2(geometry.column_width(column), HEADER_HEIGHT),
-        );
+        let rect = geometry
+            .pinned_header_rect(column, viewport)
+            .translate(clip.min.to_vec2());
         let visible = rect.intersect(header);
         if visible.width() <= 0.0 {
             continue;
@@ -85,7 +82,6 @@ pub(crate) fn paint_gutter(
     state: &GridState,
 ) {
     let painter = &canvas.painter;
-    let content_origin = canvas.origin;
     let clip = canvas.clip;
     let viewport = canvas.viewport;
     let theme = current(painter.ctx());
@@ -93,33 +89,37 @@ pub(crate) fn paint_gutter(
     if right <= clip.min.x {
         return;
     }
-    let corner = Rect::from_min_max(
-        clip.min,
-        pos2(right, (clip.min.y + HEADER_HEIGHT).min(clip.max.y)),
-    );
+    let corner = geometry
+        .pinned_corner_rect()
+        .translate(clip.min.to_vec2())
+        .intersect(clip);
     painter.rect_filled(corner, 0, theme.colors.header_background);
+    let rows_clip = Rect::from_min_max(
+        pos2(clip.min.x, (clip.min.y + HEADER_HEIGHT).min(clip.max.y)),
+        pos2(right, clip.max.y),
+    );
+    let rows_painter = painter.with_clip_rect(rows_clip);
 
     for row in geometry.visible_rows(viewport) {
-        let top = content_origin.y + HEADER_HEIGHT + row as f32 * geometry.row_height;
-        let rect = Rect::from_min_max(
-            pos2(clip.min.x, top),
-            pos2(right, top + geometry.row_height),
-        );
-        painter.rect_filled(rect, 0, theme.colors.content_background);
+        let rect = geometry
+            .pinned_gutter_rect(row, viewport)
+            .translate(clip.min.to_vec2())
+            .intersect(Rect::from_min_max(clip.min, pos2(right, clip.max.y)));
+        rows_painter.rect_filled(rect, 0, theme.colors.content_background);
         if options.alternating_rows && row % 2 == 1 {
-            painter.rect_filled(rect, 0, theme.colors.hover_background);
+            rows_painter.rect_filled(rect, 0, theme.colors.alternating_row_background);
         }
         if state.selection.rows.contains(&row) {
-            painter.rect_filled(rect, 0, theme.colors.selection_background);
+            rows_painter.rect_filled(rect, 0, theme.colors.selection_background);
         }
         if options.shows_horizontal_lines() && rect.max.y <= clip.max.y {
-            painter.hline(
+            rows_painter.hline(
                 rect.x_range(),
                 rect.max.y - 1.0,
                 Stroke::new(1.0, theme.colors.separator),
             );
         }
-        painter.with_clip_rect(rect).text(
+        rows_painter.with_clip_rect(rect).text(
             pos2(right - 6.0, rect.center().y),
             Align2::RIGHT_CENTER,
             geometry.row_number(row).to_string(),

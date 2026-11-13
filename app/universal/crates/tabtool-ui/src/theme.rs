@@ -67,6 +67,8 @@ pub struct Colors {
     pub selection_background: Color32,
     /// The fill of a hovered row or plain button.
     pub hover_background: Color32,
+    /// The tint of an alternating data row.
+    pub alternating_row_background: Color32,
     /// The ring around a keyboard-focused control.
     pub focus_ring: Color32,
     /// Destructive text and errors.
@@ -178,6 +180,7 @@ const LIGHT: Colors = Colors {
     header_background: rgb(0xEBEBEB),
     selection_background: rgb(0xB3D7FF),
     hover_background: rgb(0xF2F2F2),
+    alternating_row_background: rgb(0xF7F7F9),
     focus_ring: rgb(0x007AFF),
     error: rgb(0xD70015),
     warning: rgb(0xB25000),
@@ -202,6 +205,7 @@ const DARK: Colors = Colors {
     header_background: rgb(0x2C2C2E),
     selection_background: rgb(0x0A84FF),
     hover_background: rgb(0x2C2C2E),
+    alternating_row_background: rgb(0x252527),
     focus_ring: rgb(0x0A84FF),
     error: rgb(0xFF453A),
     warning: rgb(0xFF9F0A),

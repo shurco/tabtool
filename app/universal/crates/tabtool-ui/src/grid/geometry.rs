@@ -9,12 +9,10 @@ use egui::{Pos2, Rect, Vec2, pos2, vec2};
 pub const HEADER_HEIGHT: f32 = 28.0;
 /// The minimum width of the pinned row-number gutter.
 pub const GUTTER_WIDTH: f32 = 40.0;
-/// The default width of a column before the user resizes it.
-pub const DEFAULT_COLUMN_WIDTH: f32 = 160.0;
+/// The default width of a desktop column before the user resizes it.
+pub const DEFAULT_COLUMN_WIDTH: f32 = 100.0;
 /// The narrowest a column may be resized to.
 pub const MIN_COLUMN_WIDTH: f32 = 40.0;
-/// The widest a column may be resized to.
-pub const MAX_COLUMN_WIDTH: f32 = 600.0;
 /// How close to a header edge a resize may start.
 pub const RESIZE_HANDLE_WIDTH: f32 = 4.0;
 /// The width of the header's sort-arrow hit area.
@@ -120,31 +118,42 @@ impl<'a> GridGeometry<'a> {
         )
     }
 
-    /// The header frame for `column`, pinned to the top of `visible`.
-    pub fn pinned_header_rect(&self, column: usize, visible: Rect) -> Rect {
+    /// The header frame relative to the viewport top-left.
+    ///
+    /// `viewport` is in content coordinates. The header's y is pinned to the
+    /// viewport top while x follows the horizontal scroll, so a caller adds the
+    /// viewport's screen origin to place it.
+    pub fn pinned_header_rect(&self, column: usize, viewport: Rect) -> Rect {
         Rect::from_min_size(
-            pos2(self.column_x(column), visible.min.y),
+            pos2(self.column_x(column) - viewport.min.x, 0.0),
             vec2(self.column_width(column), HEADER_HEIGHT),
         )
     }
 
-    /// The gutter frame for `row`, pinned to the left of `visible`.
-    pub fn pinned_gutter_rect(&self, row: usize, visible: Rect) -> Rect {
+    /// The gutter frame relative to the viewport top-left.
+    ///
+    /// The gutter's x is pinned to the viewport left while y follows the
+    /// vertical scroll.
+    pub fn pinned_gutter_rect(&self, row: usize, viewport: Rect) -> Rect {
         Rect::from_min_size(
-            pos2(visible.min.x, HEADER_HEIGHT + row as f32 * self.row_height),
+            pos2(
+                0.0,
+                HEADER_HEIGHT + row as f32 * self.row_height - viewport.min.y,
+            ),
             vec2(self.gutter(), self.row_height),
         )
     }
 
-    /// The pinned corner above the gutter.
-    pub fn pinned_corner_rect(&self, visible: Rect) -> Rect {
-        Rect::from_min_size(visible.min, vec2(self.gutter(), HEADER_HEIGHT))
+    /// The pinned corner above the gutter, relative to the viewport top-left.
+    pub fn pinned_corner_rect(&self) -> Rect {
+        Rect::from_min_size(Pos2::ZERO, vec2(self.gutter(), HEADER_HEIGHT))
     }
 
-    /// The one-based number shown beside display row `row`.
+    /// The one-based display number shown beside display row `row`.
     ///
-    /// Large mode hides physical header rows, so the offset is added to keep
-    /// the gutter aligned with the file's physical rows.
+    /// Large mode hides physical header rows, so the offset is added to the
+    /// display number. Filtered input likewise contributes display rows only:
+    /// numbers are `1..visible row count`, not model row numbers.
     pub fn row_number(&self, row: usize) -> usize {
         row.saturating_add(self.header_offset).saturating_add(1)
     }

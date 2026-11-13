@@ -22,6 +22,7 @@ pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
     let editor_id = base_id.with("editor");
     state.sync(source, &options);
 
+    keyboard::note_ime(&ctx, state);
     let mut actions = Vec::new();
     let mut scroll_to = None;
     let was_editing = state.editing.is_some();
@@ -52,6 +53,7 @@ pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
     let mut interaction = Interaction::default();
     let mut editor_clicked = false;
     let mut editor_lost_focus = false;
+    let mut editor_visible = false;
 
     let scroll_area = egui::ScrollArea::both()
         .id_salt(base_id.with("scroll"))
@@ -66,13 +68,15 @@ pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
     let output = scroll_area.show_viewport(ui, |ui, viewport| {
         let theme = current(ui.ctx());
         let clip = ui.clip_rect();
+        let widths = state.ordered_widths(source);
         let geometry = GridGeometry {
-            widths: &state.widths,
+            widths: &widths,
             row_height: options.row_height,
             row_count: source.row_count(),
             shows_row_numbers: options.shows_row_numbers,
             header_offset: options.header_offset,
         };
+        state.viewport = viewport;
         let content_origin = ui.cursor().min;
         let content_size = geometry.content_size().max(viewport.size());
         ui.allocate_exact_size(content_size, Sense::hover());
@@ -101,6 +105,7 @@ pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
                 .cell_rect(editing.row, editing.column)
                 .translate(content_origin.to_vec2());
             if rect.intersects(data) {
+                editor_visible = true;
                 let name = super::state::header_for(headers.as_deref(), editing.column);
                 let right_aligned = visible
                     .cells
@@ -146,7 +151,7 @@ pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
 
     let clicked_anywhere = ctx.input(|input| input.pointer.any_click());
     if let Some(editing) = active_editor {
-        if (clicked_anywhere && !editor_clicked) || editor_lost_focus {
+        if !editor_visible || (clicked_anywhere && !editor_clicked) || editor_lost_focus {
             actions.push(editing.commit_action());
         } else {
             state.editing = Some(editing);

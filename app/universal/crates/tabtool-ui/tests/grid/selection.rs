@@ -1,8 +1,10 @@
 //! Tap resolution and selection rules.
 
 use egui::Modifiers;
+use tabtool_document::GridSelection as DocumentSelection;
 use tabtool_ui::grid::{
-    GridElement, GridFocus, GridOptions, GridSelection, GridState, GridTapOutcome, resolve_tap,
+    GridAnchor, GridElement, GridFocus, GridOptions, GridSelection, GridState, GridTapOutcome,
+    resolve_tap,
 };
 use tabtool_ui::harness::kittest::Queryable;
 
@@ -268,4 +270,68 @@ fn shift_arrow_extends_the_selected_rows() {
     fixture.run();
 
     assert_eq!(fixture.selected_rows(), [0, 1].into_iter().collect());
+}
+
+#[test]
+fn shift_after_an_axis_change_uses_the_new_axis_anchor() {
+    let mut selection = GridSelection::default();
+    let mut anchor = None;
+    selection.select_column(2, false, false, &mut anchor);
+    assert_eq!(anchor, Some(GridAnchor::Column(2)));
+
+    selection.select_row(3, true, false, &mut anchor);
+    assert_eq!(
+        selection.rows,
+        [3].into_iter().collect(),
+        "a column anchor must not define a row range"
+    );
+    assert!(selection.columns.is_empty());
+
+    selection.select_row(0, false, false, &mut anchor);
+    selection.select_column(2, true, false, &mut anchor);
+    assert_eq!(
+        selection.columns,
+        [2].into_iter().collect(),
+        "a row anchor must not define a column range"
+    );
+}
+
+#[test]
+fn document_selection_roundtrips_losslessly() {
+    let mut document = DocumentSelection::default();
+    document.rows.insert(1);
+    document.rows.insert(4);
+
+    let mut state = GridState::default();
+    state.apply_document_selection(&document);
+    assert_eq!(state.selection.rows, document.rows);
+    assert!(state.selection.columns.is_empty());
+    assert_eq!(state.document_selection(), document);
+
+    let mut columns = DocumentSelection::default();
+    columns.columns.insert(2);
+    state.apply_document_selection(&columns);
+    assert_eq!(state.document_selection(), columns);
+    assert_eq!(DocumentSelection::from(state.selection.clone()), columns);
+}
+
+#[test]
+fn shift_click_after_a_column_click_selects_only_the_row() {
+    let source = sample_table();
+    let mut fixture = GridFixture::new(
+        &source,
+        GridState::default(),
+        GridOptions::default(),
+        [640.0, 400.0],
+    );
+    fixture.run();
+    fixture.get_by_label("Note").click();
+    fixture.run();
+    fixture
+        .get_by_label("Dave")
+        .click_modifiers(Modifiers::SHIFT);
+    fixture.run();
+
+    assert_eq!(fixture.selected_rows(), [3].into_iter().collect());
+    assert!(fixture.selected_columns().is_empty());
 }

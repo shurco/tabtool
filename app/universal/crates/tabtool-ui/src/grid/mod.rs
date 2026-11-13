@@ -5,6 +5,21 @@
 //! and the persistent [`GridState`] survives source swaps after indexing.
 //! Commands that change the document are returned as [`GridAction`] values;
 //! the grid never mutates the source.
+//!
+//! # Display rows and large mode
+//!
+//! [`GridView`] always indexes rows as **display rows**. A large source maps a
+//! display row to its physical row inside `RowSource::cell` (for example
+//! `LargeCSVSource` adds its own header offset), so callers must not add the
+//! offset to cell or selection indexes. [`GridOptions::header_offset`] only
+//! shifts the row-number labels in the gutter.
+//!
+//! # Filtering
+//!
+//! A filtered view is passed through [`GridPresenter`], whose `visible_rows`
+//! maps display rows to model rows. Row numbers in a filtered grid are display
+//! numbers (`1..visible row count`), not model numbers, and
+//! [`GridOptions::header_offset`] still applies on top of them.
 
 mod chrome;
 mod editor;
@@ -24,12 +39,11 @@ use tabtool_core::{RowSource, SortDirection};
 pub use editor::CellEditor;
 pub use geometry::{
     COLUMN_OVERSCAN, DEFAULT_COLUMN_WIDTH, GUTTER_WIDTH, GridGeometry, HEADER_HEIGHT,
-    MAX_COLUMN_WIDTH, MIN_COLUMN_WIDTH, RESIZE_HANDLE_WIDTH, ROW_OVERSCAN, SORT_ARROW_WIDTH,
-    gutter_width,
+    MIN_COLUMN_WIDTH, RESIZE_HANDLE_WIDTH, ROW_OVERSCAN, SORT_ARROW_WIDTH, gutter_width,
 };
 pub use keyboard::{EditorKeyAction, MoveDirection};
 pub use selection::{
-    GridElement, GridFocus, GridSelection, GridTapOutcome, move_focus, resolve_tap,
+    GridAnchor, GridElement, GridFocus, GridSelection, GridTapOutcome, move_focus, resolve_tap,
 };
 pub use state::{CellAlignment, GridOptions, GridPresenter, GridState, SortSpec};
 
@@ -93,7 +107,10 @@ pub enum GridAction {
 
 /// The virtualized grid widget.
 ///
-/// Build one each frame with the current source and the persistent state:
+/// Build one each frame with the current source and the persistent state.
+/// `source` is indexed by display row; a large source adds its own physical
+/// header offset inside `cell`, and `options.header_offset` is only used for
+/// row-number labels:
 ///
 /// ```no_run
 /// # use tabtool_ui::grid::{GridView, GridState, GridOptions};

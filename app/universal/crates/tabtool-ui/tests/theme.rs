@@ -46,6 +46,7 @@ fn light_palette_pins_the_system_colors() {
     assert_eq!(theme.colors.header_background, rgb(0xEBEBEB));
     assert_eq!(theme.colors.selection_background, rgb(0xB3D7FF));
     assert_eq!(theme.colors.hover_background, rgb(0xF2F2F2));
+    assert_eq!(theme.colors.alternating_row_background, rgb(0xF7F7F9));
     assert_eq!(theme.colors.focus_ring, rgb(0x007AFF));
     assert_eq!(theme.colors.error, rgb(0xD70015));
     assert_eq!(theme.colors.warning, rgb(0xB25000));
@@ -71,6 +72,7 @@ fn dark_palette_pins_the_system_colors() {
     assert_eq!(theme.colors.header_background, rgb(0x2C2C2E));
     assert_eq!(theme.colors.selection_background, rgb(0x0A84FF));
     assert_eq!(theme.colors.hover_background, rgb(0x2C2C2E));
+    assert_eq!(theme.colors.alternating_row_background, rgb(0x252527));
     assert_eq!(theme.colors.focus_ring, rgb(0x0A84FF));
     assert_eq!(theme.colors.error, rgb(0xFF453A));
     assert_eq!(theme.colors.warning, rgb(0xFF9F0A));

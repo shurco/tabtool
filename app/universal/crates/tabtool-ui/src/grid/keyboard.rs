@@ -4,7 +4,7 @@
 //! the key rules are testable without an egui context. [`handle_keys`] reads
 //! the pressed keys once per frame and applies them to the persistent state.
 
-use egui::{Context, Event, Id, Key, Modifiers};
+use egui::{Context, Event, Id, ImeEvent, Key, Modifiers};
 use tabtool_core::RowSource;
 
 use super::GridAction;
@@ -30,21 +30,19 @@ pub enum MoveDirection {
 pub enum EditorKeyAction {
     /// Commit the text and move the focus in `MoveDirection`.
     CommitAndMove(MoveDirection),
-    /// Discard the editor without an action.
-    Cancel,
 }
 
 /// The editor action for `key`, or `None` when the editor keeps the key.
 ///
-/// Return commits and moves down, Tab commits and moves right, Shift+Tab
-/// commits and moves left, and Escape cancels. All other keys, including the
-/// arrows and text input, stay with the text field.
+/// Return commits and moves down, Tab commits and moves right, and Shift+Tab
+/// commits and moves left. Escape is handled before this mapping because egui
+/// clears the text field's focus before the frame's widgets run. All other
+/// keys, including the arrows and text input, stay with the text field.
 pub fn editor_action(key: Key, shift: bool) -> Option<EditorKeyAction> {
     match key {
         Key::Enter => Some(EditorKeyAction::CommitAndMove(MoveDirection::Down)),
         Key::Tab if shift => Some(EditorKeyAction::CommitAndMove(MoveDirection::Left)),
         Key::Tab => Some(EditorKeyAction::CommitAndMove(MoveDirection::Right)),
-        Key::Escape => Some(EditorKeyAction::Cancel),
         _ => None,
     }
 }
@@ -93,6 +91,21 @@ pub(crate) fn handle_keys(
             state.editing = None;
             return;
         }
+        if state.ime_composing || state.ime_commit_guard {
+            // An IME Enter commits the composition, not the cell. Consume the
+            // editor's Enter/Tab so the text field keeps focus and receives the
+            // composition commit.
+            let consumed = ctx.input_mut(|input| {
+                let enter = input.consume_key(Modifiers::NONE, Key::Enter);
+                let shift_tab = input.consume_key(Modifiers::SHIFT, Key::Tab);
+                let tab = input.consume_key(Modifiers::NONE, Key::Tab);
+                enter || shift_tab || tab
+            });
+            if consumed {
+                state.ime_commit_guard = false;
+            }
+            return;
+        }
         if !ctx.text_edit_focused() {
             return;
         }
@@ -116,9 +129,6 @@ pub(crate) fn handle_keys(
         match action {
             None => {
                 *active_editor = Some(editing);
-            }
-            Some(EditorKeyAction::Cancel) => {
-                state.editing = None;
             }
             Some(EditorKeyAction::CommitAndMove(direction)) => {
                 actions.push(editing.commit_action());
@@ -190,6 +200,35 @@ pub(crate) fn handle_keys(
         ctx.memory_mut(|memory| {
             memory.request_focus(cell_id(base_id, focus.row, focus.column));
         });
+    }
+}
+
+/// Records the frame's IME events before the editor's keys are read.
+///
+/// A commit may arrive in a different frame than the Enter that ends it, so
+/// the guard survives until that Enter has been consumed.
+pub(crate) fn note_ime(ctx: &Context, state: &mut GridState) {
+    let mut preedit = None;
+    let mut committed = false;
+    ctx.input(|input| {
+        for event in &input.events {
+            match event {
+                Event::Ime(ImeEvent::Preedit { text, .. }) => {
+                    preedit = Some(!text.is_empty());
+                }
+                Event::Ime(ImeEvent::Commit(text)) if !text.is_empty() => {
+                    committed = true;
+                }
+                _ => {}
+            }
+        }
+    });
+    if let Some(active) = preedit {
+        state.ime_composing = active;
+    }
+    if committed {
+        state.ime_composing = false;
+        state.ime_commit_guard = true;
     }
 }
 

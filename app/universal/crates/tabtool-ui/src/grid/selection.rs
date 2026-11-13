@@ -3,7 +3,18 @@
 
 use std::collections::BTreeSet;
 
+use tabtool_document::GridSelection as DocumentSelection;
+
 use crate::grid::keyboard::MoveDirection;
+
+/// The row or column a Shift click extends from.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum GridAnchor {
+    /// A display row.
+    Row(usize),
+    /// A visual column.
+    Column(usize),
+}
 
 /// The cell the keyboard and the editor act on. Rows are display rows.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -53,24 +64,28 @@ impl GridSelection {
         row: usize,
         extend: bool,
         toggle: bool,
-        anchor: &mut Option<usize>,
+        anchor: &mut Option<GridAnchor>,
     ) {
         self.columns.clear();
         if toggle {
             if !self.rows.remove(&row) {
                 self.rows.insert(row);
-                anchor.get_or_insert(row);
+                anchor.get_or_insert(GridAnchor::Row(row));
             }
             if self.rows.is_empty() {
                 *anchor = None;
             }
         } else if extend {
-            let base = anchor.unwrap_or_else(|| self.rows.first().copied().unwrap_or(row));
+            let base = match anchor {
+                Some(GridAnchor::Row(base)) => Some(*base),
+                _ => self.rows.first().copied(),
+            }
+            .unwrap_or(row);
             self.rows = (base.min(row)..=base.max(row)).collect();
         } else {
             self.rows.clear();
             self.rows.insert(row);
-            *anchor = Some(row);
+            *anchor = Some(GridAnchor::Row(row));
         }
     }
 
@@ -83,24 +98,28 @@ impl GridSelection {
         column: usize,
         extend: bool,
         toggle: bool,
-        anchor: &mut Option<usize>,
+        anchor: &mut Option<GridAnchor>,
     ) {
         self.rows.clear();
         if toggle {
             if !self.columns.remove(&column) {
                 self.columns.insert(column);
-                anchor.get_or_insert(column);
+                anchor.get_or_insert(GridAnchor::Column(column));
             }
             if self.columns.is_empty() {
                 *anchor = None;
             }
         } else if extend {
-            let base = anchor.unwrap_or_else(|| self.columns.first().copied().unwrap_or(column));
+            let base = match anchor {
+                Some(GridAnchor::Column(base)) => Some(*base),
+                _ => self.columns.first().copied(),
+            }
+            .unwrap_or(column);
             self.columns = (base.min(column)..=base.max(column)).collect();
         } else {
             self.columns.clear();
             self.columns.insert(column);
-            *anchor = Some(column);
+            *anchor = Some(GridAnchor::Column(column));
         }
     }
 }
@@ -158,7 +177,7 @@ pub fn resolve_tap(
 /// an empty grid.
 pub fn move_focus(
     selection: &mut GridSelection,
-    anchor: &mut Option<usize>,
+    anchor: &mut Option<GridAnchor>,
     focus: &mut Option<GridFocus>,
     row_count: usize,
     column_count: usize,
@@ -190,4 +209,31 @@ pub fn move_focus(
     }
     *focus = Some(next);
     Some(next)
+}
+
+impl From<&DocumentSelection> for GridSelection {
+    fn from(selection: &DocumentSelection) -> Self {
+        Self {
+            rows: selection.rows.clone(),
+            columns: selection.columns.clone(),
+        }
+    }
+}
+
+impl From<&GridSelection> for DocumentSelection {
+    fn from(selection: &GridSelection) -> Self {
+        Self {
+            rows: selection.rows.clone(),
+            columns: selection.columns.clone(),
+        }
+    }
+}
+
+impl From<GridSelection> for DocumentSelection {
+    fn from(selection: GridSelection) -> Self {
+        Self {
+            rows: selection.rows,
+            columns: selection.columns,
+        }
+    }
 }

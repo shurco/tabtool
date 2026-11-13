@@ -129,7 +129,7 @@ pub(crate) fn paint_data(
             pos2(data.max.x, top + geometry.row_height),
         );
         if options.alternating_rows && row % 2 == 1 {
-            painter.rect_filled(row_rect, 0, theme.colors.hover_background);
+            painter.rect_filled(row_rect, 0, theme.colors.alternating_row_background);
         }
         if state.selection.rows.contains(&row) {
             painter.rect_filled(row_rect, 0, theme.colors.selection_background);

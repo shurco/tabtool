@@ -1,12 +1,14 @@
 //! Persistent grid state, display options and the row-source presenter.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
-use egui::Vec2;
+use egui::{Rect, Vec2};
 use tabtool_core::{ColumnId, RowSource, SortDirection, column_name, is_numeric};
+use tabtool_document::GridSelection as DocumentSelection;
 
 use crate::grid::editor::CellEditor;
-use crate::grid::selection::{GridFocus, GridSelection};
+use crate::grid::geometry::DEFAULT_COLUMN_WIDTH;
+use crate::grid::selection::{GridAnchor, GridFocus, GridSelection};
 
 /// The sort the header marks with an arrow.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -27,6 +29,10 @@ pub struct GridOptions {
     /// Whether the row-number gutter is visible.
     pub shows_row_numbers: bool,
     /// Physical rows hidden above display row zero (large-mode headers).
+    ///
+    /// This only shifts the row-number gutter. Cell and selection indexes stay
+    /// display indexes because a large source adds its own offset inside
+    /// `RowSource::cell`; adding it again here would double it.
     pub header_offset: usize,
     /// Whether cells can enter the editor.
     pub editable: bool,
@@ -36,7 +42,8 @@ pub struct GridOptions {
     pub default_column_width: f32,
     /// The narrowest a column may be resized to.
     pub min_column_width: f32,
-    /// The content cap: the widest a column may be resized to.
+    /// The content cap: the widest a column may be resized to. Infinite by
+    /// default, matching the macOS grid.
     pub max_column_width: f32,
     /// The sort shown with an arrow in the header.
     pub sort: Option<SortSpec>,
@@ -51,9 +58,9 @@ impl Default for GridOptions {
             header_offset: 0,
             editable: true,
             decimal_mark: ".".to_string(),
-            default_column_width: crate::grid::geometry::DEFAULT_COLUMN_WIDTH,
+            default_column_width: DEFAULT_COLUMN_WIDTH,
             min_column_width: crate::grid::geometry::MIN_COLUMN_WIDTH,
-            max_column_width: crate::grid::geometry::MAX_COLUMN_WIDTH,
+            max_column_width: f32::INFINITY,
             sort: None,
         }
     }
@@ -77,24 +84,49 @@ impl GridOptions {
 ///
 /// It outlives the current [`RowSource`](tabtool_core::RowSource), so scroll,
 /// selection, widths and the editor survive a source swap after indexing.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct GridState {
     /// The selected rows or columns.
     pub selection: GridSelection,
     /// The cell being edited, if any.
     pub editing: Option<CellEditor>,
-    /// The width of every column.
-    pub widths: Vec<f32>,
+    /// The width of every column, keyed by its stable identity so a column
+    /// move does not shift another column's width.
+    pub widths: BTreeMap<ColumnId, f32>,
     /// The scroll offset in points.
     pub scroll: Vec2,
+    /// The last visible rect in content coordinates.
+    pub viewport: Rect,
     /// The last hovered cell.
     pub hovered: Option<(usize, usize)>,
     /// The focused cell for keyboard navigation and editing.
     pub focus: Option<GridFocus>,
     /// The row or column a Shift click extends from.
-    pub anchor: Option<usize>,
+    pub anchor: Option<GridAnchor>,
     /// Set when a newly started editor must take keyboard focus.
     pub(crate) pending_editor_focus: bool,
+    /// Whether an IME preedit is active in the cell editor.
+    pub(crate) ime_composing: bool,
+    /// One-shot guard so an IME commit's Enter never commits the cell.
+    pub(crate) ime_commit_guard: bool,
+}
+
+impl Default for GridState {
+    fn default() -> Self {
+        Self {
+            selection: GridSelection::default(),
+            editing: None,
+            widths: BTreeMap::new(),
+            scroll: Vec2::ZERO,
+            viewport: Rect::ZERO,
+            hovered: None,
+            focus: None,
+            anchor: None,
+            pending_editor_focus: false,
+            ime_composing: false,
+            ime_commit_guard: false,
+        }
+    }
 }
 
 impl GridState {
@@ -105,8 +137,13 @@ impl GridState {
     pub fn sync(&mut self, source: &dyn RowSource, options: &GridOptions) {
         let rows = source.row_count();
         let columns = source.column_count();
-        self.widths.resize(columns, options.default_column_width);
-        for width in &mut self.widths {
+        let column_ids = source.column_ids();
+        self.widths.retain(|id, _| column_ids.contains(id));
+        for id in column_ids {
+            let width = self
+                .widths
+                .entry(id)
+                .or_insert(options.default_column_width);
             *width = clamp_width(*width, options);
         }
         self.selection.rows.retain(|row| *row < rows);
@@ -131,19 +168,57 @@ impl GridState {
         {
             self.hovered = None;
         }
-        if self
-            .anchor
-            .is_some_and(|anchor| anchor >= rows.max(columns))
-        {
-            self.anchor = None;
-        }
+        self.anchor = match self.anchor {
+            Some(GridAnchor::Row(row)) if row < rows => Some(GridAnchor::Row(row)),
+            Some(GridAnchor::Column(column)) if column < columns => {
+                Some(GridAnchor::Column(column))
+            }
+            _ => None,
+        };
+    }
+
+    /// The column widths in `source`'s current visual order.
+    pub fn ordered_widths(&self, source: &dyn RowSource) -> Vec<f32> {
+        source
+            .column_ids()
+            .into_iter()
+            .map(|id| {
+                self.widths
+                    .get(&id)
+                    .copied()
+                    .unwrap_or(DEFAULT_COLUMN_WIDTH)
+            })
+            .collect()
     }
 
     /// Resizes one column by a pointer delta, clamped to the options.
-    pub fn resize_column(&mut self, column: usize, delta: f32, options: &GridOptions) {
-        if let Some(width) = self.widths.get_mut(column) {
-            *width = clamp_width(*width + delta, options);
-        }
+    pub fn resize_column(
+        &mut self,
+        source: &dyn RowSource,
+        column: usize,
+        delta: f32,
+        options: &GridOptions,
+    ) {
+        let Some(id) = source.column_ids().get(column).copied() else {
+            return;
+        };
+        let width = self
+            .widths
+            .entry(id)
+            .or_insert(options.default_column_width);
+        *width = clamp_width(*width + delta, options);
+    }
+
+    /// Replaces the selection with a document selection, dropping grid-only
+    /// state (the Shift anchor and focus).
+    pub fn apply_document_selection(&mut self, selection: &DocumentSelection) {
+        self.selection = GridSelection::from(selection);
+        self.anchor = None;
+    }
+
+    /// The selected rows or columns in the document's representation.
+    pub fn document_selection(&self) -> DocumentSelection {
+        DocumentSelection::from(&self.selection)
     }
 
     /// Starts editing a cell with its current text and the caret at the end.
@@ -153,6 +228,8 @@ impl GridState {
         self.focus = Some(GridFocus::new(row, column));
         self.editing = Some(CellEditor::new(row, column, text));
         self.pending_editor_focus = true;
+        self.ime_composing = false;
+        self.ime_commit_guard = false;
     }
 }
 
@@ -192,9 +269,10 @@ impl CellAlignment {
 /// A filtered, read-only projection of a [`RowSource`].
 ///
 /// With `visible_rows` the grid shows only those rows; row arguments are then
-/// display indexes while the source keeps model indexes. The presenter also
-/// implements [`RowSource`], so a filtered view can be handed to the grid
-/// directly.
+/// display indexes while the source keeps model indexes. Row numbers in the
+/// grid are display numbers (`1..visible row count`), not model numbers. The
+/// presenter also implements [`RowSource`], so a filtered view can be handed to
+/// the grid directly.
 #[derive(Clone, Copy)]
 pub struct GridPresenter<'a> {
     /// The underlying rows.

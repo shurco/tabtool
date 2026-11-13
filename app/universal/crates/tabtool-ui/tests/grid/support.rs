@@ -29,6 +29,7 @@ pub fn sample_table() -> CsvTable {
 pub struct CountingSource {
     rows: usize,
     columns: usize,
+    ids: Vec<ColumnId>,
     headers: Option<Vec<String>>,
     cell_calls: AtomicUsize,
     min_row: AtomicUsize,
@@ -45,9 +46,20 @@ impl CountingSource {
 
     /// A source with optional headers.
     pub fn with_headers(rows: usize, columns: usize, headers: Option<Vec<String>>) -> Self {
+        let ids = (0..columns).map(|_| new_column_id()).collect();
+        Self::with_ids_and_headers(rows, ids, headers)
+    }
+
+    /// A source with explicit stable column identities.
+    pub fn with_ids(rows: usize, ids: Vec<ColumnId>) -> Self {
+        Self::with_ids_and_headers(rows, ids, None)
+    }
+
+    fn with_ids_and_headers(rows: usize, ids: Vec<ColumnId>, headers: Option<Vec<String>>) -> Self {
         Self {
             rows,
-            columns,
+            columns: ids.len(),
+            ids,
             headers,
             cell_calls: AtomicUsize::new(0),
             min_row: AtomicUsize::new(usize::MAX),
@@ -55,6 +67,11 @@ impl CountingSource {
             min_column: AtomicUsize::new(usize::MAX),
             max_column: AtomicUsize::new(0),
         }
+    }
+
+    /// The stable column identities in visual order.
+    pub fn ids(&self) -> &[ColumnId] {
+        &self.ids
     }
 
     /// Forgets the reads recorded so far.
@@ -101,7 +118,7 @@ impl RowSource for CountingSource {
     }
 
     fn column_ids(&self) -> Vec<ColumnId> {
-        (0..self.columns).map(|_| new_column_id()).collect()
+        self.ids.clone()
     }
 
     fn headers(&self) -> Option<Vec<String>> {
