@@ -1,0 +1,5 @@
+# Snapshot comparison for the widget gallery.
+# The threshold is the per-pixel YIQ distance; no pixel may exceed it.
+threshold = 0.6
+max_failed_pixels = 0
+output_path = "tests/snapshots"

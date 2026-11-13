@@ -1,0 +1,23 @@
+[package]
+name = "tabtool-ui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Design tokens, widgets and the deterministic egui test harness for TabTool."
+
+[features]
+default = ["test-support"]
+# The kittest harness is only needed by tests. Production builds can opt out
+# with `default-features = false`.
+test-support = ["dep:egui_kittest"]
+
+[dependencies]
+egui.workspace = true
+egui_kittest = { workspace = true, optional = true, default-features = false, features = [
+    "snapshot",
+    "wgpu",
+] }
+
+[dev-dependencies]
+tabtool-i18n = { path = "../tabtool-i18n" }
