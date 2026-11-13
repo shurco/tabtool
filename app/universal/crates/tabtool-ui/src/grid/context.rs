@@ -24,6 +24,12 @@ pub struct GridMenuOptions {
     pub row_structural: bool,
     /// Whether a sort is active and can be removed.
     pub can_remove_sort: bool,
+    /// Whether the document is a large file.
+    ///
+    /// Select All stays disabled: the current selection type would hold one
+    /// entry per row, which is not viable at millions of rows (design §14.18,
+    /// approval pending).
+    pub large: bool,
 }
 
 impl Default for GridMenuOptions {
@@ -32,6 +38,7 @@ impl Default for GridMenuOptions {
             structural: true,
             row_structural: true,
             can_remove_sort: false,
+            large: false,
         }
     }
 }
@@ -44,6 +51,7 @@ impl GridMenuOptions {
             structural,
             row_structural: structural && document.can_edit_row_structure(),
             can_remove_sort: document.active_sort().is_some(),
+            large: !document.can_select_all(),
         }
     }
 }
@@ -196,7 +204,11 @@ pub fn cell_menu(
             options.structural && options.row_structural,
         ),
         MenuEntry::separator(),
-        MenuEntry::item("Select All", run(GridAction::SelectAll), row_count > 0),
+        MenuEntry::item(
+            "Select All",
+            run(GridAction::SelectAll),
+            row_count > 0 && !options.large,
+        ),
     ]
 }
 

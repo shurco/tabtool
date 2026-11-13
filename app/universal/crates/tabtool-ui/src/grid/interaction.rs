@@ -152,7 +152,7 @@ impl Interaction {
         let mut clicked = false;
         if let Some(tap) = self.context.take() {
             clicked = true;
-            apply_context_selection(state, tap);
+            apply_context_selection(state, source, tap);
         }
         if let Some((row, column, modifiers)) = self.cell.take() {
             clicked = true;
@@ -173,6 +173,11 @@ impl Interaction {
             }
         } else if let Some((column, modifiers)) = self.column.take() {
             clicked = true;
+            let row = state
+                .focus
+                .map(|focus| focus.row)
+                .or_else(|| state.selection.rows.first().copied())
+                .unwrap_or(0);
             if resolve_tap(GridElement::ColumnHeader, state.focus, None)
                 == GridTapOutcome::SelectColumn
             {
@@ -183,7 +188,8 @@ impl Interaction {
                     &mut state.anchor,
                 );
             }
-            state.focus = None;
+            state.focus = (source.row_count() > 0)
+                .then_some(GridFocus::new(row.min(source.row_count() - 1), column));
             state.editing = None;
         } else if let Some((row, modifiers)) = self.row.take() {
             clicked = true;
@@ -260,7 +266,7 @@ impl Interaction {
     }
 }
 
-fn apply_context_selection(state: &mut GridState, tap: ContextTap) {
+fn apply_context_selection(state: &mut GridState, source: &dyn RowSource, tap: ContextTap) {
     state.selection =
         context::context_selection(tap.element, tap.row, tap.column, &state.selection);
     state.anchor = match tap.element {
@@ -271,7 +277,15 @@ fn apply_context_selection(state: &mut GridState, tap: ContextTap) {
     state.focus = match tap.element {
         GridElement::Cell => Some(GridFocus::new(tap.row, tap.column)),
         GridElement::RowNumber => Some(GridFocus::new(tap.row, 0)),
-        GridElement::ColumnHeader | GridElement::Corner => None,
+        GridElement::ColumnHeader => {
+            let row = state
+                .focus
+                .map(|focus| focus.row)
+                .unwrap_or(0)
+                .min(source.row_count().saturating_sub(1));
+            (source.row_count() > 0).then_some(GridFocus::new(row, tap.column))
+        }
+        GridElement::Corner => None,
     };
     state.editing = None;
     state.header_editing = None;

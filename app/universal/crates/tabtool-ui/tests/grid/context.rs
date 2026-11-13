@@ -134,11 +134,23 @@ fn the_cell_menu_has_copy_paste_and_select_all() {
 }
 
 #[test]
+fn select_all_is_disabled_for_a_large_document() {
+    let options = GridMenuOptions {
+        large: true,
+        ..GridMenuOptions::default()
+    };
+    let menu = cell_menu(&options, &Default::default(), 100, 3);
+
+    assert!(!enabled(&menu, "Select All"));
+}
+
+#[test]
 fn structural_items_disable_together() {
     let options = GridMenuOptions {
         structural: false,
         row_structural: false,
         can_remove_sort: false,
+        large: false,
     };
     let mut selection: GridSelection = Default::default();
     selection.columns.insert(0);
@@ -209,6 +221,7 @@ fn menu_options_follow_the_document() {
     assert!(options.structural);
     assert!(options.row_structural);
     assert!(!options.can_remove_sort);
+    assert!(!options.large);
 
     let filtered = filtered_document();
     let options = GridMenuOptions::of(&filtered);
@@ -219,6 +232,7 @@ fn menu_options_follow_the_document() {
     let options = GridMenuOptions::of(&large);
     assert!(!options.structural, "large files have no structural edits");
     assert!(!options.row_structural);
+    assert!(options.large);
 
     let loading = Document::new(CsvConfiguration::default());
     let options = GridMenuOptions::of(&loading);
@@ -357,6 +371,22 @@ fn a_context_menu_owns_the_keyboard() {
 
     fixture.key_press(Key::ArrowDown);
     fixture.run();
+    assert!(
+        fixture.take_actions().is_empty(),
+        "arrow keys must stay with the menu"
+    );
+    fixture.key_press_modifiers(egui::Modifiers::COMMAND, Key::A);
+    fixture.run();
+    assert!(
+        fixture.take_actions().is_empty(),
+        "Command+A must stay with the menu"
+    );
+    fixture.key_press(Key::Delete);
+    fixture.run();
+    assert!(
+        fixture.take_actions().is_empty(),
+        "Delete must stay with the menu"
+    );
 
     assert_eq!(
         fixture
@@ -365,9 +395,9 @@ fn a_context_menu_owns_the_keyboard() {
             .focus
             .map(|focus| (focus.row, focus.column)),
         Some((1, 0)),
-        "arrow keys must not move the grid focus behind an open menu"
+        "shortcuts must not move the grid focus behind an open menu"
     );
-    assert!(fixture.take_actions().is_empty());
+    assert_eq!(fixture.selected_rows(), [1].into_iter().collect());
 }
 
 #[test]

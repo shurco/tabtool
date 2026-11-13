@@ -5,10 +5,9 @@
 //! through a [`Clipboard`] supplied by the app, so the UI crate stays free of
 //! platform clipboard code.
 //!
-//! Rows in [`GridAction`] are indexes of the source the grid rendered. A grid
-//! over a filtered presenter therefore needs its caller to translate display
-//! rows into model rows before dispatch; an unfiltered grid passes them
-//! through.
+//! Rows in [`GridAction`] are indexes of the source the grid rendered. This
+//! dispatcher applies them as-is; the document window translates display rows
+//! to model rows before calling it when a filter is active.
 
 use std::collections::BTreeSet;
 
@@ -18,19 +17,38 @@ use tabtool_document::{Document, DocumentError, DocumentPhase, GridSelection};
 use super::GridAction;
 use super::clipboard::Clipboard;
 
+/// What an action asks the caller to do next.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ActionOutcome {
+    /// The document was updated (or the command was a legitimate no-op).
+    Applied,
+    /// Paste had no text because the platform has not delivered it yet.
+    ///
+    /// egui cannot read the clipboard synchronously: a menu-initiated paste
+    /// requests [`egui::ViewportCommand::RequestPaste`] and retries the action
+    /// when the `Event::Paste` arrives. Keyboard paste usually supplies the
+    /// text in the same frame and returns [`Self::Applied`].
+    NeedsPasteText,
+}
+
 /// Applies `action` to `document`.
 ///
 /// Returns [`DocumentError::NotReady`] when the document has no rows or columns
 /// to act on. A command the document refuses for its own reasons (a filtered
 /// row structure, a large file, a copy limit) is a no-op here and reports
 /// through the document's state or [`tabtool_document::DocumentNotice`].
+///
+/// Select All is deliberately disabled for large documents: a [`BTreeSet`] of
+/// every row would cost hundreds of megabytes at millions of rows, so the
+/// caller must offer a range-aware selection first (design §14.18, approval
+/// pending).
 pub fn apply_action(
     document: &mut Document,
     action: GridAction,
     locale: &Locale,
     decimal_separator: &str,
     clipboard: &mut dyn Clipboard,
-) -> Result<(), DocumentError> {
+) -> Result<ActionOutcome, DocumentError> {
     if document.row_source().is_none()
         || matches!(
             document.phase(),
@@ -62,13 +80,21 @@ pub fn apply_action(
             }
         }
         GridAction::Paste => {
-            if let Some(text) = clipboard.paste() {
-                document.paste_tsv(&text, locale, decimal_separator);
-            }
+            let Some(text) = clipboard.paste() else {
+                return Ok(ActionOutcome::NeedsPasteText);
+            };
+            document.paste_tsv(&text, locale, decimal_separator);
         }
-        GridAction::SelectAll => select_all(document),
+        GridAction::SelectAll => {
+            if !document.can_select_all() {
+                // Deliberate difference: a large file has no compact way to
+                // hold "all rows" in the current selection type.
+                return Ok(ActionOutcome::Applied);
+            }
+            select_all(document);
+        }
     }
-    Ok(())
+    Ok(ActionOutcome::Applied)
 }
 
 fn select_all(document: &mut Document) {

@@ -9,7 +9,9 @@ use tabtool_core::{
 use tabtool_document::{
     Document, DocumentError, DocumentNotice, GridSelection as DocumentSelection, UndoAction,
 };
-use tabtool_ui::grid::{Clipboard, GridAction, GridOptions, GridState, apply_action};
+use tabtool_ui::grid::{
+    ActionOutcome, Clipboard, GridAction, GridMenuOptions, GridOptions, GridState, apply_action,
+};
 use tabtool_ui::harness::kittest::Queryable;
 
 use crate::support::{CountingSource, GridFixture, sample_table};
@@ -67,7 +69,7 @@ fn run(
     document: &mut Document,
     action: GridAction,
     clipboard: &mut FakeClipboard,
-) -> Result<(), DocumentError> {
+) -> Result<ActionOutcome, DocumentError> {
     apply_action(document, action, &locale(), ".", clipboard)
 }
 
@@ -406,20 +408,22 @@ fn paste_keeps_an_empty_string_as_one_cell() {
     let mut document = document("a,b\n");
     let mut clipboard = FakeClipboard::with_text("");
 
-    run(&mut document, GridAction::Paste, &mut clipboard).expect("paste");
+    let outcome = run(&mut document, GridAction::Paste, &mut clipboard).expect("paste");
 
+    assert_eq!(outcome, ActionOutcome::Applied);
     assert_eq!(document.table().expect("table").row_count(), 2);
     assert_eq!(document.selection().rows, [1].into_iter().collect());
 }
 
 #[test]
-fn paste_ignores_an_empty_clipboard() {
+fn paste_without_text_asks_for_the_platform_paste() {
     let mut document = document("a,b\n");
     let mut clipboard = FakeClipboard::default();
     let revision = document.revision();
 
-    run(&mut document, GridAction::Paste, &mut clipboard).expect("paste");
+    let outcome = run(&mut document, GridAction::Paste, &mut clipboard).expect("paste");
 
+    assert_eq!(outcome, ActionOutcome::NeedsPasteText);
     assert_eq!(document.revision(), revision);
     assert_eq!(document.table().expect("table").row_count(), 1);
 }
@@ -455,6 +459,20 @@ fn select_all_selects_only_the_visible_rows() {
     run(&mut document, GridAction::SelectAll, &mut clipboard).expect("select all");
 
     assert_eq!(document.selection().rows, [0, 2].into_iter().collect());
+}
+
+#[test]
+fn select_all_is_disabled_for_a_large_document() {
+    let (_directory, mut document) = large_document(340_000);
+    let mut clipboard = FakeClipboard::default();
+
+    let outcome = run(&mut document, GridAction::SelectAll, &mut clipboard).expect("select all");
+
+    assert_eq!(outcome, ActionOutcome::Applied);
+    assert!(
+        document.selection().rows.is_empty(),
+        "a large document must not materialize every row"
+    );
 }
 
 #[test]
@@ -602,6 +620,55 @@ fn command_arrows_keep_the_focus_in_a_wide_grid() {
     fixture.key_press_modifiers(Modifiers::COMMAND, Key::ArrowLeft);
     fixture.run();
     assert_eq!(focus(&fixture), Some((0, 0)));
+}
+
+#[test]
+fn a_header_click_keeps_a_cell_focus_for_shortcuts() {
+    let source = sample_table();
+    let mut fixture = grid(&source);
+    fixture.run();
+    fixture.get_by_label("Amount").click();
+    fixture.run();
+
+    assert_eq!(focus(&fixture), Some((0, 1)));
+    assert_eq!(fixture.selected_columns(), [1].into_iter().collect());
+    fixture.take_actions();
+
+    fixture.key_press_modifiers(Modifiers::COMMAND, Key::C);
+    fixture.run();
+    assert_eq!(fixture.take_actions(), vec![GridAction::Copy]);
+
+    fixture.key_press(Key::Delete);
+    fixture.run();
+    assert_eq!(fixture.take_actions(), vec![GridAction::DeleteSelection]);
+
+    fixture.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    fixture.run();
+    assert_eq!(fixture.take_actions(), vec![GridAction::SelectAll]);
+    assert_eq!(fixture.selected_rows(), [0, 1, 2, 3].into_iter().collect());
+}
+
+#[test]
+fn command_a_does_nothing_for_a_large_document() {
+    let source = CountingSource::new(100, 3);
+    let options = GridOptions {
+        menu: GridMenuOptions {
+            large: true,
+            ..GridMenuOptions::default()
+        },
+        ..GridOptions::default()
+    };
+    let mut fixture = GridFixture::new(&source, GridState::default(), options, [640.0, 400.0]);
+    fixture.run();
+    fixture.get_by_label("r0c0").click();
+    fixture.run();
+    fixture.take_actions();
+
+    fixture.key_press_modifiers(Modifiers::COMMAND, Key::A);
+    fixture.run();
+
+    assert!(fixture.take_actions().is_empty());
+    assert_eq!(fixture.selected_rows(), [0].into_iter().collect());
 }
 
 #[test]

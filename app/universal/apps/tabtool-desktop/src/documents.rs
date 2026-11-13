@@ -122,11 +122,6 @@ impl DocumentWindow {
         self.lock().pending_actions.clone()
     }
 
-    /// The grid state shared by the window's grid and commands.
-    pub fn grid(&self) -> GridState {
-        self.lock().grid.clone()
-    }
-
     /// Updates the interface language and the global View settings.
     pub fn set_chrome(&self, language: Language, show_format_bar: bool, has_recent: bool) {
         let mut state = self.lock();

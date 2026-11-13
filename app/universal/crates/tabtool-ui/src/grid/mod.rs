@@ -55,7 +55,7 @@ use egui::Ui;
 use tabtool_core::{RowSource, SortDirection};
 
 pub use clipboard::Clipboard;
-pub use commands::apply_action;
+pub use commands::{ActionOutcome, apply_action};
 pub use context::{GridMenuOptions, MenuCommand, MenuEntry, cell_menu, header_menu, row_menu};
 pub use drag::{
     ColumnDrag, RowDrag, column_drop_action, column_slot_at, row_drop_action, row_slot_at,

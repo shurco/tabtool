@@ -5,8 +5,8 @@ use std::collections::BTreeSet;
 use egui::{Key, pos2};
 use tabtool_core::{CsvTable, RowSource};
 use tabtool_ui::grid::{
-    GridAction, GridGeometry, GridOptions, GridState, RowDrag, column_drop_action, column_slot_at,
-    row_drop_action, row_slot_at,
+    GridAction, GridGeometry, GridMenuOptions, GridOptions, GridPresenter, GridState, RowDrag,
+    column_drop_action, column_slot_at, row_drop_action, row_slot_at,
 };
 use tabtool_ui::harness::kittest::Queryable;
 
@@ -521,7 +521,103 @@ fn the_header_resize_handle_does_not_start_a_column_drag() {
 }
 
 #[test]
-fn dragging_uses_display_rows_and_the_source_widths_stay_with_the_column() {
+fn a_filtered_grid_does_not_start_a_row_drag() {
+    let source = sample_table();
+    let options = GridOptions {
+        menu: GridMenuOptions {
+            row_structural: false,
+            ..GridMenuOptions::default()
+        },
+        ..GridOptions::default()
+    };
+    let mut fixture = GridFixture::new(&source, GridState::default(), options, [640.0, 400.0]);
+    fixture.run();
+    let alice = fixture.get_by_label("Alice").rect();
+    let dave = fixture.get_by_label("Dave").rect();
+    let start = pos2(alice.center().x, alice.center().y);
+    let end = pos2(alice.center().x, dave.max.y - 4.0);
+
+    fixture.hover_at(start);
+    fixture.run();
+    fixture.drag_at(start);
+    fixture.run();
+    fixture.hover_at(end);
+    fixture.run();
+    fixture.drop_at(end);
+    fixture.run();
+
+    assert!(fixture.state.borrow().row_drag.is_none());
+    assert!(fixture.take_actions().is_empty());
+}
+
+#[test]
+fn a_large_grid_does_not_start_a_column_drag() {
+    let source = sample_table();
+    let options = GridOptions {
+        menu: GridMenuOptions {
+            structural: false,
+            row_structural: false,
+            ..GridMenuOptions::default()
+        },
+        ..GridOptions::default()
+    };
+    let mut fixture = GridFixture::new(&source, GridState::default(), options, [640.0, 400.0]);
+    fixture.run();
+    let name = fixture.get_by_label("Name").rect();
+    let note = fixture.get_by_label("Note").rect();
+    let start = pos2(name.center().x, name.center().y);
+    let end = pos2(note.max.x - 2.0, note.center().y);
+
+    fixture.hover_at(start);
+    fixture.run();
+    fixture.drag_at(start);
+    fixture.run();
+    fixture.hover_at(end);
+    fixture.run();
+    fixture.drop_at(end);
+    fixture.run();
+
+    assert!(fixture.state.borrow().column_drag.is_none());
+    assert!(fixture.take_actions().is_empty());
+}
+
+#[test]
+fn a_drag_over_a_filtered_presenter_carries_display_rows() {
+    let source = CountingSource::new(4, 1);
+    let visible = [0, 2];
+    let presenter = GridPresenter::new(&source, Some(&visible));
+    let mut fixture = GridFixture::new(
+        &presenter,
+        GridState::default(),
+        GridOptions::default(),
+        [640.0, 400.0],
+    );
+    fixture.run();
+    let row = fixture.get_by_label("r2c0").rect();
+    let start = pos2(row.center().x, row.center().y);
+    let end = pos2(row.center().x, row.max.y - 2.0);
+
+    fixture.hover_at(start);
+    fixture.run();
+    fixture.drag_at(start);
+    fixture.run();
+    fixture.hover_at(end);
+    fixture.run();
+    fixture.drop_at(end);
+    fixture.run();
+
+    assert_eq!(
+        fixture.take_actions(),
+        vec![GridAction::MoveRows {
+            from: [1].into_iter().collect(),
+            to: 2,
+        }],
+        "a drag over a presenter carries display rows"
+    );
+}
+
+#[test]
+fn column_widths_stay_with_the_column_identity_after_a_reorder() {
     // Widths are keyed by ColumnId, so a reordered source keeps them attached.
     let source = sample_table();
     let ids = source.column_ids();

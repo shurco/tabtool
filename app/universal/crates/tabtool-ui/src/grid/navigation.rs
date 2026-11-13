@@ -66,7 +66,7 @@ pub(crate) fn handle_navigation(
         actions.push(GridAction::DeleteSelection);
     }
 
-    if ctx.input_mut(|input| input.consume_key(Modifiers::COMMAND, Key::A)) {
+    if !options.menu.large && ctx.input_mut(|input| input.consume_key(Modifiers::COMMAND, Key::A)) {
         state.selection.rows = (0..row_count).collect();
         state.selection.columns.clear();
         state.anchor = None;

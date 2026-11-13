@@ -209,6 +209,15 @@ impl GridState {
         DocumentSelection::from(&self.selection)
     }
 
+    /// Gives the grid a cell focus and requests it on the next frame.
+    ///
+    /// Callers that remap a focus after a structural change use this so the
+    /// keyboard follows the moved row.
+    pub fn focus_cell(&mut self, focus: Option<GridFocus>) {
+        self.focus = focus;
+        self.pending_focus = focus;
+    }
+
     /// Starts editing a cell with its current text and the caret at the end.
     pub fn start_editing(&mut self, row: usize, column: usize, text: impl Into<String>) {
         self.selection

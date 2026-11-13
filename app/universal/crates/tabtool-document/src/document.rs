@@ -418,6 +418,16 @@ impl Document {
         !self.is_large_mode() && self.can_edit_content()
     }
 
+    /// Whether Select All can represent every row.
+    ///
+    /// Large files cannot: [`GridSelection`] holds one index per row, and a
+    /// multi-gigabyte file would need millions of entries. A large document
+    /// deliberately reports `false`; the UI disables the command instead of
+    /// freezing or running out of memory (design §14.18, approval pending).
+    pub fn can_select_all(&self) -> bool {
+        !self.is_large_mode()
+    }
+
     /// The one-shot message the window should present, if any.
     ///
     /// A refused large-file edit raises [`DocumentNotice::EditRejected`].

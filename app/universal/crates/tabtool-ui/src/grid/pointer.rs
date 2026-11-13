@@ -84,7 +84,7 @@ pub(crate) fn interact_cells(
                 interaction.menu(command);
             }
         }
-        if response.drag_started() {
+        if options.menu.row_structural && response.drag_started() {
             interaction.begin_row_drag(cell.row, cell.column);
         }
         if (response.drag_started() || response.dragged())
@@ -171,7 +171,7 @@ pub(crate) fn interact_headers(
                     .press_origin()
                     .is_some_and(|pointer| pointer.x >= rect.right() - RESIZE_HANDLE_WIDTH)
             });
-            if !on_handle {
+            if !on_handle && options.menu.structural {
                 interaction.begin_column_drag(column);
             }
         }
@@ -277,7 +277,7 @@ pub(crate) fn interact_gutter(
                 interaction.menu(command);
             }
         }
-        if response.drag_started() {
+        if options.menu.row_structural && response.drag_started() {
             interaction.begin_row_drag(row, 0);
         }
         if (response.drag_started() || response.dragged())
