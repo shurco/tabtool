@@ -20,6 +20,7 @@
 //! dev-dependency.
 
 pub mod fonts;
+pub mod grid;
 #[cfg(feature = "test-support")]
 pub mod harness;
 pub mod theme;

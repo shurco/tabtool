@@ -13,6 +13,7 @@ test-support = ["dep:egui_kittest"]
 
 [dependencies]
 egui.workspace = true
+tabtool-core = { path = "../tabtool-core" }
 egui_kittest = { workspace = true, optional = true, default-features = false, features = [
     "snapshot",
     "wgpu",
