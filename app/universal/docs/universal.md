@@ -391,9 +391,10 @@ raises `DocumentNotice::EditRejected` with the typed error.
 - `set_decimal_mark` converts only cells that are numeric by the old mark,
   preserving leading zeros and exponents, and updates the configuration in one
   `ChangeFormat` step. `set_header_enabled` moves the first row across the
-  header boundary, with one `ToggleHeader` step; it enables headers without
-  consuming the first data row. Renaming a column on a headerless table does
-  the same.
+  header boundary with one `ToggleHeader` step: enabling makes row 0 the
+  header and removes it from the data rows; disabling puts the header back as
+  row 0. Renaming a column on a headerless table instead turns header mode on
+  with generated names and keeps every row as a data row.
 - `plan_revert` answers `Revert`, `NeedsConfirmation` or `Unavailable`.
   `revert_to_saved` re-reads the current path with the current configuration,
   records one `RevertToSaved` step and never writes the file. A failed read or
@@ -410,8 +411,9 @@ The `RowFilterModel` mirrors the Swift filter state machine:
 - Apply-all combines every enabled criterion with AND. Apply-one uses only
   that criterion and enables it even when its checkbox was off. Clear removes
   the filter and resets the draft to one empty row. Add inserts after a
-  criterion; remove always keeps one row. Criteria without a column are filled
-  from the document's column set.
+  criterion; remove always keeps one row. `fill_missing_columns` fills criteria
+  without a column from a supplied column id; the filter bar must call it when
+  it adds a row, because the document's apply path does not.
 - Evaluation uses the document decimal mark for numeric comparisons and a
   fixed `en-US` locale for text, matching Foundation's locale-independent
   case-insensitive matching. The crate has no system locale.
@@ -427,19 +429,22 @@ The `RowFilterModel` mirrors the Swift filter state machine:
   also blocks paste, which inserts rows. Column edits and column deletion stay
   available. Sorting still applies to the whole table and then refreshes the
   visible set. Applying or refreshing trims the selection to visible rows.
-- Export reads `visible_table`, which contains only the visible rows with
-  their edits; without a filter it is the whole table.
+- Export is UI work: the crate exposes `visible_table`, which contains only
+  the visible rows with their edits, or the whole table without a filter. The
+  export writer and its format options are Plan 4–5 work.
 - A large document cannot filter and cannot show the filter bar.
 
 ### Saves
 
 - Dirty is revision-based, matching the Rust design: `save` records
-  `saved_revision = revision`, and any later content, format, sort or
-  file-binding change bumps the revision. Undoing back to the saved text still
-  reports dirty. The document never re-reads the file to compare bytes, so a
-  change made outside the document is not detected here; last writer wins.
-  A large document is dirty while its overlay holds an edit, and becomes clean
-  when an edit is written back to the file's own text.
+  `saved_revision = revision`, and any later content, format, structural or
+  file-binding change bumps the revision. A sort that reorders rows also bumps
+  it; a sort that only sets or changes the arrow without reordering records no
+  undo step and does not bump it. Undoing back to the saved text still reports
+  dirty. The document never re-reads the file to compare bytes, so a change
+  made outside the document is not detected here; last writer wins. A large
+  document is dirty while its overlay holds an edit, and becomes clean when an
+  edit is written back to the file's own text.
 - `can_save` requires a path, a table, no re-read in flight, a writable phase
   and no write issue. `save` writes the current path; `save_as` writes the new
   path, then binds it. A failed write leaves the previous file, path and dirty
@@ -457,8 +462,11 @@ The `RowFilterModel` mirrors the Swift filter state machine:
 
 - `uses_large_mode(size, threshold)` opens a file large when
   `size >= threshold`; `open_file` routes by the file size, and a file below
-  the threshold stays in memory. `open_large` on a below-threshold file
-  returns `NotReady` without changing the document.
+  the threshold stays in memory. `open_large` maps and checks the format first;
+  a successful below-threshold check returns `NotReady` without installing the
+  source and leaves the content unchanged, but a mapping or format failure
+  still publishes `UnreadableFile`/`ReadFailed` and binds the path. Use
+  `open_file` for size routing.
 - Opening maps the file, checks an explicit format or sniffs the head, and
   starts the indexer on its worker thread (8 MiB steps, 100 ms progress
   reports). Rows are readable while the index grows; cell editing requires
@@ -512,8 +520,9 @@ The `RowFilterModel` mirrors the Swift filter state machine:
   target mapping until it is dropped.
 - Edits made during the save are not possible: the document releases the
   mapping when the save starts, so rows are unavailable while `Saving`. This
-  is the Windows-safe behavior the design pins in §7.1. The overlay from
-  before the save is preserved and adopted.
+  is the Windows-safe behavior the design pins in §7.1. On adoption the
+  pre-save overlay is carried over with the edits that were written removed;
+  on cancel or pre-install failure the full pre-save overlay is restored.
 
 ### What the UI still owns
 
@@ -548,8 +557,10 @@ renders nothing.
   `open_large` and replaces it. The in-memory no-op keeps a late duplicate load
   from replacing edits. A caller that opens a different file starts a new
   `Document`.
-- `open_large` on a below-threshold file returns `NotReady` without touching
-  the document. Use `open_file` for size routing.
+- `open_large` on a below-threshold file maps and checks it before returning
+  `NotReady`; the successful case leaves the content unchanged, but a read or
+  format failure changes the phase and binds the path. Use `open_file` for size
+  routing.
 - Large copy has no distinct "nothing selected" error: every refusal is
   `CsvError::RowNotEditable`, and only the 1,000,000-cell limit also raises
   `CopyLimitExceeded`.

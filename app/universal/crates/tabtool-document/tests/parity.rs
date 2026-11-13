@@ -146,7 +146,6 @@ const PORTED: &[SwiftFile] = &[
             "snapshotOffMainActorReturnsLoadedContent",
             "snapshotOffMainActorSeesCellChange",
             "snapshotOffMainActorFollowsUndo",
-            "snapshotOffMainActorThrowsValidationError",
             "snapshotOffMainActorThrowsNotReadyBeforeLoad",
             "snapshotOffMainActorThrowsNotReadyAfterReadFailure",
             "serializationOffMainActorMatchesEncodedData",
@@ -170,8 +169,13 @@ const PORTED: &[SwiftFile] = &[
                 tests: &["a_snapshot_taken_after_undo_sees_the_previous_text"],
             },
             RustTarget {
-                path: "tests/saving.rs",
-                tests: &["save_is_refused_while_a_reread_is_in_flight"],
+                path: "tests/snapshot.rs",
+                tests: &[
+                    "snapshot_before_load_is_not_ready",
+                    "snapshot_after_an_unreadable_file_is_not_ready",
+                    "encoded_data_round_trips_through_the_snapshot",
+                    "encoded_data_reports_the_write_issue_for_ambiguous_output",
+                ],
             },
         ],
     },
@@ -709,7 +713,7 @@ const WAIVED: &[Waived] = &[
         reason: "the field editor is the UI's; export reads the committed table",
     },
     Waived {
-        case: "CSVDocumentFilteringTests.changesOfTheAppliedFilterRepublishesFromTheDocument",
+        case: "CSVDocumentFilteringTests.changesOfTheAppliedFilterRepublishFromTheDocument",
         reason: "document-change notifications are UI; the filter state itself is tested",
     },
     Waived {
@@ -773,7 +777,11 @@ const GAPS: &[Gap] = &[
         reason: "the Rust load is synchronous; the no-partial-publish invariant is covered by tests/load.rs",
     },
     Gap {
-        case: "CSVDocumentTests.failedDataOnlyLoadKeepsSuppliedBytes",
+        case: "CSVDocumentConcurrencyTests.snapshotOffMainActorThrowsValidationError",
+        reason: "Rust snapshot() is infallible for a loaded table; encoded_data applies the write gate and returns the typed issue",
+    },
+    Gap {
+        case: "CSVDocumentConcurrencyTests.failedDataOnlyLoadKeepsSuppliedBytes",
         reason: "the document does not retain supplied bytes; the caller can call load_from_bytes again with the same bytes",
     },
     Gap {
@@ -820,6 +828,42 @@ fn read(path: &Path) -> String {
 fn qualified(file: &str, case: &str) -> String {
     let name = file.rsplit('/').next().unwrap_or(file);
     format!("{name}.{case}")
+}
+
+/// Resolves a Swift test file in either Apple test target.
+fn swift_test_file(name: &str) -> Option<PathBuf> {
+    let apple = apple_dir();
+    [
+        apple.join("TabToolTests").join(name),
+        apple.join("TabToolKit/Tests/TabToolKitTests").join(name),
+    ]
+    .into_iter()
+    .find(|path| path.is_file())
+}
+
+/// Asserts that a waiver or gap entry names a real Swift file or case.
+///
+/// Every entry points under `app/apple`; none lives outside this checkout, so
+/// no absolute path is needed here.
+fn assert_swift_case_exists(entry: &str) {
+    if entry.ends_with(".swift") {
+        assert!(
+            swift_test_file(entry).is_some(),
+            "{entry} is missing from the Apple test targets"
+        );
+        return;
+    }
+    let (file, case) = entry
+        .rsplit_once('.')
+        .unwrap_or_else(|| panic!("{entry} is not a qualified Swift case"));
+    let name = format!("{file}.swift");
+    let path = swift_test_file(&name).unwrap_or_else(|| panic!("{name} is missing"));
+    let source = read(&path);
+    assert!(
+        source.contains(&format!("func {case}(")),
+        "{}: Swift case {case} is missing",
+        path.display()
+    );
 }
 
 /// Every ported case has its Rust test, and the Swift case exists on disk.
@@ -931,6 +975,25 @@ fn waivers_and_gaps_are_documented() {
             "{} is both a gap and claimed as ported",
             entry.case
         );
+    }
+}
+
+/// Waived and gap entries must still name real Swift files and cases.
+#[test]
+fn waived_and_gap_cases_exist_in_the_apple_tree() {
+    let apple = apple_dir();
+    if !apple.is_dir() {
+        eprintln!(
+            "skipping the Swift waiver check: {} is absent",
+            apple.display()
+        );
+        return;
+    }
+    for entry in WAIVED {
+        assert_swift_case_exists(entry.case);
+    }
+    for entry in GAPS {
+        assert_swift_case_exists(entry.case);
     }
 }
 
