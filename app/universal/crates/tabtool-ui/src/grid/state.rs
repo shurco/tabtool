@@ -1,84 +1,16 @@
-//! Persistent grid state, display options and the row-source presenter.
+//! Persistent grid state, header names and text alignment.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use egui::{Rect, Vec2};
-use tabtool_core::{ColumnId, RowSource, SortDirection, column_name, is_numeric};
+use tabtool_core::{ColumnId, RowSource, column_name, is_numeric};
 use tabtool_document::GridSelection as DocumentSelection;
 
-use crate::grid::editor::CellEditor;
+use crate::grid::drag::{ColumnDrag, RowDrag};
+use crate::grid::editor::{CellEditor, HeaderEditor};
 use crate::grid::geometry::DEFAULT_COLUMN_WIDTH;
+use crate::grid::options::GridOptions;
 use crate::grid::selection::{GridAnchor, GridFocus, GridSelection};
-
-/// The sort the header marks with an arrow.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct SortSpec {
-    /// The sorted visual column.
-    pub column: usize,
-    /// The sort direction.
-    pub direction: SortDirection,
-}
-
-/// The grid presentation settings.
-#[derive(Clone, Debug, PartialEq)]
-pub struct GridOptions {
-    /// The height of every data row.
-    pub row_height: f32,
-    /// Whether odd rows use a tinted background.
-    pub alternating_rows: bool,
-    /// Whether the row-number gutter is visible.
-    pub shows_row_numbers: bool,
-    /// Physical rows hidden above display row zero (large-mode headers).
-    ///
-    /// This only shifts the row-number gutter. Cell and selection indexes stay
-    /// display indexes because a large source adds its own offset inside
-    /// `RowSource::cell`; adding it again here would double it.
-    pub header_offset: usize,
-    /// Whether cells can enter the editor.
-    pub editable: bool,
-    /// The document's decimal mark, used for numeric right alignment.
-    pub decimal_mark: String,
-    /// The width assigned to a column that has never been resized.
-    pub default_column_width: f32,
-    /// The narrowest a column may be resized to.
-    pub min_column_width: f32,
-    /// The content cap: the widest a column may be resized to. Infinite by
-    /// default, matching the macOS grid.
-    pub max_column_width: f32,
-    /// The sort shown with an arrow in the header.
-    pub sort: Option<SortSpec>,
-}
-
-impl Default for GridOptions {
-    fn default() -> Self {
-        Self {
-            row_height: 24.0,
-            alternating_rows: false,
-            shows_row_numbers: true,
-            header_offset: 0,
-            editable: true,
-            decimal_mark: ".".to_string(),
-            default_column_width: DEFAULT_COLUMN_WIDTH,
-            min_column_width: crate::grid::geometry::MIN_COLUMN_WIDTH,
-            max_column_width: f32::INFINITY,
-            sort: None,
-        }
-    }
-}
-
-impl GridOptions {
-    /// Whether the grid draws horizontal separators.
-    ///
-    /// Alternating backgrounds replace them, matching the macOS appearance.
-    pub fn shows_horizontal_lines(&self) -> bool {
-        !self.alternating_rows
-    }
-
-    /// The physical row a display row maps to.
-    pub fn physical_row(&self, display_row: usize) -> usize {
-        display_row.saturating_add(self.header_offset)
-    }
-}
 
 /// The grid's persistent state.
 ///
@@ -90,6 +22,12 @@ pub struct GridState {
     pub selection: GridSelection,
     /// The cell being edited, if any.
     pub editing: Option<CellEditor>,
+    /// The column header being renamed, if any.
+    pub header_editing: Option<HeaderEditor>,
+    /// The column drag in flight, if any.
+    pub column_drag: Option<ColumnDrag>,
+    /// The row drag in flight, if any.
+    pub row_drag: Option<RowDrag>,
     /// The width of every column, keyed by its stable identity so a column
     /// move does not shift another column's width.
     pub widths: BTreeMap<ColumnId, f32>,
@@ -103,8 +41,16 @@ pub struct GridState {
     pub focus: Option<GridFocus>,
     /// The row or column a Shift click extends from.
     pub anchor: Option<GridAnchor>,
+    /// Whether the grid owned keyboard focus at the end of the last frame.
+    pub(crate) grid_has_focus: bool,
+    /// A focus target to keep requesting until the scrolled-to cell exists.
+    pub(crate) pending_focus: Option<GridFocus>,
+    /// Whether a grid context menu was open at the end of the last frame.
+    pub(crate) menu_open: bool,
     /// Set when a newly started editor must take keyboard focus.
     pub(crate) pending_editor_focus: bool,
+    /// Set when the header rename editor must take keyboard focus.
+    pub(crate) pending_header_focus: bool,
     /// Whether an IME preedit is active in the cell editor.
     pub(crate) ime_composing: bool,
     /// One-shot guard so an IME commit's Enter never commits the cell.
@@ -116,13 +62,20 @@ impl Default for GridState {
         Self {
             selection: GridSelection::default(),
             editing: None,
+            header_editing: None,
+            column_drag: None,
+            row_drag: None,
             widths: BTreeMap::new(),
             scroll: Vec2::ZERO,
             viewport: Rect::ZERO,
             hovered: None,
             focus: None,
             anchor: None,
+            grid_has_focus: false,
+            pending_focus: None,
+            menu_open: false,
             pending_editor_focus: false,
+            pending_header_focus: false,
             ime_composing: false,
             ime_commit_guard: false,
         }
@@ -138,6 +91,35 @@ impl GridState {
         let rows = source.row_count();
         let columns = source.column_count();
         let column_ids = source.column_ids();
+        if self
+            .header_editing
+            .as_ref()
+            .is_some_and(|editing| !column_ids.contains(&editing.column))
+        {
+            self.header_editing = None;
+        }
+        if self
+            .column_drag
+            .as_ref()
+            .is_some_and(|drag| !column_ids.contains(&drag.column))
+        {
+            self.column_drag = None;
+        }
+        if let Some(drag) = &mut self.column_drag {
+            drag.target = drag.target.min(columns);
+        }
+        if self
+            .row_drag
+            .as_ref()
+            .is_some_and(|drag| drag.rows.iter().any(|row| *row >= rows))
+        {
+            self.row_drag = None;
+        }
+        if let Some(drag) = &mut self.row_drag
+            && let Some(target) = drag.target
+        {
+            drag.target = Some(target.min(rows));
+        }
         self.widths.retain(|id, _| column_ids.contains(id));
         for id in column_ids {
             let width = self
@@ -161,6 +143,12 @@ impl GridState {
             .is_some_and(|focus| focus.row >= rows || focus.column >= columns)
         {
             self.focus = None;
+        }
+        if self
+            .pending_focus
+            .is_some_and(|focus| focus.row >= rows || focus.column >= columns)
+        {
+            self.pending_focus = None;
         }
         if self
             .hovered
@@ -230,6 +218,29 @@ impl GridState {
         self.pending_editor_focus = true;
         self.ime_composing = false;
         self.ime_commit_guard = false;
+        self.header_editing = None;
+        self.pending_header_focus = false;
+    }
+
+    /// Starts renaming `column` with its current header text.
+    ///
+    /// The editor is keyed by the column's identity, so a reorder during the
+    /// edit still renames the same column. Returns `false` when the column does
+    /// not exist.
+    pub fn start_renaming(&mut self, source: &dyn RowSource, column: usize) -> bool {
+        let Some(id) = source.column_ids().get(column).copied() else {
+            return false;
+        };
+        self.header_editing = Some(HeaderEditor {
+            column: id,
+            text: header_for(source.headers().as_deref(), column),
+        });
+        self.pending_header_focus = true;
+        self.ime_composing = false;
+        self.ime_commit_guard = false;
+        self.editing = None;
+        self.pending_editor_focus = false;
+        true
     }
 }
 
@@ -263,116 +274,5 @@ impl CellAlignment {
         } else {
             Self::Left
         }
-    }
-}
-
-/// A filtered, read-only projection of a [`RowSource`].
-///
-/// With `visible_rows` the grid shows only those rows; row arguments are then
-/// display indexes while the source keeps model indexes. Row numbers in the
-/// grid are display numbers (`1..visible row count`), not model numbers. The
-/// presenter also implements [`RowSource`], so a filtered view can be handed to
-/// the grid directly.
-#[derive(Clone, Copy)]
-pub struct GridPresenter<'a> {
-    /// The underlying rows.
-    pub source: &'a dyn RowSource,
-    /// Ascending model indexes of the displayed rows, or `None` for all rows.
-    pub visible_rows: Option<&'a [usize]>,
-}
-
-impl<'a> GridPresenter<'a> {
-    /// Projects `source`, optionally through `visible_rows`.
-    pub fn new(source: &'a dyn RowSource, visible_rows: Option<&'a [usize]>) -> Self {
-        Self {
-            source,
-            visible_rows,
-        }
-    }
-
-    /// The number of displayed rows.
-    pub fn row_count(&self) -> usize {
-        self.visible_rows
-            .map_or_else(|| self.source.row_count(), <[usize]>::len)
-    }
-
-    /// The number of columns.
-    pub fn column_count(&self) -> usize {
-        self.source.column_count()
-    }
-
-    /// The header of `index`, or a generated A, B, … name without headers.
-    pub fn header(&self, index: usize) -> String {
-        if index >= self.column_count() {
-            return String::new();
-        }
-        let headers = self.source.headers();
-        header_for(headers.as_deref(), index)
-    }
-
-    /// The text of a display cell.
-    pub fn cell(&self, row: usize, column: usize) -> String {
-        self.model_row(row)
-            .map(|model_row| self.source.cell(model_row, column))
-            .unwrap_or_default()
-    }
-
-    /// Whether a display cell is numeric and therefore right-aligned.
-    pub fn alignment(&self, row: usize, column: usize, decimal_mark: &str) -> CellAlignment {
-        CellAlignment::of(&self.cell(row, column), decimal_mark)
-    }
-
-    /// The model row shown at display row `row`.
-    pub fn model_row(&self, row: usize) -> Option<usize> {
-        match self.visible_rows {
-            Some(visible_rows) => visible_rows
-                .get(row)
-                .copied()
-                .filter(|model_row| *model_row < self.source.row_count()),
-            None if row < self.source.row_count() => Some(row),
-            None => None,
-        }
-    }
-
-    /// The display row of model row `row`, or `None` when it is hidden.
-    pub fn display_row(&self, row: usize) -> Option<usize> {
-        let Some(visible_rows) = self.visible_rows else {
-            return (row < self.source.row_count()).then_some(row);
-        };
-        visible_rows.binary_search(&row).ok()
-    }
-
-    /// The model rows of `rows`, dropping hidden ones.
-    pub fn model_rows(&self, rows: &BTreeSet<usize>) -> BTreeSet<usize> {
-        rows.iter().filter_map(|row| self.model_row(*row)).collect()
-    }
-
-    /// The display rows of model `rows`, dropping hidden ones.
-    pub fn display_rows(&self, rows: &BTreeSet<usize>) -> BTreeSet<usize> {
-        rows.iter()
-            .filter_map(|row| self.display_row(*row))
-            .collect()
-    }
-}
-
-impl RowSource for GridPresenter<'_> {
-    fn row_count(&self) -> usize {
-        GridPresenter::row_count(self)
-    }
-
-    fn column_count(&self) -> usize {
-        GridPresenter::column_count(self)
-    }
-
-    fn column_ids(&self) -> Vec<ColumnId> {
-        self.source.column_ids()
-    }
-
-    fn headers(&self) -> Option<Vec<String>> {
-        self.source.headers()
-    }
-
-    fn cell(&self, row: usize, column: usize) -> String {
-        GridPresenter::cell(self, row, column)
     }
 }

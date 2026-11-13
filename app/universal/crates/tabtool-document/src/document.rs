@@ -408,6 +408,16 @@ impl Document {
         }
     }
 
+    /// Whether rows and columns can be added, removed, moved, sorted or
+    /// renamed.
+    ///
+    /// Those commands need the in-memory table. Large files edit cells through
+    /// their overlay; a filtered view locks row structure separately through
+    /// [`Document::can_edit_row_structure`].
+    pub fn can_edit_structure(&self) -> bool {
+        !self.is_large_mode() && self.can_edit_content()
+    }
+
     /// The one-shot message the window should present, if any.
     ///
     /// A refused large-file edit raises [`DocumentNotice::EditRejected`].

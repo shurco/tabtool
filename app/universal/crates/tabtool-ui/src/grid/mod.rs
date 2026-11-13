@@ -20,13 +20,31 @@
 //! maps display rows to model rows. Row numbers in a filtered grid are display
 //! numbers (`1..visible row count`), not model numbers, and
 //! [`GridOptions::header_offset`] still applies on top of them.
+//!
+//! # Interactions
+//!
+//! Header, row and cell context menus are built as data first
+//! ([`header_menu`], [`row_menu`], [`cell_menu`]) from the capabilities in
+//! [`GridOptions::menu`], then drawn by the render pass. A header drag reorders
+//! one column by identity; a row drag moves the selected display rows and keeps
+//! a TSV payload for an external drop target. A drop outside the grid is
+//! ignored. [`apply_action`] is the only document entry point; copy and paste go
+//! through a [`Clipboard`] supplied by the app.
 
 mod chrome;
+mod clipboard;
+mod commands;
+mod context;
+mod drag;
 mod editor;
 mod geometry;
+mod interaction;
 mod keyboard;
+mod navigation;
+mod options;
 mod paint;
 mod pointer;
+mod presenter;
 mod render;
 mod selection;
 mod state;
@@ -36,16 +54,24 @@ use std::collections::BTreeSet;
 use egui::Ui;
 use tabtool_core::{RowSource, SortDirection};
 
-pub use editor::CellEditor;
+pub use clipboard::Clipboard;
+pub use commands::apply_action;
+pub use context::{GridMenuOptions, MenuCommand, MenuEntry, cell_menu, header_menu, row_menu};
+pub use drag::{
+    ColumnDrag, RowDrag, column_drop_action, column_slot_at, row_drop_action, row_slot_at,
+};
+pub use editor::{CellEditor, HeaderEditor};
 pub use geometry::{
     COLUMN_OVERSCAN, DEFAULT_COLUMN_WIDTH, GUTTER_WIDTH, GridGeometry, HEADER_HEIGHT,
     MIN_COLUMN_WIDTH, RESIZE_HANDLE_WIDTH, ROW_OVERSCAN, SORT_ARROW_WIDTH, gutter_width,
 };
 pub use keyboard::{EditorKeyAction, MoveDirection};
+pub use options::{GridOptions, SortSpec};
+pub use presenter::GridPresenter;
 pub use selection::{
     GridAnchor, GridElement, GridFocus, GridSelection, GridTapOutcome, move_focus, resolve_tap,
 };
-pub use state::{CellAlignment, GridOptions, GridPresenter, GridState, SortSpec};
+pub use state::{CellAlignment, GridState};
 
 /// A command the grid asks its owner to apply.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -76,11 +102,12 @@ pub enum GridAction {
         /// Destination display row.
         to: usize,
     },
-    /// Move a column to a new visual position.
+    /// Move a column to a new insertion slot.
     MoveColumn {
         /// Source visual column.
         from: usize,
-        /// Destination visual column.
+        /// Destination insertion slot, before the column currently at this
+        /// index. The document clamps it and accounts for the removed column.
         to: usize,
     },
     /// Sort by a column.
@@ -90,6 +117,8 @@ pub enum GridAction {
         /// The direction.
         direction: SortDirection,
     },
+    /// Restore the pre-sort row order.
+    RemoveSort,
     /// Rename a column.
     RenameColumn {
         /// The visual column.

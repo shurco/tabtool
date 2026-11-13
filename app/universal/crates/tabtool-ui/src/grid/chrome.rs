@@ -6,8 +6,9 @@ use tabtool_core::SortDirection;
 use crate::theme::{Theme, current};
 
 use super::geometry::{GridGeometry, HEADER_HEIGHT, SORT_ARROW_WIDTH};
+use super::options::{GridOptions, SortSpec};
 use super::paint::{Canvas, tint};
-use super::state::{GridOptions, GridState, SortSpec, header_for};
+use super::state::{GridState, header_for};
 
 /// Paints the pinned column headers.
 pub(crate) fn paint_header(

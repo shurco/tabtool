@@ -9,7 +9,9 @@ use tabtool_core::RowSource;
 
 use super::GridAction;
 use super::editor::{self, CellEditor};
-use super::selection::{GridFocus, move_focus};
+use super::navigation;
+use super::options::GridOptions;
+use super::selection::GridFocus;
 use super::state::GridState;
 
 /// A direction the editor moves after committing.
@@ -76,11 +78,15 @@ pub(crate) fn handle_keys(
     state: &mut GridState,
     base_id: Id,
     editor_id: Id,
-    editable: bool,
+    options: &GridOptions,
     active_editor: &mut Option<CellEditor>,
     actions: &mut Vec<GridAction>,
     scroll_to: &mut Option<GridFocus>,
 ) {
+    if state.header_editing.is_some() {
+        editor::handle_header_keys(ctx, source, state, actions);
+        return;
+    }
     let editing_now = active_editor.is_some() || state.editing.is_some();
     if editing_now {
         // egui clears keyboard focus when Escape is pressed before the frame's
@@ -153,15 +159,25 @@ pub(crate) fn handle_keys(
         return;
     }
 
+    if ctx.text_edit_focused() {
+        // A field elsewhere in the window owns the key; the grid must not
+        // interpret its shortcuts.
+        return;
+    }
+    if state.menu_open {
+        // A context menu owns the arrow keys and shortcuts while it is open.
+        return;
+    }
+
     let focused = ctx.memory(|memory| memory.focused());
-    let grid_focused = state
-        .focus
-        .is_some_and(|focus| focused == Some(cell_id(base_id, focus.row, focus.column)));
+    let grid_focused = state.focus.is_some_and(|focus| {
+        focused == Some(cell_id(base_id, focus.row, focus.column)) || state.grid_has_focus
+    });
     if !grid_focused {
         return;
     }
 
-    if editable
+    if options.editable
         && starts_editing(Key::Enter)
         && ctx.input_mut(|input| input.consume_key(Modifiers::NONE, Key::Enter))
     {
@@ -184,23 +200,7 @@ pub(crate) fn handle_keys(
         return;
     }
 
-    if let Some((direction, extend)) = arrow_pressed(ctx) {
-        move_focus(
-            &mut state.selection,
-            &mut state.anchor,
-            &mut state.focus,
-            source.row_count(),
-            source.column_count(),
-            direction,
-            extend,
-        );
-        *scroll_to = state.focus;
-    }
-    if let Some(focus) = *scroll_to {
-        ctx.memory_mut(|memory| {
-            memory.request_focus(cell_id(base_id, focus.row, focus.column));
-        });
-    }
+    navigation::handle_navigation(ctx, source, state, base_id, options, actions, scroll_to);
 }
 
 /// Records the frame's IME events before the editor's keys are read.
@@ -230,38 +230,4 @@ pub(crate) fn note_ime(ctx: &Context, state: &mut GridState) {
         state.ime_composing = false;
         state.ime_commit_guard = true;
     }
-}
-
-fn arrow_pressed(ctx: &Context) -> Option<(MoveDirection, bool)> {
-    let shift = ctx.input(|input| {
-        input
-            .events
-            .iter()
-            .find_map(|event| match event {
-                Event::Key {
-                    key,
-                    pressed: true,
-                    modifiers,
-                    ..
-                } if arrow_direction(*key).is_some() => Some(modifiers.shift),
-                _ => None,
-            })
-            .unwrap_or(input.modifiers.shift)
-    });
-    for key in [
-        Key::ArrowUp,
-        Key::ArrowDown,
-        Key::ArrowLeft,
-        Key::ArrowRight,
-    ] {
-        let modifiers = if shift {
-            Modifiers::SHIFT
-        } else {
-            Modifiers::NONE
-        };
-        if ctx.input_mut(|input| input.consume_key(modifiers, key)) {
-            return arrow_direction(key).map(|direction| (direction, shift));
-        }
-    }
-    None
 }

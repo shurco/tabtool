@@ -3699,6 +3699,7 @@ dependencies = [
  "tabtool-document",
  "tabtool-i18n",
  "tabtool-ui",
+ "tempfile",
 ]
 
 [[package]]

@@ -3,10 +3,12 @@
 mod alerts;
 mod close;
 mod commands;
+mod grid;
 mod messages;
 mod requests;
 mod view;
 
+pub use grid::EguiClipboard;
 pub(crate) use messages::{issue_message, saving_text};
 
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -17,6 +19,7 @@ use tabtool_core::Locale;
 use tabtool_document::{Document, DocumentError};
 use tabtool_i18n::Language;
 use tabtool_platform::DesktopPlatform;
+use tabtool_ui::grid::GridState;
 
 use crate::autosave::Autosave;
 use crate::menu::MenuAction;
@@ -27,13 +30,6 @@ pub(crate) use requests::WindowRequest;
 
 /// The Apple app's minimum document window size.
 pub const DOCUMENT_MIN_INNER_SIZE: [f32; 2] = [640.0, 400.0];
-
-/// The grid engine state.
-///
-/// Task 4 replaces this empty placeholder with the virtualized grid state; the
-/// shell only needs the field to exist and survive a repaint.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct GridState;
 
 /// The platform services a document window uses.
 pub struct WindowServices {
@@ -70,7 +66,7 @@ impl DocumentWindow {
         let state = WindowState {
             document,
             untitled_name,
-            grid: GridState,
+            grid: GridState::default(),
             autosave,
             storage: services.storage,
             dialogs: services.dialogs,
@@ -126,9 +122,9 @@ impl DocumentWindow {
         self.lock().pending_actions.clone()
     }
 
-    /// The grid state; Task 4 replaces the placeholder type.
+    /// The grid state shared by the window's grid and commands.
     pub fn grid(&self) -> GridState {
-        self.lock().grid
+        self.lock().grid.clone()
     }
 
     /// Updates the interface language and the global View settings.

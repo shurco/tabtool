@@ -15,6 +15,7 @@ test-support = ["dep:egui_kittest"]
 egui.workspace = true
 tabtool-core = { path = "../tabtool-core" }
 tabtool-document = { path = "../tabtool-document" }
+tabtool-i18n = { path = "../tabtool-i18n" }
 egui_kittest = { workspace = true, optional = true, default-features = false, features = [
     "snapshot",
     "wgpu",
@@ -24,4 +25,4 @@ egui_kittest = { workspace = true, optional = true, default-features = false, fe
 # Enables `test-support` for this package's own tests without enabling it for
 # downstream consumers.
 tabtool-ui = { path = ".", features = ["test-support"] }
-tabtool-i18n = { path = "../tabtool-i18n" }
+tempfile = "3"

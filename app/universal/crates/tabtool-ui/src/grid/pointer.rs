@@ -1,128 +1,27 @@
-//! Pointer input for the grid.
+//! Pointer input, context menus and drags for the grid.
 
 use egui::{Context, Event, Id, Modifiers, PointerButton, Rect, Role, Sense, Ui, WidgetInfo, pos2};
-use tabtool_core::RowSource;
 
+use super::context::{self, cell_menu, header_menu, row_menu};
+use super::drag::{column_slot_at, row_slot_at};
 use super::geometry::{GridGeometry, HEADER_HEIGHT, RESIZE_HANDLE_WIDTH};
-use super::keyboard::cell_id;
+use super::interaction::{ContextTap, Interaction};
+use super::options::GridOptions;
 use super::paint::{Canvas, VisibleCells};
-use super::selection::{GridElement, GridFocus, GridSelection, GridTapOutcome, resolve_tap};
-use super::state::{GridOptions, GridState, header_for};
+use super::selection::GridElement;
+use super::state::{GridState, header_for};
 
-/// What a pointer gesture requested this frame.
-#[derive(Clone, Debug, Default)]
-pub(crate) struct Interaction {
-    cell: Option<(usize, usize, Modifiers)>,
-    column: Option<(usize, Modifiers)>,
-    row: Option<(usize, Modifiers)>,
-    resize: Option<(usize, f32)>,
-}
-
-impl Interaction {
-    /// Records a click on a data cell.
-    pub fn cell(&mut self, click: (usize, usize, Modifiers)) {
-        self.cell = Some(click);
-    }
-
-    /// Records a click on a column header.
-    pub fn column(&mut self, column: usize, modifiers: Modifiers) {
-        self.column = Some((column, modifiers));
-    }
-
-    /// Records a click on a row number.
-    pub fn row(&mut self, row: usize, modifiers: Modifiers) {
-        self.row = Some((row, modifiers));
-    }
-
-    /// Records a column drag.
-    pub fn resize(&mut self, column: usize, delta: f32) {
-        self.resize = Some((column, delta));
-    }
-
-    /// Applies the gesture to the persistent state.
-    ///
-    /// Selection clicks are applied after the editor has committed, and a
-    /// click only starts a new edit when it is the second click on the focused
-    /// cell and no editor was active at the start of the frame.
-    pub fn apply(
-        &mut self,
-        ctx: &Context,
-        base_id: Id,
-        state: &mut GridState,
-        source: &dyn RowSource,
-        options: &GridOptions,
-        was_editing: bool,
-    ) {
-        if let Some((column, delta)) = self.resize.take() {
-            state.resize_column(source, column, delta, options);
-        }
-        let mut clicked = false;
-        if let Some((row, column, modifiers)) = self.cell.take() {
-            clicked = true;
-            let tapped = GridFocus::new(row, column);
-            let outcome = resolve_tap(GridElement::Cell, state.focus, Some(tapped));
-            state
-                .selection
-                .select_row(row, modifiers.shift, modifiers.command, &mut state.anchor);
-            state.focus = Some(tapped);
-            if outcome == GridTapOutcome::EditCell
-                && !was_editing
-                && options.editable
-                && !modifiers.shift
-                && !modifiers.command
-            {
-                let text = source.cell(row, column);
-                state.start_editing(row, column, text);
-            }
-        } else if let Some((column, modifiers)) = self.column.take() {
-            clicked = true;
-            if resolve_tap(GridElement::ColumnHeader, state.focus, None)
-                == GridTapOutcome::SelectColumn
-            {
-                state.selection.select_column(
-                    column,
-                    modifiers.shift,
-                    modifiers.command,
-                    &mut state.anchor,
-                );
-            }
-            state.focus = None;
-            state.editing = None;
-        } else if let Some((row, modifiers)) = self.row.take() {
-            clicked = true;
-            if resolve_tap(GridElement::RowNumber, state.focus, None)
-                == GridTapOutcome::SelectRowNumber
-            {
-                state.selection.select_row(
-                    row,
-                    modifiers.shift,
-                    modifiers.command,
-                    &mut state.anchor,
-                );
-            }
-            state.focus = (source.column_count() > 0).then_some(GridFocus::new(row, 0));
-            state.editing = None;
-        }
-        if clicked
-            && state.editing.is_none()
-            && let Some(focus) = state.focus
-        {
-            ctx.memory_mut(|memory| {
-                memory.request_focus(cell_id(base_id, focus.row, focus.column));
-            });
-        }
-    }
-}
-
-/// Creates the click targets for the visible cells.
+/// Creates the click, context-menu and drag targets for the visible cells.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn interact_cells(
     ui: &mut Ui,
     base_id: Id,
     visible: &VisibleCells,
+    geometry: &GridGeometry,
     canvas: &Canvas,
     data: Rect,
-    selection: &GridSelection,
+    state: &GridState,
+    options: &GridOptions,
     interaction: &mut Interaction,
 ) {
     for cell in &visible.cells {
@@ -133,21 +32,79 @@ pub(crate) fn interact_cells(
         }
         let response = ui.interact(
             interact,
-            cell_id(base_id, cell.row, cell.column),
-            Sense::click(),
+            super::keyboard::cell_id(base_id, cell.row, cell.column),
+            Sense::click_and_drag(),
         );
-        let selected =
-            selection.rows.contains(&cell.row) || selection.columns.contains(&cell.column);
+        if response.has_focus() {
+            // The grid maps Tab, arrows, Home/End and pages itself; without
+            // this filter egui would also move focus to a neighbouring widget
+            // on the same key press.
+            ui.ctx().memory_mut(|memory| {
+                memory.set_focus_lock_filter(
+                    super::keyboard::cell_id(base_id, cell.row, cell.column),
+                    egui::EventFilter {
+                        tab: true,
+                        horizontal_arrows: true,
+                        vertical_arrows: true,
+                        escape: false,
+                    },
+                );
+            });
+        }
+        let selected = state.selection.rows.contains(&cell.row)
+            || state.selection.columns.contains(&cell.column);
         response
             .widget_info(|| WidgetInfo::selected(Role::Cell, true, selected, cell.text.clone()));
         if response.clicked() {
             interaction.cell((cell.row, cell.column, click_modifiers(ui.ctx())));
             response.request_focus();
         }
+        if response.secondary_clicked() {
+            interaction.context(ContextTap {
+                element: GridElement::Cell,
+                row: cell.row,
+                column: cell.column,
+            });
+        }
+        if response.secondary_clicked() || response.context_menu_opened() {
+            interaction.note_menu_open();
+            let selection = context::context_selection(
+                GridElement::Cell,
+                cell.row,
+                cell.column,
+                &state.selection,
+            );
+            let entries = cell_menu(
+                &options.menu,
+                &selection,
+                geometry.row_count,
+                geometry.column_count(),
+            );
+            if let Some(command) = context::show(&response, &entries, options.language) {
+                interaction.menu(command);
+            }
+        }
+        if response.drag_started() {
+            interaction.begin_row_drag(cell.row, cell.column);
+        }
+        if (response.drag_started() || response.dragged())
+            && let Some(pointer) = ui.ctx().input(|input| input.pointer.interact_pos())
+        {
+            let content_y = canvas.viewport.min.y + pointer.y - canvas.clip.min.y;
+            interaction.row_target(row_slot_at(geometry, content_y));
+        }
+        if response.drag_stopped() {
+            let inside = ui
+                .ctx()
+                .input(|input| input.pointer.interact_pos())
+                .is_some_and(|pointer| data.contains(pointer));
+            interaction.end_row_drag(inside);
+        }
     }
 }
 
-/// Creates the click and resize targets for the pinned headers.
+/// Creates the click, resize, context-menu and drag targets for the pinned
+/// headers.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn interact_headers(
     ui: &mut Ui,
@@ -155,7 +112,8 @@ pub(crate) fn interact_headers(
     headers: Option<&[String]>,
     geometry: &GridGeometry,
     canvas: &Canvas,
-    selection: &GridSelection,
+    state: &GridState,
+    options: &GridOptions,
     interaction: &mut Interaction,
 ) {
     let clip = canvas.clip;
@@ -172,8 +130,12 @@ pub(crate) fn interact_headers(
         if interact.width() <= 0.0 {
             continue;
         }
-        let response = ui.interact(interact, base_id.with(("header", column)), Sense::click());
-        let selected = selection.columns.contains(&column);
+        let response = ui.interact(
+            interact,
+            base_id.with(("header", column)),
+            Sense::click_and_drag(),
+        );
+        let selected = state.selection.columns.contains(&column);
         response.widget_info(|| {
             WidgetInfo::selected(
                 Role::ColumnHeader,
@@ -184,6 +146,47 @@ pub(crate) fn interact_headers(
         });
         if response.clicked() {
             interaction.column(column, click_modifiers(ui.ctx()));
+        }
+        if response.secondary_clicked() {
+            interaction.context(ContextTap {
+                element: GridElement::ColumnHeader,
+                row: 0,
+                column,
+            });
+        }
+        if response.secondary_clicked() || response.context_menu_opened() {
+            interaction.note_menu_open();
+            let selection =
+                context::context_selection(GridElement::ColumnHeader, 0, column, &state.selection);
+            let entries = header_menu(&options.menu, column, &selection, geometry.column_count());
+            if let Some(command) = context::show(&response, &entries, options.language) {
+                interaction.menu(command);
+            }
+        }
+        if response.drag_started() {
+            // A press on the resize handle is a resize, not a header drag.
+            let on_handle = ui.ctx().input(|input| {
+                input
+                    .pointer
+                    .press_origin()
+                    .is_some_and(|pointer| pointer.x >= rect.right() - RESIZE_HANDLE_WIDTH)
+            });
+            if !on_handle {
+                interaction.begin_column_drag(column);
+            }
+        }
+        if (response.drag_started() || response.dragged())
+            && let Some(pointer) = ui.ctx().input(|input| input.pointer.interact_pos())
+        {
+            let content_x = canvas.viewport.min.x + pointer.x - canvas.clip.min.x;
+            interaction.column_target(column_slot_at(geometry, content_x));
+        }
+        if response.drag_stopped() {
+            let inside = ui
+                .ctx()
+                .input(|input| input.pointer.interact_pos())
+                .is_some_and(|pointer| canvas.clip.contains(pointer));
+            interaction.end_column_drag(inside);
         }
 
         let handle = Rect::from_min_max(
@@ -207,14 +210,16 @@ pub(crate) fn interact_headers(
     }
 }
 
-/// Creates the click targets for the pinned row-number gutter.
+/// Creates the click, context-menu and drag targets for the pinned row-number
+/// gutter.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn interact_gutter(
     ui: &mut Ui,
     base_id: Id,
     geometry: &GridGeometry,
     canvas: &Canvas,
-    selection: &GridSelection,
+    state: &GridState,
+    options: &GridOptions,
     interaction: &mut Interaction,
 ) {
     let clip = canvas.clip;
@@ -239,8 +244,12 @@ pub(crate) fn interact_gutter(
         if interact.width() <= 0.0 || interact.height() <= 0.0 {
             continue;
         }
-        let response = ui.interact(interact, base_id.with(("row-number", row)), Sense::click());
-        let selected = selection.rows.contains(&row);
+        let response = ui.interact(
+            interact,
+            base_id.with(("row-number", row)),
+            Sense::click_and_drag(),
+        );
+        let selected = state.selection.rows.contains(&row);
         response.widget_info(|| {
             WidgetInfo::selected(
                 Role::RowHeader,
@@ -251,6 +260,38 @@ pub(crate) fn interact_gutter(
         });
         if response.clicked() {
             interaction.row(row, click_modifiers(ui.ctx()));
+        }
+        if response.secondary_clicked() {
+            interaction.context(ContextTap {
+                element: GridElement::RowNumber,
+                row,
+                column: 0,
+            });
+        }
+        if response.secondary_clicked() || response.context_menu_opened() {
+            interaction.note_menu_open();
+            let selection =
+                context::context_selection(GridElement::RowNumber, row, 0, &state.selection);
+            let entries = row_menu(&options.menu, &selection);
+            if let Some(command) = context::show(&response, &entries, options.language) {
+                interaction.menu(command);
+            }
+        }
+        if response.drag_started() {
+            interaction.begin_row_drag(row, 0);
+        }
+        if (response.drag_started() || response.dragged())
+            && let Some(pointer) = ui.ctx().input(|input| input.pointer.interact_pos())
+        {
+            let content_y = canvas.viewport.min.y + pointer.y - canvas.clip.min.y;
+            interaction.row_target(row_slot_at(geometry, content_y));
+        }
+        if response.drag_stopped() {
+            let inside = ui
+                .ctx()
+                .input(|input| input.pointer.interact_pos())
+                .is_some_and(|pointer| canvas.clip.contains(pointer));
+            interaction.end_row_drag(inside);
         }
     }
 }

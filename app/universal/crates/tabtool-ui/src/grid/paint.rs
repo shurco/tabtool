@@ -8,7 +8,8 @@ use tabtool_core::RowSource;
 use crate::theme::current;
 
 use super::geometry::{GridGeometry, HEADER_HEIGHT};
-use super::state::{CellAlignment, GridOptions, GridState};
+use super::options::GridOptions;
+use super::state::{CellAlignment, GridState};
 
 /// One cell read from the source for this frame.
 #[derive(Clone, Debug)]

@@ -11,8 +11,10 @@
 //! tabtool_ui::apply_themes(&ctx); // both palettes, following the system
 //! ```
 //!
-//! Every visible widget string is supplied by the caller from `tabtool-i18n`;
-//! this crate contains no interface copy of its own.
+//! Every visible widget string is supplied from `tabtool-i18n`; widgets that
+//! draw their own labels, such as the grid's context menus, take a
+//! [`tabtool_i18n::Language`] in their options. This crate contains no
+//! interface copy of its own.
 //!
 //! The `UiHarness` is behind the off-by-default `test-support` feature, so
 //! normal consumers do not compile `egui_kittest`, wgpu or the image diffing
