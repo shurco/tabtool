@@ -212,6 +212,14 @@ fn action_label_key(action: MenuAction) -> &'static str {
     }
 }
 
+/// Whether the tree enables `action`.
+///
+/// Shortcuts use the same answer as the menu item, so a disabled command can
+/// never run from the keyboard.
+pub fn is_enabled(tree: &MenuTree, action: MenuAction) -> bool {
+    tree.entry(action).is_some_and(|entry| entry.enabled)
+}
+
 /// Shows the menu bar and returns the chosen action.
 pub fn show(ui: &mut Ui, tree: &MenuTree) -> Option<MenuAction> {
     let mut items: Vec<Vec<MenuItem<'_>>> = tree

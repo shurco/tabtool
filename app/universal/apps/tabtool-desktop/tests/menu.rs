@@ -355,6 +355,66 @@ fn shortcut_hints_exist_only_for_bound_commands() {
 }
 
 #[test]
+fn disabled_menu_commands_ignore_their_shortcuts() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let path = directory.path().join("big.csv");
+    std::fs::write(&path, b"a,b\n1,2\n").expect("fixture file is written");
+    let mut large = support::large_ready(&path);
+    large
+        .set_large_cell("edited", 0, 0)
+        .expect("edit the overlay");
+    large.start_large_save(None).expect("start the large save");
+    assert!(matches!(
+        large.large_status(),
+        tabtool_document::LargeStatus::Saving(_)
+    ));
+
+    let saving_tree = menus(EN, &Capabilities::of(&large), true, false);
+    assert!(
+        !tabtool_desktop::menu::is_enabled(&saving_tree, MenuAction::Save),
+        "Save is disabled while a large save is running"
+    );
+
+    let actions = Rc::new(RefCell::new(Vec::new()));
+    let recorded = Rc::clone(&actions);
+    let tree = Rc::new(RefCell::new(saving_tree));
+    let active_tree = Rc::clone(&tree);
+    let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
+        if let Some(action) = shortcuts::consume_enabled(ui.ctx(), &active_tree.borrow()) {
+            recorded.borrow_mut().push(action);
+        }
+        ui.label("Background");
+    });
+
+    harness.run();
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::S);
+    harness.run();
+    assert!(
+        actions.borrow().is_empty(),
+        "Ctrl/Cmd+S must not save while the menu disables Save"
+    );
+
+    large.cancel_large_save();
+    large.wait_for_large_save().expect("cancel the large save");
+    let ready_tree = menus(EN, &Capabilities::of(&large), true, false);
+    assert!(
+        !tabtool_desktop::menu::is_enabled(&ready_tree, MenuAction::Export),
+        "Export is disabled on a large document"
+    );
+    *tree.borrow_mut() = ready_tree;
+
+    harness.key_press_modifiers(
+        egui::Modifiers::COMMAND.plus(egui::Modifiers::SHIFT),
+        egui::Key::E,
+    );
+    harness.run();
+    assert!(
+        actions.borrow().is_empty(),
+        "Shift+Ctrl/Cmd+E must not export a large document"
+    );
+}
+
+#[test]
 fn command_shortcuts_do_not_fire_while_a_text_field_has_focus() {
     let actions = Rc::new(RefCell::new(Vec::new()));
     let value = Rc::new(RefCell::new(String::new()));

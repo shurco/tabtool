@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tabtool_core::Locale;
 use tabtool_document::{StdStorage, Storage};
 use tabtool_i18n::{Language, language_from_system};
-use tabtool_platform::{DesktopPlatform, Settings, SystemInfo};
+use tabtool_platform::{DesktopPlatform, FileDialogs, Settings, SystemInfo};
 
 /// The storage every document window shares.
 ///
@@ -13,9 +13,20 @@ use tabtool_platform::{DesktopPlatform, Settings, SystemInfo};
 /// stored by egui and may run on another thread.
 pub type SharedStorage = Arc<dyn Storage + Send + Sync>;
 
+/// The native file dialogs every document window shares.
+///
+/// The real app injects [`DesktopPlatform`]; tests inject a scripted dialog
+/// source so Save As and close paths run without a user.
+pub type SharedDialogs = Arc<dyn FileDialogs + Send + Sync>;
+
 /// The filesystem storage used by the real app.
 pub fn standard_storage() -> SharedStorage {
     Arc::new(StdStorage)
+}
+
+/// The real platform file dialogs.
+pub fn standard_dialogs() -> SharedDialogs {
+    Arc::new(DesktopPlatform)
 }
 
 /// The language the interface uses for a preference and the system languages.

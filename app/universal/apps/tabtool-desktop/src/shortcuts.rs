@@ -7,7 +7,7 @@
 
 use egui::{Context, Key, KeyboardShortcut, ModifierNames, Modifiers};
 
-use crate::menu::MenuAction;
+use crate::menu::{MenuAction, MenuTree};
 
 /// The platform's command modifier.
 pub const COMMAND: Modifiers = Modifiers::COMMAND;
@@ -84,6 +84,15 @@ pub fn hint(action: MenuAction) -> Option<String> {
         ModifierNames::NAMES
     };
     Some(shortcut.format(&names, is_mac))
+}
+
+/// Consumes one shortcut whose menu item is enabled.
+///
+/// This is the dispatch entry point: it applies the same capability checks as
+/// the menu, so ⌘S cannot save a document whose Save item is disabled.
+pub fn consume_enabled(ctx: &Context, tree: &MenuTree) -> Option<MenuAction> {
+    let action = consume(ctx)?;
+    crate::menu::is_enabled(tree, action).then_some(action)
 }
 
 /// Consumes one command shortcut from this frame's input.

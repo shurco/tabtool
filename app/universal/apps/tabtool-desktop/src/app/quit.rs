@@ -36,6 +36,17 @@ pub fn quit_decision(documents: &[DocumentWindow]) -> QuitDecision {
     }
 }
 
+/// How the quit alert was answered.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum QuitResponse {
+    /// Save every dirty document, then quit.
+    Save,
+    /// Quit and discard the edits.
+    DontSave,
+    /// Stay open.
+    Cancel,
+}
+
 /// The in-progress quit state.
 #[derive(Default)]
 pub(crate) struct QuitState {
@@ -43,18 +54,52 @@ pub(crate) struct QuitState {
     pub(crate) busy: bool,
     pub(crate) issue: Option<DocumentError>,
     pub(crate) saving: Vec<ViewportId>,
+    /// The user confirmed the quit; stop re-prompting on the root close.
+    pub(crate) force_close: bool,
 }
 
 impl DesktopApp {
     /// Handles File > Quit and Cmd+Q.
-    pub(crate) fn request_quit(&mut self, ctx: &egui::Context) {
-        if self.quit.prompt || self.quit.busy || self.quit.issue.is_some() {
+    pub fn request_quit(&mut self, ctx: &egui::Context) {
+        if self.quit.force_close || self.quit.prompt || self.quit.busy || self.quit.issue.is_some()
+        {
             return;
         }
         match quit_decision(&self.documents) {
-            QuitDecision::Quit => ctx.send_viewport_cmd(ViewportCommand::Close),
+            QuitDecision::Quit => {
+                self.quit.force_close = true;
+                ctx.send_viewport_cmd(ViewportCommand::Close);
+            }
             QuitDecision::Ask => self.quit.prompt = true,
             QuitDecision::Busy => self.quit.busy = true,
+        }
+    }
+
+    /// Whether the app has decided to quit and must not ask again.
+    pub fn is_quitting(&self) -> bool {
+        self.quit.force_close
+    }
+
+    /// Whether the quit alert is showing.
+    pub fn is_quit_prompt_visible(&self) -> bool {
+        self.quit.prompt
+    }
+
+    /// Answers the quit alert; `Save` may start large saves.
+    pub fn answer_quit_prompt(&mut self, response: QuitResponse, ctx: &egui::Context) {
+        self.quit.prompt = false;
+        match response {
+            QuitResponse::Save => self.confirm_quit(ctx),
+            QuitResponse::DontSave => {
+                self.quit.force_close = true;
+                // A save left over from an earlier attempt must not keep a
+                // mapping alive after the app exits.
+                for window in &self.documents {
+                    window.cancel_close_save();
+                }
+                ctx.send_viewport_cmd(ViewportCommand::Close);
+            }
+            QuitResponse::Cancel => {}
         }
     }
 
@@ -73,11 +118,11 @@ impl DesktopApp {
                 CloseSave::Saved => {}
                 CloseSave::Saving => self.quit.saving.push(window.viewport_id()),
                 CloseSave::Cancelled => {
-                    self.quit.saving.clear();
+                    self.abort_quit();
                     return;
                 }
                 CloseSave::Failed(error) => {
-                    self.quit.saving.clear();
+                    self.abort_quit();
                     self.quit.issue = Some(error);
                     return;
                 }
@@ -85,7 +130,16 @@ impl DesktopApp {
         }
 
         if self.quit.saving.is_empty() {
+            self.quit.force_close = true;
             ctx.send_viewport_cmd(ViewportCommand::Close);
+        }
+    }
+
+    /// Stops every pending close and clears the quit attempt.
+    fn abort_quit(&mut self) {
+        self.quit.saving.clear();
+        for window in &self.documents {
+            window.abort_close_after_save();
         }
     }
 
@@ -118,13 +172,16 @@ impl DesktopApp {
         self.quit.saving = remaining;
 
         if let Some(error) = failed {
+            self.abort_quit();
             self.quit.issue = Some(error);
             return;
         }
         if self.quit.saving.is_empty() {
             if self.documents.iter().all(|window| !window.is_dirty()) {
+                self.quit.force_close = true;
                 ctx.send_viewport_cmd(ViewportCommand::Close);
             } else {
+                self.abort_quit();
                 self.quit.issue = Some(DocumentError::CannotWriteFile);
             }
         }
@@ -148,12 +205,12 @@ impl DesktopApp {
                 ),
                 &actions,
             ) {
-                self.quit.prompt = false;
-                match index {
-                    0 => self.confirm_quit(ui.ctx()),
-                    1 => ui.ctx().send_viewport_cmd(ViewportCommand::Close),
-                    _ => {}
-                }
+                let response = match index {
+                    0 => QuitResponse::Save,
+                    1 => QuitResponse::DontSave,
+                    _ => QuitResponse::Cancel,
+                };
+                self.answer_quit_prompt(response, ui.ctx());
             }
         }
 

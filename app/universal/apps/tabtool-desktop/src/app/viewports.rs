@@ -57,6 +57,9 @@ impl DesktopApp {
 
     /// The root window is only needed for the empty state and quit alerts.
     pub(super) fn sync_root_visibility(&mut self, ctx: &Context) {
+        if self.quit.force_close {
+            return;
+        }
         let visible = self.documents.is_empty()
             || self.quit.prompt
             || self.quit.busy

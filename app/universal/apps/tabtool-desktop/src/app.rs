@@ -2,6 +2,7 @@
 
 mod quit;
 mod viewports;
+mod welcome;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -9,15 +10,16 @@ use std::time::Instant;
 
 use egui::{Context, Ui, ViewportCommand, ViewportId};
 use tabtool_document::Document;
-use tabtool_i18n::{Language, tr};
+use tabtool_i18n::Language;
 use tabtool_platform::{DesktopPlatform, OpenUrl, Settings};
 
-use crate::documents::DocumentWindow;
-use crate::menu::{Capabilities, MenuAction};
-use crate::platform::{SharedStorage, interface_language, standard_storage};
-use crate::shortcuts;
+use crate::documents::{DocumentWindow, WindowServices};
+use crate::menu::MenuAction;
+use crate::platform::{
+    SharedDialogs, SharedStorage, interface_language, standard_dialogs, standard_storage,
+};
 
-pub use quit::{QuitDecision, quit_decision};
+pub use quit::{QuitDecision, QuitResponse, quit_decision};
 
 /// The desktop application.
 pub struct DesktopApp {
@@ -32,6 +34,7 @@ pub struct DesktopApp {
     /// The platform services.
     pub platform: DesktopPlatform,
     storage: SharedStorage,
+    dialogs: SharedDialogs,
     next_window: u64,
     untitled_count: usize,
     language: Language,
@@ -54,6 +57,18 @@ impl DesktopApp {
         platform: DesktopPlatform,
         storage: SharedStorage,
     ) -> Self {
+        Self::with_dialogs(settings, platform, storage, standard_dialogs())
+    }
+
+    /// Creates an empty app with injected storage and file dialogs.
+    ///
+    /// Tests use scripted dialogs so Save As and close paths run unattended.
+    pub fn with_dialogs(
+        settings: Settings,
+        platform: DesktopPlatform,
+        storage: SharedStorage,
+        dialogs: SharedDialogs,
+    ) -> Self {
         let language = interface_language(&settings, &platform);
         Self {
             documents: Vec::new(),
@@ -62,6 +77,7 @@ impl DesktopApp {
             settings_window: false,
             platform,
             storage,
+            dialogs,
             next_window: 0,
             untitled_count: 0,
             language,
@@ -156,39 +172,6 @@ impl DesktopApp {
         self.render_quit_alerts(ui);
     }
 
-    fn render_welcome(&mut self, ui: &mut Ui) {
-        let theme = tabtool_ui::theme::current(ui.ctx());
-        egui::Frame::new()
-            .fill(theme.colors.window_background)
-            .inner_margin(theme.metrics.window_padding)
-            .show(ui, |ui| {
-                let tree = crate::menu::menus(
-                    self.language,
-                    &Capabilities::none(),
-                    self.settings.show_format_bar,
-                    !self.settings.recent_documents.is_empty(),
-                );
-                if let Some(action) = crate::menu::show(ui, &tree) {
-                    self.perform(action, ui.ctx());
-                }
-                if let Some(action) = shortcuts::consume(ui.ctx()) {
-                    self.perform(action, ui.ctx());
-                }
-                ui.separator();
-                ui.add_space(theme.metrics.window_padding * 4.0);
-                ui.vertical_centered(|ui| {
-                    ui.heading(tr(self.language, "No Documents"));
-                    ui.label(tr(self.language, "Create a document or import a CSV file."));
-                    ui.add_space(theme.metrics.item_spacing);
-                    if tabtool_ui::widgets::primary_button(ui, tr(self.language, "New Document"))
-                        .clicked()
-                    {
-                        self.new_document();
-                    }
-                });
-            });
-    }
-
     fn push_document(&mut self, document: Document, untitled_name: String) {
         let serial = self.next_window;
         self.next_window += 1;
@@ -199,8 +182,11 @@ impl DesktopApp {
             untitled_name,
             self.language,
             self.settings.show_format_bar,
-            self.platform,
-            Arc::clone(&self.storage),
+            WindowServices {
+                platform: self.platform,
+                dialogs: Arc::clone(&self.dialogs),
+                storage: Arc::clone(&self.storage),
+            },
         );
         self.documents.push(window);
     }
@@ -229,6 +215,12 @@ impl DesktopApp {
 
     fn handle_root_close(&mut self, ctx: &Context) {
         if !ctx.input(|input| input.viewport().close_requested()) {
+            return;
+        }
+        if self.quit.force_close {
+            // The user already chose Don't Save or every document was saved.
+            // Let the close proceed even though documents may still report
+            // unsaved edits.
             return;
         }
         match quit_decision(&self.documents) {

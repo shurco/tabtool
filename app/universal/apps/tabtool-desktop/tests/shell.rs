@@ -230,6 +230,36 @@ fn quitting_with_a_dirty_document_shows_the_save_alert() {
         "an unsaved document must ask before quitting"
     );
     assert!(harness.query_all_by_label("Cancel").next().is_some());
+
+    harness.get_by_label("Don’t Save").click();
+    harness.step();
+    assert!(
+        handle.borrow().is_quitting(),
+        "Don't Save must allow the quit to proceed"
+    );
+    assert!(
+        harness.output().viewport_output[&egui::ViewportId::ROOT]
+            .commands
+            .contains(&egui::ViewportCommand::Close),
+        "Don't Save must request the root close"
+    );
+    harness.run();
+
+    // The root close that follows the decision must not ask again.
+    harness
+        .input_mut()
+        .viewports
+        .get_mut(&egui::ViewportId::ROOT)
+        .expect("the root viewport")
+        .events
+        .push(egui::ViewportEvent::Close);
+    harness.run();
+
+    assert!(handle.borrow().is_quitting());
+    assert!(
+        !handle.borrow().is_quit_prompt_visible(),
+        "a confirmed quit must not reopen the quit alert"
+    );
 }
 
 #[test]

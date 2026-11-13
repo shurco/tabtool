@@ -5,9 +5,9 @@ use tabtool_core::CsvWriteIssue;
 use tabtool_document::{DocumentError, DocumentPhase};
 use tabtool_i18n::tr;
 use tabtool_ui::theme::current;
-use tabtool_ui::widgets::{AlertAction, BannerKind, ButtonKind, banner, modal};
+use tabtool_ui::widgets::{BannerKind, banner};
 
-use crate::documents::{CloseChoice, CloseDecision, WindowRequest, WindowState, close_decision};
+use crate::documents::{CloseDecision, WindowRequest, WindowState, close_decision};
 use crate::menu::Capabilities;
 
 impl WindowState {
@@ -19,7 +19,8 @@ impl WindowState {
         }
 
         let theme = current(ui.ctx());
-        if let Some(action) = crate::shortcuts::consume(ui.ctx()) {
+        let tree = self.menu_tree();
+        if let Some(action) = crate::shortcuts::consume_enabled(ui.ctx(), &tree) {
             self.requests.push(WindowRequest::Menu(action));
             ui.ctx().request_repaint();
         }
@@ -27,7 +28,9 @@ impl WindowState {
             .fill(theme.colors.window_background)
             .inner_margin(theme.metrics.window_padding)
             .show(ui, |ui| {
-                self.render_menu(ui);
+                if let Some(action) = crate::menu::show(ui, &tree) {
+                    self.requests.push(WindowRequest::Menu(action));
+                }
                 ui.separator();
                 self.render_placeholder(ui);
                 self.render_issue(ui);
@@ -67,17 +70,13 @@ impl WindowState {
         }
     }
 
-    fn render_menu(&mut self, ui: &mut Ui) {
-        let capabilities = Capabilities::of(&self.document);
-        let tree = crate::menu::menus(
+    fn menu_tree(&self) -> crate::menu::MenuTree {
+        crate::menu::menus(
             self.language,
-            &capabilities,
+            &Capabilities::of(&self.document),
             self.show_format_bar,
             self.has_recent,
-        );
-        if let Some(action) = crate::menu::show(ui, &tree) {
-            self.requests.push(WindowRequest::Menu(action));
-        }
+        )
     }
 
     fn render_placeholder(&mut self, ui: &mut Ui) {
@@ -139,109 +138,6 @@ impl WindowState {
                     .size(theme.typography.caption)
                     .color(theme.colors.secondary_label),
             );
-        }
-    }
-
-    fn render_alerts(&mut self, ui: &mut Ui) {
-        if self.close_prompt {
-            self.render_close_prompt(ui);
-        }
-        if self.revert_prompt {
-            self.render_revert_prompt(ui);
-        }
-        if self.saving && self.close_after_save {
-            self.render_close_saving(ui);
-        } else if self.busy {
-            self.render_busy(ui);
-        }
-    }
-
-    fn render_close_prompt(&mut self, ui: &mut Ui) {
-        let title = self.title();
-        let actions = [
-            AlertAction::new(tr(self.language, "Save"), ButtonKind::Prominent),
-            AlertAction::new(tr(self.language, "Don’t Save"), ButtonKind::Destructive),
-            AlertAction::new(tr(self.language, "Cancel"), ButtonKind::Bordered),
-        ];
-        let chosen = modal(
-            ui,
-            ("close-prompt", title.clone()),
-            &title,
-            tr(
-                self.language,
-                "Your changes will be lost if you don’t save them.",
-            ),
-            &actions,
-        );
-        let Some(index) = chosen else {
-            return;
-        };
-        self.close_prompt = false;
-        let choice = match index {
-            0 => CloseChoice::Save,
-            1 => CloseChoice::DontSave,
-            _ => CloseChoice::Cancel,
-        };
-        self.requests.push(WindowRequest::Close(choice));
-    }
-
-    fn render_revert_prompt(&mut self, ui: &mut Ui) {
-        let actions = [
-            AlertAction::new(tr(self.language, "Revert"), ButtonKind::Destructive),
-            AlertAction::new(tr(self.language, "Cancel"), ButtonKind::Bordered),
-        ];
-        let chosen = modal(
-            ui,
-            "revert-prompt",
-            tr(self.language, "Revert to Saved?"),
-            tr(
-                self.language,
-                "Your unsaved changes will be discarded. The table will be replaced with the last saved version from disk.",
-            ),
-            &actions,
-        );
-        let Some(index) = chosen else {
-            return;
-        };
-        self.revert_prompt = false;
-        self.requests.push(WindowRequest::Revert(index == 0));
-    }
-
-    fn render_close_saving(&mut self, ui: &mut Ui) {
-        let progress = self.document.large_save_progress().unwrap_or(0.0);
-        let actions = [AlertAction::new(
-            tr(self.language, "Cancel"),
-            ButtonKind::Bordered,
-        )];
-        if modal(
-            ui,
-            "close-saving",
-            &crate::documents::saving_text(self.language, progress),
-            "",
-            &actions,
-        )
-        .is_some()
-        {
-            self.requests.push(WindowRequest::CancelSave);
-        }
-    }
-
-    fn render_busy(&mut self, ui: &mut Ui) {
-        let progress = self.document.large_save_progress().unwrap_or(0.0);
-        let actions = [AlertAction::new(
-            tr(self.language, "OK"),
-            ButtonKind::Bordered,
-        )];
-        if modal(
-            ui,
-            "close-busy",
-            &crate::documents::saving_text(self.language, progress),
-            "",
-            &actions,
-        )
-        .is_some()
-        {
-            self.busy = false;
         }
     }
 

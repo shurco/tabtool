@@ -1,11 +1,49 @@
-//! Saving for close and quit.
+//! Close policy and saving for close and quit.
 
 use std::path::Path;
 
-use tabtool_document::DocumentError;
-use tabtool_platform::FileDialogs;
+use tabtool_document::{Document, DocumentError, LargeStatus};
 
-use crate::documents::{CloseSave, WindowState};
+use crate::documents::WindowState;
+
+/// What closing a document should do now.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CloseDecision {
+    /// Clean; close without asking.
+    Close,
+    /// Dirty; ask Save / Don't Save / Cancel.
+    Ask,
+    /// A save owns the document; do not close yet.
+    Busy,
+}
+
+/// Decides whether closing `document` needs a prompt.
+///
+/// A running large save wins over the dirty check: the document cannot be
+/// closed until the saver settles. An untitled document is dirty until Save As
+/// binds a path, exactly like the Apple app.
+pub fn close_decision(document: &Document) -> CloseDecision {
+    if matches!(document.large_status(), LargeStatus::Saving(_)) {
+        CloseDecision::Busy
+    } else if document.is_dirty() {
+        CloseDecision::Ask
+    } else {
+        CloseDecision::Close
+    }
+}
+
+/// How an explicit save-for-close ended.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CloseSave {
+    /// The bytes are on disk; the window may close.
+    Saved,
+    /// A large streaming save is running; poll it before closing.
+    Saving,
+    /// The user cancelled the save panel; the close is cancelled.
+    Cancelled,
+    /// The save failed; the window stays open and the issue is visible.
+    Failed(DocumentError),
+}
 
 impl WindowState {
     /// Saves the document for a close request.
@@ -48,7 +86,7 @@ impl WindowState {
 
     fn save_as_dialog(&mut self, close_after: bool) -> CloseSave {
         let suggested = self.suggested_file_name();
-        let Some(path) = self.platform.save_file(&suggested, "csv") else {
+        let Some(path) = self.dialogs.save_file(&suggested, "csv") else {
             return CloseSave::Cancelled;
         };
         if self.document.is_large_mode() {

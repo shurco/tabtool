@@ -1,8 +1,10 @@
 //! Document windows: one viewport, one [`Document`] and its close state.
 
+mod alerts;
 mod close;
 mod commands;
 mod messages;
+mod requests;
 mod view;
 
 pub(crate) use messages::{issue_message, saving_text};
@@ -12,13 +14,16 @@ use std::time::{Duration, Instant};
 
 use egui::{Context, Ui, ViewportId};
 use tabtool_core::Locale;
-use tabtool_document::{Document, DocumentError, LargeStatus};
+use tabtool_document::{Document, DocumentError};
 use tabtool_i18n::Language;
 use tabtool_platform::DesktopPlatform;
 
 use crate::autosave::Autosave;
 use crate::menu::MenuAction;
-use crate::platform::{SharedStorage, decimal_separator, system_locale};
+use crate::platform::{SharedDialogs, SharedStorage, decimal_separator, system_locale};
+pub use close::{CloseDecision, CloseSave, close_decision};
+pub use requests::CloseChoice;
+pub(crate) use requests::WindowRequest;
 
 /// The Apple app's minimum document window size.
 pub const DOCUMENT_MIN_INNER_SIZE: [f32; 2] = [640.0, 400.0];
@@ -30,43 +35,14 @@ pub const DOCUMENT_MIN_INNER_SIZE: [f32; 2] = [640.0, 400.0];
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct GridState;
 
-/// What closing a document should do now.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum CloseDecision {
-    /// Clean; close without asking.
-    Close,
-    /// Dirty; ask Save / Don't Save / Cancel.
-    Ask,
-    /// A save owns the document; do not close yet.
-    Busy,
-}
-
-/// Decides whether closing `document` needs a prompt.
-///
-/// A running large save wins over the dirty check: the document cannot be
-/// closed until the saver settles. An untitled document is dirty until Save As
-/// binds a path, exactly like the Apple app.
-pub fn close_decision(document: &Document) -> CloseDecision {
-    if matches!(document.large_status(), LargeStatus::Saving(_)) {
-        CloseDecision::Busy
-    } else if document.is_dirty() {
-        CloseDecision::Ask
-    } else {
-        CloseDecision::Close
-    }
-}
-
-/// How an explicit save-for-close ended.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum CloseSave {
-    /// The bytes are on disk; the window may close.
-    Saved,
-    /// A large streaming save is running; poll it before closing.
-    Saving,
-    /// The user cancelled the save panel; the close is cancelled.
-    Cancelled,
-    /// The save failed; the window stays open and the issue is visible.
-    Failed(DocumentError),
+/// The platform services a document window uses.
+pub struct WindowServices {
+    /// Locale and decimal separators come from the platform.
+    pub platform: DesktopPlatform,
+    /// Scripted Save As panels in tests; the native panel in the app.
+    pub dialogs: SharedDialogs,
+    /// The shared document storage.
+    pub storage: SharedStorage,
 }
 
 /// One document viewport.
@@ -88,8 +64,7 @@ impl DocumentWindow {
         untitled_name: String,
         language: Language,
         show_format_bar: bool,
-        platform: DesktopPlatform,
-        storage: SharedStorage,
+        services: WindowServices,
     ) -> Self {
         let autosave = Autosave::new(&document);
         let state = WindowState {
@@ -97,13 +72,13 @@ impl DocumentWindow {
             untitled_name,
             grid: GridState,
             autosave,
-            storage,
-            platform,
+            storage: services.storage,
+            dialogs: services.dialogs,
             language,
             show_format_bar,
             has_recent: false,
-            locale: system_locale(&platform),
-            decimal_separator: decimal_separator(&platform),
+            locale: system_locale(&services.platform),
+            decimal_separator: decimal_separator(&services.platform),
             requests: Vec::new(),
             app_actions: Vec::new(),
             pending_actions: Vec::new(),
@@ -218,6 +193,39 @@ impl DocumentWindow {
         self.lock().saving
     }
 
+    /// Asks the window to run its close policy.
+    ///
+    /// This is what a native close request and File > Close use. The close
+    /// alert, or an immediate close, is visible to the renderer.
+    pub fn request_close(&self) {
+        let mut state = self.lock();
+        match close_decision(&state.document) {
+            CloseDecision::Close => state.should_close = true,
+            CloseDecision::Ask => state.close_prompt = true,
+            CloseDecision::Busy => state.busy = true,
+        }
+    }
+
+    /// Whether the unsaved-changes alert is showing.
+    pub fn has_close_prompt(&self) -> bool {
+        self.lock().close_prompt
+    }
+
+    /// Answers the unsaved-changes alert; the next tick performs the choice.
+    pub fn answer_close_prompt(&self, choice: CloseChoice) {
+        self.lock().requests.push(WindowRequest::Close(choice));
+    }
+
+    /// Whether a completed large save will close this window.
+    pub fn is_closing_after_save(&self) -> bool {
+        self.lock().close_after_save
+    }
+
+    /// Stops a pending close without cancelling the large save.
+    pub(crate) fn abort_close_after_save(&self) {
+        self.lock().close_after_save = false;
+    }
+
     /// Saves the document for a close or quit.
     pub fn begin_close_save(&self) -> CloseSave {
         self.lock().save_for_close()
@@ -245,28 +253,6 @@ impl DocumentWindow {
     }
 }
 
-/// A request the window UI makes to the state machine.
-pub(crate) enum WindowRequest {
-    /// A menu item was chosen.
-    Menu(MenuAction),
-    /// The user answered the unsaved-changes alert.
-    Close(CloseChoice),
-    /// The user answered the revert alert; `true` confirms.
-    Revert(bool),
-    /// The user cancelled a large close save.
-    CancelSave,
-}
-
-/// The unsaved-changes alert choices.
-pub(crate) enum CloseChoice {
-    /// Save, then close.
-    Save,
-    /// Close and discard the edits.
-    DontSave,
-    /// Keep the window open.
-    Cancel,
-}
-
 /// The mutable state of one document window.
 pub(crate) struct WindowState {
     pub(crate) document: Document,
@@ -274,7 +260,7 @@ pub(crate) struct WindowState {
     pub(crate) grid: GridState,
     pub(crate) autosave: Autosave,
     pub(crate) storage: SharedStorage,
-    pub(crate) platform: DesktopPlatform,
+    pub(crate) dialogs: SharedDialogs,
     pub(crate) language: Language,
     pub(crate) show_format_bar: bool,
     pub(crate) has_recent: bool,

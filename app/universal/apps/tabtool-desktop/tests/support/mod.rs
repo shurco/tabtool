@@ -2,13 +2,15 @@
 
 #![allow(dead_code)]
 
+use std::collections::VecDeque;
 use std::io;
-use std::path::Path;
-use std::sync::Mutex;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 use tabtool_core::CsvConfiguration;
 use tabtool_document::{Document, Storage};
+use tabtool_platform::FileDialogs;
 
 /// In-memory [`Storage`] that counts writes and can fail them.
 pub struct MemoryStorage {
@@ -100,6 +102,19 @@ pub fn loaded_csv(_storage: &MemoryStorage, csv: &[u8]) -> Document {
     document
 }
 
+/// Opens `path` through the large-file path and waits until its index is ready.
+pub fn large_ready(path: &Path) -> Document {
+    let mut document = Document::new(CsvConfiguration::default());
+    document
+        .open_large(path, None, false, 0)
+        .expect("open the large fixture");
+    if let Some(state) = document.large_state() {
+        state.indexer.wait();
+    }
+    document.poll_large_indexing();
+    document
+}
+
 /// A ready untitled document.
 pub fn untitled(configuration: CsvConfiguration) -> Document {
     let mut document = Document::new(configuration.clone());
@@ -107,4 +122,52 @@ pub fn untitled(configuration: CsvConfiguration) -> Document {
         .new_document(configuration)
         .expect("create a new document");
     document
+}
+
+/// A scripted save panel: one optional path per call.
+pub struct FakeDialogs {
+    results: Mutex<VecDeque<Option<PathBuf>>>,
+    saves: Mutex<Vec<(String, String)>>,
+}
+
+impl FakeDialogs {
+    /// A panel that returns `results` in order.
+    pub fn scripted(results: impl IntoIterator<Item = Option<PathBuf>>) -> Arc<Self> {
+        Arc::new(Self {
+            results: Mutex::new(results.into_iter().collect()),
+            saves: Mutex::new(Vec::new()),
+        })
+    }
+
+    /// A panel that only cancels.
+    pub fn cancelled() -> Arc<Self> {
+        Self::scripted([None])
+    }
+
+    /// The suggested names and extensions the app asked for.
+    pub fn saves(&self) -> Vec<(String, String)> {
+        self.saves.lock().expect("unpoisoned dialogs").clone()
+    }
+}
+
+impl FileDialogs for FakeDialogs {
+    fn open_files(&self) -> Vec<PathBuf> {
+        Vec::new()
+    }
+
+    fn save_file(&self, suggested_name: &str, extension: &str) -> Option<PathBuf> {
+        self.saves
+            .lock()
+            .expect("unpoisoned dialogs")
+            .push((suggested_name.to_owned(), extension.to_owned()));
+        self.results
+            .lock()
+            .expect("unpoisoned dialogs")
+            .pop_front()
+            .flatten()
+    }
+
+    fn choose_folder(&self) -> Option<PathBuf> {
+        None
+    }
 }
