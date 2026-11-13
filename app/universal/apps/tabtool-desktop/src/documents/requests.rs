@@ -10,6 +10,8 @@ pub(crate) enum WindowRequest {
     Close(CloseChoice),
     /// The user answered the revert alert; `true` confirms.
     Revert(bool),
+    /// The user answered the open-another alert.
+    Open(CloseChoice),
     /// The user cancelled a large close save.
     CancelSave,
 }

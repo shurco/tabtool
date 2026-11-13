@@ -71,6 +71,7 @@ fn window_at(
             platform: DesktopPlatform,
             dialogs: shared_dialogs,
             storage: shared_storage,
+            settings: tabtool_platform::Settings::default(),
         },
     )
 }

@@ -15,6 +15,7 @@ impl crate::documents::WindowState {
         if self.should_close {
             return;
         }
+        self.collect_dropped_files(ui.ctx());
 
         let theme = current(ui.ctx());
         let tree = self.menu_tree();
@@ -33,6 +34,7 @@ impl crate::documents::WindowState {
             });
 
         self.render_alerts(ui);
+        self.render_export(ui);
 
         // Menu clicks, shortcut presses, alert answers and direct edits are
         // handled by the root viewport's logic pass. A child repaint alone
@@ -69,9 +71,7 @@ impl crate::documents::WindowState {
 
         for action in actions {
             match action {
-                DocumentAction::Export => {
-                    self.requests.push(WindowRequest::Menu(MenuAction::Export))
-                }
+                DocumentAction::Export => self.open_export_panel(),
                 DocumentAction::ShowFormatBar => {
                     if !self.show_format_bar {
                         self.app_actions.push(MenuAction::ToggleFormatBar);
@@ -87,6 +87,20 @@ impl crate::documents::WindowState {
                     }
                 }
             }
+        }
+    }
+
+    fn collect_dropped_files(&mut self, ctx: &egui::Context) {
+        let files: Vec<std::path::PathBuf> = ctx.input(|input| {
+            input
+                .raw
+                .dropped_files
+                .iter()
+                .map(|file| file.path().to_path_buf())
+                .collect()
+        });
+        if !files.is_empty() {
+            self.accept_dropped(files);
         }
     }
 

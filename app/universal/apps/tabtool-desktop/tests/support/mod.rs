@@ -124,18 +124,22 @@ pub fn untitled(configuration: CsvConfiguration) -> Document {
     document
 }
 
-/// A scripted save panel: one optional path per call.
+/// A scripted file dialog source: one open result and one save path per call.
 pub struct FakeDialogs {
+    opens: Mutex<VecDeque<Vec<PathBuf>>>,
     results: Mutex<VecDeque<Option<PathBuf>>>,
     saves: Mutex<Vec<(String, String)>>,
+    open_calls: AtomicUsize,
 }
 
 impl FakeDialogs {
     /// A panel that returns `results` in order.
     pub fn scripted(results: impl IntoIterator<Item = Option<PathBuf>>) -> Arc<Self> {
         Arc::new(Self {
+            opens: Mutex::new(VecDeque::new()),
             results: Mutex::new(results.into_iter().collect()),
             saves: Mutex::new(Vec::new()),
+            open_calls: AtomicUsize::new(0),
         })
     }
 
@@ -144,15 +148,32 @@ impl FakeDialogs {
         Self::scripted([None])
     }
 
+    /// An open panel that returns `results` in order.
+    pub fn scripted_opens(results: impl IntoIterator<Item = Vec<PathBuf>>) -> Arc<Self> {
+        let dialogs = Self::cancelled();
+        *dialogs.opens.lock().expect("unpoisoned dialogs") = results.into_iter().collect();
+        dialogs
+    }
+
     /// The suggested names and extensions the app asked for.
     pub fn saves(&self) -> Vec<(String, String)> {
         self.saves.lock().expect("unpoisoned dialogs").clone()
+    }
+
+    /// How many times the open panel was shown.
+    pub fn open_calls(&self) -> usize {
+        self.open_calls.load(Ordering::SeqCst)
     }
 }
 
 impl FileDialogs for FakeDialogs {
     fn open_files(&self) -> Vec<PathBuf> {
-        Vec::new()
+        self.open_calls.fetch_add(1, Ordering::SeqCst);
+        self.opens
+            .lock()
+            .expect("unpoisoned dialogs")
+            .pop_front()
+            .unwrap_or_default()
     }
 
     fn save_file(&self, suggested_name: &str, extension: &str) -> Option<PathBuf> {

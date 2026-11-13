@@ -22,7 +22,9 @@
 //! dev-dependency.
 
 pub mod document;
+pub mod export;
 pub mod fonts;
+mod format_options;
 pub mod grid;
 #[cfg(feature = "test-support")]
 pub mod harness;

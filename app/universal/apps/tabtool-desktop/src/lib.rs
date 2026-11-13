@@ -6,6 +6,7 @@
 pub mod app;
 pub mod autosave;
 pub mod documents;
+pub mod files;
 pub mod menu;
 pub mod platform;
 pub mod shortcuts;

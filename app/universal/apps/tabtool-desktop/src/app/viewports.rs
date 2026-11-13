@@ -61,6 +61,7 @@ impl DesktopApp {
             return;
         }
         let visible = self.documents.is_empty()
+            || self.recent_picker
             || self.quit.prompt
             || self.quit.busy
             || self.quit.issue.is_some()

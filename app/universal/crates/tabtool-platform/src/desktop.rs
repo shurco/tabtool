@@ -4,6 +4,11 @@ use std::path::PathBuf;
 
 pub use crate::locale::{SystemInfo, SystemLocale, decimal_separator, system_locale};
 
+/// The extensions the open panel offers and the app accepts on drop.
+///
+/// These match the Apple `Info.plist` document types and `DroppedFiles`.
+pub const TABLE_EXTENSIONS: [&str; 5] = ["csv", "tsv", "txt", "tab", "dat"];
+
 /// The file dialogs a view needs. Tests use a fake; the app uses [`DesktopPlatform`].
 pub trait FileDialogs {
     /// Asks for files to open; an empty list when the user cancels.
@@ -43,7 +48,11 @@ pub struct DesktopPlatform;
 
 impl FileDialogs for DesktopPlatform {
     fn open_files(&self) -> Vec<PathBuf> {
-        rfd::FileDialog::new().pick_files().unwrap_or_default()
+        let language = tabtool_i18n::language_from_system(&SystemLocale.languages());
+        rfd::FileDialog::new()
+            .add_filter(tabtool_i18n::tr(language, "CSV"), &TABLE_EXTENSIONS)
+            .pick_files()
+            .unwrap_or_default()
     }
 
     fn save_file(&self, suggested_name: &str, extension: &str) -> Option<PathBuf> {

@@ -30,6 +30,7 @@ impl WindowState {
                 },
                 WindowRequest::Revert(true) => self.revert_now(),
                 WindowRequest::Revert(false) => self.revert_prompt = false,
+                WindowRequest::Open(choice) => self.answer_open(choice),
                 WindowRequest::CancelSave => self.cancel_save(),
             }
         }
@@ -57,10 +58,10 @@ impl WindowState {
                 RevertDecision::NeedsConfirmation => self.revert_prompt = true,
                 RevertDecision::Unavailable => {}
             },
-            // Export and the inline rename editor belong to the document
-            // chrome and grid tasks; the shell records them so those views can
-            // consume the same command.
-            MenuAction::Export | MenuAction::RenameColumn => {
+            MenuAction::Export => self.open_export_panel(),
+            // The inline rename editor belongs to the grid; the shell records
+            // it so that view can consume the same command.
+            MenuAction::RenameColumn => {
                 self.pending_actions.push(action);
             }
             MenuAction::Paste => self.chrome.request_paste(ctx, self.viewport_id),

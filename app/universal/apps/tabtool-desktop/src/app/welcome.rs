@@ -18,7 +18,7 @@ impl DesktopApp {
                     self.language,
                     &Capabilities::none(),
                     self.settings.show_format_bar,
-                    !self.settings.recent_documents.is_empty(),
+                    self.files.has_recent(),
                 );
                 if let Some(action) = crate::menu::show(ui, &tree) {
                     self.perform(action, ui.ctx());

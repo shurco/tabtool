@@ -1,10 +1,9 @@
 //! Close policy and saving for close and quit.
 
-use std::path::Path;
-
 use tabtool_document::{Document, DocumentError, LargeStatus};
 
 use crate::documents::WindowState;
+use crate::files::{SaveMode, SaveOutcome, save_document};
 
 /// What closing a document should do now.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -66,53 +65,30 @@ impl WindowState {
     /// `close_after` closes the window when a large job settles; the small
     /// path is synchronous and the caller acts on [`CloseSave::Saved`].
     fn save(&mut self, close_after: bool, force_dialog: bool) -> CloseSave {
-        if force_dialog || self.document.file_path().is_none() {
-            return self.save_as_dialog(close_after);
-        }
-        if self.document.is_large_mode() {
-            return self.start_large_save(None, close_after);
-        }
-        match self.document.save(&*self.storage) {
-            Ok(()) => {
-                self.issue = None;
-                CloseSave::Saved
-            }
-            Err(error) => {
-                self.issue = Some(error);
-                CloseSave::Failed(error)
-            }
-        }
-    }
-
-    fn save_as_dialog(&mut self, close_after: bool) -> CloseSave {
-        let suggested = self.suggested_file_name();
-        let Some(path) = self.dialogs.save_file(&suggested, "csv") else {
-            return CloseSave::Cancelled;
+        let mode = if force_dialog {
+            SaveMode::SaveAs
+        } else {
+            SaveMode::Save
         };
-        if self.document.is_large_mode() {
-            return self.start_large_save(Some(&path), close_after);
-        }
-        match self.document.save_as(&path, &*self.storage) {
-            Ok(()) => {
+        let suggested_name = self.title();
+        match save_document(
+            &mut self.document,
+            &*self.storage,
+            &*self.dialogs,
+            &suggested_name,
+            mode,
+        ) {
+            SaveOutcome::Saved => {
                 self.issue = None;
                 CloseSave::Saved
             }
-            Err(error) => {
-                self.issue = Some(error);
-                CloseSave::Failed(error)
-            }
-        }
-    }
-
-    fn start_large_save(&mut self, destination: Option<&Path>, close_after: bool) -> CloseSave {
-        match self.document.start_large_save(destination) {
-            Ok(_) => {
+            SaveOutcome::LargeStarted => {
                 self.saving = true;
                 self.close_after_save = close_after;
                 CloseSave::Saving
             }
-            Err(_) => {
-                let error = DocumentError::CannotWriteFile;
+            SaveOutcome::Cancelled => CloseSave::Cancelled,
+            SaveOutcome::Failed(error) => {
                 self.issue = Some(error);
                 CloseSave::Failed(error)
             }
@@ -139,35 +115,28 @@ impl WindowState {
         self.saving = false;
         if let Err(error) = result {
             self.issue = Some(error);
+            self.open.after_save = None;
+            self.open.path = None;
         }
-        if result.is_ok() && self.close_after_save {
-            self.close_after_save = false;
-            self.should_close = true;
+        if result.is_ok() {
+            if self.close_after_save {
+                self.close_after_save = false;
+                self.should_close = true;
+            } else if let Some(path) = self.open.after_save.take() {
+                self.begin_open(path);
+            }
         }
         Some(result)
     }
 
-    /// Cancels a large save and aborts the close.
+    /// Cancels a large save and aborts the close or open that started it.
     pub(crate) fn cancel_save(&mut self) {
         self.document.cancel_large_save();
         let _ = self.document.wait_for_large_save();
         self.saving = false;
         self.close_after_save = false;
+        self.open.after_save = None;
+        self.open.path = None;
         self.busy = false;
-    }
-
-    /// The name the save panel starts with.
-    fn suggested_file_name(&self) -> String {
-        let base = self
-            .document
-            .file_path()
-            .and_then(|path| path.file_name())
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_else(|| self.title());
-        if base.to_ascii_lowercase().ends_with(".csv") {
-            base
-        } else {
-            format!("{base}.csv")
-        }
     }
 }

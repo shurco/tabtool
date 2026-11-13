@@ -9,17 +9,9 @@ use tabtool_core::{CsvConfiguration, Encoding};
 use tabtool_document::Document;
 use tabtool_i18n::{Language, tr};
 
+use crate::format_options::{DECIMALS, QuoteStyle, SEPARATORS};
 use crate::theme::current;
 use crate::widgets::{ButtonKind, Picker, PushButton, toggle_enabled};
-
-const SEPARATORS: [(&str, &str); 4] = [
-    (",", "Comma (,)"),
-    (";", "Semicolon (;)"),
-    ("\t", "Tab (⇥)"),
-    ("|", "Pipe (|)"),
-];
-
-const DECIMALS: [(&str, &str); 2] = [(".", "Dot (.)"), (",", "Comma (,)")];
 
 /// What one format-bar interaction asks for.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -195,57 +187,4 @@ fn control<R>(ui: &mut Ui, caption: &str, add: impl FnOnce(&mut Ui) -> R) -> R {
         add(ui)
     })
     .inner
-}
-
-/// The three quote styles the bar offers.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum QuoteStyle {
-    Doubled,
-    Backslash,
-    None,
-}
-
-impl QuoteStyle {
-    fn of(configuration: &CsvConfiguration) -> Self {
-        if configuration.quote_character.is_empty() {
-            Self::None
-        } else if configuration.escape_character == "\\" {
-            Self::Backslash
-        } else {
-            Self::Doubled
-        }
-    }
-
-    fn index(self) -> usize {
-        match self {
-            Self::Doubled => 0,
-            Self::Backslash => 1,
-            Self::None => 2,
-        }
-    }
-
-    fn at(index: usize) -> Self {
-        match index {
-            1 => Self::Backslash,
-            2 => Self::None,
-            _ => Self::Doubled,
-        }
-    }
-
-    fn apply(self, configuration: &mut CsvConfiguration) {
-        match self {
-            Self::Doubled => {
-                configuration.quote_character = "\"".to_owned();
-                configuration.escape_character = "\"".to_owned();
-            }
-            Self::Backslash => {
-                configuration.quote_character = "\"".to_owned();
-                configuration.escape_character = "\\".to_owned();
-            }
-            Self::None => {
-                configuration.quote_character.clear();
-                configuration.escape_character.clear();
-            }
-        }
-    }
 }

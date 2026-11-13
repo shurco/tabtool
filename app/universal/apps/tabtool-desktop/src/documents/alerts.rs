@@ -14,11 +14,44 @@ impl WindowState {
         if self.revert_prompt {
             self.render_revert_prompt(ui);
         }
-        if self.saving && self.close_after_save {
+        if self.open.prompt {
+            self.render_open_prompt(ui);
+        }
+        if self.saving && (self.close_after_save || self.open.after_save.is_some()) {
             self.render_close_saving(ui);
         } else if self.busy {
             self.render_busy(ui);
         }
+    }
+
+    fn render_open_prompt(&mut self, ui: &mut Ui) {
+        let title = self.title();
+        let actions = [
+            AlertAction::new(tr(self.language, "Save"), ButtonKind::Prominent),
+            AlertAction::new(tr(self.language, "Don’t Save"), ButtonKind::Destructive),
+            AlertAction::new(tr(self.language, "Cancel"), ButtonKind::Bordered),
+        ];
+        let chosen = modal(
+            ui,
+            ("open-prompt", title.clone()),
+            &title,
+            tr(
+                self.language,
+                "Your changes will be lost if you don’t save them.",
+            ),
+            &actions,
+        );
+        let Some(index) = chosen else {
+            return;
+        };
+        self.open.prompt = false;
+        let choice = match index {
+            0 => CloseChoice::Save,
+            1 => CloseChoice::DontSave,
+            _ => CloseChoice::Cancel,
+        };
+        self.requests
+            .push(crate::documents::WindowRequest::Open(choice));
     }
 
     fn render_close_prompt(&mut self, ui: &mut Ui) {

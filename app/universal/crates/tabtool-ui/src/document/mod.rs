@@ -105,7 +105,7 @@ impl DocumentUiState {
 /// An app-level action the chrome asks its window to run.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DocumentAction {
-    /// Open the export panel; Task 7's file workflow consumes this.
+    /// Open the export panel.
     Export,
     /// The needs-attention banner asked for the format controls.
     ShowFormatBar,

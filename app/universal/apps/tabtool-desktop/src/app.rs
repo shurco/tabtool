@@ -1,20 +1,24 @@
 //! The eframe application shell: viewports, menu dispatch and quit policy.
 
+mod dispatch;
+mod files;
 mod quit;
+mod recent;
 mod viewports;
 mod welcome;
 
+use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 
-use egui::{Context, Ui, ViewportCommand, ViewportId};
+use egui::{Context, Ui};
 use tabtool_document::Document;
 use tabtool_i18n::Language;
-use tabtool_platform::{DesktopPlatform, OpenUrl, Settings};
+use tabtool_platform::{DesktopPlatform, Settings, settings_path};
 
-use crate::documents::{DocumentWindow, WindowServices};
-use crate::menu::MenuAction;
+use crate::documents::DocumentWindow;
+use crate::files::FileWorkflow;
 use crate::platform::{
     SharedDialogs, SharedStorage, interface_language, standard_dialogs, standard_storage,
 };
@@ -33,12 +37,14 @@ pub struct DesktopApp {
     pub settings_window: bool,
     /// The platform services.
     pub platform: DesktopPlatform,
+    /// File workflows and the recent-document list.
+    pub files: FileWorkflow,
     storage: SharedStorage,
     dialogs: SharedDialogs,
     next_window: u64,
     untitled_count: usize,
     language: Language,
-    pending_actions: Vec<MenuAction>,
+    recent_picker: bool,
     root_visible: Option<bool>,
     about_closed: Arc<AtomicBool>,
     settings_closed: Arc<AtomicBool>,
@@ -48,7 +54,13 @@ pub struct DesktopApp {
 impl DesktopApp {
     /// Creates an empty app with the filesystem storage.
     pub fn new(settings: Settings, platform: DesktopPlatform) -> Self {
-        Self::with_storage(settings, platform, standard_storage())
+        Self::build(
+            settings,
+            platform,
+            standard_storage(),
+            standard_dialogs(),
+            settings_path(),
+        )
     }
 
     /// Creates an empty app with an injected storage.
@@ -57,7 +69,7 @@ impl DesktopApp {
         platform: DesktopPlatform,
         storage: SharedStorage,
     ) -> Self {
-        Self::with_dialogs(settings, platform, storage, standard_dialogs())
+        Self::build(settings, platform, storage, standard_dialogs(), None)
     }
 
     /// Creates an empty app with injected storage and file dialogs.
@@ -69,19 +81,37 @@ impl DesktopApp {
         storage: SharedStorage,
         dialogs: SharedDialogs,
     ) -> Self {
+        Self::build(settings, platform, storage, dialogs, None)
+    }
+
+    fn build(
+        settings: Settings,
+        platform: DesktopPlatform,
+        storage: SharedStorage,
+        dialogs: SharedDialogs,
+        settings_path: Option<PathBuf>,
+    ) -> Self {
         let language = interface_language(&settings, &platform);
+        let mut files = FileWorkflow::new(
+            Arc::clone(&dialogs),
+            Arc::clone(&storage),
+            settings.clone(),
+            settings_path,
+        );
+        files.set_language(language);
         Self {
             documents: Vec::new(),
             settings,
             about: false,
             settings_window: false,
             platform,
+            files,
             storage,
             dialogs,
             next_window: 0,
             untitled_count: 0,
             language,
-            pending_actions: Vec::new(),
+            recent_picker: false,
             root_visible: None,
             about_closed: Arc::new(AtomicBool::new(false)),
             settings_closed: Arc::new(AtomicBool::new(false)),
@@ -94,23 +124,14 @@ impl DesktopApp {
         &self.documents
     }
 
-    /// The actions the shell still has to hand to a later view.
-    pub fn pending_actions(&self) -> &[MenuAction] {
-        &self.pending_actions
-    }
-
     /// The resolved interface language.
     pub fn language(&self) -> Language {
         self.language
     }
 
-    /// Creates an empty untitled document.
+    /// Creates an empty untitled document in the New Document format.
     pub fn new_document(&mut self) {
-        let configuration = self.settings.new_document_configuration();
-        let mut document = Document::new(configuration.clone());
-        document
-            .new_document(configuration)
-            .expect("a new untitled document is never busy");
+        let document = self.files.new_document();
         self.untitled_count += 1;
         let name = untitled_name(self.untitled_count);
         self.push_document(document, name);
@@ -140,21 +161,51 @@ impl DesktopApp {
     /// Advances timers, dispatches window requests and registers viewports.
     pub fn tick(&mut self, ctx: &Context) {
         self.sync_language();
+        self.files.set_settings(self.settings.clone());
+        self.files.set_language(self.language);
         self.handle_root_close(ctx);
         self.close_finished_aux_windows();
 
         let now = Instant::now();
-        let has_recent = !self.settings.recent_documents.is_empty();
+        let has_recent = self.files.has_recent();
         for window in &self.documents {
             window.set_chrome(self.language, self.settings.show_format_bar, has_recent);
+            window.set_settings(self.settings.clone());
         }
 
         let mut actions = Vec::new();
         for window in &self.documents {
             actions.extend(window.tick(now, ctx));
         }
+
+        let mut opened_paths = Vec::new();
+        let mut dropped = Vec::new();
+        for window in &self.documents {
+            opened_paths.extend(window.take_opened_paths());
+            dropped.extend(window.take_dropped_files());
+        }
+        for path in opened_paths {
+            self.files.remember(&path);
+        }
+        self.sync_recent();
+        if !dropped.is_empty() {
+            self.open_dropped(&dropped);
+        }
+
         for action in actions {
             self.perform(action, ctx);
+        }
+
+        let dropped: Vec<PathBuf> = ctx.input(|input| {
+            input
+                .raw
+                .dropped_files
+                .iter()
+                .map(|file| file.path().to_path_buf())
+                .collect()
+        });
+        if !dropped.is_empty() {
+            self.open_dropped(&dropped);
         }
 
         self.poll_quit(ctx);
@@ -164,100 +215,13 @@ impl DesktopApp {
         self.schedule_repaint(ctx, now);
     }
 
-    /// Renders the root viewport: the empty state and the quit alerts.
+    /// Renders the root viewport: the empty state, recent chooser and quit alerts.
     pub fn show(&mut self, ui: &mut Ui) {
         if self.documents.is_empty() {
             self.render_welcome(ui);
         }
+        self.render_recent_documents(ui);
         self.render_quit_alerts(ui);
-    }
-
-    fn push_document(&mut self, document: Document, untitled_name: String) {
-        let serial = self.next_window;
-        self.next_window += 1;
-        let viewport_id = ViewportId::from_hash_of(("tabtool-document", serial));
-        let window = DocumentWindow::new(
-            viewport_id,
-            document,
-            untitled_name,
-            self.language,
-            self.settings.show_format_bar,
-            WindowServices {
-                platform: self.platform,
-                dialogs: Arc::clone(&self.dialogs),
-                storage: Arc::clone(&self.storage),
-            },
-        );
-        self.documents.push(window);
-    }
-
-    pub(crate) fn perform(&mut self, action: MenuAction, ctx: &Context) {
-        match action {
-            MenuAction::About => self.about = true,
-            MenuAction::Settings => self.settings_window = true,
-            MenuAction::Quit => self.request_quit(ctx),
-            MenuAction::New => self.new_document(),
-            MenuAction::Open | MenuAction::OpenRecent => self.pending_actions.push(action),
-            MenuAction::ToggleFormatBar => {
-                self.settings.show_format_bar = !self.settings.show_format_bar;
-            }
-            MenuAction::Website => self.platform.open("https://tabtool.shurco.app"),
-            MenuAction::License => self
-                .platform
-                .open("https://github.com/shurco/tabtool/blob/main/LICENSE"),
-            _ => {}
-        }
-    }
-
-    fn sync_language(&mut self) {
-        self.language = interface_language(&self.settings, &self.platform);
-    }
-
-    fn handle_root_close(&mut self, ctx: &Context) {
-        if !ctx.input(|input| input.viewport().close_requested()) {
-            return;
-        }
-        if self.quit.force_close {
-            // The user already chose Don't Save or every document was saved.
-            // Let the close proceed even though documents may still report
-            // unsaved edits.
-            return;
-        }
-        match quit_decision(&self.documents) {
-            QuitDecision::Quit => {}
-            QuitDecision::Ask => {
-                ctx.send_viewport_cmd(ViewportCommand::CancelClose);
-                self.quit.prompt = true;
-            }
-            QuitDecision::Busy => {
-                ctx.send_viewport_cmd(ViewportCommand::CancelClose);
-                self.quit.busy = true;
-            }
-        }
-    }
-
-    fn close_finished_aux_windows(&mut self) {
-        if self.about_closed.swap(false, Ordering::SeqCst) {
-            self.about = false;
-        }
-        if self.settings_closed.swap(false, Ordering::SeqCst) {
-            self.settings_window = false;
-        }
-    }
-
-    fn remove_closed(&mut self, ctx: &Context) {
-        let mut closed = Vec::new();
-        self.documents.retain(|window| {
-            if window.should_close() {
-                closed.push(window.viewport_id());
-                false
-            } else {
-                true
-            }
-        });
-        for viewport_id in closed {
-            ctx.send_viewport_cmd_to(viewport_id, ViewportCommand::Close);
-        }
     }
 }
 

@@ -13,6 +13,7 @@ fn main() -> eframe::Result {
     let settings = settings_path()
         .map(|path| Settings::load(&path))
         .unwrap_or_default();
+    let launch = tabtool_desktop::files::launch_path(std::env::args().skip(1));
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("TabTool")
@@ -27,7 +28,12 @@ fn main() -> eframe::Result {
             tabtool_ui::install_fonts(&creation.egui_ctx);
             tabtool_ui::apply_themes(&creation.egui_ctx);
             let mut app = DesktopApp::new(settings, DesktopPlatform);
-            app.new_document();
+            match launch {
+                Some(path) => {
+                    app.open_path(&path);
+                }
+                None => app.new_document(),
+            }
             Ok(Box::new(app))
         }),
     )

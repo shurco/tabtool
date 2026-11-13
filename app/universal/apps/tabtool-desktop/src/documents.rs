@@ -3,44 +3,37 @@
 mod alerts;
 mod close;
 mod commands;
+mod export;
 mod grid;
 mod messages;
+mod open;
 mod requests;
+mod state;
 mod view;
 
 pub use grid::EguiClipboard;
 pub(crate) use messages::{issue_message, saving_text};
+pub use state::WindowServices;
 
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use egui::{Context, Ui, ViewportId};
-use tabtool_core::Locale;
 use tabtool_document::{Document, DocumentError};
 use tabtool_i18n::Language;
-use tabtool_platform::DesktopPlatform;
 use tabtool_ui::document::{DocumentUiState, sync_selection_to_grid};
 use tabtool_ui::grid::GridState;
 
 use crate::autosave::Autosave;
 use crate::menu::MenuAction;
-use crate::platform::{SharedDialogs, SharedStorage, decimal_separator, system_locale};
+use crate::platform::{decimal_separator, system_locale};
 pub use close::{CloseDecision, CloseSave, close_decision};
 pub use requests::CloseChoice;
 pub(crate) use requests::WindowRequest;
+pub(crate) use state::WindowState;
 
 /// The Apple app's minimum document window size.
 pub const DOCUMENT_MIN_INNER_SIZE: [f32; 2] = [640.0, 400.0];
-
-/// The platform services a document window uses.
-pub struct WindowServices {
-    /// Locale and decimal separators come from the platform.
-    pub platform: DesktopPlatform,
-    /// Scripted Save As panels in tests; the native panel in the app.
-    pub dialogs: SharedDialogs,
-    /// The shared document storage.
-    pub storage: SharedStorage,
-}
 
 /// One document viewport.
 ///
@@ -63,6 +56,12 @@ impl DocumentWindow {
         show_format_bar: bool,
         services: WindowServices,
     ) -> Self {
+        let WindowServices {
+            platform,
+            dialogs,
+            storage,
+            settings,
+        } = services;
         let autosave = Autosave::new(&document);
         let viewport_id_for_state = viewport_id;
         let state = WindowState {
@@ -72,18 +71,21 @@ impl DocumentWindow {
             grid: GridState::default(),
             chrome: DocumentUiState::default(),
             autosave,
-            storage: services.storage,
-            dialogs: services.dialogs,
+            storage,
+            dialogs,
+            settings,
             language,
             show_format_bar,
             has_recent: false,
-            locale: system_locale(&services.platform),
-            decimal_separator: decimal_separator(&services.platform),
+            locale: system_locale(&platform),
+            decimal_separator: decimal_separator(&platform),
             requests: Vec::new(),
             app_actions: Vec::new(),
             pending_actions: Vec::new(),
             close_prompt: false,
             revert_prompt: false,
+            open: open::OpenState::default(),
+            export: export::ExportState::default(),
             busy: false,
             saving: false,
             close_after_save: false,
@@ -106,6 +108,11 @@ impl DocumentWindow {
         self.lock().title()
     }
 
+    /// Reads the document behind the window.
+    pub fn with_document<T>(&self, read: impl FnOnce(&Document) -> T) -> T {
+        read(&self.lock().document)
+    }
+
     /// The document's unsaved state.
     pub fn is_dirty(&self) -> bool {
         self.lock().document.is_dirty()
@@ -119,11 +126,6 @@ impl DocumentWindow {
     /// Whether the window has finished closing and should leave the app list.
     pub fn should_close(&self) -> bool {
         self.lock().should_close
-    }
-
-    /// Actions the shell (or a later task) still has to handle.
-    pub fn pending_actions(&self) -> Vec<MenuAction> {
-        self.lock().pending_actions.clone()
     }
 
     /// Updates the interface language and the global View settings.
@@ -157,13 +159,14 @@ impl DocumentWindow {
             state.issue = None;
         }
 
-        let outcome = if state.close_prompt || state.revert_prompt || state.saving {
-            crate::autosave::AutosaveOutcome::Idle
-        } else {
-            state
-                .autosave
-                .tick(now, &mut state.document, &*state.storage)
-        };
+        let outcome =
+            if state.close_prompt || state.revert_prompt || state.open.prompt || state.saving {
+                crate::autosave::AutosaveOutcome::Idle
+            } else {
+                state
+                    .autosave
+                    .tick(now, &mut state.document, &*state.storage)
+            };
         match outcome {
             crate::autosave::AutosaveOutcome::Saved => state.issue = None,
             crate::autosave::AutosaveOutcome::Blocked(error) => state.issue = Some(error),
@@ -255,43 +258,5 @@ impl DocumentWindow {
         self.state
             .lock()
             .expect("the document window lock is not poisoned")
-    }
-}
-
-/// The mutable state of one document window.
-pub(crate) struct WindowState {
-    pub(crate) viewport_id: ViewportId,
-    pub(crate) document: Document,
-    pub(crate) untitled_name: String,
-    pub(crate) grid: GridState,
-    pub(crate) chrome: DocumentUiState,
-    pub(crate) autosave: Autosave,
-    pub(crate) storage: SharedStorage,
-    pub(crate) dialogs: SharedDialogs,
-    pub(crate) language: Language,
-    pub(crate) show_format_bar: bool,
-    pub(crate) has_recent: bool,
-    pub(crate) locale: Locale,
-    pub(crate) decimal_separator: String,
-    pub(crate) requests: Vec<WindowRequest>,
-    pub(crate) app_actions: Vec<MenuAction>,
-    pub(crate) pending_actions: Vec<MenuAction>,
-    pub(crate) close_prompt: bool,
-    pub(crate) revert_prompt: bool,
-    pub(crate) busy: bool,
-    pub(crate) saving: bool,
-    pub(crate) close_after_save: bool,
-    pub(crate) should_close: bool,
-    pub(crate) issue: Option<DocumentError>,
-}
-
-impl WindowState {
-    /// The window title.
-    pub(crate) fn title(&self) -> String {
-        self.document
-            .file_path()
-            .and_then(|path| path.file_name())
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_else(|| self.untitled_name.clone())
     }
 }
