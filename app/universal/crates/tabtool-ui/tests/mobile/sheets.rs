@@ -548,13 +548,21 @@ fn the_touch_text_input_seam_opens_over_the_control_rect() {
 
 fn mobile_sources() -> Vec<PathBuf> {
     let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/mobile");
-    let mut files: Vec<PathBuf> = std::fs::read_dir(directory)
-        .expect("the mobile module is readable")
-        .map(|entry| entry.expect("a module entry").path())
-        .filter(|path| path.extension().is_some_and(|extension| extension == "rs"))
-        .collect();
+    let mut files = Vec::new();
+    collect_sources(&directory, &mut files);
     files.sort();
     files
+}
+
+fn collect_sources(directory: &Path, files: &mut Vec<PathBuf>) {
+    for entry in std::fs::read_dir(directory).expect("the mobile module is readable") {
+        let path = entry.expect("a module entry").path();
+        if path.is_dir() {
+            collect_sources(&path, files);
+        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            files.push(path);
+        }
+    }
 }
 
 #[test]

@@ -2,11 +2,13 @@
 //!
 //! These views layer the iOS layout on the shared [`crate::Theme`] tokens: a
 //! navigation stack, a touch toolbar, the fold-aware contextual action bar,
-//! sheets, list rows and the editor accessory. They depend on the platform
-//! only through [`TouchTextInput`], so `tabtool-ui` stays neutral.
+//! sheets, list rows, the documents library and the editor accessory. They
+//! depend on the platform only through [`TouchTextInput`] and the library's
+//! file seams, so `tabtool-ui` stays neutral.
 
 mod accessory;
 mod action_bar;
+mod library;
 mod list;
 mod metrics;
 mod nav;
@@ -17,6 +19,11 @@ pub use accessory::{AccessoryAction, editor_accessory};
 pub use action_bar::{
     ContextualAction, ContextualActionId, FoldGap, FoldRegion, actions_for, actions_for_selection,
     contextual_action_bar, fold_gap, is_enabled,
+};
+pub use library::{
+    DocumentEntry, DocumentFiles, DocumentMetadata, ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE,
+    FileMetadata, LibraryError, LibraryErrors, LibraryResponse, LibrarySort, LibraryView,
+    SystemMetadata, available_name, format_modified, format_size, new_document_name,
 };
 pub use list::{ListRow, ListRowResponse};
 pub use metrics::{
