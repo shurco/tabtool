@@ -13,6 +13,7 @@ mod editor_chrome;
 mod editor_placement;
 mod editor_session;
 mod editor_state;
+mod editor_targets;
 mod library;
 mod list;
 mod metrics;

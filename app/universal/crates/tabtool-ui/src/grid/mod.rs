@@ -69,9 +69,7 @@ pub use geometry::{
 pub use keyboard::{EditorKeyAction, MoveDirection};
 pub use options::{GridAppearance, GridOptions, SortSpec};
 pub use presenter::GridPresenter;
-pub use selection::{
-    GridAnchor, GridElement, GridFocus, GridSelection, GridTapOutcome, move_focus, resolve_tap,
-};
+pub use selection::{GridAnchor, GridElement, GridFocus, GridSelection, move_focus};
 pub use state::{CellAlignment, GridState};
 pub use touch::{GridEditRequest, GridHighlight, GridTouch, TouchGesture};
 

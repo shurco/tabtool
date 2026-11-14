@@ -137,39 +137,6 @@ pub enum GridElement {
     Corner,
 }
 
-/// What a tap should do, given the element and the focused cell.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum GridTapOutcome {
-    /// Select the tapped cell's row.
-    SelectCell,
-    /// Edit the already-focused cell.
-    EditCell,
-    /// Select the tapped column.
-    SelectColumn,
-    /// Select the tapped row from the gutter.
-    SelectRowNumber,
-    /// Do nothing.
-    Ignore,
-}
-
-/// Decides the effect of a tap without a UI, so the rule is testable.
-pub fn resolve_tap(
-    element: GridElement,
-    focus: Option<GridFocus>,
-    tapped: Option<GridFocus>,
-) -> GridTapOutcome {
-    match element {
-        GridElement::ColumnHeader => GridTapOutcome::SelectColumn,
-        GridElement::RowNumber => GridTapOutcome::SelectRowNumber,
-        GridElement::Cell => match tapped {
-            Some(tapped) if focus == Some(tapped) => GridTapOutcome::EditCell,
-            Some(_) => GridTapOutcome::SelectCell,
-            None => GridTapOutcome::Ignore,
-        },
-        GridElement::Corner => GridTapOutcome::Ignore,
-    }
-}
-
 /// Moves the focused cell with an arrow key, updating row selection.
 ///
 /// Left and right keep the row selected; up and down move the row selection

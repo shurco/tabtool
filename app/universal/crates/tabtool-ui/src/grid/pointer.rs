@@ -10,6 +10,7 @@ use super::options::GridOptions;
 use super::paint::{Canvas, VisibleCells};
 use super::selection::GridElement;
 use super::state::{GridState, header_for};
+use super::touch::{GridTouch, TouchGesture};
 
 /// Creates the click, context-menu and drag targets for the visible cells.
 #[allow(clippy::too_many_arguments)]
@@ -55,7 +56,9 @@ pub(crate) fn interact_cells(
             || state.selection.columns.contains(&cell.column);
         response
             .widget_info(|| WidgetInfo::selected(Role::Cell, true, selected, cell.text.clone()));
-        let long_touch = options.touch && response.long_touched();
+        let long_touch = options.touch
+            && response.long_touched()
+            && GridTouch::new().long_press(GridElement::Cell) == TouchGesture::ContextMenu;
         if response.clicked() && !long_touch {
             interaction.cell((cell.row, cell.column, click_modifiers(ui.ctx())));
             response.request_focus();
@@ -81,7 +84,8 @@ pub(crate) fn interact_cells(
                 geometry.row_count,
                 geometry.column_count(),
             );
-            if let Some(command) = context::show(&response, &entries, options.language) {
+            if let Some(command) = context::show(&response, &entries, options.language, long_touch)
+            {
                 interaction.menu(command);
             }
         }
@@ -145,7 +149,9 @@ pub(crate) fn interact_headers(
                 header_for(headers, column),
             )
         });
-        let long_touch = options.touch && response.long_touched();
+        let long_touch = options.touch
+            && response.long_touched()
+            && GridTouch::new().long_press(GridElement::ColumnHeader) == TouchGesture::ContextMenu;
         if response.clicked() && !long_touch {
             interaction.column(column, click_modifiers(ui.ctx()));
         }
@@ -161,7 +167,8 @@ pub(crate) fn interact_headers(
             let selection =
                 context::context_selection(GridElement::ColumnHeader, 0, column, &state.selection);
             let entries = header_menu(&options.menu, column, &selection, geometry.column_count());
-            if let Some(command) = context::show(&response, &entries, options.language) {
+            if let Some(command) = context::show(&response, &entries, options.language, long_touch)
+            {
                 interaction.menu(command);
             }
         }
@@ -260,7 +267,9 @@ pub(crate) fn interact_gutter(
                 geometry.row_number(row).to_string(),
             )
         });
-        let long_touch = options.touch && response.long_touched();
+        let long_touch = options.touch
+            && response.long_touched()
+            && GridTouch::new().long_press(GridElement::RowNumber) == TouchGesture::ContextMenu;
         if response.clicked() && !long_touch {
             interaction.row(row, click_modifiers(ui.ctx()));
         }
@@ -276,7 +285,8 @@ pub(crate) fn interact_gutter(
             let selection =
                 context::context_selection(GridElement::RowNumber, row, 0, &state.selection);
             let entries = row_menu(&options.menu, &selection);
-            if let Some(command) = context::show(&response, &entries, options.language) {
+            if let Some(command) = context::show(&response, &entries, options.language, long_touch)
+            {
                 interaction.menu(command);
             }
         }

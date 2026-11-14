@@ -3,8 +3,8 @@
 use egui::Modifiers;
 use tabtool_document::GridSelection as DocumentSelection;
 use tabtool_ui::grid::{
-    GridAnchor, GridElement, GridFocus, GridOptions, GridSelection, GridState, GridTapOutcome,
-    resolve_tap,
+    GridAnchor, GridElement, GridFocus, GridOptions, GridSelection, GridState, GridTouch,
+    TouchGesture,
 };
 use tabtool_ui::harness::kittest::Queryable;
 
@@ -15,8 +15,8 @@ fn first_tap_selects() {
     let cell = GridFocus::new(2, 3);
 
     assert_eq!(
-        resolve_tap(GridElement::Cell, None, Some(cell)),
-        GridTapOutcome::SelectCell
+        GridTouch::new().tap(GridElement::Cell, None, Some(cell)),
+        TouchGesture::SelectCell
     );
 }
 
@@ -25,8 +25,8 @@ fn second_tap_on_the_focused_cell_edits() {
     let cell = GridFocus::new(2, 3);
 
     assert_eq!(
-        resolve_tap(GridElement::Cell, Some(cell), Some(cell)),
-        GridTapOutcome::EditCell
+        GridTouch::new().tap(GridElement::Cell, Some(cell), Some(cell)),
+        TouchGesture::EditCell
     );
 }
 
@@ -36,8 +36,8 @@ fn tap_on_another_cell_selects_instead_of_editing() {
     let other = GridFocus::new(2, 4);
 
     assert_eq!(
-        resolve_tap(GridElement::Cell, Some(cell), Some(other)),
-        GridTapOutcome::SelectCell
+        GridTouch::new().tap(GridElement::Cell, Some(cell), Some(other)),
+        TouchGesture::SelectCell
     );
 }
 
@@ -46,12 +46,12 @@ fn header_and_row_number_select_their_axis() {
     let cell = GridFocus::new(2, 3);
 
     assert_eq!(
-        resolve_tap(GridElement::ColumnHeader, Some(cell), None),
-        GridTapOutcome::SelectColumn
+        GridTouch::new().tap(GridElement::ColumnHeader, Some(cell), None),
+        TouchGesture::SelectColumn
     );
     assert_eq!(
-        resolve_tap(GridElement::RowNumber, Some(cell), None),
-        GridTapOutcome::SelectRowNumber
+        GridTouch::new().tap(GridElement::RowNumber, Some(cell), None),
+        TouchGesture::SelectRowNumber
     );
 }
 
@@ -60,12 +60,12 @@ fn corner_and_empty_hits_are_ignored() {
     let cell = GridFocus::new(2, 3);
 
     assert_eq!(
-        resolve_tap(GridElement::Corner, Some(cell), None),
-        GridTapOutcome::Ignore
+        GridTouch::new().tap(GridElement::Corner, Some(cell), None),
+        TouchGesture::Ignore
     );
     assert_eq!(
-        resolve_tap(GridElement::Cell, None, None),
-        GridTapOutcome::Ignore
+        GridTouch::new().tap(GridElement::Cell, None, None),
+        TouchGesture::Ignore
     );
 }
 

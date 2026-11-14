@@ -254,9 +254,20 @@ pub(crate) fn show(
     response: &Response,
     entries: &[MenuEntry],
     language: Language,
+    long_pressed: bool,
 ) -> Option<MenuCommand> {
     let mut chosen = None;
-    response.context_menu(|ui| {
+    let popup = if long_pressed {
+        // A long touch reports `clicked`, not `secondary_clicked`, so the
+        // standard context-menu builder would immediately close it. Open the
+        // menu explicitly for that one frame; later frames keep its state.
+        egui::Popup::menu(response)
+            .open_memory(Some(egui::SetOpenCommand::Bool(true)))
+            .at_pointer_fixed()
+    } else {
+        egui::Popup::context_menu(response)
+    };
+    popup.show(|ui| {
         for entry in entries {
             if entry.is_separator() {
                 ui.separator();

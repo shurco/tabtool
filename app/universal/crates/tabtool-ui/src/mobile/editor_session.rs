@@ -7,18 +7,19 @@
 //! text in the cell it came from and applies every edit exactly once.
 
 use egui::Rect;
-use tabtool_core::{ColumnId, Locale};
+use tabtool_core::Locale;
 use tabtool_document::Document;
 
 use super::editor_placement::{placement, scroll_target};
 use super::editor_state::{MobileEdit, MobileEditTarget, MobileEditorState, PendingWork};
+use super::editor_targets::{cell_text, column_of, header};
 use super::{MobileToolbarResponse, TouchTextInput, TouchTextInputOutcome, TouchTextInputRequest};
 use crate::document::{
     apply_grid_action, poll_large_state, sync_selection_to_document, sync_selection_to_grid,
 };
 use crate::grid::{
-    CellEditor, Clipboard, GridAction, GridEditRequest, GridFocus, GridOptions, GridPresenter,
-    GridState, MoveDirection, move_after_commit,
+    CellEditor, Clipboard, GridAction, GridEditRequest, GridFocus, GridOptions, GridState,
+    MoveDirection, move_after_commit,
 };
 
 /// The touch editor's document-backed operations.
@@ -241,7 +242,7 @@ impl<'a> EditorSession<'a> {
                 });
             }
             MobileEditTarget::Column(id) => {
-                let Some(column) = self.column_of(id) else {
+                let Some(column) = column_of(self.document, id) else {
                     return;
                 };
                 self.apply_action(GridAction::RenameColumn {
@@ -256,7 +257,7 @@ impl<'a> EditorSession<'a> {
         if !self.document.can_edit_cells() {
             return;
         }
-        let Some((text, row_count, column_count)) = self.cell_text(focus) else {
+        let Some((text, row_count, column_count)) = cell_text(self.document, focus) else {
             return;
         };
         if focus.row >= row_count || focus.column >= column_count {
@@ -282,7 +283,7 @@ impl<'a> EditorSession<'a> {
         if !self.document.can_rename_column(column) {
             return;
         }
-        let Some((id, text)) = self.header(column) else {
+        let Some((id, text)) = header(self.document, column) else {
             return;
         };
         self.state
@@ -305,7 +306,8 @@ impl<'a> EditorSession<'a> {
         else {
             return;
         };
-        let Some((_, row_count, column_count)) = self.cell_text(GridFocus::new(*row, *column))
+        let Some((_, row_count, column_count)) =
+            cell_text(self.document, GridFocus::new(*row, *column))
         else {
             return;
         };
@@ -316,42 +318,18 @@ impl<'a> EditorSession<'a> {
     }
 
     fn place(&mut self, text: String, rect: Rect) {
+        // A quoted cell may contain line breaks. The platform editor is
+        // single-line for ordinary cells, matching the desktop field, and
+        // accepts breaks only when the cell already has them.
+        let multiline = text.contains(['\n', '\r']);
         self.text_input.open(TouchTextInputRequest {
             rect,
             text,
-            multiline: false,
+            multiline,
         });
         self.editor.last_editor_rect = Some(rect);
         if let Some(edit) = &mut self.editor.editing {
             edit.opened = true;
         }
-    }
-
-    fn cell_text(&self, focus: GridFocus) -> Option<(String, usize, usize)> {
-        let source = self.document.row_source()?;
-        let visible = self.document.row_filter().visible_rows.as_deref();
-        let presenter = GridPresenter::new(source, visible);
-        if focus.row >= presenter.row_count() || focus.column >= presenter.column_count() {
-            return None;
-        }
-        Some((
-            presenter.cell(focus.row, focus.column),
-            presenter.row_count(),
-            presenter.column_count(),
-        ))
-    }
-
-    fn header(&self, column: usize) -> Option<(ColumnId, String)> {
-        let source = self.document.row_source()?;
-        let id = *source.column_ids().get(column)?;
-        Some((id, GridPresenter::new(source, None).header(column)))
-    }
-
-    fn column_of(&self, id: ColumnId) -> Option<usize> {
-        self.document
-            .row_source()?
-            .column_ids()
-            .iter()
-            .position(|candidate| *candidate == id)
     }
 }

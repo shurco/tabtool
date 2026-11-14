@@ -112,12 +112,6 @@ fn a_long_press_opens_the_context_menu() {
 }
 
 #[test]
-fn a_double_tap_is_reserved_for_zoom_and_never_edits() {
-    let touch = GridTouch::new();
-    assert_eq!(touch.double_tap(), TouchGesture::Ignore);
-}
-
-#[test]
 fn focus_beats_selection() {
     let touch = GridTouch::new();
     assert_eq!(

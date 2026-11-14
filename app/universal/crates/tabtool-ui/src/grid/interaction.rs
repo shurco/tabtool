@@ -14,11 +14,9 @@ use super::context::{self, MenuCommand};
 use super::drag::{ColumnDrag, RowDrag, column_drop_action, row_drop_action};
 use super::keyboard::cell_id;
 use super::options::GridOptions;
-use super::selection::{
-    GridAnchor, GridElement, GridFocus, GridSelection, GridTapOutcome, resolve_tap,
-};
+use super::selection::{GridAnchor, GridElement, GridFocus, GridSelection};
 use super::state::GridState;
-use super::touch::GridEditRequest;
+use super::touch::{GridEditRequest, GridTouch, TouchGesture};
 
 /// A right-click that opens a context menu.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -167,12 +165,12 @@ impl Interaction {
         if let Some((row, column, modifiers)) = self.cell.take() {
             clicked = true;
             let tapped = GridFocus::new(row, column);
-            let outcome = resolve_tap(GridElement::Cell, state.focus, Some(tapped));
+            let gesture = GridTouch::new().tap(GridElement::Cell, state.focus, Some(tapped));
             state
                 .selection
                 .select_row(row, modifiers.shift, modifiers.command, &mut state.anchor);
             state.focus = Some(tapped);
-            if outcome == GridTapOutcome::EditCell
+            if gesture == TouchGesture::EditCell
                 && !was_editing
                 && !modifiers.shift
                 && !modifiers.command
@@ -195,8 +193,8 @@ impl Interaction {
                 .map(|focus| focus.row)
                 .or_else(|| state.selection.rows.first().copied())
                 .unwrap_or(0);
-            if resolve_tap(GridElement::ColumnHeader, state.focus, None)
-                == GridTapOutcome::SelectColumn
+            if GridTouch::new().tap(GridElement::ColumnHeader, state.focus, None)
+                == TouchGesture::SelectColumn
             {
                 state.selection.select_column(
                     column,
@@ -205,13 +203,20 @@ impl Interaction {
                     &mut state.anchor,
                 );
             }
-            state.focus = (source.row_count() > 0)
-                .then_some(GridFocus::new(row.min(source.row_count() - 1), column));
+            state.focus = if options.touch {
+                // A touch header tap selects the whole column. Keeping a cell
+                // focus would draw a cell border under the column and make the
+                // next tap on that cell edit instead of select its row.
+                None
+            } else {
+                (source.row_count() > 0)
+                    .then_some(GridFocus::new(row.min(source.row_count() - 1), column))
+            };
             state.editing = None;
         } else if let Some((row, modifiers)) = self.row.take() {
             clicked = true;
-            if resolve_tap(GridElement::RowNumber, state.focus, None)
-                == GridTapOutcome::SelectRowNumber
+            if GridTouch::new().tap(GridElement::RowNumber, state.focus, None)
+                == TouchGesture::SelectRowNumber
             {
                 state.selection.select_row(
                     row,

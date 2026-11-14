@@ -476,7 +476,7 @@ fn the_accessory_reports_previous_next_and_done() {
     let metrics = MobileMetrics::phone();
 
     let mut harness = UiHarness::new(Theme::desktop_light(), [360.0, 800.0], move |ui| {
-        if let Some(action) = editor_accessory(ui, metrics, EN) {
+        if let Some(action) = editor_accessory(ui, metrics, EN, true) {
             *state.borrow_mut() = Some(action);
         }
     });

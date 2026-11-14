@@ -104,12 +104,16 @@ impl MobileEditor<'_> {
                 .show(ui, |_| {});
         }
         if editing {
+            let moves =
+                self.editor_state.editing.as_ref().is_some_and(|edit| {
+                    matches!(edit.target, super::MobileEditTarget::Cell { .. })
+                });
             Panel::bottom("mobile-editor-accessory")
                 .exact_size(self.metrics.accessory_height)
                 .frame(Frame::NONE)
                 .show_separator_line(false)
                 .show(ui, |ui| {
-                    if let Some(action) = editor_accessory(ui, self.metrics, self.language) {
+                    if let Some(action) = editor_accessory(ui, self.metrics, self.language, moves) {
                         self.run_accessory(action, &options);
                     }
                 });

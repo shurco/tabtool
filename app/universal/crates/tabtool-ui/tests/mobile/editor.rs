@@ -32,9 +32,10 @@ fn the_editor_composes_the_toolbar_grid_and_status() {
 }
 
 #[test]
-fn the_second_tap_opens_the_native_editor_over_the_cell() {
+fn a_fast_second_tap_is_the_edit_gesture_and_never_zooms() {
     let mut fixture = EditorFixture::phone(support::small_document());
     fixture.run();
+    let zoom = fixture.ctx.zoom_factor();
 
     fixture.click_cell("Alice");
     assert!(
@@ -65,6 +66,11 @@ fn the_second_tap_opens_the_native_editor_over_the_cell() {
             && (request.rect.width() - cell.width()).abs() < 1.0,
         "the editor opens over the cell: request {:?}, cell {cell:?}",
         request.rect
+    );
+    assert_eq!(
+        fixture.ctx.zoom_factor(),
+        zoom,
+        "the reserved double-tap gesture must not zoom the grid"
     );
 }
 
@@ -195,12 +201,14 @@ fn a_header_tap_selects_the_column_and_rename_opens_the_native_editor() {
         matches!(fixture.edit_target(), Some(MobileEditTarget::Column(_))),
         "rename targets the column identity"
     );
+    assert!(
+        !fixture.has_label("Next Cell") && !fixture.has_label("Previous Cell"),
+        "a header rename has no cells to step through"
+    );
+    assert!(fixture.has_label("Done"));
 
     fixture.input.set_draft("Title");
-    fixture
-        .input
-        .finish(TouchTextInputOutcome::Committed("Title".to_owned()));
-    fixture.run();
+    fixture.click("Done");
 
     let headers = fixture
         .document
@@ -388,6 +396,105 @@ fn a_filtered_grid_commits_the_model_row_behind_the_display_row() {
         "the display row must not be written as a model row"
     );
     assert_eq!(fixture.cell(1, 0), "Bob");
+}
+
+#[test]
+fn a_header_tap_clears_the_cell_focus_so_the_next_tap_selects() {
+    let mut fixture = EditorFixture::phone(support::small_document());
+    fixture.run();
+    fixture.click_cell("Alice");
+    assert_eq!(fixture.state.borrow().focus, Some(GridFocus::new(0, 0)));
+
+    fixture.click_header("Amount");
+    assert_eq!(fixture.selection().columns, [1].into_iter().collect());
+    assert_eq!(
+        fixture.state.borrow().focus,
+        None,
+        "a touch header selection must not keep a cell border"
+    );
+
+    fixture.click_cell("1.5");
+    assert!(
+        fixture.input.request().is_none(),
+        "the next tap selects the row instead of editing the old focus"
+    );
+    assert_eq!(fixture.selection().rows, [0].into_iter().collect());
+    assert_eq!(fixture.edit_target(), None);
+}
+
+#[test]
+fn a_quoted_multiline_cell_opens_a_multiline_field() {
+    let mut fixture = EditorFixture::phone(support::multiline_document());
+    fixture.run();
+
+    fixture.click_cell("first\nsecond");
+    fixture.click_cell("first\nsecond");
+
+    let request = fixture
+        .input
+        .request()
+        .expect("the multiline cell opens the native editor");
+    assert_eq!(request.text, "first\nsecond");
+    assert!(
+        request.multiline,
+        "a cell with an embedded line break must accept line breaks"
+    );
+}
+
+#[test]
+fn a_long_press_opens_the_cell_context_menu_without_selecting() {
+    let mut fixture = EditorFixture::phone(support::small_document());
+    fixture.run();
+    let cell = fixture.get_by_role_and_label(Role::Cell, "Alice").rect();
+    let pos = cell.center();
+
+    fixture.event(egui::Event::Touch {
+        device_id: egui::TouchDeviceId(0),
+        id: egui::TouchId(0),
+        phase: egui::TouchPhase::Start,
+        pos,
+        force: Some(1.0),
+    });
+    fixture.event(egui::Event::PointerMoved(pos));
+    fixture.event(egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::default(),
+    });
+    fixture.run();
+    fixture.run_steps(5);
+
+    assert!(
+        fixture.has_label("Copy"),
+        "a long press opens the cell context menu"
+    );
+    assert_eq!(
+        fixture.selection().rows,
+        [0].into_iter().collect(),
+        "the context menu targets the pressed row"
+    );
+    assert_eq!(
+        fixture.edit_target(),
+        None,
+        "a long press must not run the two-tap edit flow"
+    );
+    assert!(fixture.input.request().is_none());
+
+    fixture.event(egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::default(),
+    });
+    fixture.event(egui::Event::Touch {
+        device_id: egui::TouchDeviceId(0),
+        id: egui::TouchId(0),
+        phase: egui::TouchPhase::End,
+        pos,
+        force: None,
+    });
+    fixture.run();
 }
 
 #[test]

@@ -56,6 +56,21 @@ pub fn small_document() -> Document {
     document
 }
 
+/// A document whose second cell contains a quoted line break.
+pub fn multiline_document() -> Document {
+    let configuration = header_configuration();
+    let mut document = Document::new(configuration.clone());
+    document
+        .load_from_bytes(
+            b"Name,Note\nAlice,\"first\nsecond\"\n",
+            None,
+            Some(configuration),
+            false,
+        )
+        .expect("the quoted cell parses");
+    document
+}
+
 /// Opens `path` through the large-file path and waits for its index.
 pub fn large_document(directory: &TempDir) -> Document {
     let path: std::path::PathBuf = directory.path().join("large.csv");

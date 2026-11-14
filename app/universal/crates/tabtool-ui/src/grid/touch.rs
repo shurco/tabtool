@@ -86,7 +86,7 @@ impl GridTouch {
         }
     }
 
-    /// What a long press does: every grid element except the corner offers a
+    /// A long press does nothing on the corner; every real element offers its
     /// context menu.
     pub fn long_press(&self, element: GridElement) -> TouchGesture {
         match element {
@@ -95,14 +95,6 @@ impl GridTouch {
                 TouchGesture::ContextMenu
             }
         }
-    }
-
-    /// A double tap is reserved for zoom and never edits or selects.
-    ///
-    /// Android does not zoom the grid today; the rule keeps the reserved
-    /// gesture from reaching the cell editor by accident.
-    pub fn double_tap(&self) -> TouchGesture {
-        TouchGesture::Ignore
     }
 
     /// Whether `cell` is focused, selected or plain.

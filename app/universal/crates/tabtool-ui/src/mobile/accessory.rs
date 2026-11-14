@@ -18,12 +18,13 @@ pub enum AccessoryAction {
 
 /// Draw the keyboard accessory bar; returns the pressed action.
 ///
-/// The caller places the bar directly above the keyboard inset and forwards
-/// the action to the native text input's commit and move.
+/// `moves` draws Previous Cell and Next Cell. A column rename has no cells to
+/// step through, so the caller hides them and keeps Done.
 pub fn editor_accessory(
     ui: &mut Ui,
     metrics: MobileMetrics,
     language: Language,
+    moves: bool,
 ) -> Option<AccessoryAction> {
     let width = ui.available_width();
     let (rect, _) = ui.allocate_exact_size(
@@ -56,23 +57,25 @@ pub fn editor_accessory(
     ) {
         chosen = Some(action);
     }
-    if let Some(action) = button(
-        ui,
-        "\u{203A}",
-        tr(language, "Next Cell"),
-        "editor-accessory-next",
-        AccessoryAction::Next,
-    ) {
-        chosen = Some(action);
-    }
-    if let Some(action) = button(
-        ui,
-        "\u{2039}",
-        tr(language, "Previous Cell"),
-        "editor-accessory-previous",
-        AccessoryAction::Previous,
-    ) {
-        chosen = Some(action);
+    if moves {
+        if let Some(action) = button(
+            ui,
+            "\u{203A}",
+            tr(language, "Next Cell"),
+            "editor-accessory-next",
+            AccessoryAction::Next,
+        ) {
+            chosen = Some(action);
+        }
+        if let Some(action) = button(
+            ui,
+            "\u{2039}",
+            tr(language, "Previous Cell"),
+            "editor-accessory-previous",
+            AccessoryAction::Previous,
+        ) {
+            chosen = Some(action);
+        }
     }
     chosen
 }
