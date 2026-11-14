@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 
 //! Design tokens, widgets and the deterministic test harness for the TabTool
-//! desktop UI.
+//! desktop and mobile UI.
 //!
 //! Start an application with [`install_fonts`] (the operating system's fonts,
 //! not a bundled set), then install the appearance:
@@ -31,6 +31,7 @@ mod format_options;
 pub mod grid;
 #[cfg(feature = "test-support")]
 pub mod harness;
+pub mod mobile;
 pub mod settings;
 pub mod theme;
 pub mod widgets;
