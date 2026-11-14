@@ -1,20 +1,18 @@
-//! TabTool Android host and input/clipboard/SAF/insets feasibility spike.
+//! TabTool Android host and the platform-services smoke UI.
+//!
+//! The spike exercises the production platform layer: the native text editor,
+//! SAF import/export, clipboard, share, insets, system languages, links and
+//! back. It is replaced by the real mobile app in Plan 5 Task 6.
 
-pub mod insets;
-
-#[cfg(target_os = "android")]
-mod platform_bridge;
 #[cfg(target_os = "android")]
 mod spike_app;
-#[cfg(target_os = "android")]
-mod text_input;
 
 #[cfg(target_os = "android")]
 #[unsafe(no_mangle)]
 fn android_main(app: winit::platform::android::activity::AndroidApp) {
     use eframe::egui;
 
-    platform_bridge::init_logging();
+    init_logging();
     log::info!("TabTool {} starting", tabtool_core::VERSION);
 
     let options = eframe::NativeOptions {
@@ -31,6 +29,15 @@ fn android_main(app: winit::platform::android::activity::AndroidApp) {
     ) {
         log::error!("eframe failed to run: {error}");
     }
+}
+
+#[cfg(target_os = "android")]
+fn init_logging() {
+    android_logger::init_once(
+        android_logger::Config::default()
+            .with_max_level(log::LevelFilter::Info)
+            .with_tag("TabTool"),
+    );
 }
 
 /// The Android emulator's Vulkan driver (`vulkan.ranchu`) segfaults while wgpu

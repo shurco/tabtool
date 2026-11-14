@@ -15,6 +15,7 @@ eframe = { version = "=0.37.0", default-features = false, features = ["default_f
 log = "0.4"
 serde_json = { workspace = true }
 tabtool-core = { path = "../../crates/tabtool-core" }
+tabtool-platform = { path = "../../crates/tabtool-platform" }
 
 # The Android entry point is declared by this crate, so it must name winit's
 # `AndroidApp` type directly. The features match what eframe enables transitively.

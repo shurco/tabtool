@@ -15,9 +15,11 @@ pub trait SystemInfo {
 }
 
 /// The live system locale.
+#[cfg(not(target_os = "android"))]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SystemLocale;
 
+#[cfg(not(target_os = "android"))]
 impl SystemInfo for SystemLocale {
     fn languages(&self) -> Vec<String> {
         sys_locale::get_locales().collect()
@@ -33,6 +35,7 @@ impl SystemInfo for SystemLocale {
 }
 
 /// The system locale, for example `de_DE`.
+#[cfg(not(target_os = "android"))]
 pub fn system_locale() -> String {
     let tag = sys_locale::get_locale().unwrap_or_else(|| "en_US".to_string());
     normalize_tag(&tag)
@@ -61,7 +64,7 @@ pub fn decimal_separator(locale: &str) -> String {
 }
 
 /// Removes an encoding suffix and turns the tag into an underscore locale.
-fn normalize_tag(tag: &str) -> String {
+pub(crate) fn normalize_tag(tag: &str) -> String {
     let tag = tag.split(['.', '@']).next().unwrap_or(tag);
     tag.replace('-', "_")
 }

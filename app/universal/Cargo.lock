@@ -3601,6 +3601,7 @@ dependencies = [
  "ndk-context",
  "serde_json",
  "tabtool-core",
+ "tabtool-platform",
  "winit",
 ]
 
@@ -3670,6 +3671,9 @@ dependencies = [
  "directories",
  "icu_decimal",
  "icu_locale_core",
+ "jni 0.21.1",
+ "log",
+ "ndk-context",
  "open",
  "rfd",
  "serde_json",

@@ -1,7 +1,10 @@
 use std::cell::RefCell;
 use std::path::PathBuf;
 
-use tabtool_platform::{Clipboard, DesktopPlatform, FileDialogs, OpenUrl, SystemInfo};
+use tabtool_platform::{
+    BackHandler, Clipboard, DesktopPlatform, DocumentFiles, FileDialogs, Insets, OpenUrl, Share,
+    SystemInfo, TextInput,
+};
 
 #[derive(Default)]
 struct FakeDialogs {
@@ -99,9 +102,19 @@ fn the_desktop_platform_implements_every_service() {
     fn assert_clipboard<T: Clipboard>() {}
     fn assert_open_url<T: OpenUrl>() {}
     fn assert_system_info<T: SystemInfo>() {}
+    fn assert_text_input<T: TextInput>() {}
+    fn assert_document_files<T: DocumentFiles>() {}
+    fn assert_insets<T: Insets>() {}
+    fn assert_share<T: Share>() {}
+    fn assert_back_handler<T: BackHandler>() {}
 
     assert_dialogs::<DesktopPlatform>();
     assert_clipboard::<DesktopPlatform>();
     assert_open_url::<DesktopPlatform>();
     assert_system_info::<DesktopPlatform>();
+    assert_text_input::<DesktopPlatform>();
+    assert_document_files::<DesktopPlatform>();
+    assert_insets::<DesktopPlatform>();
+    assert_share::<DesktopPlatform>();
+    assert_back_handler::<DesktopPlatform>();
 }

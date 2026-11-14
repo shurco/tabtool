@@ -10,12 +10,21 @@ description = "Desktop services, settings and system locale for TabTool."
 directories = "6"
 icu_decimal = { version = "2.4", features = ["alloc"] }
 icu_locale_core = "2.4"
-open = "5"
-rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
 serde_json.workspace = true
-sys-locale = "0.3"
 tabtool-core = { path = "../tabtool-core" }
 tabtool-i18n = { path = "../tabtool-i18n" }
 tabtool-large = { path = "../tabtool-large" }
 tabtool-settings = { path = "../tabtool-settings" }
 tempfile = "3"
+
+# Desktop-only services. Android replaces them with the JNI bridge.
+[target.'cfg(not(target_os = "android"))'.dependencies]
+open = "5"
+rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
+sys-locale = "0.3"
+
+# The Android bridge calls the Kotlin host through JNI.
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+log = "0.4"
+ndk-context = "0.1"

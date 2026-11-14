@@ -1,13 +1,13 @@
-# TabTool Android host (feasibility spike)
+# TabTool Android host (platform services spike)
 
 Real Android host for the Rust `tabtool-core` port: a Gradle project with a
 `GameActivity` subclass, Kotlin JNI bridge, native `EditText` overlay, and a Rust
 `cdylib` built with eframe 0.37.0 / egui 0.37.0.
 
-This is a developer spike, not product UI. Its purpose is to decide whether the
-Android input path (soft keyboard + IME composition), clipboard, Storage Access
-Framework (SAF) and window insets support the port. The checklist below is the
-go/no-go record.
+This is a developer spike, not product UI. Plan 5 Task 1 moved the JNI bridge
+into `tabtool-platform::android`; the spike now drives the production platform
+services (native editor, SAF, clipboard, share, insets, languages, links and
+back). It is replaced by the real mobile app in Plan 5 Task 6.
 
 ## Why text entry uses a native editor
 
@@ -66,25 +66,51 @@ The crate's library name is `main` because `GameActivity` loads `libmain.so`.
 ## Bridge surface
 
 `app.shurco.tabtool.TabToolBridge` (Kotlin) exposes static JNI methods consumed
-by `src/platform_bridge.rs`:
+by `tabtool-platform::android`. Results are `OK`, `OK:<value>`, `CANCELLED` or
+`ERROR:<message>`; SAF calls return `null` while the picker or copy runs.
 
 | Kotlin | Rust | Notes |
 | --- | --- | --- |
-| `clipboardGet(): String?` | `clipboard_get() -> Option<String>` | `SecurityException` is caught in Kotlin and cleared in Rust |
-| `clipboardSet(text: String)` | `clipboard_set(&str)` | |
-| `openDocument(): String?` | `open_document() -> Option<String>` | launches `ACTION_OPEN_DOCUMENT` (`text/*`) with `ACTION_GET_CONTENT` fallback; returns and clears the URI from the previous pick |
-| `insets(): IntArray` | `insets() -> Insets` | `[left, top, right, bottom, keyboard]` in dp |
-| `showTextEditor(left, top, width, height, text, multiline)` | `text_input::open(TextInputRequest)` | rectangle in physical pixels; opens the native `EditText` |
-| `hideTextEditor()` | `text_input::close()` | removes the editor without committing or cancelling |
+| `clipboardGet(): String?` | `Clipboard::get` | `SecurityException` is caught in Kotlin and cleared in Rust |
+| `clipboardSet(text: String)` | `Clipboard::set` | |
+| `documentsDir(): String?` | `DocumentFiles::documents_dir` | app-private `files/documents`, created on demand |
+| `importDocument(): String?` | `DocumentFiles::import_from_picker` | `ACTION_OPEN_DOCUMENT` (`text/*`); streams the URI into the documents dir under a collision-free name |
+| `exportDocument(sourcePath, suggestedName): String?` | `DocumentFiles::export_copy` | `ACTION_CREATE_DOCUMENT`; streams the source file to the chosen URI |
+| `shareFile(path): String` | `Share::share` | `FileProvider` (`${applicationId}.fileprovider`) + `ACTION_SEND` chooser |
+| `insets(): IntArray` | `Insets::safe_area` / `keyboard_height` | `[left, top, right, bottom, keyboard]` in dp |
+| `languages(): Array<String>` | `SystemInfo::languages` | system language tags, most preferred first |
+| `openUrl(url): String` | `OpenUrl::open` | http, https and mailto only |
+| `isDocumentOperationPending(): Boolean` | `AndroidPlatform::document_operation_pending` | lets the app poll SAF without relaunching the picker |
+| `takeBack(): Boolean` | `BackHandler::take_back` | back is consumed and queued; the app exits at its root with `finishActivity` |
+| `showTextEditor(left, top, width, height, text, multiline)` | `TextInput::open` | rectangle in points; Kotlin converts with the display density |
+| `hideTextEditor()` | `TextInput::close` | removes the editor without committing or cancelling |
 | `throwSecurityException()` | spike self-test | proves JNI exceptions are cleared instead of crashing |
 
 `TabToolTextEditor` (real `AppCompatEditText`) calls back into Rust via
 `nativeTextCommitted(text)` / `nativeTextCancelled()`. The callbacks store the
-outcome in a `Mutex<Option<TextInputOutcome>>` that `text_input::poll()` drains.
+outcome in a `Mutex<Option<TextInputOutcome>>` that `TextInput::poll` drains.
 Back cancels; the IME Done action and focus loss commit; rotation cancels the
 edit without touching the committed value.
 
-## Checklist result
+## Platform services checklist (Plan 5 Task 1)
+
+Verified on the `Medium_Phone_API_36.1` AVD (arm64, Android 16, headless,
+`-gpu host`).
+
+| # | Check | Result | Evidence |
+| --- | --- | --- | --- |
+| 1 | Import a CSV into the private directory | **PASS** | Picked `sample.csv` from Downloads; `run-as ... ls files/documents` showed `sample.csv`, 26 bytes; the UI showed the private path. |
+| 2 | Export a byte-identical copy to Downloads | **PASS** | `ACTION_CREATE_DOCUMENT` opened with `TabTool export.csv`; `adb pull` + `cmp` matched the source; the working file stayed in the private directory. |
+| 3 | Clipboard round-trip | **PASS** | `Clipboard set` then `Clipboard get` returned `Some("TabTool clipboard")`. |
+| 4 | Share sheet opens with the document | **PASS** | The chooser (`com.android.intentresolver/.ChooserActivityLauncher`) showed "Sharing 1 file: sample.csv". |
+| 5 | Insets report and react | **PASS** | Safe area `[0, 24, 0, 24]` dp in portrait; keyboard `0 ↔ 336` dp while editing; landscape re-laid out the surface. |
+| 6 | Back closes the editor without committing | **PASS** | With the keyboard visible, the first back hides the IME; the next back produced `last outcome: cancelled` and kept the committed text. Later backs produced `status: back: taken` and the activity stayed alive. |
+| 7 | Text input commit | **PASS** | `Platform` typed through Gboard committed once on IME Done. |
+| 8 | System languages and links | **PASS** | `languages: ["en-US"]`; `Open URL` resumed Chrome. |
+| 9 | JNI exception containment | **PASS** | Forced `SecurityException` logged and cleared; `SecurityException contained: true`, process alive. |
+| 10 | Import cancel leaves no file and no stuck picker | **PASS** | Backing out of the picker left the documents dir unchanged and a second import opened normally. |
+
+## Plan 1 feasibility checklist (historical)
 
 Verified on the `Medium_Phone_API_36.1` AVD (arm64, Android 16, headless,
 `-gpu host`, Gboard with English, Russian and Simplified Chinese/Pinyin
@@ -144,11 +170,12 @@ layouts). Screenshots were taken with `adb exec-out screencap`.
   wgpu to its GL backend on Android and the emulator is started with
   `-gpu host`. Disabling guest Vulkan (`-feature -Vulkan`) instead made GL
   surface creation fail with `BadAlloc`.
-- The overlay is positioned from the egui field rectangle in points multiplied
-  by `pixels_per_point`. It sits in `android.R.id.content` above the
+- The overlay is positioned from the egui field rectangle in points; Kotlin
+  applies the display density and places it in `android.R.id.content` above the
   `SurfaceView`, and its top-left matched the placeholder in every tested
   orientation.
 - Because the editor commits on focus loss, switching apps or opening another
   Android activity commits the current text (expected for this spike).
-- The spike app's `insets` and clipboard paths are unchanged from the first
-  round; only the input path is new.
+- The spike app's insets and clipboard paths were carried into
+  `tabtool-platform::android`; Plan 5 Task 1 added SAF import/export, share,
+  languages, links, back and the FileProvider.

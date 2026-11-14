@@ -11,12 +11,7 @@ import com.google.androidgamesdk.GameActivity
 class MainActivity : GameActivity() {
     private val editorBackCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
-            if (TabToolBridge.cancelTextEditor()) {
-                return
-            }
-            isEnabled = false
-            onBackPressedDispatcher.onBackPressed()
-            isEnabled = true
+            TabToolBridge.handleBack()
         }
     }
 

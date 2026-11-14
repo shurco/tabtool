@@ -1,0 +1,580 @@
+//! Android platform services through the Kotlin `TabToolBridge`.
+//!
+//! The JavaVM, the bridge class and the documents directory are resolved once
+//! and cached. Every call checks, describes and clears a pending Java
+//! exception before it is logged, so a failed bridge method can never abort the
+//! native app.
+//!
+//! The bridge encodes its typed results as strings: `OK`, `OK:<value>`,
+//! `CANCELLED` or `ERROR:<message>`. Pending file operations return `null` and
+//! are polled again later.
+
+use std::io;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, OnceLock};
+
+use jni::objects::{GlobalRef, JIntArray, JObject, JObjectArray, JString, JValue, JValueOwned};
+use jni::sys::jobject;
+use jni::{JNIEnv, JavaVM};
+use log::{error, info};
+
+use crate::locale::{SystemInfo, decimal_separator, normalize_tag};
+use crate::services::{BackHandler, Clipboard, DocumentFiles, Insets, OpenUrl, Share};
+use crate::text_input::{TextInput, TextInputOutcome, TextInputRequest};
+
+const BRIDGE_CLASS: &str = "app/shurco/tabtool/TabToolBridge";
+
+struct Bridge {
+    vm: JavaVM,
+    class: GlobalRef,
+}
+
+static BRIDGE: OnceLock<Option<Bridge>> = OnceLock::new();
+static DOCUMENTS_DIR: OnceLock<Option<PathBuf>> = OnceLock::new();
+static OUTCOME: Mutex<Option<TextInputOutcome>> = Mutex::new(None);
+static EDITOR_ACTIVE: AtomicBool = AtomicBool::new(false);
+
+/// The Android platform services.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct AndroidPlatform;
+
+impl AndroidPlatform {
+    /// Whether a SAF import or export is still running.
+    ///
+    /// The neutral [`DocumentFiles`] methods return their result on a later
+    /// call. The app polls this first so it does not relaunch the picker after
+    /// the previous request.
+    #[must_use]
+    pub fn document_operation_pending(self) -> bool {
+        call_bool("isDocumentOperationPending")
+    }
+
+    /// Closes the activity when the app's navigation stack cannot take back.
+    pub fn finish_activity(self) {
+        call_void("finishActivity", "()V", &[]);
+    }
+}
+
+impl TextInput for AndroidPlatform {
+    fn open(&self, request: TextInputRequest) {
+        set_outcome(None);
+        let [left, top, width, height] = request.rect;
+        EDITOR_ACTIVE.store(true, Ordering::Release);
+        with_env("showTextEditor", (), |env, bridge| {
+            let text = env.new_string(&request.text)?;
+            let args = [
+                JValue::Float(left),
+                JValue::Float(top),
+                JValue::Float(width),
+                JValue::Float(height),
+                JValue::from(&text),
+                JValue::Bool(u8::from(request.multiline)),
+            ];
+            env.call_static_method(
+                &bridge.class,
+                "showTextEditor",
+                "(FFFFLjava/lang/String;Z)V",
+                &args,
+            )?;
+            Ok(())
+        });
+    }
+
+    fn close(&self) {
+        set_outcome(None);
+        EDITOR_ACTIVE.store(false, Ordering::Release);
+        call_void("hideTextEditor", "()V", &[]);
+    }
+
+    fn poll(&self) -> Option<TextInputOutcome> {
+        OUTCOME
+            .lock()
+            .map(|mut slot| slot.take())
+            .unwrap_or_else(|poisoned| poisoned.into_inner().take())
+    }
+
+    fn is_active(&self) -> bool {
+        EDITOR_ACTIVE.load(Ordering::Acquire)
+    }
+}
+
+impl DocumentFiles for AndroidPlatform {
+    fn documents_dir(&self) -> PathBuf {
+        DOCUMENTS_DIR
+            .get_or_init(|| {
+                call_string("documentsDir", "()Ljava/lang/String;", &[]).map(PathBuf::from)
+            })
+            .clone()
+            .unwrap_or_default()
+    }
+
+    fn list_documents(&self) -> Vec<PathBuf> {
+        crate::services::table_files(&self.documents_dir())
+    }
+
+    fn import_from_picker(&self) -> Option<PathBuf> {
+        let raw = call_string("importDocument", "()Ljava/lang/String;", &[])?;
+        match parse_result(&raw) {
+            BridgeResult::Ok(Some(name)) => {
+                let path = self.documents_dir().join(name);
+                if path.is_file() {
+                    Some(path)
+                } else {
+                    error!("The imported document is missing at {}", path.display());
+                    None
+                }
+            }
+            BridgeResult::Ok(None) => None,
+            BridgeResult::Cancelled => None,
+            BridgeResult::Failed(message) => {
+                error!("Import failed: {message}");
+                None
+            }
+        }
+    }
+
+    fn export_copy(&self, source: &Path, suggested_name: &str) -> bool {
+        let source = source.to_string_lossy();
+        let Some(raw) = call_string_2(
+            "exportDocument",
+            &source,
+            suggested_name,
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+        ) else {
+            return false;
+        };
+        match parse_result(&raw) {
+            BridgeResult::Ok(_) => true,
+            BridgeResult::Cancelled => false,
+            BridgeResult::Failed(message) => {
+                error!("Export failed: {message}");
+                false
+            }
+        }
+    }
+
+    fn delete(&self, path: &Path) -> io::Result<()> {
+        self.ensure_document(path)?;
+        std::fs::remove_file(path)
+    }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        self.ensure_document(from)?;
+        self.ensure_document(to)?;
+        std::fs::rename(from, to)
+    }
+}
+
+impl AndroidPlatform {
+    /// Refuses paths outside the private documents directory.
+    fn ensure_document(self, path: &Path) -> io::Result<()> {
+        if path.parent() == Some(self.documents_dir().as_path()) {
+            Ok(())
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("{} is outside the documents directory", path.display()),
+            ))
+        }
+    }
+}
+
+impl Insets for AndroidPlatform {
+    fn safe_area(&self) -> [f32; 4] {
+        match call_int_array("insets") {
+            Some(values) if values.len() >= 5 => [
+                values[0] as f32,
+                values[1] as f32,
+                values[2] as f32,
+                values[3] as f32,
+            ],
+            _ => [0.0; 4],
+        }
+    }
+
+    fn keyboard_height(&self) -> f32 {
+        call_int_array("insets")
+            .and_then(|values| values.get(4).copied())
+            .map_or(0.0, |height| height as f32)
+    }
+}
+
+impl Share for AndroidPlatform {
+    fn share(&self, path: &Path) {
+        let path = path.to_string_lossy();
+        let Some(raw) = call_string_1("shareFile", &path, "(Ljava/lang/String;)Ljava/lang/String;")
+        else {
+            return;
+        };
+        if let BridgeResult::Failed(message) = parse_result(&raw) {
+            error!("Share failed: {message}");
+        }
+    }
+}
+
+impl BackHandler for AndroidPlatform {
+    fn take_back(&self) -> bool {
+        call_bool("takeBack")
+    }
+}
+
+impl Clipboard for AndroidPlatform {
+    fn get(&self) -> Option<String> {
+        call_string("clipboardGet", "()Ljava/lang/String;", &[])
+    }
+
+    fn set(&self, text: &str) {
+        with_env("clipboardSet", (), |env, bridge| {
+            let text = env.new_string(text)?;
+            env.call_static_method(
+                &bridge.class,
+                "clipboardSet",
+                "(Ljava/lang/String;)V",
+                &[JValue::from(&text)],
+            )?;
+            Ok(())
+        });
+    }
+}
+
+impl OpenUrl for AndroidPlatform {
+    fn open(&self, url: &str) {
+        let Some(raw) = call_string_1("openUrl", url, "(Ljava/lang/String;)Ljava/lang/String;")
+        else {
+            return;
+        };
+        if let BridgeResult::Failed(message) = parse_result(&raw) {
+            error!("Opening {url} failed: {message}");
+        }
+    }
+}
+
+impl SystemInfo for AndroidPlatform {
+    fn languages(&self) -> Vec<String> {
+        call_string_array("languages").unwrap_or_default()
+    }
+
+    fn locale(&self) -> String {
+        self.languages()
+            .first()
+            .map_or_else(|| "en_US".to_owned(), |tag| normalize_tag(tag))
+    }
+
+    fn decimal_separator(&self) -> String {
+        decimal_separator(&self.locale())
+    }
+}
+
+/// The bridge's typed result.
+#[derive(Debug, PartialEq, Eq)]
+enum BridgeResult {
+    /// The operation succeeded, with an optional payload.
+    Ok(Option<String>),
+    /// The user dismissed the picker.
+    Cancelled,
+    /// The operation failed with a message for the log and the UI.
+    Failed(String),
+}
+
+fn parse_result(raw: &str) -> BridgeResult {
+    if raw == "CANCELLED" {
+        return BridgeResult::Cancelled;
+    }
+    if let Some(message) = raw.strip_prefix("ERROR:") {
+        return BridgeResult::Failed(message.to_owned());
+    }
+    if raw == "OK" {
+        return BridgeResult::Ok(None);
+    }
+    if let Some(value) = raw.strip_prefix("OK:") {
+        return BridgeResult::Ok(Some(value.to_owned()));
+    }
+    BridgeResult::Failed(format!("malformed bridge result: {raw}"))
+}
+
+fn set_outcome(outcome: Option<TextInputOutcome>) {
+    match OUTCOME.lock() {
+        Ok(mut slot) => *slot = outcome,
+        Err(poisoned) => *poisoned.into_inner() = outcome,
+    }
+}
+
+// --- JNI plumbing -----------------------------------------------------------
+
+fn bridge() -> Option<&'static Bridge> {
+    BRIDGE
+        .get_or_init(|| {
+            // SAFETY: android-activity initializes `ndk_context` before `android_main`.
+            unsafe { init_bridge() }
+        })
+        .as_ref()
+}
+
+unsafe fn init_bridge() -> Option<Bridge> {
+    let android_context = ndk_context::android_context();
+    // SAFETY: `ndk_context` was initialized by android-activity with the process
+    // `JavaVM` before `android_main`; the pointer is valid for the process lifetime.
+    let vm = match unsafe { JavaVM::from_raw(android_context.vm().cast()) } {
+        Ok(vm) => vm,
+        Err(error) => {
+            error!("Cannot wrap the Android JavaVM: {error}");
+            return None;
+        }
+    };
+
+    let class = {
+        let mut env = match vm.attach_current_thread() {
+            Ok(env) => env,
+            Err(error) => {
+                error!("Cannot attach the native thread to the JavaVM: {error}");
+                return None;
+            }
+        };
+
+        let class = (|| -> jni::errors::Result<GlobalRef> {
+            // SAFETY: `ndk_context` holds a live Android context reference for
+            // the process lifetime. It is borrowed only to reach the app's
+            // class loader; the borrowed value is not used after this scope.
+            let context = unsafe { JObject::from_raw(android_context.context() as jobject) };
+            let class = bridge_class(&mut env, &context)?;
+            env.new_global_ref(class)
+        })();
+
+        match class {
+            Ok(class) => class,
+            Err(error) => {
+                log_jni_error(&mut env, "init_bridge", &error);
+                return None;
+            }
+        }
+    };
+
+    info!("JNI bridge initialized");
+    Some(Bridge { vm, class })
+}
+
+fn bridge_class<'local>(
+    env: &mut JNIEnv<'local>,
+    context: &JObject<'local>,
+) -> jni::errors::Result<JObject<'local>> {
+    // `FindClass` on the native thread only sees the boot class path, so load the
+    // bridge through the application's class loader instead.
+    let name = env.new_string(BRIDGE_CLASS.replace('/', "."))?;
+    let loader = env
+        .call_method(context, "getClassLoader", "()Ljava/lang/ClassLoader;", &[])?
+        .l()?;
+    if loader.is_null() {
+        return Err(jni::errors::Error::NullPtr("bridge class loader"));
+    }
+
+    env.call_method(
+        &loader,
+        "loadClass",
+        "(Ljava/lang/String;)Ljava/lang/Class;",
+        &[JValue::from(&name)],
+    )?
+    .l()
+}
+
+/// Attaches the calling thread and runs `call`, containing every JNI failure.
+fn with_env<T>(
+    method: &str,
+    fallback: T,
+    call: impl FnOnce(&mut JNIEnv<'_>, &'static Bridge) -> jni::errors::Result<T>,
+) -> T {
+    let Some(bridge) = bridge() else {
+        error!("The JNI bridge is unavailable for `{method}`");
+        return fallback;
+    };
+    let mut env = match bridge.vm.attach_current_thread() {
+        Ok(env) => env,
+        Err(error) => {
+            error!("Cannot attach the native thread for `{method}`: {error}");
+            return fallback;
+        }
+    };
+
+    match call(&mut env, bridge) {
+        Ok(value) => value,
+        Err(error) => {
+            log_jni_error(&mut env, method, &error);
+            fallback
+        }
+    }
+}
+
+/// Checks, describes and clears a pending Java exception, then logs the failure.
+fn log_jni_error(env: &mut JNIEnv<'_>, method: &str, error: &jni::errors::Error) -> bool {
+    let pending = env.exception_check().unwrap_or(false);
+    if pending {
+        let _ = env.exception_describe();
+        let _ = env.exception_clear();
+    }
+    error!("JNI call `{method}` failed: {error}");
+    pending
+}
+
+fn call_string(method: &str, signature: &str, args: &[JValue<'_, '_>]) -> Option<String> {
+    with_env(method, None, |env, bridge| {
+        let value = env.call_static_method(&bridge.class, method, signature, args)?;
+        take_string(env, value)
+    })
+}
+
+fn call_string_1(method: &str, first: &str, signature: &str) -> Option<String> {
+    with_env(method, None, |env, bridge| {
+        let first = env.new_string(first)?;
+        let value =
+            env.call_static_method(&bridge.class, method, signature, &[JValue::from(&first)])?;
+        take_string(env, value)
+    })
+}
+
+fn call_string_2(method: &str, first: &str, second: &str, signature: &str) -> Option<String> {
+    with_env(method, None, |env, bridge| {
+        let first = env.new_string(first)?;
+        let second = env.new_string(second)?;
+        let value = env.call_static_method(
+            &bridge.class,
+            method,
+            signature,
+            &[JValue::from(&first), JValue::from(&second)],
+        )?;
+        take_string(env, value)
+    })
+}
+
+fn call_bool(method: &str) -> bool {
+    with_env(method, false, |env, bridge| {
+        match env.call_static_method(&bridge.class, method, "()Z", &[])? {
+            JValueOwned::Bool(value) => Ok(value != 0),
+            _ => Err(jni::errors::Error::WrongJValueType("boolean", "other")),
+        }
+    })
+}
+
+fn call_int_array(method: &str) -> Option<Vec<i32>> {
+    with_env(method, None, |env, bridge| {
+        let value = env.call_static_method(&bridge.class, method, "()[I", &[])?;
+        let JValueOwned::Object(object) = value else {
+            return Err(jni::errors::Error::WrongJValueType("int[]", "other"));
+        };
+        if object.is_null() {
+            return Ok(None);
+        }
+        let array = JIntArray::from(object);
+        let length = env.get_array_length(&array)?;
+        let mut values = vec![0i32; length.max(0) as usize];
+        if !values.is_empty() {
+            env.get_int_array_region(&array, 0, &mut values)?;
+        }
+        Ok(Some(values))
+    })
+}
+
+fn call_string_array(method: &str) -> Option<Vec<String>> {
+    with_env(method, None, |env, bridge| {
+        let value = env.call_static_method(&bridge.class, method, "()[Ljava/lang/String;", &[])?;
+        let JValueOwned::Object(object) = value else {
+            return Err(jni::errors::Error::WrongJValueType("String[]", "other"));
+        };
+        if object.is_null() {
+            return Ok(None);
+        }
+        let array = JObjectArray::from(object);
+        let length = env.get_array_length(&array)?;
+        let mut strings = Vec::with_capacity(length.max(0) as usize);
+        for index in 0..length {
+            let element = env.get_object_array_element(&array, index)?;
+            if element.is_null() {
+                continue;
+            }
+            let text = JString::from(element);
+            strings.push(env.get_string(&text)?.into());
+        }
+        Ok(Some(strings))
+    })
+}
+
+fn call_void(method: &str, signature: &str, args: &[JValue<'_, '_>]) {
+    with_env(method, (), |env, bridge| {
+        env.call_static_method(&bridge.class, method, signature, args)?;
+        Ok(())
+    });
+}
+
+fn take_string(
+    env: &mut JNIEnv<'_>,
+    value: JValueOwned<'_>,
+) -> jni::errors::Result<Option<String>> {
+    let JValueOwned::Object(object) = value else {
+        return Ok(None);
+    };
+    if object.is_null() {
+        return Ok(None);
+    }
+    let text = JString::from(object);
+    Ok(Some(env.get_string(&text)?.into()))
+}
+
+// --- JNI callbacks ----------------------------------------------------------
+
+/// JNI callback from `TabToolTextEditor.nativeTextCommitted`.
+///
+/// # Safety
+///
+/// The JVM calls this on the UI thread of the attached app; the `JNIEnv` and
+/// `JString` arguments are valid for the duration of the call.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_app_shurco_tabtool_TabToolTextEditor_nativeTextCommitted(
+    mut env: JNIEnv<'_>,
+    _this: JObject<'_>,
+    text: JString<'_>,
+) {
+    match env.get_string(&text) {
+        Ok(text) => {
+            set_outcome(Some(TextInputOutcome::Committed(text.into())));
+            EDITOR_ACTIVE.store(false, Ordering::Release);
+        }
+        Err(error) => {
+            log_jni_error(&mut env, "nativeTextCommitted", &error);
+            error!("Dropping a text commit that could not be read from the JVM");
+        }
+    }
+}
+
+/// JNI callback from `TabToolTextEditor.nativeTextCancelled`.
+///
+/// # Safety
+///
+/// The JVM calls this on the UI thread of the attached app; both references are
+/// valid for the duration of the call.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_app_shurco_tabtool_TabToolTextEditor_nativeTextCancelled(
+    _env: JNIEnv<'_>,
+    _this: JObject<'_>,
+) {
+    set_outcome(Some(TextInputOutcome::Cancelled));
+    EDITOR_ACTIVE.store(false, Ordering::Release);
+}
+
+// --- Spike self-test --------------------------------------------------------
+
+/// Spike-only self-test: proves the Rust bridge clears JNI exceptions.
+///
+/// Removed together with the spike UI in Plan 5 Task 6.
+#[doc(hidden)]
+pub fn throw_test_security_exception() -> bool {
+    let Some(bridge) = bridge() else {
+        return false;
+    };
+    let Ok(mut env) = bridge.vm.attach_current_thread() else {
+        return false;
+    };
+
+    match env.call_static_method(&bridge.class, "throwSecurityException", "()V", &[]) {
+        Ok(_) => false,
+        Err(error) => log_jni_error(&mut env, "throwSecurityException", &error),
+    }
+}
