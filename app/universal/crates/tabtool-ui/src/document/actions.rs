@@ -5,15 +5,15 @@ use std::time::{Duration, Instant};
 use egui::Context;
 use tabtool_core::CsvConfiguration;
 use tabtool_document::{
-    Document, DocumentError, DocumentPhase, FormatChange, LargeStatus, plan_format_change,
+    Document, DocumentError, DocumentPhase, FormatChange, LargeStatus, Storage, plan_format_change,
 };
-use tabtool_i18n::tr;
+use tabtool_i18n::{Language, tr};
 
 use crate::filter::FilterAction;
 use crate::grid::{ActionOutcome, GridAction};
 
 use super::dispatch::apply_grid_action;
-use super::{DocumentView, FormatBarAction, alert_message};
+use super::{ChromeAlert, DocumentView, FormatBarAction, alert_message};
 
 /// How often a large document rechecks the file at rest.
 pub(crate) const STALE_CHECK_INTERVAL: Duration = Duration::from_secs(1);
@@ -47,6 +47,101 @@ pub(crate) fn repaint_interval(is_large: bool, status: LargeStatus) -> Option<Du
         LargeStatus::Ready if is_large => Some(STALE_CHECK_INTERVAL),
         LargeStatus::None | LargeStatus::Ready | LargeStatus::Stale { .. } => None,
     }
+}
+
+/// The result of asking to apply a format configuration.
+pub(crate) enum FormatApplyOutcome {
+    /// The document changed.
+    Applied,
+    /// Unsaved edits would be discarded; the caller must ask.
+    NeedsConfirmation(CsvConfiguration),
+    /// The change failed and the document kept its table and format.
+    Failed(ChromeAlert),
+}
+
+/// Whether the document is loading, indexing or saving.
+pub(crate) fn is_document_busy(document: &Document) -> bool {
+    matches!(document.phase(), DocumentPhase::Loading)
+        || matches!(
+            document.large_status(),
+            LargeStatus::Indexing(_) | LargeStatus::Saving(_)
+        )
+}
+
+/// Applies a candidate configuration through [`Document::apply_parsing_configuration`].
+pub(crate) fn apply_format_configuration(
+    document: &mut Document,
+    storage: &dyn Storage,
+    language: Language,
+    configuration: &CsvConfiguration,
+    force: bool,
+) -> Option<ChromeAlert> {
+    match document.apply_parsing_configuration(configuration.clone(), force, storage) {
+        Ok(()) => None,
+        Err(DocumentError::RequiresConfirmation) => Some(ChromeAlert {
+            title: "Re-read Interrupted",
+            message: tr(
+                language,
+                "The document changed while it was being re-read, so the new format was not applied. Try again.",
+            )
+            .to_owned(),
+        }),
+        Err(error) => Some(ChromeAlert {
+            title: "Format Not Applied",
+            message: alert_message(language, error),
+        }),
+    }
+}
+
+/// Applies the smallest operation a format edit needs.
+///
+/// Decimal and header changes transform the table in memory; parsing changes
+/// re-read the file, asking first when unsaved edits would be discarded.
+pub(crate) fn request_format_configuration(
+    document: &mut Document,
+    storage: &dyn Storage,
+    language: Language,
+    configuration: CsvConfiguration,
+) -> FormatApplyOutcome {
+    let from = document.configuration().clone();
+    match plan_format_change(&from, &configuration) {
+        FormatChange::None => FormatApplyOutcome::Applied,
+        FormatChange::DecimalMark(mark) if document.has_content() => {
+            document.set_decimal_mark(&mark);
+            FormatApplyOutcome::Applied
+        }
+        FormatChange::Header(enabled) if document.has_content() => {
+            document.set_header_enabled(enabled);
+            FormatApplyOutcome::Applied
+        }
+        _ => {
+            let needs_confirmation = document.file_path().is_some()
+                && document.has_content()
+                && document.has_unsaved_changes();
+            if needs_confirmation {
+                return FormatApplyOutcome::NeedsConfirmation(configuration);
+            }
+            match apply_format_configuration(document, storage, language, &configuration, true) {
+                Some(alert) => FormatApplyOutcome::Failed(alert),
+                None => FormatApplyOutcome::Applied,
+            }
+        }
+    }
+}
+
+/// Detects the format from the file on disk without changing the document.
+pub(crate) fn detect_format_configuration(
+    document: &Document,
+    storage: &dyn Storage,
+    language: Language,
+    prefers_chinese: bool,
+) -> Result<CsvConfiguration, ChromeAlert> {
+    document
+        .detect_format_from_disk(storage, prefers_chinese)
+        .map_err(|error| ChromeAlert {
+            title: "Format Not Detected",
+            message: alert_message(language, error),
+        })
 }
 
 /// Polls a large document's index and at-rest staleness.
@@ -187,46 +282,30 @@ impl DocumentView<'_> {
     }
 
     pub(super) fn request_configuration(&mut self, configuration: CsvConfiguration) {
-        let from = self.document.configuration().clone();
-        match plan_format_change(&from, &configuration) {
-            FormatChange::None => {}
-            FormatChange::DecimalMark(mark) if self.document.has_content() => {
-                self.document.set_decimal_mark(&mark);
+        match request_format_configuration(
+            self.document,
+            self.storage,
+            self.language,
+            configuration,
+        ) {
+            FormatApplyOutcome::Applied => self.ui_state.alert = None,
+            FormatApplyOutcome::NeedsConfirmation(configuration) => {
+                self.ui_state.pending_reparse = Some(configuration);
             }
-            FormatChange::Header(enabled) if self.document.has_content() => {
-                self.document.set_header_enabled(enabled);
-            }
-            _ => {
-                let needs_confirmation = self.document.file_path().is_some()
-                    && self.document.has_content()
-                    && self.document.has_unsaved_changes();
-                if needs_confirmation {
-                    self.ui_state.pending_reparse = Some(configuration);
-                } else {
-                    self.apply_configuration(&configuration, true);
-                }
-            }
+            FormatApplyOutcome::Failed(alert) => self.ui_state.alert = Some(alert),
         }
     }
 
     pub(super) fn apply_configuration(&mut self, configuration: &CsvConfiguration, force: bool) {
-        match self
-            .document
-            .apply_parsing_configuration(configuration.clone(), force, self.storage)
-        {
-            Ok(()) => self.ui_state.alert = None,
-            Err(DocumentError::RequiresConfirmation) => self.ui_state.show_alert(
-                "Re-read Interrupted",
-                tr(
-                    self.language,
-                    "The document changed while it was being re-read, so the new format was not applied. Try again.",
-                )
-                .to_owned(),
-            ),
-            Err(error) => self.ui_state.show_alert(
-                "Format Not Applied",
-                alert_message(self.language, error),
-            ),
+        match apply_format_configuration(
+            self.document,
+            self.storage,
+            self.language,
+            configuration,
+            force,
+        ) {
+            Some(alert) => self.ui_state.alert = Some(alert),
+            None => self.ui_state.alert = None,
         }
     }
 
@@ -234,10 +313,12 @@ impl DocumentView<'_> {
         if self.document.file_path().is_none() {
             return;
         }
-        match self
-            .document
-            .detect_format_from_disk(self.storage, self.prefers_chinese)
-        {
+        match detect_format_configuration(
+            self.document,
+            self.storage,
+            self.language,
+            self.prefers_chinese,
+        ) {
             Ok(detected) => {
                 if !self.document.has_content() {
                     self.apply_configuration(&detected, true);
@@ -245,19 +326,12 @@ impl DocumentView<'_> {
                     self.request_configuration(detected);
                 }
             }
-            Err(error) => self
-                .ui_state
-                .show_alert("Format Not Detected", alert_message(self.language, error)),
+            Err(alert) => self.ui_state.alert = Some(alert),
         }
     }
 
     pub(super) fn is_busy(&self) -> bool {
-        matches!(self.document.phase(), DocumentPhase::Loading)
-            || matches!(
-                self.document.large_status(),
-                LargeStatus::Indexing(_) | LargeStatus::Saving(_)
-            )
-            || self.ui_state.pending_reparse.is_some()
+        is_document_busy(self.document) || self.ui_state.pending_reparse.is_some()
     }
 }
 

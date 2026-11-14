@@ -230,7 +230,7 @@ pub fn show(
 }
 
 /// The columns of `document`, named as the grid headers are.
-fn column_options(document: &Document) -> Vec<(ColumnId, String)> {
+pub(crate) fn column_options(document: &Document) -> Vec<(ColumnId, String)> {
     let Some(source) = document.row_source() else {
         return Vec::new();
     };

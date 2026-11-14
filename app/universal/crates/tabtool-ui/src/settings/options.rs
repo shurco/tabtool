@@ -7,7 +7,7 @@ use tabtool_settings::LARGE_FILE_THRESHOLDS_MIB;
 use crate::format_options::{DECIMALS, SEPARATORS};
 
 /// The offered index of UTF-8.
-pub(super) fn default_encoding_index() -> usize {
+pub(crate) fn default_encoding_index() -> usize {
     Encoding::ALL
         .iter()
         .position(|encoding| *encoding == Encoding::Utf8)
@@ -15,7 +15,7 @@ pub(super) fn default_encoding_index() -> usize {
 }
 
 /// The offered index of `separator`, or comma for an unknown value.
-pub(super) fn separator_index(separator: &str) -> usize {
+pub(crate) fn separator_index(separator: &str) -> usize {
     SEPARATORS
         .iter()
         .position(|(candidate, _)| *candidate == separator)
@@ -23,7 +23,7 @@ pub(super) fn separator_index(separator: &str) -> usize {
 }
 
 /// The offered index of `decimal`, or the dot for an unknown value.
-pub(super) fn decimal_index(decimal: &str) -> usize {
+pub(crate) fn decimal_index(decimal: &str) -> usize {
     DECIMALS
         .iter()
         .position(|(candidate, _)| *candidate == decimal)
@@ -31,7 +31,7 @@ pub(super) fn decimal_index(decimal: &str) -> usize {
 }
 
 /// The offered index of the 100 MiB default threshold.
-pub(super) fn default_threshold_index() -> usize {
+pub(crate) fn default_threshold_index() -> usize {
     LARGE_FILE_THRESHOLDS_MIB
         .iter()
         .position(|mebibytes| *mebibytes == 100)
@@ -40,7 +40,7 @@ pub(super) fn default_threshold_index() -> usize {
 
 /// The picker label for a large-file threshold: binary units, as the system
 /// byte-count formatter shows.
-pub(super) fn threshold_label(language: Language, mebibytes: u32) -> String {
+pub(crate) fn threshold_label(language: Language, mebibytes: u32) -> String {
     let (key, value) = if mebibytes >= 1024 {
         ("%lld GiB", mebibytes / 1024)
     } else {

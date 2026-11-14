@@ -179,6 +179,19 @@ pub trait DocumentFiles {
         false
     }
 
+    /// Writes a copy of `source` under `suggested_name` at a location the user
+    /// chooses, and reports whether the copy completed.
+    ///
+    /// Cancel and failure are both `false`; a platform with an asynchronous
+    /// picker answers over later calls, as with
+    /// [`DocumentFiles::import_from_picker`].
+    fn export_copy(&self, source: &Path, suggested_name: &str) -> bool;
+
+    /// Whether an export picker started earlier is still open.
+    fn export_in_progress(&self) -> bool {
+        false
+    }
+
     /// Deletes a document.
     fn delete(&self, path: &Path) -> io::Result<()>;
 

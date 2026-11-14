@@ -27,6 +27,8 @@ pub struct PushButton<'a> {
     selected: bool,
     accessible_name: Option<&'a str>,
     min_width: Option<f32>,
+    height: Option<f32>,
+    text_size: Option<f32>,
 }
 
 impl<'a> PushButton<'a> {
@@ -39,6 +41,8 @@ impl<'a> PushButton<'a> {
             selected: false,
             accessible_name: None,
             min_width: None,
+            height: None,
+            text_size: None,
         }
     }
 
@@ -63,6 +67,18 @@ impl<'a> PushButton<'a> {
     /// Force a minimum width.
     pub fn min_width(mut self, width: f32) -> Self {
         self.min_width = Some(width);
+        self
+    }
+
+    /// Force a height, e.g. a touch target.
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Some(height);
+        self
+    }
+
+    /// Override the label size.
+    pub fn text_size(mut self, size: f32) -> Self {
+        self.text_size = Some(size);
         self
     }
 
@@ -117,17 +133,17 @@ impl<'a> PushButton<'a> {
             ButtonKind::Plain => 0.0,
             _ => 50.0,
         });
-        let height = if self.kind == ButtonKind::Plain {
+        let height = self.height.unwrap_or(if self.kind == ButtonKind::Plain {
             metrics.control_height
         } else {
             metrics.control_height_large
-        };
+        });
 
         let response = ui
             .scope(|ui| {
                 ui.set_style(style);
                 let text = RichText::new(self.label)
-                    .size(theme.typography.body)
+                    .size(self.text_size.unwrap_or(theme.typography.body))
                     .color(text_color);
                 let mut button = Button::new(text)
                     .selected(self.selected)

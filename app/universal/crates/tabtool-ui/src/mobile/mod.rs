@@ -19,6 +19,7 @@ mod list;
 mod metrics;
 mod nav;
 mod sheet;
+pub mod sheets;
 mod toolbar;
 
 pub use accessory::{AccessoryAction, editor_accessory};
@@ -40,6 +41,11 @@ pub use metrics::{
 };
 pub use nav::{BackOutcome, DocumentId, MISSING_DOCUMENT_NOTICE, NavStack, Screen, SheetKind};
 pub use sheet::{SheetOptions, SheetResponse, sheet};
+pub use sheets::{
+    AboutSheetResponse, CopyResult, ExportSheet, FiltersSheet, FormatSheet, RATE_URL,
+    SAVED_COPY_KEY, SaveCopy, SettingsSheetResponse, SheetScreenResponse, SheetStyle, about_sheet,
+    saved_copy_message, settings_sheet,
+};
 pub use toolbar::{MobileToolbar, MobileToolbarResponse, OverflowItem};
 
 use core::fmt;

@@ -125,6 +125,10 @@ impl DocumentFiles for TestFiles {
         self.in_progress.get()
     }
 
+    fn export_copy(&self, _source: &Path, _suggested_name: &str) -> bool {
+        false
+    }
+
     fn delete(&self, path: &Path) -> std::io::Result<()> {
         if self.fail_delete.get() {
             return Err(std::io::Error::other("delete failed"));

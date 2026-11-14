@@ -4,7 +4,7 @@
 //! The desktop window persists the copy and applies it to open documents; the
 //! form itself never touches the filesystem, a document or the platform.
 
-mod options;
+pub(crate) mod options;
 mod tabs;
 
 use egui::Ui;

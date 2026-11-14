@@ -8,6 +8,7 @@
 //! The panel edits a copy of the document configuration. Nothing here mutates a
 //! document or writes a file.
 
+pub(crate) mod controls;
 mod panel;
 mod plan;
 

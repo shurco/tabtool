@@ -33,7 +33,10 @@ pub use panels::grid_options;
 pub use progress::{indexing_text, saving_text};
 pub use status_line::{document_summary, status_summary};
 
-pub(crate) use actions::poll_large_state;
+pub(crate) use actions::{
+    FormatApplyOutcome, apply_format_configuration, detect_format_configuration, is_document_busy,
+    poll_large_state, request_format_configuration,
+};
 pub use banners::{
     NeedsAttentionResponse, large_file as large_file_banner,
     needs_attention as needs_attention_banner, notice as notice_banner, stale as stale_banner,

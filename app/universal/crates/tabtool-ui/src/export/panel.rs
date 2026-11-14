@@ -3,14 +3,16 @@
 use core::hash::Hash;
 
 use egui::{Align, Grid, Layout, RichText, Ui};
-use tabtool_core::{CsvConfiguration, Encoding};
+use tabtool_core::CsvConfiguration;
 use tabtool_i18n::{Language, tr};
 
-use crate::format_options::{DECIMALS, QuoteStyle, SEPARATORS};
 use crate::theme::current;
-use crate::widgets::{ButtonKind, Picker, PushButton, sheet, toggle};
+use crate::widgets::{ButtonKind, PushButton, sheet, toggle};
 
 use super::ExportOptions;
+use super::controls::{
+    PickerSize, decimal_picker, encoding_picker, quote_picker, separator_picker,
+};
 
 /// What the export panel asked for.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -41,19 +43,19 @@ pub fn export_panel(
                 .spacing([12.0, 8.0])
                 .show(ui, |ui| {
                     ui.label(tr(language, "Encoding"));
-                    encoding_picker(ui, options, language);
+                    encoding_picker(ui, options, language, PickerSize::DESKTOP);
                     ui.end_row();
 
                     ui.label(tr(language, "Separator"));
-                    separator_picker(ui, options, language);
+                    separator_picker(ui, options, language, PickerSize::DESKTOP);
                     ui.end_row();
 
                     ui.label(tr(language, "Quote"));
-                    quote_picker(ui, options, language);
+                    quote_picker(ui, options, language, PickerSize::DESKTOP);
                     ui.end_row();
 
                     ui.label(tr(language, "Decimal"));
-                    decimal_picker(ui, options, language);
+                    decimal_picker(ui, options, language, PickerSize::DESKTOP);
                     ui.end_row();
 
                     ui.label(tr(language, "Header"));
@@ -95,90 +97,5 @@ pub fn export_panel(
         Some(ExportPanelAction::Export(options.configuration.clone()))
     } else {
         None
-    }
-}
-
-fn encoding_picker(ui: &mut Ui, options: &mut ExportOptions, language: Language) {
-    let values: Vec<&str> = Encoding::ALL
-        .iter()
-        .map(|encoding| tr(language, encoding.display_name()))
-        .collect();
-    let selected = tr(language, options.configuration.encoding.display_name());
-    if let Some(index) = Picker::new(
-        (ui.ctx().viewport_id(), "export-encoding"),
-        tr(language, "Encoding"),
-        selected,
-        &values,
-    )
-    .width(190.0)
-    .show(ui)
-    {
-        options.configuration.encoding = Encoding::ALL[index];
-    }
-}
-
-fn separator_picker(ui: &mut Ui, options: &mut ExportOptions, language: Language) {
-    let values: Vec<&str> = SEPARATORS
-        .iter()
-        .map(|(_, key)| tr(language, key))
-        .collect();
-    let selected = SEPARATORS
-        .iter()
-        .find(|(separator, _)| *separator == options.configuration.column_separator)
-        .map_or(
-            options.configuration.column_separator.as_str(),
-            |(_, key)| tr(language, key),
-        );
-    if let Some(index) = Picker::new(
-        (ui.ctx().viewport_id(), "export-separator"),
-        tr(language, "Separator"),
-        selected,
-        &values,
-    )
-    .width(190.0)
-    .show(ui)
-    {
-        options.configuration.column_separator = SEPARATORS[index].0.to_owned();
-    }
-}
-
-fn quote_picker(ui: &mut Ui, options: &mut ExportOptions, language: Language) {
-    let values = [
-        tr(language, "Doubled"),
-        tr(language, "Backslash"),
-        tr(language, "None"),
-    ];
-    let style = QuoteStyle::of(&options.configuration);
-    if let Some(index) = Picker::new(
-        (ui.ctx().viewport_id(), "export-quote"),
-        tr(language, "Quote"),
-        values[style.index()],
-        &values,
-    )
-    .width(190.0)
-    .show(ui)
-    {
-        QuoteStyle::at(index).apply(&mut options.configuration);
-    }
-}
-
-fn decimal_picker(ui: &mut Ui, options: &mut ExportOptions, language: Language) {
-    let values: Vec<&str> = DECIMALS.iter().map(|(_, key)| tr(language, key)).collect();
-    let selected = DECIMALS
-        .iter()
-        .find(|(mark, _)| *mark == options.configuration.decimal_mark)
-        .map_or(options.configuration.decimal_mark.as_str(), |(_, key)| {
-            tr(language, key)
-        });
-    if let Some(index) = Picker::new(
-        (ui.ctx().viewport_id(), "export-decimal"),
-        tr(language, "Decimal"),
-        selected,
-        &values,
-    )
-    .width(190.0)
-    .show(ui)
-    {
-        options.configuration.decimal_mark = DECIMALS[index].0.to_owned();
     }
 }
