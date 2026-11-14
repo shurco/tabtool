@@ -1,7 +1,7 @@
 //! The touch list row with swipe-to-delete and a rename context menu.
 
 use egui::{
-    Align2, Button, Color32, CornerRadius, FontId, Rect, Response, RichText, Sense, Ui, Vec2,
+    Align2, Button, Color32, CornerRadius, FontId, Pos2, Rect, Response, RichText, Sense, Ui, Vec2,
     WidgetInfo, pos2,
 };
 use tabtool_i18n::{Language, tr};
@@ -15,6 +15,12 @@ const SWIPE_ACTION_WIDTH: f32 = 80.0;
 
 /// How far a row must travel left before delete stays revealed.
 const SWIPE_REVEAL_THRESHOLD: f32 = 40.0;
+
+/// How far a pointer must move sideways before it counts as a swipe.
+///
+/// A smaller movement is a tap. The horizontal check keeps vertical drags free
+/// for the enclosing scroll area.
+const SWIPE_DRAG_THRESHOLD: f32 = 8.0;
 
 /// The horizontal content inset of a list row.
 const ROW_INSET: f32 = 16.0;
@@ -53,36 +59,60 @@ impl<'a> ListRow<'a> {
         let theme = current(ui.ctx());
         let colors = theme.colors;
         let width = ui.available_width();
-        let (rect, response) = ui.allocate_exact_size(
-            Vec2::new(width, metrics.list_row_height),
-            Sense::click_and_drag(),
-        );
+        let (rect, response) =
+            ui.allocate_exact_size(Vec2::new(width, metrics.list_row_height), Sense::click());
         let revealed_id = response.id.with("list-row-revealed");
-        let drag_id = response.id.with("list-row-drag");
+        let swipe_id = response.id.with("list-row-swipe");
         let mut revealed = ui
             .ctx()
             .data(|data| data.get_temp::<bool>(revealed_id))
             .unwrap_or(false);
-        let mut drag_distance = ui
+        let mut swipe = ui
             .ctx()
-            .data(|data| data.get_temp::<f32>(drag_id))
-            .unwrap_or(0.0);
+            .data(|data| data.get_temp::<SwipeState>(swipe_id))
+            .unwrap_or_default();
+        let pointer_pos = ui.input(|input| input.pointer.interact_pos());
+        let pointer_down = ui.input(|input| input.pointer.any_down());
+        let pointer_released = ui.input(|input| input.pointer.any_released());
 
-        if response.dragged() {
-            drag_distance = response
-                .total_drag_delta()
-                .map_or(drag_distance, |delta| delta.x);
-            ui.ctx()
-                .data_mut(|data| data.insert_temp(drag_id, drag_distance));
+        if response.is_pointer_button_down_on()
+            && swipe.start.is_none()
+            && let Some(position) = pointer_pos
+        {
+            swipe.start = Some(position);
         }
-        if response.drag_stopped() {
-            revealed = drag_distance <= -SWIPE_REVEAL_THRESHOLD;
-            ui.ctx()
-                .data_mut(|data| data.insert_temp(revealed_id, revealed));
-            ui.ctx().data_mut(|data| data.insert_temp(drag_id, 0.0));
+        if let Some(start) = swipe.start {
+            if let Some(position) = pointer_pos {
+                swipe.dx = position.x - start.x;
+                swipe.dy = position.y - start.y;
+                if swipe.dx.abs() > swipe.dy.abs() && swipe.dx.abs() >= SWIPE_DRAG_THRESHOLD {
+                    swipe.horizontal = true;
+                }
+            }
+            if pointer_down || pointer_released {
+                ui.ctx().data_mut(|data| data.insert_temp(swipe_id, swipe));
+            }
+            if pointer_released {
+                if swipe.horizontal {
+                    if swipe.dx <= -SWIPE_REVEAL_THRESHOLD {
+                        revealed = true;
+                    } else if swipe.dx >= SWIPE_REVEAL_THRESHOLD {
+                        revealed = false;
+                    }
+                }
+                ui.ctx()
+                    .data_mut(|data| data.insert_temp(revealed_id, revealed));
+                swipe = SwipeState::default();
+                ui.ctx().data_mut(|data| data.insert_temp(swipe_id, swipe));
+            }
         }
-        let offset = if response.dragged() {
-            drag_distance.clamp(-SWIPE_ACTION_WIDTH, 0.0)
+        if swipe.start.is_some() && !pointer_down && !pointer_released {
+            swipe = SwipeState::default();
+            ui.ctx().data_mut(|data| data.insert_temp(swipe_id, swipe));
+        }
+        let swiping = swipe.start.is_some() && swipe.horizontal;
+        let offset = if swiping {
+            swipe.dx.clamp(-SWIPE_ACTION_WIDTH, 0.0)
         } else if revealed {
             -SWIPE_ACTION_WIDTH
         } else {
@@ -142,7 +172,7 @@ impl<'a> ListRow<'a> {
         let mut delete_requested = false;
         let mut rename_requested = false;
 
-        if revealed || response.dragged() {
+        if revealed || swiping {
             let delete_rect = Rect::from_min_size(
                 pos2(rect.right() - SWIPE_ACTION_WIDTH, rect.top()),
                 Vec2::new(SWIPE_ACTION_WIDTH, rect.height()),
@@ -172,7 +202,11 @@ impl<'a> ListRow<'a> {
             }
         }
 
-        if response.clicked() && !delete_requested {
+        let long_touched = response.long_touched();
+        if long_touched {
+            rename_requested = true;
+        }
+        if response.clicked() && !long_touched && !delete_requested {
             let on_delete = response
                 .interact_pointer_pos()
                 .is_some_and(|pointer| pointer.x >= rect.right() - SWIPE_ACTION_WIDTH);
@@ -212,6 +246,15 @@ impl<'a> ListRow<'a> {
             rename_requested,
         }
     }
+}
+
+/// The pointer gesture in progress on one row.
+#[derive(Clone, Copy, Debug, Default)]
+struct SwipeState {
+    start: Option<Pos2>,
+    dx: f32,
+    dy: f32,
+    horizontal: bool,
 }
 
 /// What the user did to a list row.

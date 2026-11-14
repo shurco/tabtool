@@ -21,6 +21,9 @@ const DRAG_CLOSE_THRESHOLD: f32 = 60.0;
 /// The space above the title.
 const TOP_PADDING: f32 = 8.0;
 
+/// The space between the header and the scrolling content.
+const HEADER_GAP: f32 = 8.0;
+
 /// The strings and insets a sheet needs.
 pub struct SheetOptions<'a> {
     /// The localized sheet title.
@@ -154,10 +157,14 @@ pub fn sheet<R>(
                 }
             });
         });
-        ui.add_space(8.0);
+        ui.add_space(HEADER_GAP);
 
-        let scroll_height =
-            (content_max_height - 20.0 - metrics.sheet_header_height).max(metrics.control_height);
+        let scroll_height = (content_max_height
+            - HANDLE_ROW_HEIGHT
+            - metrics.sheet_header_height
+            - HEADER_GAP
+            - ui.spacing().item_spacing.y)
+            .max(metrics.control_height);
         ScrollArea::vertical()
             .max_height(scroll_height)
             .auto_shrink([false, true])

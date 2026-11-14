@@ -4,7 +4,8 @@ use core::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use egui::{Rect, pos2};
+use egui::scroll_area::{DragScroll, ScrollSource};
+use egui::{Rect, ScrollArea, pos2};
 use tabtool_i18n::{Language, tr};
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::mobile::{
@@ -340,6 +341,58 @@ fn the_list_row_context_menu_requests_a_rename() {
 }
 
 #[test]
+fn a_touch_long_press_requests_a_rename() {
+    let outcome = Rc::new(RefCell::new((false, false, false)));
+    let state = Rc::clone(&outcome);
+    let metrics = MobileMetrics::phone();
+    let mut harness = UiHarness::new(Theme::desktop_light(), [360.0, 800.0], move |ui| {
+        let response = ListRow::new("Notes.csv").show(ui, metrics, EN);
+        let mut outcome = state.borrow_mut();
+        outcome.0 |= response.activated;
+        outcome.1 |= response.delete_requested;
+        outcome.2 |= response.rename_requested;
+    });
+    harness.run();
+
+    let center = harness.get_by_label("Notes.csv").rect().center();
+    harness.event(egui::Event::Touch {
+        device_id: egui::TouchDeviceId(0),
+        id: egui::TouchId(0),
+        phase: egui::TouchPhase::Start,
+        pos: center,
+        force: Some(1.0),
+    });
+    harness.event(egui::Event::PointerButton {
+        pos: center,
+        button: egui::PointerButton::Primary,
+        pressed: true,
+        modifiers: egui::Modifiers::default(),
+    });
+    harness.run_steps(5);
+
+    assert_eq!(
+        *outcome.borrow(),
+        (false, false, true),
+        "a long touch opens Rename without activating the row"
+    );
+
+    harness.event(egui::Event::Touch {
+        device_id: egui::TouchDeviceId(0),
+        id: egui::TouchId(0),
+        phase: egui::TouchPhase::End,
+        pos: center,
+        force: None,
+    });
+    harness.event(egui::Event::PointerButton {
+        pos: center,
+        button: egui::PointerButton::Primary,
+        pressed: false,
+        modifiers: egui::Modifiers::default(),
+    });
+    harness.run();
+}
+
+#[test]
 fn swiping_a_list_row_reveals_delete() {
     let outcome = Rc::new(RefCell::new((false, false, false)));
     let state = Rc::clone(&outcome);
@@ -369,6 +422,51 @@ fn swiping_a_list_row_reveals_delete() {
     harness.run();
 
     assert_eq!(*outcome.borrow(), (false, true, false));
+}
+
+#[test]
+fn a_vertical_drag_scrolls_the_list_instead_of_swiping() {
+    let outcome = Rc::new(RefCell::new((false, false, false)));
+    let state = Rc::clone(&outcome);
+    let offset = Rc::new(RefCell::new(0.0f32));
+    let scroll_state = Rc::clone(&offset);
+    let metrics = MobileMetrics::phone();
+    let mut harness = UiHarness::new(Theme::desktop_light(), [360.0, 200.0], move |ui| {
+        let output = ScrollArea::vertical()
+            .id_salt("library-list")
+            .scroll_source(ScrollSource {
+                drag: DragScroll::Always,
+                ..ScrollSource::default()
+            })
+            .show(ui, |ui| {
+                for index in 0..20 {
+                    let title = format!("Row {index}");
+                    let response = ListRow::new(&title).subtitle("2 KB").show(ui, metrics, EN);
+                    let mut outcome = state.borrow_mut();
+                    outcome.0 |= response.activated;
+                    outcome.1 |= response.delete_requested;
+                    outcome.2 |= response.rename_requested;
+                }
+            });
+        *scroll_state.borrow_mut() = output.state.clamped_offset().y;
+    });
+    harness.run();
+
+    let rect = harness.get_by_label("Row 0").rect();
+    let start = rect.center();
+    let end = pos2(start.x, start.y - 80.0);
+    harness.drag_at(start);
+    harness.hover_at(end);
+    harness.run();
+    harness.drop_at(end);
+    harness.run();
+
+    assert!(*offset.borrow() > 0.0, "a vertical drag scrolls the list");
+    assert!(
+        !outcome.borrow().1,
+        "a vertical drag must not reveal delete"
+    );
+    assert!(!outcome.borrow().0, "a vertical drag must not open the row");
 }
 
 #[test]
