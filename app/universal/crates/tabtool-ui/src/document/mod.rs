@@ -31,6 +31,7 @@ pub use error_overlay::alert_message;
 pub use format_bar::FormatBarAction;
 pub use panels::grid_options;
 pub use progress::{indexing_text, saving_text};
+pub(crate) use status_line::rows_text;
 pub use status_line::{document_summary, status_summary};
 
 pub(crate) use actions::{

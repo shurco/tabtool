@@ -13,10 +13,10 @@ use tabtool_ui::Theme;
 use tabtool_ui::UiHarness;
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::mobile::{
-    DocumentFiles, ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, LibraryClock, LibraryError,
-    LibraryErrors, LibraryResponse, LibrarySort, LibraryView, MobileMetrics, SystemMetadata,
-    TouchTextInput, TouchTextInputOutcome, TouchTextInputRequest, available_name, format_modified,
-    format_size, new_document_name,
+    DocumentFiles, ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, ExportOutcome, LibraryClock,
+    LibraryError, LibraryErrors, LibraryResponse, LibrarySort, LibraryView, MobileMetrics,
+    SystemMetadata, TouchTextInput, TouchTextInputOutcome, TouchTextInputRequest, available_name,
+    format_modified, format_size, new_document_name,
 };
 use tempfile::TempDir;
 
@@ -125,8 +125,8 @@ impl DocumentFiles for TestFiles {
         self.in_progress.get()
     }
 
-    fn export_copy(&self, _source: &Path, _suggested_name: &str) -> bool {
-        false
+    fn export_copy(&self, _source: &Path, _suggested_name: &str) -> ExportOutcome {
+        ExportOutcome::Cancelled
     }
 
     fn delete(&self, path: &Path) -> std::io::Result<()> {

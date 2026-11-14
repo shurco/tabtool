@@ -1,7 +1,7 @@
 //! The Filters sheet: criterion cards, the footer actions and the draft.
 
 use egui::{Align, CornerRadius, Frame, Layout, Margin, RichText, Ui};
-use tabtool_core::{CriterionId, FilterOperator};
+use tabtool_core::{CriterionId, FilterOperator, Locale};
 use tabtool_document::Document;
 use tabtool_i18n::tr;
 
@@ -9,6 +9,7 @@ use super::{
     PickerTouch, SheetScreenResponse, SheetStyle, touch_button, touch_checkbox, touch_field,
     touch_picker_sized,
 };
+use crate::document::rows_text;
 use crate::filter::FilterAction;
 use crate::filter::bar::{column_options, operator_title};
 use crate::mobile::{
@@ -22,6 +23,7 @@ use crate::widgets::ButtonKind;
 pub struct FiltersSheet {
     editing: Option<CriterionId>,
     pending_action: Option<FilterAction>,
+    pending_close: bool,
 }
 
 impl FiltersSheet {
@@ -37,11 +39,18 @@ impl FiltersSheet {
         style: SheetStyle,
         document: &mut Document,
         text_input: &mut dyn TouchTextInput,
+        locale: &Locale,
     ) -> SheetScreenResponse {
         let language = style.language;
         let committed = self.poll_text_input(document, text_input);
         if committed && let Some(action) = self.pending_action.take() {
             self.apply(action, document, text_input);
+        }
+        if self.pending_close && self.editing.is_none() {
+            self.pending_close = false;
+            return SheetScreenResponse {
+                close_requested: true,
+            };
         }
 
         if !document.can_filter() {
@@ -193,6 +202,8 @@ impl FiltersSheet {
                 let invalid = criteria
                     .iter()
                     .any(|criterion| criterion.is_enabled && !criterion.is_valid());
+                let total = document.row_source().map_or(0, |source| source.row_count());
+                let visible = document.row_filter().visible_rows.as_ref().map(Vec::len);
                 ui.horizontal(|ui| {
                     if touch_button(style, tr(language, "Clear"), ButtonKind::Bordered)
                         .show(ui)
@@ -200,6 +211,11 @@ impl FiltersSheet {
                     {
                         action = Some(FilterAction::Clear);
                     }
+                    ui.label(
+                        RichText::new(rows_text(language, total, visible, locale))
+                            .size(style.metrics.caption)
+                            .color(current(ui.ctx()).colors.secondary_label),
+                    );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if touch_button(style, tr(language, "Apply"), ButtonKind::Bordered)
                             .enabled(!invalid)
@@ -244,15 +260,34 @@ impl FiltersSheet {
             });
         }
         if response.close_requested {
-            self.pending_action = None;
             if self.editing.is_some() {
-                text_input.close();
-                self.editing = None;
+                self.pending_close = true;
+                text_input.commit();
+                return SheetScreenResponse {
+                    close_requested: false,
+                };
             }
+            self.pending_action = None;
         }
 
         SheetScreenResponse {
             close_requested: response.close_requested,
+        }
+    }
+
+    /// Requests a native commit before the host closes the sheet from
+    /// navigation.
+    ///
+    /// Returns whether the sheet can close now. When it returns `false`, the
+    /// host must keep presenting the sheet so [`Self::show`] can drain the
+    /// commit and then report its close.
+    pub fn finish(&mut self, text_input: &mut dyn TouchTextInput) -> bool {
+        if self.editing.is_some() {
+            self.pending_close = true;
+            text_input.commit();
+            false
+        } else {
+            true
         }
     }
 

@@ -7,7 +7,7 @@ use tabtool_core::{CsvConfiguration, CsvError};
 use tabtool_document::{Document, DocumentError};
 use tabtool_i18n::{Language, tr};
 
-use super::export_file::{remove_temporary_export, temporary_export};
+use super::export_file::{clean_stale_exports, remove_temporary_export, temporary_export};
 use super::{SheetScreenResponse, SheetStyle, caption, form_row, touch_button, touch_toggle};
 use crate::document::{alert_message, can_export};
 use crate::export::ExportDecision;
@@ -16,7 +16,7 @@ use crate::export::ExportPlan;
 use crate::export::controls::{
     PickerSize, decimal_picker, encoding_picker, quote_picker, separator_picker,
 };
-use crate::mobile::{DocumentFiles, SheetOptions, sheet};
+use crate::mobile::{DocumentFiles, ExportOutcome, SheetOptions, sheet};
 use crate::widgets::{AlertAction, BannerKind, ButtonKind, banner, modal};
 
 /// The catalog key of an export that did not finish.
@@ -44,6 +44,10 @@ struct ExportNotice {
 
 impl ExportSheet {
     /// A sheet seeded from `document`; the document is never changed.
+    ///
+    /// The host must commit any open cell edit before presenting the sheet.
+    /// The touch editor defers toolbar actions until an edit commits, so the
+    /// table this sheet reads is the settled one.
     pub fn new(document: &Document) -> Self {
         Self {
             options: ExportOptions::new(document.configuration().clone()),
@@ -69,7 +73,7 @@ impl ExportSheet {
         files: &dyn DocumentFiles,
     ) -> SheetScreenResponse {
         let language = style.language;
-        self.poll_pending(files);
+        self.poll_pending(files, style.language);
 
         let mut dismissed = false;
         let mut pressed = false;
@@ -240,7 +244,9 @@ impl ExportSheet {
 
     fn start_copy(&mut self, data: &[u8], files: &dyn DocumentFiles, language: Language) {
         let name = self.options.suggested_name(&self.base_name);
-        let source = match temporary_export(&files.documents_dir(), data, &name) {
+        let base = files.documents_dir();
+        clean_stale_exports(&base);
+        let source = match temporary_export(&base, data, &name) {
             Ok(source) => source,
             Err(_) => {
                 self.notice = Some(ExportNotice {
@@ -250,25 +256,37 @@ impl ExportSheet {
                 return;
             }
         };
-        let _copied = files.export_copy(&source, &name);
+        let outcome = files.export_copy(&source, &name);
         if files.export_in_progress() {
             self.pending = Some(PendingExport { source, name });
-        } else {
-            remove_temporary_export(&source);
-            self.finished = true;
+            return;
+        }
+        remove_temporary_export(&source);
+        self.finish(outcome, language);
+    }
+
+    fn finish(&mut self, outcome: ExportOutcome, language: Language) {
+        match outcome {
+            ExportOutcome::Copied | ExportOutcome::Cancelled => self.finished = true,
+            ExportOutcome::Failed => {
+                self.notice = Some(ExportNotice {
+                    title: EXPORT_NOT_COMPLETED,
+                    message: tr(language, "The file could not be saved").to_owned(),
+                });
+            }
         }
     }
 
-    fn poll_pending(&mut self, files: &dyn DocumentFiles) {
+    fn poll_pending(&mut self, files: &dyn DocumentFiles, language: Language) {
         if self.pending.is_none() || files.export_in_progress() {
             return;
         }
         let Some(pending) = self.pending.take() else {
             return;
         };
-        let _copied = files.export_copy(&pending.source, &pending.name);
+        let outcome = files.export_copy(&pending.source, &pending.name);
         remove_temporary_export(&pending.source);
-        self.finished = true;
+        self.finish(outcome, language);
     }
 
     fn show_confirmation(

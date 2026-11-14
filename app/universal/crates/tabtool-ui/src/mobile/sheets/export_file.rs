@@ -27,3 +27,17 @@ pub(super) fn remove_temporary_export(path: &Path) {
         let _ = std::fs::remove_dir_all(directory);
     }
 }
+
+/// Removes export directories a killed process left in `base`.
+pub(super) fn clean_stale_exports(base: &Path) {
+    let Ok(entries) = std::fs::read_dir(base) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let name = name.to_string_lossy();
+        if name.starts_with(".export-") && entry.path().is_dir() {
+            let _ = std::fs::remove_dir_all(entry.path());
+        }
+    }
+}

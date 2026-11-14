@@ -9,8 +9,9 @@ mod persisted;
 use std::path::{Path, PathBuf};
 
 pub use tabtool_settings::{
-    DEFAULT_ROW_HEIGHT, LARGE_FILE_THRESHOLDS_MIB, QuoteStyle, RECENT_DOCUMENTS_LIMIT, ROW_HEIGHTS,
-    Settings, keys, valid_row_height,
+    DEFAULT_ROW_HEIGHT, LARGE_FILE_THRESHOLDS_MIB, MOBILE_DEFAULT_ROW_HEIGHT, MOBILE_ROW_HEIGHTS,
+    QuoteStyle, RECENT_DOCUMENTS_LIMIT, ROW_HEIGHTS, Settings, VALID_ROW_HEIGHTS, keys,
+    valid_mobile_row_height, valid_row_height,
 };
 
 /// Loads the settings at `path`.

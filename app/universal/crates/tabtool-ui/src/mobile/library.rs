@@ -140,6 +140,17 @@ impl FileMetadata for SystemMetadata {
     }
 }
 
+/// What a platform export picker did.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ExportOutcome {
+    /// The copy was written.
+    Copied,
+    /// The user cancelled the picker.
+    Cancelled,
+    /// The copy failed; the platform reports the cause separately.
+    Failed,
+}
+
 /// The app's private document store and import picker.
 ///
 /// This mirrors the platform's `DocumentFiles` trait. The app adapts its
@@ -180,12 +191,13 @@ pub trait DocumentFiles {
     }
 
     /// Writes a copy of `source` under `suggested_name` at a location the user
-    /// chooses, and reports whether the copy completed.
+    /// chooses.
     ///
-    /// Cancel and failure are both `false`; a platform with an asynchronous
-    /// picker answers over later calls, as with
+    /// A platform with an asynchronous picker reports [`ExportOutcome::Cancelled`]
+    /// while the picker is open and again when the user cancels; the finished
+    /// outcome arrives on a later call, as with
     /// [`DocumentFiles::import_from_picker`].
-    fn export_copy(&self, source: &Path, suggested_name: &str) -> bool;
+    fn export_copy(&self, source: &Path, suggested_name: &str) -> ExportOutcome;
 
     /// Whether an export picker started earlier is still open.
     fn export_in_progress(&self) -> bool {

@@ -20,9 +20,10 @@ use tabtool_ui::mobile::sheets::{
     about_sheet, saved_copy_message, settings_sheet,
 };
 use tabtool_ui::mobile::{
-    AccessoryAction, BackOutcome, DocumentFiles, DocumentId, Insets, ListRow, MobileMetrics,
-    MobileToolbar, MobileToolbarResponse, NavStack, OverflowItem, Screen, SheetKind, SheetOptions,
-    TouchTextInput, TouchTextInputOutcome, TouchTextInputRequest, editor_accessory, sheet,
+    AccessoryAction, BackOutcome, DocumentFiles, DocumentId, ExportOutcome, Insets, ListRow,
+    MobileMetrics, MobileToolbar, MobileToolbarResponse, NavStack, OverflowItem, Screen, SheetKind,
+    SheetOptions, TouchTextInput, TouchTextInputOutcome, TouchTextInputRequest, editor_accessory,
+    sheet,
 };
 use tabtool_ui::{Theme, UiHarness};
 use tempfile::TempDir;
@@ -623,6 +624,10 @@ fn sheet_style() -> SheetStyle {
     SheetStyle::new(phone(), EN)
 }
 
+fn en_locale() -> tabtool_core::Locale {
+    tabtool_core::Locale::try_from_str("en-US").expect("en-US is a valid locale")
+}
+
 fn header_configuration() -> CsvConfiguration {
     CsvConfiguration {
         first_row_as_header: true,
@@ -732,12 +737,14 @@ impl FiltersFixture {
         let ui_sheet = Rc::clone(&sheet);
         let ui_input = input.clone();
         let ui_closed = Rc::clone(&closed);
+        let locale = en_locale();
         let ui = UiHarness::new(Theme::desktop_light(), [360.0, 800.0], move |ui| {
             let mut document = ui_document.borrow_mut();
             let mut input = ui_input.clone();
-            let response = ui_sheet
-                .borrow_mut()
-                .show(ui, sheet_style(), &mut document, &mut input);
+            let response =
+                ui_sheet
+                    .borrow_mut()
+                    .show(ui, sheet_style(), &mut document, &mut input, &locale);
             ui_closed.set(ui_closed.get() || response.close_requested);
         });
         Self {
@@ -796,8 +803,9 @@ struct ExportCall {
 }
 
 struct ExportFiles {
+    directory: TempDir,
     calls: RefCell<Vec<ExportCall>>,
-    success: Cell<bool>,
+    outcome: Cell<ExportOutcome>,
     defer_once: Cell<bool>,
     in_progress: Cell<bool>,
 }
@@ -805,11 +813,16 @@ struct ExportFiles {
 impl ExportFiles {
     fn new() -> Self {
         Self {
+            directory: TempDir::new().expect("an export fixture directory"),
             calls: RefCell::new(Vec::new()),
-            success: Cell::new(true),
+            outcome: Cell::new(ExportOutcome::Copied),
             defer_once: Cell::new(false),
             in_progress: Cell::new(false),
         }
+    }
+
+    fn set_outcome(&self, outcome: ExportOutcome) {
+        self.outcome.set(outcome);
     }
 
     fn calls(&self) -> Vec<ExportCall> {
@@ -827,7 +840,7 @@ impl ExportFiles {
 
 impl DocumentFiles for ExportFiles {
     fn documents_dir(&self) -> PathBuf {
-        std::env::temp_dir()
+        self.directory.path().to_path_buf()
     }
 
     fn list_documents(&self) -> Vec<PathBuf> {
@@ -854,7 +867,7 @@ impl DocumentFiles for ExportFiles {
         std::fs::rename(from, to)
     }
 
-    fn export_copy(&self, source: &Path, suggested_name: &str) -> bool {
+    fn export_copy(&self, source: &Path, suggested_name: &str) -> ExportOutcome {
         let bytes = std::fs::read(source).unwrap_or_default();
         self.calls.borrow_mut().push(ExportCall {
             source: source.to_path_buf(),
@@ -863,9 +876,9 @@ impl DocumentFiles for ExportFiles {
         });
         if self.defer_once.replace(false) {
             self.in_progress.set(true);
-            return false;
+            return ExportOutcome::Cancelled;
         }
-        self.success.get()
+        self.outcome.get()
     }
 
     fn export_in_progress(&self) -> bool {
@@ -1066,7 +1079,7 @@ fn the_format_sheet_shows_every_control_and_closes() {
     let mut fixture = FormatFixture::new(small_document(), false);
     fixture.run();
 
-    for label in ["Encoding", "Separator", "Quote", "Decimal"] {
+    for label in ["Encoding", "Separator", "Quote", "Decimal Mark"] {
         assert!(
             fixture
                 .query_by_role_and_label(Role::ComboBox, label)
@@ -1098,7 +1111,7 @@ fn the_format_sheet_disables_the_decimal_mark_in_large_mode() {
 
     assert!(
         fixture
-            .get_by_role_and_label(Role::ComboBox, "Decimal")
+            .get_by_role_and_label(Role::ComboBox, "Decimal Mark")
             .accesskit_node()
             .is_disabled()
     );
@@ -1282,6 +1295,16 @@ fn the_filters_sheet_adds_and_removes_criterion_cards() {
 }
 
 #[test]
+fn opening_the_filters_sheet_does_not_add_an_extra_blank_card() {
+    let mut document = small_document();
+    document.row_filter_mut().add_criterion(0);
+    let mut fixture = FiltersFixture::new(document);
+    fixture.run();
+
+    assert_eq!(fixture.document.borrow().row_filter().criteria.len(), 2);
+}
+
+#[test]
 fn the_value_field_uses_the_native_text_input() {
     let mut fixture = FiltersFixture::new(small_document());
     fixture.run();
@@ -1402,7 +1425,7 @@ fn closing_the_filters_sheet_keeps_the_draft() {
 }
 
 #[test]
-fn closing_the_filters_sheet_discards_an_open_native_edit() {
+fn closing_the_filters_sheet_keeps_an_open_native_value() {
     let mut fixture = FiltersFixture::new(small_document());
     fixture.run();
 
@@ -1410,10 +1433,26 @@ fn closing_the_filters_sheet_discards_an_open_native_edit() {
         .get_by_role_and_label(Role::TextInput, tr(EN, "Value"))
         .click();
     fixture.run();
+    fixture.input.set_draft("Bob");
     assert!(fixture.input.is_active());
 
     fixture.click(tr(EN, "Done"));
+
+    assert!(fixture.closed.get());
+    assert!(fixture.input.commits() > 0, "closing commits the value");
     assert!(!fixture.input.is_active());
+    assert_eq!(
+        fixture.document.borrow().row_filter().criteria[0].value,
+        "Bob"
+    );
+}
+
+#[test]
+fn the_filters_sheet_shows_the_row_count() {
+    let mut fixture = FiltersFixture::new(small_document());
+    fixture.run();
+
+    assert!(fixture.query_by_label("3 rows").is_some());
 }
 
 #[test]
@@ -1705,6 +1744,59 @@ fn an_unencodable_export_is_refused() {
         "the refusal explains the encoding problem"
     );
     assert!(!fixture.closed.get(), "the sheet stays open");
+}
+
+#[test]
+fn a_failed_export_keeps_the_sheet_open_with_a_notice() {
+    let mut fixture = ExportFixture::new(small_document());
+    fixture.files.set_outcome(ExportOutcome::Failed);
+    fixture.run();
+
+    fixture.click_button(tr(EN, "Export"));
+
+    assert_eq!(fixture.files.calls().len(), 1);
+    assert!(!fixture.closed.get(), "a failure is not a cancel");
+    assert!(
+        fixture
+            .query_by_label(tr(EN, "Export Not Completed"))
+            .is_some()
+    );
+    assert!(
+        fixture
+            .query_by_label(tr(EN, "The file could not be saved"))
+            .is_some()
+    );
+    assert!(!fixture.files.calls()[0].source.exists());
+}
+
+#[test]
+fn a_cancelled_export_closes_without_a_notice() {
+    let mut fixture = ExportFixture::new(small_document());
+    fixture.files.set_outcome(ExportOutcome::Cancelled);
+    fixture.run();
+
+    fixture.click_button(tr(EN, "Export"));
+
+    assert!(fixture.closed.get());
+    assert!(
+        fixture
+            .query_by_label(tr(EN, "Export Not Completed"))
+            .is_none()
+    );
+    assert!(!fixture.files.calls()[0].source.exists());
+}
+
+#[test]
+fn a_stale_export_directory_is_removed_before_the_next_one() {
+    let mut fixture = ExportFixture::new(small_document());
+    let stale = fixture.files.documents_dir().join(".export-stale");
+    std::fs::create_dir_all(&stale).expect("the stale directory is created");
+    std::fs::write(stale.join("old.csv"), b"old").expect("the stale file is written");
+
+    fixture.run();
+    fixture.click_button(tr(EN, "Export"));
+
+    assert!(!stale.exists(), "startup cleanup removes a leaked export");
 }
 
 #[test]

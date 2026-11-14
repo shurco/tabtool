@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use tabtool_document::Document;
 use tabtool_i18n::{Language, tr};
 
-use crate::mobile::DocumentFiles;
+use crate::mobile::{DocumentFiles, ExportOutcome};
 
 /// The catalog key of the successful Save As notice.
 pub const SAVED_COPY_KEY: &str = "Saved a copy to %@";
@@ -30,7 +30,9 @@ struct PendingCopy {
 pub enum CopyResult {
     /// The copy was written under this file name.
     Saved(String),
-    /// The picker was cancelled or the copy failed.
+    /// The user cancelled the picker.
+    Cancelled,
+    /// The copy failed.
     Failed,
 }
 
@@ -56,18 +58,14 @@ impl SaveCopy {
         else {
             return false;
         };
-        let copied = files.export_copy(path, &name);
+        let outcome = files.export_copy(path, &name);
         if files.export_in_progress() {
             self.pending = Some(PendingCopy {
                 source: path.to_path_buf(),
                 name,
             });
         } else {
-            self.result = Some(if copied {
-                CopyResult::Saved(name)
-            } else {
-                CopyResult::Failed
-            });
+            self.result = Some(result(outcome, name));
         }
         true
     }
@@ -80,12 +78,8 @@ impl SaveCopy {
         let Some(pending) = self.pending.take() else {
             return;
         };
-        let copied = files.export_copy(&pending.source, &pending.name);
-        self.result = Some(if copied {
-            CopyResult::Saved(pending.name)
-        } else {
-            CopyResult::Failed
-        });
+        let outcome = files.export_copy(&pending.source, &pending.name);
+        self.result = Some(result(outcome, pending.name));
     }
 
     /// Whether the picker is still open.
@@ -96,6 +90,14 @@ impl SaveCopy {
     /// Takes the finished result, if any.
     pub fn take_result(&mut self) -> Option<CopyResult> {
         self.result.take()
+    }
+}
+
+fn result(outcome: ExportOutcome, name: String) -> CopyResult {
+    match outcome {
+        ExportOutcome::Copied => CopyResult::Saved(name),
+        ExportOutcome::Cancelled => CopyResult::Cancelled,
+        ExportOutcome::Failed => CopyResult::Failed,
     }
 }
 

@@ -7,10 +7,7 @@
 use egui::{Rect, pos2};
 
 /// The row heights the mobile grid offers, in points.
-pub const MOBILE_ROW_HEIGHTS: [f32; 3] = [32.0, 44.0, 56.0];
-
-/// The row height used when the stored value is not one of the options.
-pub const MOBILE_DEFAULT_ROW_HEIGHT: f32 = 44.0;
+pub use tabtool_settings::{MOBILE_DEFAULT_ROW_HEIGHT, MOBILE_ROW_HEIGHTS};
 
 /// The smallest touch target the interface allows, in points.
 pub const MOBILE_MIN_TOUCH_TARGET: f32 = 44.0;
@@ -198,9 +195,5 @@ impl MobileMetrics {
 
 /// The mobile row height for a stored setting, or the default when unknown.
 pub fn row_height(stored: f32) -> f32 {
-    if MOBILE_ROW_HEIGHTS.contains(&stored) {
-        stored
-    } else {
-        MOBILE_DEFAULT_ROW_HEIGHT
-    }
+    tabtool_settings::valid_mobile_row_height(stored)
 }

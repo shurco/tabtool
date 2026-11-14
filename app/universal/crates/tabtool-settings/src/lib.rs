@@ -55,8 +55,18 @@ pub mod keys {
     pub const RECENT_DOCUMENTS: &str = "recentDocuments";
 }
 
-/// The row heights, in points, the settings offer.
+/// The row heights, in points, the desktop settings offer.
 pub const ROW_HEIGHTS: [f32; 3] = [20.0, 24.0, 32.0];
+
+/// The row heights, in points, the mobile settings offer.
+pub const MOBILE_ROW_HEIGHTS: [f32; 3] = [32.0, 44.0, 56.0];
+
+/// Every row height either platform persists.
+///
+/// The platforms keep separate settings files, but the loader accepts both
+/// sets so a value written by one platform stays valid instead of silently
+/// reverting to a default.
+pub const VALID_ROW_HEIGHTS: [f32; 5] = [20.0, 24.0, 32.0, 44.0, 56.0];
 
 /// The large file thresholds, in MiB, the settings offer.
 pub const LARGE_FILE_THRESHOLDS_MIB: [u32; 6] = [25, 50, 100, 250, 500, 1024];
@@ -64,8 +74,13 @@ pub const LARGE_FILE_THRESHOLDS_MIB: [u32; 6] = [25, 50, 100, 250, 500, 1024];
 /// How many recent documents the settings keep.
 pub const RECENT_DOCUMENTS_LIMIT: usize = 10;
 
-/// The row height used when the stored value is not one the settings offer.
+/// The desktop row height used when the stored value is not one the settings
+/// offer.
 pub const DEFAULT_ROW_HEIGHT: f32 = 24.0;
+
+/// The mobile row height used when the stored value is not one the mobile
+/// settings offer.
+pub const MOBILE_DEFAULT_ROW_HEIGHT: f32 = 44.0;
 
 /// Everything the app persists between launches.
 #[derive(Clone, Debug, PartialEq)]
@@ -151,17 +166,39 @@ impl Settings {
         u64::from(self.large_file_threshold_mib) * 1_048_576
     }
 
-    /// The grid row height, or the default when the stored value is not offered.
+    /// The grid row height for the desktop layout, or the desktop default
+    /// when the stored value is not one the desktop settings offer.
     pub fn row_height(&self) -> f32 {
-        valid_row_height(self.grid_row_height)
+        if ROW_HEIGHTS.contains(&self.grid_row_height) {
+            self.grid_row_height
+        } else {
+            DEFAULT_ROW_HEIGHT
+        }
+    }
+
+    /// The grid row height for the mobile layout, or the mobile default when
+    /// the stored value is not one the mobile settings offer.
+    pub fn mobile_row_height(&self) -> f32 {
+        valid_mobile_row_height(self.grid_row_height)
     }
 }
 
-/// Returns `value` when it is one of [`ROW_HEIGHTS`], otherwise the default.
+/// Returns `value` when either platform offers it, otherwise the desktop
+/// default.
 pub fn valid_row_height(value: f32) -> f32 {
-    if ROW_HEIGHTS.contains(&value) {
+    if VALID_ROW_HEIGHTS.contains(&value) {
         value
     } else {
         DEFAULT_ROW_HEIGHT
+    }
+}
+
+/// Returns `value` when the mobile settings offer it, otherwise the mobile
+/// default.
+pub fn valid_mobile_row_height(value: f32) -> f32 {
+    if MOBILE_ROW_HEIGHTS.contains(&value) {
+        value
+    } else {
+        MOBILE_DEFAULT_ROW_HEIGHT
     }
 }

@@ -102,7 +102,12 @@ pub fn show(ui: &mut Ui, language: Language, summary: &str, status: LargeStatus)
     cancel
 }
 
-fn rows_text(language: Language, rows: usize, visible: Option<usize>, locale: &Locale) -> String {
+pub(crate) fn rows_text(
+    language: Language,
+    rows: usize,
+    visible: Option<usize>,
+    locale: &Locale,
+) -> String {
     match visible {
         Some(visible) => fill_pair(
             tr(language, "%lld of %lld rows"),

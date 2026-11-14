@@ -1,7 +1,8 @@
 use tabtool_core::Encoding;
 use tabtool_i18n::Language;
 use tabtool_settings::{
-    LARGE_FILE_THRESHOLDS_MIB, QuoteStyle, ROW_HEIGHTS, Settings, keys, valid_row_height,
+    LARGE_FILE_THRESHOLDS_MIB, MOBILE_DEFAULT_ROW_HEIGHT, MOBILE_ROW_HEIGHTS, QuoteStyle,
+    ROW_HEIGHTS, Settings, VALID_ROW_HEIGHTS, keys, valid_mobile_row_height, valid_row_height,
 };
 
 #[test]
@@ -24,9 +25,12 @@ fn defaults_are_the_documented_values() {
 #[test]
 fn offered_values_are_the_documented_sets() {
     assert_eq!(ROW_HEIGHTS, [20.0, 24.0, 32.0]);
+    assert_eq!(MOBILE_ROW_HEIGHTS, [32.0, 44.0, 56.0]);
+    assert_eq!(VALID_ROW_HEIGHTS, [20.0, 24.0, 32.0, 44.0, 56.0]);
     assert_eq!(LARGE_FILE_THRESHOLDS_MIB, [25, 50, 100, 250, 500, 1024]);
     assert!(LARGE_FILE_THRESHOLDS_MIB.contains(&100));
     assert!(ROW_HEIGHTS.contains(&24.0));
+    assert!(MOBILE_ROW_HEIGHTS.contains(&MOBILE_DEFAULT_ROW_HEIGHT));
 }
 
 #[test]
@@ -72,9 +76,19 @@ fn thresholds_are_mebibytes_and_row_heights_fall_back() {
     for invalid in [0.0, 7.0, 99.0, -24.0] {
         assert_eq!(valid_row_height(invalid), 24.0);
     }
-    for height in ROW_HEIGHTS {
+    for height in VALID_ROW_HEIGHTS {
         assert_eq!(valid_row_height(height), height);
     }
+    for height in MOBILE_ROW_HEIGHTS {
+        assert_eq!(valid_mobile_row_height(height), height);
+    }
+    assert_eq!(valid_mobile_row_height(24.0), MOBILE_DEFAULT_ROW_HEIGHT);
+    let mobile = Settings {
+        grid_row_height: 56.0,
+        ..Settings::default()
+    };
+    assert_eq!(mobile.row_height(), 24.0);
+    assert_eq!(mobile.mobile_row_height(), 56.0);
 }
 
 #[test]

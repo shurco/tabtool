@@ -153,12 +153,12 @@ impl FormatSheet {
                     .map_or(configuration.decimal_mark.as_str(), |(_, key)| {
                         tr(language, key)
                     });
-                if let Some(index) = form_row(ui, style, tr(language, "Decimal"), |ui| {
+                if let Some(index) = form_row(ui, style, tr(language, "Decimal Mark"), |ui| {
                     touch_picker(
                         ui,
                         style,
                         ("mobile-format-decimal", ui.ctx().viewport_id()),
-                        tr(language, "Decimal"),
+                        tr(language, "Decimal Mark"),
                         selected,
                         &decimals,
                         !busy && !large,

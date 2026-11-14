@@ -5,8 +5,8 @@ use serde_json::json;
 use tabtool_core::{CsvConfiguration, Encoding};
 use tabtool_i18n::Language;
 use tabtool_platform::{
-    LARGE_FILE_THRESHOLDS_MIB, QuoteStyle, RECENT_DOCUMENTS_LIMIT, ROW_HEIGHTS, Settings, keys,
-    load_settings, save_settings, settings_path,
+    LARGE_FILE_THRESHOLDS_MIB, MOBILE_ROW_HEIGHTS, QuoteStyle, RECENT_DOCUMENTS_LIMIT, ROW_HEIGHTS,
+    Settings, keys, load_settings, save_settings, settings_path,
 };
 use tempfile::TempDir;
 
@@ -216,6 +216,23 @@ fn row_heights_the_settings_offer_are_kept() {
             ..Settings::default()
         };
         assert_eq!(settings.row_height(), height);
+    }
+}
+
+#[test]
+fn mobile_row_heights_round_trip_through_the_file() {
+    for height in MOBILE_ROW_HEIGHTS {
+        let dir = TempDir::new().expect("temp dir");
+        let path = path_in(&dir);
+        save_settings(
+            &Settings {
+                grid_row_height: height,
+                ..Settings::default()
+            },
+            &path,
+        )
+        .expect("save");
+        assert_eq!(load_settings(&path).grid_row_height, height);
     }
 }
 
