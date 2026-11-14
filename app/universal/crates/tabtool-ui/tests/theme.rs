@@ -181,7 +181,7 @@ fn apply_themes_installs_both_palettes() {
 #[test]
 fn system_fonts_shape_latin_text() {
     let ctx = Context::default();
-    install_fonts(&ctx);
+    install_fonts(&ctx).expect("the system must provide fonts");
     run_pass(&ctx);
 
     let body = FontId::proportional(13.0);
@@ -196,7 +196,7 @@ fn system_fonts_shape_latin_text() {
 #[test]
 fn font_families_resolve_in_a_deterministic_order() {
     let ctx = Context::default();
-    install_fonts(&ctx);
+    install_fonts(&ctx).expect("the system must provide fonts");
     run_pass(&ctx);
 
     let families = ctx.fonts(|fonts| fonts.definitions().families.clone());
@@ -224,7 +224,18 @@ fn font_families_resolve_in_a_deterministic_order() {
         monospace[0].contains(":Monospace:"),
         "monospace must start with the system monospace face, got {monospace:?}"
     );
-    assert_eq!(heading, proportional);
+    assert!(
+        heading == proportional || heading.ends_with(proportional),
+        "the heading family must be the proportional list or extend it with a \
+         heavier face first, got {heading:?}"
+    );
+    if heading != proportional {
+        assert!(
+            heading.len() > proportional.len(),
+            "a heavier heading face must be added before the proportional \
+             fallbacks, got {heading:?}"
+        );
+    }
     assert!(
         ctx.fonts(|fonts| fonts
             .definitions()
@@ -238,7 +249,7 @@ fn font_families_resolve_in_a_deterministic_order() {
 #[test]
 fn heading_text_style_uses_the_heading_family() {
     let ctx = Context::default();
-    install_fonts(&ctx);
+    install_fonts(&ctx).expect("the system must provide fonts");
     apply_theme(&ctx, &Theme::desktop_light());
 
     let heading = ctx.style_of(egui::Theme::Light).text_styles[&TextStyle::Heading].clone();
@@ -250,17 +261,29 @@ fn heading_text_style_uses_the_heading_family() {
 }
 
 #[test]
-fn the_startup_coverage_check_runs_against_system_fonts() {
+fn the_startup_coverage_check_reports_exactly_the_uncovered_scripts() {
     let ctx = Context::default();
-    install_fonts(&ctx);
+    install_fonts(&ctx).expect("the system must provide fonts");
     run_pass(&ctx);
 
     let missing = tabtool_ui::fonts::warn_missing_scripts(&ctx);
 
-    assert!(
-        missing.len() <= tabtool_ui::fonts::Script::ALL.len(),
-        "the check must only report known scripts"
-    );
+    for script in tabtool_ui::fonts::Script::ALL {
+        let covered = ctx.fonts_mut(|fonts| {
+            script.sample().chars().all(|character| {
+                [FontId::proportional(13.0), FontId::monospace(13.0)]
+                    .iter()
+                    .any(|font| fonts.has_glyph(font, character))
+            })
+        });
+
+        assert_eq!(
+            missing.contains(&script),
+            !covered,
+            "{} must be reported only when neither family covers it",
+            script.name()
+        );
+    }
 }
 
 #[test]

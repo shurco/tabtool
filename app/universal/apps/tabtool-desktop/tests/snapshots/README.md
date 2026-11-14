@@ -38,7 +38,9 @@ TABTOOL_RENDER_SNAPSHOTS=1 cargo test -p tabtool-desktop --test visual
 
 Without `TABTOOL_RENDER_SNAPSHOTS=1` the image tests print a skip notice and
 return; the scenario, interaction and accessibility suites always run on every
-platform. Review every changed image before keeping it, and regenerate after a
-font, theme, scale or OS change. `../../kittest.toml` sets the local comparison
+platform. Generated PNGs are ignored by `.gitignore`
+(`app/universal/**/tests/snapshots/*.png`), so a baseline cannot be committed
+with `git add -A`; macOS CI has no visual gate. Review every changed image
+before keeping it, and regenerate after a font, theme, scale or OS change. `../../kittest.toml` sets the local comparison
 budget (threshold 2.0, at most 4 different pixels); do not raise it to hide a
 layout change.

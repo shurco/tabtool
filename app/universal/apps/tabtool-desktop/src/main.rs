@@ -28,7 +28,10 @@ fn main() -> eframe::Result {
         "TabTool",
         options,
         Box::new(move |creation| {
-            tabtool_ui::install_fonts(&creation.egui_ctx);
+            if let Err(error) = tabtool_ui::install_fonts(&creation.egui_ctx) {
+                eprintln!("tabtool: {error}");
+                std::process::exit(1);
+            }
             tabtool_ui::apply_themes(&creation.egui_ctx);
             let mut app = DesktopApp::new(settings, DesktopPlatform);
             match launch {

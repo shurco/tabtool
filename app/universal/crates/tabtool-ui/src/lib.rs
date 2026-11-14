@@ -8,7 +8,7 @@
 //!
 //! ```no_run
 //! # let ctx = egui::Context::default();
-//! tabtool_ui::install_fonts(&ctx);
+//! tabtool_ui::install_fonts(&ctx).expect("the operating system must provide fonts");
 //! tabtool_ui::apply_themes(&ctx); // both palettes, following the system
 //! ```
 //!

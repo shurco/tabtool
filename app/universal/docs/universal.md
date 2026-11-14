@@ -716,13 +716,16 @@ Apple app remains the visual source of truth; the reference screenshots are
 
 The desktop UI ships no font files. `tabtool-ui` installs the operating
 system's generic sans-serif, serif and monospace faces in a fixed fallback
-order and lets `egui_system_font_provider` find a font for each script the
-installed faces lack. Fonts are memory-mapped from the OS, never embedded, and
-there is no bundled emoji font. On the first frame the app checks Chinese,
-Japanese, Korean, Cyrillic, Greek and emoji samples and prints one stderr
-warning per missing script, naming the script and the affected UI language.
-The warning does not stop startup. The setup and coverage rules are in
-`docs/desktop-ui.md`.
+order, uses a semibold or bold system face for titles when one exists, and lets
+`egui_system_font_provider` find a font for each script the installed faces
+lack. Fonts are memory-mapped from the OS, never embedded, and there is no
+bundled emoji font. If no generic system family resolves, the app prints an
+actionable error on stderr and exits non-zero instead of running without fonts.
+On the first frame the app checks Chinese, Japanese, Korean, Cyrillic, Greek and
+emoji samples against both proportional and monospace faces and prints one
+stderr warning per missing script, naming the script and the affected UI
+language. The warning does not stop startup, and stderr is its only channel.
+The setup and coverage rules are in `docs/desktop-ui.md`.
 
 ### Visual and performance verification
 
@@ -733,8 +736,10 @@ The warning does not stop startup. The setup and coverage rules are in
   stale, the four Settings tabs, About and Export. That is 88 local images
   when `TABTOOL_RENDER_SNAPSHOTS=1` is set; no baseline is committed.
 - The granular UI image tests write under `crates/tabtool-ui/tests/snapshots/`
-  with the same opt-in flag. Images are never a CI gate; scenario,
-  interaction and accessibility tests run on Linux, Windows and macOS.
+  with the same opt-in flag. `.gitignore` excludes
+  `app/universal/**/tests/snapshots/*.png`, so generated baselines stay local.
+  Images are never a CI gate; scenario, interaction and accessibility tests run
+  on Linux, Windows and macOS, and macOS CI has no visual gate.
   `UPDATE_SNAPSHOTS=1` regenerates a local baseline after review.
 - Grid virtualization is proven with a counting `RowSource`: at 640×400 a
   100,000-row scroll reads 119 cells (17 rows × 7 columns) in 78 µs in a

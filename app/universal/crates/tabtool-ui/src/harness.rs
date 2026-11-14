@@ -53,7 +53,7 @@ impl<'a> UiHarness<'a> {
             .with_pixels_per_point(1.0)
             .with_theme(theme.mode.egui())
             .with_context_setup(move |ctx: &Context| {
-                install_fonts(ctx);
+                install_fonts(ctx).expect("UI tests need system fonts");
                 apply_theme(ctx, &theme);
             })
             .wgpu()

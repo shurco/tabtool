@@ -169,7 +169,9 @@ fixed order:
 
 - proportional: system sans-serif → system serif → system monospace;
 - monospace: system monospace → system sans-serif → system serif;
-- the named `UI Heading` family used by titles: the proportional order.
+- the named `UI Heading` family used by titles: a semibold (600) or bold
+  system face first, then the proportional order. When the system ships no
+  heavier face, the family is the proportional list.
 
 `egui` 0.37's `egui_system_font_provider` then discovers a platform font for
 each character the installed faces lack. That provider covers Chinese,
@@ -179,19 +181,31 @@ installed). Font files are memory-mapped, not embedded, and no monochrome emoji
 font is bundled: platforms without a color emoji font fall back to their
 available glyphs or tofu.
 
+When no generic system family resolves at all, `install_fonts` returns
+`MissingSystemFonts`: the desktop app prints an actionable message on stderr
+(`install a desktop font package...`) and exits with a non-zero status instead
+of opening a window without fonts. TabTool never falls back to bundled fonts.
+
 On the first frame the desktop app checks representative text for Chinese `中`,
-Japanese `あ`, Korean `한`, Cyrillic `Привет`, Greek `Ελλάδα` and emoji `😀`.
-For every missing script it prints one warning on stderr that names the script
-and the affected UI language (Belarusian and Ukrainian for Cyrillic; Greek and
-emoji only appear in CSV content). The check never stops startup and never
-blocks rendering: whatever the OS provides is what the app shows.
+Japanese `あ`, Korean `한`, Cyrillic `Привет`, Greek `Ελλάδα` and emoji `😀`
+against both the proportional and the monospace family, so a script covered
+only by monospace is not reported. For every missing script it prints one
+warning on stderr that names the script and the affected UI language
+(Belarusian and Ukrainian for Cyrillic; Greek and emoji only appear in CSV
+content). Stderr is the only warning channel: the desktop app has no logger, so
+a GUI launch does not persist these lines. The check never stops startup and
+never blocks rendering: whatever the OS provides is what the app shows.
 
 ## Snapshot policy
 
 Image comparison is opt-in and local. The operating system's font files and the
 GPU rasterizer differ between machines, so a PNG snapshot is only valid on the
 machine that rendered it. No image baseline is committed, and images are not a
-CI gate on macOS, Linux or Windows.
+CI gate on macOS, Linux or Windows. Generated images under
+`app/universal/**/tests/snapshots/` are ignored by `.gitignore`, so
+`UPDATE_SNAPSHOTS=1` cannot add them with `git add -A`. macOS CI therefore has
+no visual gate: it runs only the scenario, interaction and accessibility
+suites, and a visual regression must be caught by a local snapshot review.
 
 The consolidated Plan 4 test in
 `app/universal/apps/tabtool-desktop/tests/visual.rs` still renders 22 states at

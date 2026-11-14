@@ -5,7 +5,7 @@ mod support;
 use std::sync::Arc;
 use std::time::Instant;
 
-use egui::{ViewportEvent, ViewportId};
+use egui::{FontId, ViewportEvent, ViewportId};
 use tabtool_core::CsvConfiguration;
 use tabtool_desktop::documents::{DocumentWindow, WindowServices};
 use tabtool_desktop::platform::{SharedDialogs, SharedStorage};
@@ -180,7 +180,7 @@ fn a_title_bar_close_keeps_the_open_editor_text() {
 }
 
 #[test]
-fn a_document_with_cjk_and_emoji_text_renders_without_panicking() {
+fn a_document_with_cjk_and_emoji_text_renders_and_reports_its_coverage() {
     let storage = Arc::new(MemoryStorage::new(
         "中文,日本語,한국어\n😀,Привет,Ελλάδα\n".as_bytes(),
     ));
@@ -190,9 +190,30 @@ fn a_document_with_cjk_and_emoji_text_renders_without_panicking() {
 
     harness.run();
 
-    assert!(
-        harness.query_by_label("Привет").is_some(),
-        "the Cyrillic cell stays in the accessibility tree; glyph availability \
-         is warned about at startup, never asserted against system fonts"
-    );
+    for text in ["中文", "日本語", "한국어", "😀", "Привет", "Ελλάδα"] {
+        assert!(
+            harness.query_by_label(text).is_some(),
+            "{text} stays in the accessibility tree; glyph availability is \
+             warned about at startup, never asserted against system fonts"
+        );
+    }
+
+    let missing = tabtool_ui::fonts::warn_missing_scripts(&harness.ctx);
+    for script in tabtool_ui::fonts::Script::ALL {
+        let covered = harness.ctx.fonts_mut(|fonts| {
+            script.sample().chars().all(|character| {
+                [FontId::proportional(13.0), FontId::monospace(13.0)]
+                    .iter()
+                    .any(|font| fonts.has_glyph(font, character))
+            })
+        });
+
+        assert_eq!(
+            missing.contains(&script),
+            !covered,
+            "the coverage check must report {} exactly when the installed \
+             families lack its sample",
+            script.name()
+        );
+    }
 }

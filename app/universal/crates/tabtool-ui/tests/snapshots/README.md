@@ -24,5 +24,8 @@ TABTOOL_RENDER_SNAPSHOTS=1 cargo test -p tabtool-ui
 
 Without `TABTOOL_RENDER_SNAPSHOTS=1` the image tests print a skip notice and
 return. Scenario, interaction and accessibility tests run on every platform
-without a flag. `kittest.toml` allows a small local difference (threshold 2.0,
-budget 4 pixels); do not raise it to hide a layout change.
+without a flag. Generated PNGs are ignored by `.gitignore`
+(`app/universal/**/tests/snapshots/*.png`) and CI has no visual gate, so review
+them locally before relying on a change. `kittest.toml` allows a small local
+difference (threshold 2.0, budget 4 pixels); do not raise it to hide a layout
+change.

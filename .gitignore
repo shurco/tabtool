@@ -80,6 +80,9 @@ jniLibs/
 *.apk
 *.aab
 
+# Local visual snapshots (opt-in, per machine; never committed)
+app/universal/**/tests/snapshots/*.png
+
 # Project
 .superpowers/
 docs/store/
