@@ -56,6 +56,13 @@ pub struct GridOptions {
     /// Whether the grid reads keyboard shortcuts. A modal clears this so its
     /// backdrop cannot leak arrows, Delete or select-all into the document.
     pub keys_enabled: bool,
+    /// Whether the grid is driven by touch.
+    ///
+    /// Touch mode removes the hover highlight, enables finger-drag scrolling
+    /// and paints the focused cell without waiting for keyboard focus. The
+    /// owner opens the platform text editor for an edit; the grid never starts
+    /// an in-window text field.
+    pub touch: bool,
     /// The document's decimal mark, used for numeric right alignment.
     pub decimal_mark: String,
     /// The width assigned to a column that has never been resized.
@@ -83,6 +90,7 @@ impl Default for GridOptions {
             header_offset: 0,
             editable: true,
             keys_enabled: true,
+            touch: false,
             decimal_mark: ".".to_string(),
             default_column_width: DEFAULT_COLUMN_WIDTH,
             min_column_width: MIN_COLUMN_WIDTH,
@@ -95,6 +103,17 @@ impl Default for GridOptions {
 }
 
 impl GridOptions {
+    /// The touch layout with `row_height` and finger gestures.
+    ///
+    /// Keyboard shortcuts are off because the platform text editor owns text
+    /// entry; a hardware Enter must not start the desktop cell field.
+    pub fn for_touch(mut self, row_height: f32) -> Self {
+        self.row_height = row_height;
+        self.touch = true;
+        self.keys_enabled = false;
+        self
+    }
+
     /// Whether the grid draws horizontal separators.
     ///
     /// Alternating backgrounds replace them, matching the macOS appearance.

@@ -95,6 +95,10 @@ impl TextInput for DesktopPlatform {
 
     fn close(&self) {}
 
+    fn commit(&self) {}
+
+    fn move_to(&self, _rect: [f32; 4]) {}
+
     fn poll(&self) -> Option<TextInputOutcome> {
         None
     }

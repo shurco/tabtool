@@ -8,13 +8,18 @@ use super::interaction::Interaction;
 use super::keyboard;
 use super::paint::{self, VisibleCells};
 use super::pointer;
-use super::{GridAction, GridView};
+use super::{GridAction, GridEditRequest, GridView};
 use crate::theme::current;
+use egui::containers::scroll_area::DragScroll;
 use egui::{Align, Rect, Sense, Ui, pos2};
 use tabtool_i18n::tr;
 
 /// Renders the grid and returns the actions requested this frame.
-pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
+pub(crate) fn show(
+    view: GridView<'_>,
+    ui: &mut Ui,
+    touch_request: &mut Option<GridEditRequest>,
+) -> Vec<GridAction> {
     let GridView {
         source,
         state,
@@ -82,7 +87,11 @@ pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
         .content_margin(0)
         .scroll_source(egui::containers::scroll_area::ScrollSource {
             scroll_bar: true,
-            drag: egui::containers::scroll_area::DragScroll::Never,
+            drag: if options.touch {
+                DragScroll::Always
+            } else {
+                DragScroll::Never
+            },
             mouse_wheel: true,
         });
     let output = scroll_area.show_viewport(ui, |ui, viewport| {
@@ -105,7 +114,19 @@ pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
 
         let data = paint::data_clip(clip, &geometry);
         let canvas = paint::Canvas::new(ui.painter(), content_origin, clip, viewport);
-        state.hovered = hovered_cell(ui, clip, viewport, &geometry);
+        state.hovered = if options.touch {
+            None
+        } else {
+            hovered_cell(ui, clip, viewport, &geometry)
+        };
+        if let Some(focus) = state.pending_scroll.take() {
+            let rect = geometry
+                .cell_rect(focus.row, focus.column)
+                .translate(content_origin.to_vec2());
+            if !data.contains_rect(rect) {
+                ui.scroll_to_rect(rect, Some(Align::Center));
+            }
+        }
 
         let headers = source.headers();
         let visible = VisibleCells::read(source, &geometry, viewport, &options.decimal_mark);
@@ -251,6 +272,7 @@ pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
         was_editing,
         &mut actions,
     );
+    *touch_request = interaction.touch_request();
     // The target cell may have been outside the viewport when the key was
     // handled; keep requesting its focus until the scrolled viewport has
     // created it. egui drops focus for a widget it has not seen.

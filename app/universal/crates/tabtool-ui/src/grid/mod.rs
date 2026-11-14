@@ -48,6 +48,7 @@ mod presenter;
 mod render;
 mod selection;
 mod state;
+mod touch;
 
 use std::collections::BTreeSet;
 
@@ -72,6 +73,9 @@ pub use selection::{
     GridAnchor, GridElement, GridFocus, GridSelection, GridTapOutcome, move_focus, resolve_tap,
 };
 pub use state::{CellAlignment, GridState};
+pub use touch::{GridEditRequest, GridHighlight, GridTouch, TouchGesture};
+
+pub(crate) use editor::move_after_commit;
 
 /// A command the grid asks its owner to apply.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -166,6 +170,18 @@ pub struct GridView<'a> {
 impl GridView<'_> {
     /// Paints the grid and returns the commands the user requested.
     pub fn show(self, ui: &mut Ui) -> Vec<GridAction> {
-        render::show(self, ui)
+        render::show(self, ui, &mut None)
+    }
+
+    /// Paints a touch grid and returns its commands and any native edit the
+    /// user asked for.
+    ///
+    /// The grid still never opens a text field itself: with
+    /// [`GridOptions::touch`] a second tap and a context-menu rename are
+    /// reported here so the owner can place the platform editor.
+    pub fn show_touch(self, ui: &mut Ui) -> (Vec<GridAction>, Option<GridEditRequest>) {
+        let mut request = None;
+        let actions = render::show(self, ui, &mut request);
+        (actions, request)
     }
 }

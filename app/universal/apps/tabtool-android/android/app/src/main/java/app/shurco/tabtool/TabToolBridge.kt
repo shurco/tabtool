@@ -356,6 +356,41 @@ object TabToolBridge {
         }
     }
 
+    /** Commits the visible editor's current text through the JNI callback. */
+    @JvmStatic
+    fun commitTextEditor() {
+        val activity = activity ?: return
+        activity.runOnUiThread { textEditor?.commitEdit() }
+    }
+
+    /** Moves the visible editor without resetting its text. */
+    @JvmStatic
+    fun moveTextEditor(
+        left: Float,
+        top: Float,
+        width: Float,
+        height: Float,
+    ) {
+        val activity = activity ?: return
+        if (!width.isFinite() || !height.isFinite() || width <= 0f || height <= 0f) {
+            return
+        }
+        activity.runOnUiThread {
+            val editor = textEditor ?: return@runOnUiThread
+            val density = activity.resources.displayMetrics.density
+            val params =
+                FrameLayout.LayoutParams(
+                    (width * density).roundToInt(),
+                    (height * density).roundToInt(),
+                ).apply {
+                    leftMargin = (left * density).roundToInt()
+                    topMargin = (top * density).roundToInt()
+                }
+            editor.layoutParams = params
+            editor.requestLayout()
+        }
+    }
+
     /** Returns true when a visible editor was cancelled. Runs on the UI thread. */
     fun cancelTextEditor(): Boolean {
         val editor = textEditor ?: return false

@@ -35,6 +35,11 @@ pub struct GridState {
     pub scroll: Vec2,
     /// The last visible rect in content coordinates.
     pub viewport: Rect,
+    /// A cell that must be scrolled into view on the next paint.
+    ///
+    /// Touch editing opens a native editor over a cell, so the cell must be
+    /// above the keyboard before the editor is placed.
+    pub pending_scroll: Option<GridFocus>,
     /// The last hovered cell.
     pub hovered: Option<(usize, usize)>,
     /// The focused cell for keyboard navigation and editing.
@@ -68,6 +73,7 @@ impl Default for GridState {
             widths: BTreeMap::new(),
             scroll: Vec2::ZERO,
             viewport: Rect::ZERO,
+            pending_scroll: None,
             hovered: None,
             focus: None,
             anchor: None,
@@ -156,6 +162,12 @@ impl GridState {
         {
             self.hovered = None;
         }
+        if self
+            .pending_scroll
+            .is_some_and(|focus| focus.row >= rows || focus.column >= columns)
+        {
+            self.pending_scroll = None;
+        }
         self.anchor = match self.anchor {
             Some(GridAnchor::Row(row)) if row < rows => Some(GridAnchor::Row(row)),
             Some(GridAnchor::Column(column)) if column < columns => {
@@ -216,6 +228,14 @@ impl GridState {
     pub fn focus_cell(&mut self, focus: Option<GridFocus>) {
         self.focus = focus;
         self.pending_focus = focus;
+    }
+
+    /// Scrolls `focus` into view on the next paint.
+    ///
+    /// Touch editing needs the cell above the keyboard before the platform
+    /// editor is placed over it.
+    pub fn scroll_to_cell(&mut self, focus: GridFocus) {
+        self.pending_scroll = Some(focus);
     }
 
     /// Starts editing a cell with its current text and the caret at the end.

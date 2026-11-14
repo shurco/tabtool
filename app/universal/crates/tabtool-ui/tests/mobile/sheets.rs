@@ -512,6 +512,14 @@ impl TouchTextInput for FakeTextInput {
         self.pending = None;
     }
 
+    fn commit(&mut self) {
+        self.pending = None;
+    }
+
+    fn move_to(&mut self, _rect: egui::Rect) {
+        // The sheets never move an open text session.
+    }
+
     fn poll(&mut self) -> Option<TouchTextInputOutcome> {
         self.pending.take()
     }

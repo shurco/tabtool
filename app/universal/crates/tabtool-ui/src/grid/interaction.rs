@@ -18,6 +18,7 @@ use super::selection::{
     GridAnchor, GridElement, GridFocus, GridSelection, GridTapOutcome, resolve_tap,
 };
 use super::state::GridState;
+use super::touch::GridEditRequest;
 
 /// A right-click that opens a context menu.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -46,6 +47,8 @@ pub(crate) struct Interaction {
     row_end: Option<bool>,
     menu: Option<MenuCommand>,
     menu_open: bool,
+    touch_edit: Option<GridFocus>,
+    touch_rename: Option<usize>,
 }
 
 impl Interaction {
@@ -127,6 +130,13 @@ impl Interaction {
         self.row_begin.is_some() || self.column_begin.is_some()
     }
 
+    /// The native edit the touch grid asked for this frame, if any.
+    pub fn touch_request(&self) -> Option<GridEditRequest> {
+        self.touch_edit
+            .map(GridEditRequest::Cell)
+            .or_else(|| self.touch_rename.map(GridEditRequest::Column))
+    }
+
     /// Applies the gesture to the persistent state and collects its actions.
     #[allow(clippy::too_many_arguments)]
     pub fn apply(
@@ -164,12 +174,19 @@ impl Interaction {
             state.focus = Some(tapped);
             if outcome == GridTapOutcome::EditCell
                 && !was_editing
-                && options.editable
                 && !modifiers.shift
                 && !modifiers.command
             {
-                let text = source.cell(row, column);
-                state.start_editing(row, column, text);
+                if options.touch {
+                    // The owner places the platform editor; the grid must not
+                    // open an in-window text field on a touch device.
+                    if options.editable {
+                        self.touch_edit = Some(tapped);
+                    }
+                } else if options.editable {
+                    let text = source.cell(row, column);
+                    state.start_editing(row, column, text);
+                }
             }
         } else if let Some((column, modifiers)) = self.column.take() {
             clicked = true;
@@ -249,7 +266,11 @@ impl Interaction {
             match command {
                 MenuCommand::Run(action) => actions.push(action),
                 MenuCommand::StartRename { column } => {
-                    state.start_renaming(source, column);
+                    if options.touch {
+                        self.touch_rename = Some(column);
+                    } else {
+                        state.start_renaming(source, column);
+                    }
                 }
             }
         }

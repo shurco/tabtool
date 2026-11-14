@@ -49,6 +49,33 @@ pub struct MobileToolbarResponse {
     pub overflow: Option<OverflowItem>,
 }
 
+impl MobileToolbarResponse {
+    /// Whether no control was pressed.
+    pub fn is_empty(&self) -> bool {
+        !self.back
+            && !self.undo
+            && !self.redo
+            && !self.filter
+            && !self.export
+            && self.overflow.is_none()
+    }
+
+    /// Folds another frame's response into this one.
+    ///
+    /// A deferred response from a commit frame and a tap in the same frame
+    /// both matter, so a press in either is kept.
+    pub fn merge(&mut self, other: Self) {
+        self.back |= other.back;
+        self.undo |= other.undo;
+        self.redo |= other.redo;
+        self.filter |= other.filter;
+        self.export |= other.export;
+        if other.overflow.is_some() {
+            self.overflow = other.overflow;
+        }
+    }
+}
+
 /// The editor's navigation bar.
 pub struct MobileToolbar<'a> {
     metrics: MobileMetrics,

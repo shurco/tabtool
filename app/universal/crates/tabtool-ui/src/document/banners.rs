@@ -105,7 +105,7 @@ pub fn stale(ui: &mut Ui, language: Language, appended: bool) -> bool {
 
 /// What the needs-attention banner's buttons asked for.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub(crate) struct NeedsAttentionResponse {
+pub struct NeedsAttentionResponse {
     /// Undo Last Edit was pressed.
     pub undo: bool,
     /// Show Format Controls was pressed.

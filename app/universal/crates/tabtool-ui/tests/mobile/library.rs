@@ -749,6 +749,24 @@ impl TouchTextInput for FakeTouchInput {
         self.active.set(false);
     }
 
+    fn commit(&mut self) {
+        // The library never commits a text session.
+    }
+
+    fn move_to(&mut self, rect: egui::Rect) {
+        let text = self
+            .request
+            .borrow()
+            .as_ref()
+            .map(|request| request.text.clone())
+            .unwrap_or_default();
+        self.request.replace(Some(TouchTextInputRequest {
+            rect,
+            text,
+            multiline: false,
+        }));
+    }
+
     fn poll(&mut self) -> Option<TouchTextInputOutcome> {
         let outcome = self.pending.borrow_mut().take();
         if outcome.is_some() {

@@ -62,6 +62,20 @@ pub trait TextInput {
     /// Closes the active editor and drops its undrained outcome.
     fn close(&self);
 
+    /// Asks the active editor to commit its current text.
+    ///
+    /// The platform reports the result through [`TextInput::poll`] on a later
+    /// call, exactly like a user commit. Without an active session this does
+    /// nothing. Closing instead of committing would discard the typed text.
+    fn commit(&self);
+
+    /// Moves the active editor over `rect` without resetting its text.
+    ///
+    /// [`TextInputRequest::rect`] is in points and relative to the app's
+    /// content view; the platform converts it to pixels. A keyboard inset or a
+    /// scroll that moves the edited cell calls this.
+    fn move_to(&self, rect: [f32; 4]);
+
     /// Takes the session's outcome, if the platform reported one.
     fn poll(&self) -> Option<TextInputOutcome>;
 

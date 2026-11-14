@@ -8,6 +8,11 @@
 
 mod accessory;
 mod action_bar;
+mod editor;
+mod editor_chrome;
+mod editor_placement;
+mod editor_session;
+mod editor_state;
 mod library;
 mod list;
 mod metrics;
@@ -20,6 +25,8 @@ pub use action_bar::{
     ContextualAction, ContextualActionId, FoldGap, FoldRegion, actions_for, actions_for_selection,
     contextual_action_bar, fold_gap, is_enabled,
 };
+pub use editor::{MobileEditor, MobileEditorResponse};
+pub use editor_state::{MobileEdit, MobileEditTarget, MobileEditorState};
 pub use library::{
     DocumentEntry, DocumentFiles, DocumentMetadata, ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE,
     FileMetadata, LibraryClock, LibraryError, LibraryErrors, LibraryResponse, LibrarySort,
@@ -71,6 +78,20 @@ pub trait TouchTextInput {
 
     /// Closes the editor without an outcome.
     fn close(&mut self);
+
+    /// Asks the open editor to commit its current text.
+    ///
+    /// The platform reports the outcome through [`Self::poll`] on a later
+    /// frame. The accessory bar uses this to commit and move in one gesture;
+    /// [`Self::close`] would discard the typed text.
+    fn commit(&mut self);
+
+    /// Moves the open editor over a new rectangle without resetting its text.
+    ///
+    /// A keyboard that appears after the editor opened, or a scroll that keeps
+    /// the cell above the inset, changes the cell's screen position; the
+    /// native view follows it.
+    fn move_to(&mut self, rect: Rect);
 
     /// Takes the one outcome the session produced.
     fn poll(&mut self) -> Option<TouchTextInputOutcome>;

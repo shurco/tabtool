@@ -48,6 +48,16 @@ impl TextInput for FakeTextInput {
         state.outcome = None;
     }
 
+    fn commit(&self) {
+        let mut state = self.state.borrow_mut();
+        let Some(request) = state.request.take() else {
+            return;
+        };
+        state.outcome = Some(TextInputOutcome::Committed(request.text));
+    }
+
+    fn move_to(&self, _rect: [f32; 4]) {}
+
     fn poll(&self) -> Option<TextInputOutcome> {
         self.state.borrow_mut().outcome.take()
     }
@@ -113,6 +123,21 @@ fn closing_a_session_drops_its_outcome() {
     input.close();
 
     assert!(!input.is_active());
+    assert_eq!(input.poll(), None);
+}
+
+#[test]
+fn a_commit_request_reports_the_current_text_once() {
+    let input = FakeTextInput::default();
+    input.open(request("old"));
+
+    input.commit();
+
+    assert!(!input.is_active());
+    assert_eq!(
+        input.poll(),
+        Some(TextInputOutcome::Committed("old".to_owned()))
+    );
     assert_eq!(input.poll(), None);
 }
 

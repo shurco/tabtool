@@ -1,12 +1,14 @@
 //! The document toolbar above the grid.
 
 use egui::Ui;
-use tabtool_document::{Document, DocumentPhase};
+use tabtool_document::Document;
 use tabtool_i18n::{Language, tr};
 
 use crate::grid::{GridAction, GridState};
 use crate::widgets::toolbar;
 use crate::widgets::{ButtonKind, PushButton, toolbar_separator};
+
+use super::{can_export, enabled_filter_count};
 
 /// What the toolbar asked for.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -42,10 +44,6 @@ pub fn show(
         .columns
         .iter()
         .any(|column| *column < column_count);
-    let has_content = !matches!(
-        document.phase(),
-        DocumentPhase::Loading | DocumentPhase::ReadFailed(_) | DocumentPhase::UnreadableFile
-    );
 
     let add_above = can_insert_rows && selected_rows;
     let add_below = can_insert_rows;
@@ -58,16 +56,10 @@ pub fn show(
     } else {
         selected_columns && column_count > 1
     };
-    let export_enabled = editable_for_export(document, has_content);
+    let export_enabled = can_export(document);
     let filter_enabled = document.can_filter();
     let filter_visible = document.row_filter().is_bar_visible;
-    let filter_count = document.row_filter().applied.as_ref().map_or(0, |filter| {
-        filter
-            .criteria
-            .iter()
-            .filter(|criterion| criterion.is_enabled)
-            .count()
-    });
+    let filter_count = enabled_filter_count(document);
 
     toolbar(ui, |ui| {
         if tool_button(ui, "\u{2191}+", tr(language, "Add Row Above"), add_above).clicked() {
@@ -116,10 +108,6 @@ pub fn show(
         });
     });
     ToolbarResponse { actions, export }
-}
-
-fn editable_for_export(document: &Document, has_content: bool) -> bool {
-    has_content && !document.is_large_mode() && document.table().is_some()
 }
 
 fn tool_button(ui: &mut Ui, glyph: &str, name: &str, enabled: bool) -> egui::Response {

@@ -104,6 +104,27 @@ impl TextInput for AndroidPlatform {
         call_void("hideTextEditor", "()V", &[]);
     }
 
+    fn commit(&self) {
+        call_void("commitTextEditor", "()V", &[]);
+    }
+
+    fn move_to(&self, rect: [f32; 4]) {
+        let [left, top, width, height] = rect;
+        if !rect.iter().all(|value| value.is_finite()) || width <= 0.0 || height <= 0.0 {
+            return;
+        }
+        call_void(
+            "moveTextEditor",
+            "(FFFF)V",
+            &[
+                JValue::Float(left),
+                JValue::Float(top),
+                JValue::Float(width),
+                JValue::Float(height),
+            ],
+        );
+    }
+
     fn poll(&self) -> Option<TextInputOutcome> {
         SESSIONS.poll()
     }

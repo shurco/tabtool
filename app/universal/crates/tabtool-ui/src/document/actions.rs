@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use egui::Context;
 use tabtool_core::CsvConfiguration;
 use tabtool_document::{
-    DocumentError, DocumentPhase, FormatChange, LargeStatus, plan_format_change,
+    Document, DocumentError, DocumentPhase, FormatChange, LargeStatus, plan_format_change,
 };
 use tabtool_i18n::tr;
 
@@ -49,27 +49,37 @@ pub(crate) fn repaint_interval(is_large: bool, status: LargeStatus) -> Option<Du
     }
 }
 
+/// Polls a large document's index and at-rest staleness.
+///
+/// The desktop window and the touch editor share the rule: poll while busy,
+/// recheck the file at most once a second at rest, and request repaints while a
+/// job runs.
+pub(crate) fn poll_large_state(
+    document: &mut Document,
+    last_stale_check: &mut Option<Instant>,
+    ctx: &Context,
+) {
+    document.poll_large_indexing();
+    let large_ready =
+        document.is_large_mode() && matches!(document.large_status(), LargeStatus::Ready);
+    let now = Instant::now();
+    if !large_ready
+        || last_stale_check
+            .is_none_or(|checked| now.saturating_duration_since(checked) >= STALE_CHECK_INTERVAL)
+    {
+        document.refresh_large_staleness();
+        if large_ready {
+            *last_stale_check = Some(now);
+        }
+    }
+    if let Some(interval) = repaint_interval(document.is_large_mode(), document.large_status()) {
+        ctx.request_repaint_after(interval);
+    }
+}
+
 impl DocumentView<'_> {
     pub(super) fn poll_large_state(&mut self, ctx: &Context) {
-        self.document.poll_large_indexing();
-        let large_ready = self.document.is_large_mode()
-            && matches!(self.document.large_status(), LargeStatus::Ready);
-        let now = Instant::now();
-        if !large_ready
-            || self.ui_state.last_stale_check.is_none_or(|checked| {
-                now.saturating_duration_since(checked) >= STALE_CHECK_INTERVAL
-            })
-        {
-            self.document.refresh_large_staleness();
-            if large_ready {
-                self.ui_state.last_stale_check = Some(now);
-            }
-        }
-        if let Some(interval) =
-            repaint_interval(self.document.is_large_mode(), self.document.large_status())
-        {
-            ctx.request_repaint_after(interval);
-        }
+        poll_large_state(self.document, &mut self.ui_state.last_stale_check, ctx);
     }
 
     pub(super) fn run_grid_action(

@@ -274,7 +274,13 @@ impl DocumentView<'_> {
     }
 }
 
-fn grid_options(
+/// The grid options for `document`: sort arrow, decimal mark and capabilities.
+///
+/// The desktop window and the touch editor build on this so a large file's
+/// header offset, a filtered view's menu limits and the document's editable
+/// state stay in one place. Callers add their own row height and input mode;
+/// the touch editor uses [`crate::grid::GridOptions::for_touch`].
+pub fn grid_options(
     document: &Document,
     language: Language,
     appearance: GridAppearance,

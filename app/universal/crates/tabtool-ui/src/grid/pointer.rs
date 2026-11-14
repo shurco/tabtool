@@ -55,18 +55,19 @@ pub(crate) fn interact_cells(
             || state.selection.columns.contains(&cell.column);
         response
             .widget_info(|| WidgetInfo::selected(Role::Cell, true, selected, cell.text.clone()));
-        if response.clicked() {
+        let long_touch = options.touch && response.long_touched();
+        if response.clicked() && !long_touch {
             interaction.cell((cell.row, cell.column, click_modifiers(ui.ctx())));
             response.request_focus();
         }
-        if response.secondary_clicked() {
+        if response.secondary_clicked() || long_touch {
             interaction.context(ContextTap {
                 element: GridElement::Cell,
                 row: cell.row,
                 column: cell.column,
             });
         }
-        if response.secondary_clicked() || response.context_menu_opened() {
+        if response.secondary_clicked() || long_touch || response.context_menu_opened() {
             interaction.note_menu_open();
             let selection = context::context_selection(
                 GridElement::Cell,
@@ -84,7 +85,7 @@ pub(crate) fn interact_cells(
                 interaction.menu(command);
             }
         }
-        if options.menu.row_structural && response.drag_started() {
+        if options.menu.row_structural && !options.touch && response.drag_started() {
             interaction.begin_row_drag(cell.row, cell.column);
         }
         if (response.drag_started() || response.dragged())
@@ -144,17 +145,18 @@ pub(crate) fn interact_headers(
                 header_for(headers, column),
             )
         });
-        if response.clicked() {
+        let long_touch = options.touch && response.long_touched();
+        if response.clicked() && !long_touch {
             interaction.column(column, click_modifiers(ui.ctx()));
         }
-        if response.secondary_clicked() {
+        if response.secondary_clicked() || long_touch {
             interaction.context(ContextTap {
                 element: GridElement::ColumnHeader,
                 row: 0,
                 column,
             });
         }
-        if response.secondary_clicked() || response.context_menu_opened() {
+        if response.secondary_clicked() || long_touch || response.context_menu_opened() {
             interaction.note_menu_open();
             let selection =
                 context::context_selection(GridElement::ColumnHeader, 0, column, &state.selection);
@@ -163,7 +165,7 @@ pub(crate) fn interact_headers(
                 interaction.menu(command);
             }
         }
-        if response.drag_started() {
+        if !options.touch && response.drag_started() {
             // A press on the resize handle is a resize, not a header drag.
             let on_handle = ui.ctx().input(|input| {
                 input
@@ -258,17 +260,18 @@ pub(crate) fn interact_gutter(
                 geometry.row_number(row).to_string(),
             )
         });
-        if response.clicked() {
+        let long_touch = options.touch && response.long_touched();
+        if response.clicked() && !long_touch {
             interaction.row(row, click_modifiers(ui.ctx()));
         }
-        if response.secondary_clicked() {
+        if response.secondary_clicked() || long_touch {
             interaction.context(ContextTap {
                 element: GridElement::RowNumber,
                 row,
                 column: 0,
             });
         }
-        if response.secondary_clicked() || response.context_menu_opened() {
+        if response.secondary_clicked() || long_touch || response.context_menu_opened() {
             interaction.note_menu_open();
             let selection =
                 context::context_selection(GridElement::RowNumber, row, 0, &state.selection);
@@ -277,7 +280,7 @@ pub(crate) fn interact_gutter(
                 interaction.menu(command);
             }
         }
-        if options.menu.row_structural && response.drag_started() {
+        if options.menu.row_structural && !options.touch && response.drag_started() {
             interaction.begin_row_drag(row, 0);
         }
         if (response.drag_started() || response.dragged())

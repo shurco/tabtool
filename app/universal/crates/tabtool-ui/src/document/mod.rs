@@ -29,8 +29,34 @@ use crate::theme::current;
 pub use dispatch::{apply_grid_action, sync_selection_to_document, sync_selection_to_grid};
 pub use error_overlay::alert_message;
 pub use format_bar::FormatBarAction;
+pub use panels::grid_options;
 pub use progress::{indexing_text, saving_text};
-pub use status_line::status_summary;
+pub use status_line::{document_summary, status_summary};
+
+pub(crate) use actions::poll_large_state;
+pub use banners::{
+    NeedsAttentionResponse, large_file as large_file_banner,
+    needs_attention as needs_attention_banner, notice as notice_banner, stale as stale_banner,
+};
+
+/// Whether the document can be exported now.
+///
+/// Export needs an in-memory table: a large file stays on its private working
+/// file, and Save As copies it through the platform picker instead.
+pub fn can_export(document: &Document) -> bool {
+    document.has_content() && !document.is_large_mode() && document.table().is_some()
+}
+
+/// The number of enabled filter criteria the toolbar badge reports.
+pub fn enabled_filter_count(document: &Document) -> usize {
+    document.row_filter().applied.as_ref().map_or(0, |filter| {
+        filter
+            .criteria
+            .iter()
+            .filter(|criterion| criterion.is_enabled)
+            .count()
+    })
+}
 
 /// A one-shot message the format bar or a large-file action raises.
 #[derive(Clone, Debug, Eq, PartialEq)]

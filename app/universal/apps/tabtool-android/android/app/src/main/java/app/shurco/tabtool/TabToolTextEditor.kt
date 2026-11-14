@@ -71,6 +71,11 @@ class TabToolTextEditor(context: Context) : AppCompatEditText(context) {
         finish(commit = false)
     }
 
+    /** Commits the current text as if the user pressed Done. */
+    fun commitEdit() {
+        finish(commit = true)
+    }
+
     fun dismissWithoutCallback() {
         finished = true
         hideAndRemove()

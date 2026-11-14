@@ -199,7 +199,7 @@ pub(crate) fn paint_data(
         }
     }
 
-    if grid_focused
+    if (grid_focused || options.touch)
         && let Some(focus) = state.focus
         && visible.rows.contains(&focus.row)
         && visible.columns.contains(&focus.column)
