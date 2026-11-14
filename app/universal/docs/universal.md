@@ -105,26 +105,27 @@ cargo test -p tabtool-document            # document layer
 cargo test -p tabtool-document --test parity  # ported-test inventory
 cargo test -p tabtool-ui                   # widgets, grid, chrome, panels
 cargo test -p tabtool-ui -p tabtool-desktop --tests  # UI scenarios
-cargo test -p tabtool-desktop --test visual          # macOS image baselines
+TABTOOL_RENDER_SNAPSHOTS=1 cargo test -p tabtool-desktop --test visual  # local images
 cargo check -p tabtool-large --features bench   # compiles the benchmark binary
 cargo test -p tabtool-core --test golden   # macOS only
 ```
 
 The UI suites use `egui_kittest` for deterministic interaction and
 accessibility assertions. Scenario, interaction and accessibility tests run on
-Linux, Windows and macOS. Image snapshots have two committed sets:
+Linux, Windows and macOS. Image snapshots are opt-in and local because they
+depend on the operating system's fonts and GPU rasterizer:
 
 - `crates/tabtool-ui/tests/snapshots/` holds the granular widget, grid and
-  document-chrome baselines gathered while those surfaces were built;
+  document-chrome image output when enabled;
 - `apps/tabtool-desktop/tests/snapshots/` holds the consolidated Plan 4
-  `<state>-<size>-<theme>.png` baselines in `tests/visual.rs`.
+  `<state>-<size>-<theme>.png` output from `tests/visual.rs` when enabled.
 
-Both image sets are compiled and compared only on macOS. Set
-`TABTOOL_SKIP_SNAPSHOTS=1` on a macOS machine without a usable Metal device.
-Set `UPDATE_SNAPSHOTS=1` after reviewing a deliberate visual change. Linux CI
-runs the scenario tests under `xvfb-run`; Windows runs them directly. Neither
-runs the image comparison until per-OS baselines exist. The workflow and
-`docs/desktop-ui.md` record the split.
+No PNG baseline is committed. Set `TABTOOL_RENDER_SNAPSHOTS=1` to render and
+compare on the current machine, `UPDATE_SNAPSHOTS=1` to generate its baseline
+after review. Without the flag the image tests print a skip notice and return.
+Linux CI runs the scenario suite under `xvfb-run`; Windows and macOS run it
+directly. `docs/desktop-ui.md` records the font setup, coverage warning and
+snapshot policy.
 
 The `bench` feature owns the benchmark binary and its dev-only dependencies,
 so the plain workspace commands skip it. Every CI job runs the `cargo check`
@@ -711,19 +712,30 @@ Apple app remains the visual source of truth; the reference screenshots are
 - Language switching re-renders every open view in the same tick. Native file
   dialogs are created after the switch and use the platform locale.
 
+### Fonts
+
+The desktop UI ships no font files. `tabtool-ui` installs the operating
+system's generic sans-serif, serif and monospace faces in a fixed fallback
+order and lets `egui_system_font_provider` find a font for each script the
+installed faces lack. Fonts are memory-mapped from the OS, never embedded, and
+there is no bundled emoji font. On the first frame the app checks Chinese,
+Japanese, Korean, Cyrillic, Greek and emoji samples and prints one stderr
+warning per missing script, naming the script and the affected UI language.
+The warning does not stop startup. The setup and coverage rules are in
+`docs/desktop-ui.md`.
+
 ### Visual and performance verification
 
 - `apps/tabtool-desktop/tests/visual.rs` renders 22 states at 1200×800 and
   640×400 in light and dark: the empty root, new document, CSV header, row and
   column selection, cell editor, format bar, filter bar, needs-attention,
   read-error, save-error, format-alert, reparse, large indexing, saving,
-  stale, the four Settings tabs, About and Export. That is 88 committed
-  baselines under `apps/tabtool-desktop/tests/snapshots/`.
-- The granular UI tests keep their own baselines under
-  `crates/tabtool-ui/tests/snapshots/`. Both sets compare on macOS only;
-  Linux and Windows run the scenario, interaction and accessibility tests.
-  Set `TABTOOL_SKIP_SNAPSHOTS=1` to skip images, `UPDATE_SNAPSHOTS=1` to
-  regenerate after review.
+  stale, the four Settings tabs, About and Export. That is 88 local images
+  when `TABTOOL_RENDER_SNAPSHOTS=1` is set; no baseline is committed.
+- The granular UI image tests write under `crates/tabtool-ui/tests/snapshots/`
+  with the same opt-in flag. Images are never a CI gate; scenario,
+  interaction and accessibility tests run on Linux, Windows and macOS.
+  `UPDATE_SNAPSHOTS=1` regenerates a local baseline after review.
 - Grid virtualization is proven with a counting `RowSource`: at 640×400 a
   100,000-row scroll reads 119 cells (17 rows × 7 columns) in 78 µs in a
   release build on an Apple M4 Pro (1.36 ms in the debug test build); the

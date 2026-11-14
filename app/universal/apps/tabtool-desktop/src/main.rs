@@ -18,6 +18,9 @@ fn main() -> eframe::Result {
         viewport: egui::ViewportBuilder::default()
             .with_title("TabTool")
             .with_min_inner_size([640.0, 400.0]),
+        // `install_fonts` adds the shared system font provider, so eframe must
+        // not enumerate the system fonts a second time.
+        system_font_fallback: false,
         ..Default::default()
     };
 

@@ -377,15 +377,15 @@ impl Theme {
 
 fn text_styles(typography: Typography) -> std::collections::BTreeMap<TextStyle, FontId> {
     let proportional = |size| FontId::new(size, FontFamily::Proportional);
-    let semibold = |size| FontId::new(size, FontFamily::Name(crate::fonts::SEMIBOLD_FAMILY.into()));
+    let heading = |size| FontId::new(size, FontFamily::Name(crate::fonts::HEADING_FAMILY.into()));
     [
         (TextStyle::Body, proportional(typography.body)),
         (TextStyle::Button, proportional(typography.body)),
         (TextStyle::Small, proportional(typography.caption)),
-        (TextStyle::Heading, semibold(typography.title)),
+        (TextStyle::Heading, heading(typography.title)),
         (
             TextStyle::Name(WINDOW_TITLE_STYLE.into()),
-            semibold(typography.title_large),
+            heading(typography.title_large),
         ),
         (
             TextStyle::Monospace,

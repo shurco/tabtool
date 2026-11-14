@@ -57,7 +57,7 @@ pub fn banner(
                 ui.vertical(|ui| {
                     ui.label(
                         RichText::new(title)
-                            .font(crate::fonts::semibold_font(theme.typography.body))
+                            .font(crate::fonts::heading_font(theme.typography.body))
                             .color(colors.label),
                     );
                     if !message.is_empty() {

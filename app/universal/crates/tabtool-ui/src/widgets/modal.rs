@@ -67,7 +67,7 @@ pub fn modal(
             ui.set_width(theme.metrics.alert_width);
             ui.label(
                 RichText::new(title)
-                    .font(crate::fonts::semibold_font(theme.typography.title))
+                    .font(crate::fonts::heading_font(theme.typography.title))
                     .color(colors.label),
             );
             ui.add_space(6.0);

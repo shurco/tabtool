@@ -1,135 +1,273 @@
-//! The bundled fonts and their deterministic fallback order.
+//! System font installation and script coverage checks.
 //!
-//! Inter is the interface font, Noto Sans SC covers Chinese and Japanese,
-//! Noto Sans KR covers Korean, and Noto Emoji is the monochrome emoji fallback.
-//! The four are SIL Open Font License releases, committed with their license
-//! texts under `assets/fonts/`.
-//!
-//! Noto Emoji is deliberately *not* part of the configured proportional
-//! fallback chain: a [`FontProvider`] adds it only after every other provider
-//! missed. `eframe` installs the system font provider first, so a platform with
-//! a color emoji font (Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji)
-//! renders color glyphs; elsewhere the bundled monochrome font keeps emoji
-//! deterministic.
+//! TabTool ships no fonts. The operating system's generic sans-serif, serif and
+//! monospace families are installed in a fixed order, and
+//! [`egui_system_font_provider::SystemFontProvider`] discovers a per-script
+//! font (Chinese, Japanese, Korean, Cyrillic, Greek, emoji) when the installed
+//! faces lack a glyph. Font files are memory-mapped, never copied into the
+//! executable.
 
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
-use egui::{
-    Context, FallbackRequest, FontData, FontDefinitions, FontFamily, FontId, FontInsert,
-    FontPriority, FontProvider, FontTweak, InsertFontFamily, epaint::text::VariationCoords,
+use egui::{Context, FontData, FontDefinitions, FontFamily, FontId};
+use egui_system_font_provider::SystemFontProvider;
+use fontique::{
+    Collection, CollectionOptions, GenericFamily, QueryFamily, QueryStatus, SourceCache,
+    SourceCacheOptions,
 };
 
-/// The interface font.
-pub const INTER: &str = "Inter";
-/// The semibold cut of Inter, used for titles.
-pub const INTER_SEMIBOLD: &str = "Inter Semibold";
-/// The Chinese and Japanese fallback.
-pub const CJK: &str = "Noto Sans SC";
-/// The Korean fallback.
-pub const KOREAN: &str = "Noto Sans KR";
-/// The monochrome emoji fallback.
-pub const EMOJI: &str = "Noto Emoji";
-/// The named family that always resolves to the semibold cut.
-pub const SEMIBOLD_FAMILY: &str = "Inter Semibold";
-/// The named family that always resolves to the bundled emoji font.
-pub const EMOJI_FAMILY: &str = "Emoji";
-
-static INTER_BYTES: &[u8] = include_bytes!("../../../assets/fonts/Inter-Variable.ttf");
-static CJK_BYTES: &[u8] = include_bytes!("../../../assets/fonts/NotoSansSC-Variable.ttf");
-static KOREAN_BYTES: &[u8] = include_bytes!("../../../assets/fonts/NotoSansKR-Variable.ttf");
-static EMOJI_BYTES: &[u8] = include_bytes!("../../../assets/fonts/NotoEmoji-Variable.ttf");
-
-/// Install the bundled fonts and the monochrome emoji provider.
+/// The named family used for titles and other semibold text.
 ///
-/// The proportional family starts with Inter, then the Noto CJK fallbacks, then
-/// egui's own icon fallbacks. The monospace family keeps egui's Hack for
-/// code-like cells and gains the CJK fallbacks. The named [`EMOJI_FAMILY`]
-/// always resolves to Noto Emoji.
-pub fn install_fonts(ctx: &Context) {
-    let mut fonts = FontDefinitions::default();
-    fonts.font_data.insert(
-        INTER.to_owned(),
-        Arc::new(FontData::from_static(INTER_BYTES)),
-    );
-    fonts
-        .font_data
-        .insert(CJK.to_owned(), Arc::new(FontData::from_static(CJK_BYTES)));
-    fonts.font_data.insert(
-        KOREAN.to_owned(),
-        Arc::new(FontData::from_static(KOREAN_BYTES)),
-    );
-    fonts.font_data.insert(
-        EMOJI.to_owned(),
-        Arc::new(FontData::from_static(EMOJI_BYTES)),
-    );
-    fonts.font_data.insert(
-        INTER_SEMIBOLD.to_owned(),
-        Arc::new(FontData::from_static(INTER_BYTES).tweak(FontTweak {
-            coords: VariationCoords::new([(b"wght", 600.0)]),
-            ..Default::default()
-        })),
-    );
+/// System fonts do not expose a portable weight choice through
+/// [`FontData`], so the family resolves to the system sans-serif face before
+/// the serif and monospace fallbacks.
+pub const HEADING_FAMILY: &str = "UI Heading";
 
-    let proportional = fonts.families.entry(FontFamily::Proportional).or_default();
-    proportional.insert(0, INTER.to_owned());
-    let cjk_index = usize::from(!proportional.is_empty());
-    proportional.insert(cjk_index, CJK.to_owned());
-    proportional.insert(cjk_index + 1, KOREAN.to_owned());
-
-    let monospace = fonts.families.entry(FontFamily::Monospace).or_default();
-    monospace.push(CJK.to_owned());
-    monospace.push(KOREAN.to_owned());
-    fonts.families.insert(
-        FontFamily::Name(EMOJI_FAMILY.into()),
-        vec![EMOJI.to_owned()],
-    );
-    fonts.families.insert(
-        FontFamily::Name(SEMIBOLD_FAMILY.into()),
-        vec![INTER_SEMIBOLD.to_owned(), CJK.to_owned(), KOREAN.to_owned()],
-    );
-
-    ctx.set_fonts(fonts);
-    ctx.add_font_provider(Arc::new(BundledEmoji));
+/// The UI scripts checked at startup.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Script {
+    /// Chinese, represented by 中.
+    Chinese,
+    /// Japanese, represented by あ.
+    Japanese,
+    /// Korean, represented by 한.
+    Korean,
+    /// Cyrillic, represented by Привет.
+    Cyrillic,
+    /// Greek, represented by Ελλάδα.
+    Greek,
+    /// Emoji, represented by 😀.
+    Emoji,
 }
 
-/// A semibold font at `size`, for titles that are not using `TextStyle::Heading`.
-pub fn semibold_font(size: f32) -> FontId {
-    FontId::new(size, FontFamily::Name(SEMIBOLD_FAMILY.into()))
-}
+impl Script {
+    /// Every script, in the order the startup check reports them.
+    pub const ALL: [Self; 6] = [
+        Self::Chinese,
+        Self::Japanese,
+        Self::Korean,
+        Self::Cyrillic,
+        Self::Greek,
+        Self::Emoji,
+    ];
 
-/// Supplies Noto Emoji for emoji clusters no configured font covers.
-struct BundledEmoji;
+    /// The representative text that must have glyphs.
+    pub const fn sample(self) -> &'static str {
+        match self {
+            Self::Chinese => "中",
+            Self::Japanese => "あ",
+            Self::Korean => "한",
+            Self::Cyrillic => "Привет",
+            Self::Greek => "Ελλάδα",
+            Self::Emoji => "😀",
+        }
+    }
 
-impl FontProvider for BundledEmoji {
-    fn font_for(&self, request: &FallbackRequest<'_>) -> Option<FontInsert> {
-        let first = request.cluster.chars().next()?;
-        is_emoji(first).then(|| {
-            FontInsert::new(
-                EMOJI,
-                FontData::from_static(EMOJI_BYTES),
-                vec![InsertFontFamily {
-                    family: request.family.clone(),
-                    priority: FontPriority::Lowest,
-                }],
-            )
-        })
+    /// The human-readable script name used in warnings.
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Chinese => "Chinese",
+            Self::Japanese => "Japanese",
+            Self::Korean => "Korean",
+            Self::Cyrillic => "Cyrillic",
+            Self::Greek => "Greek",
+            Self::Emoji => "emoji",
+        }
+    }
+
+    /// The UI languages that need this script, or the content that does.
+    pub const fn affected(self) -> &'static str {
+        match self {
+            Self::Chinese => "Simplified Chinese interface text",
+            Self::Japanese => "Japanese interface text",
+            Self::Korean => "Korean interface text",
+            Self::Cyrillic => "Belarusian and Ukrainian interface text",
+            Self::Greek => "Greek CSV content (no interface language uses it)",
+            Self::Emoji => "emoji in CSV content (no interface language uses it)",
+        }
     }
 }
 
-/// Whether `c` belongs to a Unicode block that Noto Emoji covers.
+/// Install the system font families and the script fallback provider.
 ///
-/// The list is intentionally conservative: the provider is only useful for
-/// characters that would otherwise render as tofu, and a false positive costs
-/// one failed lookup.
-fn is_emoji(c: char) -> bool {
-    matches!(
-        c as u32,
-        0x2139
-            | 0x2190..=0x21FF
-            | 0x2300..=0x23FF
-            | 0x2600..=0x27BF
-            | 0x2900..=0x297F
-            | 0x2B00..=0x2BFF
-            | 0x1F000..=0x1FAFF
-    )
+/// The proportional family is system sans-serif, then serif, then monospace.
+/// The monospace family starts with system monospace and falls back to
+/// sans-serif, then serif. [`HEADING_FAMILY`] uses the proportional order.
+/// Any character these faces miss is resolved by the system font provider from
+/// the installed platform fonts.
+pub fn install_fonts(ctx: &Context) {
+    // Starting the provider first enumerates system fonts on its background
+    // thread while the generic families are resolved on this one.
+    let provider: Arc<SystemFontProvider> = Arc::clone(&*SCRIPT_FONTS);
+    ctx.set_fonts(system_font_definitions());
+    ctx.add_font_provider(provider);
+}
+
+/// A title font at `size`, for titles that are not using `TextStyle::Heading`.
+///
+/// The family keeps its name for the design tokens; the face is the system
+/// sans-serif face.
+pub fn heading_font(size: f32) -> FontId {
+    FontId::new(size, FontFamily::Name(HEADING_FAMILY.into()))
+}
+
+/// The glyphs the UI needs but the installed system fonts do not provide.
+///
+/// `has_glyph` reports whether the font set covers one character, which lets
+/// tests inject a font set without constructing an egui [`Context`].
+pub fn missing_scripts(mut has_glyph: impl FnMut(char) -> bool) -> Vec<Script> {
+    Script::ALL
+        .into_iter()
+        .filter(|script| !script.sample().chars().all(&mut has_glyph))
+        .collect()
+}
+
+/// Check the installed fonts and warn on stderr for each missing script.
+///
+/// Called after the first frame, when egui has built its font set. The app
+/// keeps running and renders the glyphs that are available.
+pub fn warn_missing_scripts(ctx: &Context) -> Vec<Script> {
+    let font = FontId::proportional(13.0);
+    let missing =
+        ctx.fonts_mut(|fonts| missing_scripts(|character| fonts.has_glyph(&font, character)));
+
+    for script in &missing {
+        eprintln!(
+            "tabtool: no system font covers {} (sample {:?}); affected: {}. \
+             Install a font for this script or those characters will show as tofu boxes.",
+            script.name(),
+            script.sample(),
+            script.affected()
+        );
+    }
+
+    missing
+}
+
+#[derive(Clone)]
+struct FamilyFont {
+    name: String,
+    data: FontData,
+}
+
+/// The resolved system families, shared by every context in the process.
+///
+/// Enumerating system fonts is expensive, so the resolution happens once even
+/// though each [`crate::UiHarness`] installs its own font definitions.
+static SYSTEM_FAMILIES: LazyLock<SystemFamilies> = LazyLock::new(resolve_system_families);
+
+/// The font provider that finds per-script fallbacks, shared across contexts.
+static SCRIPT_FONTS: LazyLock<Arc<SystemFontProvider>> =
+    LazyLock::new(|| Arc::new(SystemFontProvider::new()));
+
+struct SystemFamilies {
+    sans: Option<FamilyFont>,
+    serif: Option<FamilyFont>,
+    mono: Option<FamilyFont>,
+}
+
+fn system_font_definitions() -> FontDefinitions {
+    let families = &*SYSTEM_FAMILIES;
+    let mut definitions = FontDefinitions::empty();
+
+    let ordered = [&families.sans, &families.serif, &families.mono];
+    for font in ordered.into_iter().flatten() {
+        definitions
+            .font_data
+            .insert(font.name.clone(), Arc::new(font.data.clone()));
+    }
+
+    let proportional = family_names(ordered);
+    let monospace = family_names([&families.mono, &families.sans, &families.serif]);
+
+    definitions
+        .families
+        .insert(FontFamily::Proportional, proportional.clone());
+    definitions
+        .families
+        .insert(FontFamily::Monospace, monospace);
+    definitions
+        .families
+        .insert(FontFamily::Name(HEADING_FAMILY.into()), proportional);
+
+    definitions
+}
+
+fn family_names(fonts: [&Option<FamilyFont>; 3]) -> Vec<String> {
+    fonts
+        .into_iter()
+        .flatten()
+        .map(|font| font.name.clone())
+        .collect()
+}
+
+fn resolve_system_families() -> SystemFamilies {
+    let mut collection = Collection::new(CollectionOptions {
+        shared: false,
+        system_fonts: true,
+    });
+    let mut source_cache = SourceCache::new(SourceCacheOptions::default());
+
+    let mut resolve = |generic: GenericFamily| -> Option<FamilyFont> {
+        let font = {
+            let mut query = collection.query(&mut source_cache);
+            query.set_families([QueryFamily::Generic(generic)]);
+            let mut found = None;
+            query.matches_with(|candidate| {
+                found = Some(candidate.clone());
+                QueryStatus::Stop
+            });
+            found
+        }?;
+
+        let family_name = collection
+            .family_name(font.family.0)
+            .unwrap_or("unknown")
+            .to_owned();
+        let name = format!("system:{generic:?}:{family_name}:{}", font.index);
+        let (blob, _) = font.blob.into_raw_parts();
+
+        Some(FamilyFont {
+            name,
+            data: FontData::from_blob(blob, font.index),
+        })
+    };
+
+    let sans = resolve(GenericFamily::SansSerif);
+    let serif = resolve(GenericFamily::Serif);
+    let mono = resolve(GenericFamily::Monospace);
+
+    SystemFamilies { sans, serif, mono }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Script, missing_scripts};
+
+    #[test]
+    fn every_script_is_reported_when_no_font_covers_it() {
+        assert_eq!(missing_scripts(|_| false), Script::ALL.to_vec());
+    }
+
+    #[test]
+    fn only_the_script_without_a_glyph_is_reported() {
+        let missing = missing_scripts(|character| character != '한');
+
+        assert_eq!(missing, vec![Script::Korean]);
+    }
+
+    #[test]
+    fn complete_coverage_reports_nothing() {
+        assert!(missing_scripts(|_| true).is_empty());
+    }
+
+    #[test]
+    fn samples_exercise_their_script() {
+        assert_eq!(Script::Chinese.sample(), "中");
+        assert_eq!(Script::Japanese.sample(), "あ");
+        assert_eq!(Script::Korean.sample(), "한");
+        assert_eq!(Script::Cyrillic.sample(), "Привет");
+        assert_eq!(Script::Greek.sample(), "Ελλάδα");
+        assert_eq!(Script::Emoji.sample(), "😀");
+    }
 }

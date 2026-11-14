@@ -21,6 +21,7 @@ rust-version = "1.99"
 license = "MIT"
 
 [workspace.dependencies]
-egui = { version = "=0.37.0", features = ["default_fonts"] }
+# TabTool installs the operating system's fonts; no font is bundled.
+egui = { version = "=0.37.0" }
 egui_kittest = "=0.37.0"
 serde_json = "1"

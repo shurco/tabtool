@@ -42,7 +42,7 @@ pub fn sheet<R>(
             ui.horizontal(|ui| {
                 ui.label(
                     RichText::new(title)
-                        .font(crate::fonts::semibold_font(theme.typography.title))
+                        .font(crate::fonts::heading_font(theme.typography.title))
                         .color(colors.label),
                 );
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {

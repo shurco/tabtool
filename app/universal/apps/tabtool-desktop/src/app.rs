@@ -52,6 +52,8 @@ pub struct DesktopApp {
     next_window: u64,
     untitled_count: usize,
     language: Language,
+    /// Whether the one-time system font coverage check has run.
+    fonts_checked: bool,
     /// The system languages, cached because `sys_locale` is process-wide and
     /// must not be queried every frame.
     system_languages: Vec<String>,
@@ -143,6 +145,7 @@ impl DesktopApp {
             next_window: 0,
             untitled_count: 0,
             language,
+            fonts_checked: false,
             system_languages,
             prefers_chinese,
             recent_picker: false,
@@ -277,6 +280,12 @@ impl DesktopApp {
 
 impl eframe::App for DesktopApp {
     fn logic(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
+        // The first frame has built egui's font set, which the coverage check
+        // needs. A missing script only warns; the app keeps rendering.
+        if !self.fonts_checked {
+            self.fonts_checked = true;
+            tabtool_ui::fonts::warn_missing_scripts(ctx);
+        }
         self.tick(ctx);
     }
 

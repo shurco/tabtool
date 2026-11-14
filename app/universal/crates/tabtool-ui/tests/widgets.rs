@@ -23,9 +23,8 @@ fn heading(ui: &mut egui::Ui, text: &str) {
     ui.label(RichText::new(text).heading());
 }
 
-#[cfg(target_os = "macos")]
 fn snapshots_enabled() -> bool {
-    std::env::var_os("TABTOOL_SKIP_SNAPSHOTS").is_none()
+    tabtool_ui::harness::render_snapshots_enabled()
 }
 
 /// Every widget in one deterministic screen, in the compact macOS density.

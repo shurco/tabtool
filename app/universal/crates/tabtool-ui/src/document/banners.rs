@@ -88,7 +88,7 @@ pub fn stale(ui: &mut Ui, language: Language, appended: bool) -> bool {
                         } else {
                             tr(language, "The file changed on disk. Reload to continue.")
                         })
-                        .font(crate::fonts::semibold_font(theme.typography.body))
+                        .font(crate::fonts::heading_font(theme.typography.body))
                         .color(theme.colors.label),
                     )
                     .wrap(),
@@ -136,7 +136,7 @@ pub fn needs_attention(
                 ui.add(
                     egui::Label::new(
                         RichText::new(title)
-                            .font(crate::fonts::semibold_font(theme.typography.body))
+                            .font(crate::fonts::heading_font(theme.typography.body))
                             .color(theme.colors.label),
                     )
                     .wrap(),

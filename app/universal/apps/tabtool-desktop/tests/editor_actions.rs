@@ -178,3 +178,21 @@ fn a_title_bar_close_keeps_the_open_editor_text() {
     assert_eq!(cell(&window, 0, 0), "xedited");
     assert_eq!(cell(&window, 1, 0), "p");
 }
+
+#[test]
+fn a_document_with_cjk_and_emoji_text_renders_without_panicking() {
+    let storage = Arc::new(MemoryStorage::new(
+        "中文,日本語,한국어\n😀,Привет,Ελλάδα\n".as_bytes(),
+    ));
+    let dialogs = FakeDialogs::cancelled();
+    let window = window(&storage, &dialogs);
+    let mut harness = render(&window);
+
+    harness.run();
+
+    assert!(
+        harness.query_by_label("Привет").is_some(),
+        "the Cyrillic cell stays in the accessibility tree; glyph availability \
+         is warned about at startup, never asserted against system fonts"
+    );
+}

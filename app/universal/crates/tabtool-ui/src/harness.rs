@@ -1,8 +1,9 @@
 //! The deterministic `egui_kittest` harness used by every UI test.
 //!
-//! A harness gets the bundled fonts, a fixed 1200×800 (or 640×400) viewport,
-//! `pixels_per_point = 1.0`, the chosen desktop theme and wgpu rendering, so
-//! snapshots do not depend on the machine's fonts or display scale.
+//! A harness gets the system fonts, a fixed 1200×800 (or 640×400) viewport,
+//! `pixels_per_point = 1.0`, the chosen desktop theme and wgpu rendering.
+//! Scenario and accessibility assertions are machine-independent; rendered
+//! images depend on the installed fonts and are opt-in per machine.
 
 use core::ops::{Deref, DerefMut};
 
@@ -13,6 +14,25 @@ pub use egui_kittest::SnapshotResults;
 pub use egui_kittest::kittest;
 
 use crate::{Theme, apply_theme, install_fonts};
+
+/// Whether image snapshot rendering is enabled for this machine.
+///
+/// System fonts and the GPU rasterizer differ between machines, so image
+/// comparisons are opt-in and their baselines are not committed. Set
+/// `TABTOOL_RENDER_SNAPSHOTS=1` to render and compare them locally.
+pub fn render_snapshots_enabled() -> bool {
+    let enabled = std::env::var("TABTOOL_RENDER_SNAPSHOTS").is_ok_and(|value| value == "1");
+    if !enabled {
+        static NOTICE: std::sync::Once = std::sync::Once::new();
+        NOTICE.call_once(|| {
+            eprintln!(
+                "tabtool: skipping image snapshots; set TABTOOL_RENDER_SNAPSHOTS=1 \
+                 to render and compare them on this machine"
+            );
+        });
+    }
+    enabled
+}
 
 /// A kittest harness with TabTool fonts and theme installed.
 pub struct UiHarness<'a> {
@@ -58,7 +78,8 @@ impl<'a> UiHarness<'a> {
 
     /// Compare the current frame with `tests/snapshots/<name>.png`.
     ///
-    /// Set `UPDATE_SNAPSHOTS=1` to write or update the committed image.
+    /// Baselines are per machine and are not committed. Generate them with
+    /// `TABTOOL_RENDER_SNAPSHOTS=1 UPDATE_SNAPSHOTS=1`.
     pub fn snapshot(&mut self, name: impl Into<String>) {
         self.harness.snapshot(name);
     }

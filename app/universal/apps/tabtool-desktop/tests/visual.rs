@@ -6,12 +6,12 @@
 //! indexing/saving/staleness, the four Settings tabs, About, Export and the
 //! root empty state.
 //!
-//! Image comparison is macOS-only; other platforms run the scenario and
-//! accessibility suites instead. Set `TABTOOL_SKIP_SNAPSHOTS=1` to skip the
-//! image comparison on a macOS machine without a usable Metal device.
-//! `UPDATE_SNAPSHOTS=1` rewrites the committed images after a reviewed change.
-
-#![cfg(target_os = "macos")]
+//! The images depend on the operating system's fonts and GPU rasterizer, so
+//! comparison is opt-in: set `TABTOOL_RENDER_SNAPSHOTS=1` to render and compare
+//! them on this machine. No baseline is committed. Generate a local baseline
+//! with `TABTOOL_RENDER_SNAPSHOTS=1 UPDATE_SNAPSHOTS=1`; review every changed
+//! image before keeping it. Scenario and accessibility tests live in the other
+//! test binaries and run on every platform without a flag.
 
 mod support;
 
@@ -24,7 +24,7 @@ mod panels;
 
 use tabtool_ui::Theme;
 use tabtool_ui::UiHarness;
-use tabtool_ui::harness::SnapshotResults;
+use tabtool_ui::harness::{SnapshotResults, render_snapshots_enabled};
 
 use fixture::DocumentFixture;
 
@@ -61,10 +61,6 @@ const SELECTION_STATES: [(&str, DocumentState); 3] = [
     ("editing-cell", documents::editing_cell),
 ];
 
-fn snapshots_skipped() -> bool {
-    std::env::var_os("TABTOOL_SKIP_SNAPSHOTS").is_some()
-}
-
 fn finish(results: SnapshotResults) {
     let errors = results.into_inner();
     assert!(errors.is_empty(), "snapshot failures: {errors:?}");
@@ -77,7 +73,7 @@ fn snapshot_harness(name: String, mut harness: UiHarness<'static>, results: &mut
 
 #[test]
 fn document_states_match_the_baselines() {
-    if snapshots_skipped() {
+    if !render_snapshots_enabled() {
         return;
     }
     let mut results = SnapshotResults::new();
@@ -95,7 +91,7 @@ fn document_states_match_the_baselines() {
 
 #[test]
 fn grid_selection_states_match_the_baselines() {
-    if snapshots_skipped() {
+    if !render_snapshots_enabled() {
         return;
     }
     let mut results = SnapshotResults::new();
@@ -113,7 +109,7 @@ fn grid_selection_states_match_the_baselines() {
 
 #[test]
 fn settings_tabs_match_the_baselines() {
-    if snapshots_skipped() {
+    if !render_snapshots_enabled() {
         return;
     }
     let mut results = SnapshotResults::new();
@@ -139,7 +135,7 @@ fn settings_tabs_match_the_baselines() {
 
 #[test]
 fn panel_states_match_the_baselines() {
-    if snapshots_skipped() {
+    if !render_snapshots_enabled() {
         return;
     }
     let states: [(&str, HarnessState); 2] = [
@@ -163,7 +159,7 @@ fn panel_states_match_the_baselines() {
 
 #[test]
 fn the_empty_root_matches_the_baselines() {
-    if snapshots_skipped() {
+    if !render_snapshots_enabled() {
         return;
     }
     let mut results = SnapshotResults::new();

@@ -25,13 +25,11 @@ defaults:
     working-directory: app/universal
 
 jobs:
-  # Scenario, interaction and accessibility tests run on every OS. The image
-  # baselines are macOS/Metal only; Linux and Windows must not compare them
-  # until per-OS baselines exist (see docs/desktop-ui.md).
+  # Scenario, interaction and accessibility tests run on every OS. Image
+  # snapshots use the operating system's fonts and are opt-in per machine, so
+  # no CI job compares them (see docs/desktop-ui.md).
   linux:
     runs-on: ubuntu-22.04
-    env:
-      TABTOOL_SKIP_SNAPSHOTS: "1"
     steps:
       - uses: actions/checkout@v4
       - name: Install system dependencies
@@ -57,8 +55,6 @@ jobs:
 
   windows:
     runs-on: windows-2022
-    env:
-      TABTOOL_SKIP_SNAPSHOTS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.99.1
@@ -90,7 +86,7 @@ jobs:
           key: ${{ runner.os }}-cargo-1.99.1-${{ hashFiles('app/universal/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-1.99.1-
-      - name: Run tests including the macOS image baselines
+      - name: Run the cross-platform scenario and accessibility tests
         run: cargo test --workspace
       - run: cargo run -p xtask -- i18n --check
       - run: cargo test -p tabtool-core --test golden

@@ -363,9 +363,8 @@ fn a_save_failure_is_reported_above_the_format_bar() {
     );
 }
 
-#[cfg(target_os = "macos")]
 fn snapshot(name: &str, mut fixture: Fixture, results: &mut SnapshotResults) {
-    if std::env::var_os("TABTOOL_SKIP_SNAPSHOTS").is_some() {
+    if !tabtool_ui::harness::render_snapshots_enabled() {
         return;
     }
     fixture.run();
@@ -373,7 +372,6 @@ fn snapshot(name: &str, mut fixture: Fixture, results: &mut SnapshotResults) {
     results.extend(fixture.take_snapshot_results());
 }
 
-#[cfg(target_os = "macos")]
 fn snapshot_pair(name: &str, build: impl Fn([f32; 2]) -> Fixture, results: &mut SnapshotResults) {
     snapshot(
         &format!("document-{name}-1200x800"),
@@ -387,7 +385,6 @@ fn snapshot_pair(name: &str, build: impl Fn([f32; 2]) -> Fixture, results: &mut 
     );
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn document_states_match_their_snapshots() {
     use crate::support::untitled;

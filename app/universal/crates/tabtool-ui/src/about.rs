@@ -52,7 +52,7 @@ pub fn show(ui: &mut Ui, language: Language, version: &str, license: &str) -> Op
                 ui.add_space(4.0);
                 ui.label(
                     RichText::new(tr(language, NAME_KEY))
-                        .font(crate::fonts::semibold_font(theme.typography.title_large))
+                        .font(crate::fonts::heading_font(theme.typography.title_large))
                         .color(theme.colors.label),
                 );
                 ui.label(
@@ -82,7 +82,7 @@ pub fn show(ui: &mut Ui, language: Language, version: &str, license: &str) -> Op
                 ui.add_space(6.0);
                 ui.label(
                     RichText::new(tr(language, LICENSE_KEY))
-                        .font(crate::fonts::semibold_font(theme.typography.caption)),
+                        .font(crate::fonts::heading_font(theme.typography.caption)),
                 );
                 ui.label(
                     RichText::new(tr(language, COPYRIGHT_KEY))

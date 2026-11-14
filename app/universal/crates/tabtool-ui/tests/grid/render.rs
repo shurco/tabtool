@@ -291,14 +291,13 @@ fn a_partially_indexed_large_source_never_reads_unpublished_rows() {
     assert_eq!(viewport.size(), vec2(624.0, 384.0));
 }
 
-#[cfg(target_os = "macos")]
 fn snapshot(
     name: &str,
     source: &dyn tabtool_core::RowSource,
     state: GridState,
     options: GridOptions,
 ) {
-    if std::env::var_os("TABTOOL_SKIP_SNAPSHOTS").is_some() {
+    if !tabtool_ui::harness::render_snapshots_enabled() {
         return;
     }
     let mut fixture = GridFixture::new(source, state, options, [640.0, 400.0]);
@@ -306,7 +305,6 @@ fn snapshot(
     fixture.snapshot(name);
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn empty_one_by_one_matches_the_snapshot() {
     let source = CsvTable::new_document(1, 1);
@@ -318,7 +316,6 @@ fn empty_one_by_one_matches_the_snapshot() {
     );
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn header_and_data_match_the_snapshot() {
     let source = sample_table();
@@ -332,10 +329,9 @@ fn header_and_data_match_the_snapshot() {
     snapshot("grid-header-data", &source, GridState::default(), options);
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn the_focused_cell_draws_a_two_pixel_border() {
-    if std::env::var_os("TABTOOL_SKIP_SNAPSHOTS").is_some() {
+    if !tabtool_ui::harness::render_snapshots_enabled() {
         return;
     }
     let source = sample_table();
@@ -354,7 +350,6 @@ fn the_focused_cell_draws_a_two_pixel_border() {
     fixture.snapshot("grid-focused-cell");
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn selected_row_matches_the_snapshot() {
     let source = sample_table();
@@ -363,7 +358,6 @@ fn selected_row_matches_the_snapshot() {
     snapshot("grid-selected-row", &source, state, GridOptions::default());
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn selected_column_matches_the_snapshot() {
     let source = sample_table();
@@ -377,7 +371,6 @@ fn selected_column_matches_the_snapshot() {
     );
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn editing_cell_matches_the_snapshot() {
     let source = sample_table();
@@ -386,7 +379,6 @@ fn editing_cell_matches_the_snapshot() {
     snapshot("grid-editing-cell", &source, state, GridOptions::default());
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn hidden_gutter_matches_the_snapshot() {
     let source = sample_table();
@@ -397,7 +389,6 @@ fn hidden_gutter_matches_the_snapshot() {
     snapshot("grid-hidden-gutter", &source, GridState::default(), options);
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn large_mode_header_offset_matches_the_snapshot() {
     let source = sample_table();
@@ -440,10 +431,9 @@ fn dragging_the_header_edge_resizes_the_column() {
     assert!(width > 100.0, "the dragged column stayed at {width} pt");
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn scrolled_chrome_matches_the_snapshot() {
-    if std::env::var_os("TABTOOL_SKIP_SNAPSHOTS").is_some() {
+    if !tabtool_ui::harness::render_snapshots_enabled() {
         return;
     }
     let headers = (0..12).map(|index| format!("Column {index}")).collect();

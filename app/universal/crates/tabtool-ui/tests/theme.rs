@@ -1,6 +1,6 @@
-//! Design tokens and bundled fonts.
+//! Design tokens and system fonts.
 
-use egui::{Color32, Context, FontId, TextStyle};
+use egui::{Color32, Context, FontFamily, FontId, TextStyle};
 use tabtool_ui::{
     Theme, apply_theme, apply_themes, install_fonts,
     theme::{self, ThemeMode},
@@ -179,70 +179,97 @@ fn apply_themes_installs_both_palettes() {
 }
 
 #[test]
-fn bundled_fonts_shape_latin_cjk_and_emoji() {
+fn system_fonts_shape_latin_text() {
     let ctx = Context::default();
     install_fonts(&ctx);
     run_pass(&ctx);
 
     let body = FontId::proportional(13.0);
     ctx.fonts_mut(|fonts| {
-        assert!(fonts.has_glyph(&body, 'A'), "Inter must cover Latin");
-        assert!(fonts.has_glyph(&body, '漢'), "Noto Sans CJK must cover Han");
         assert!(
-            fonts.has_glyph(&body, 'あ'),
-            "Noto Sans CJK must cover Kana"
-        );
-        assert!(
-            fonts.has_glyph(&body, '😀'),
-            "an emoji fallback must cover emoji"
-        );
-
-        let galley = fonts.layout_no_wrap("漢".to_owned(), body.clone(), Color32::WHITE);
-        let glyph = &galley.rows[0].row.glyphs[0];
-        assert!(
-            !glyph.uv_rect.is_nothing(),
-            "the CJK glyph must be rasterized, not a tofu box"
-        );
-
-        let galley = fonts.layout_no_wrap("한".to_owned(), body.clone(), Color32::WHITE);
-        let glyph = &galley.rows[0].row.glyphs[0];
-        assert!(
-            !glyph.uv_rect.is_nothing(),
-            "the Korean glyph must be rasterized, not a tofu box"
+            fonts.has_glyph(&body, 'A'),
+            "the system sans-serif family must cover Latin text"
         );
     });
 }
 
 #[test]
-fn fonts_fall_back_in_a_deterministic_order() {
+fn font_families_resolve_in_a_deterministic_order() {
     let ctx = Context::default();
     install_fonts(&ctx);
     run_pass(&ctx);
 
     let families = ctx.fonts(|fonts| fonts.definitions().families.clone());
-    let proportional = &families[&egui::FontFamily::Proportional];
-    assert_eq!(proportional.first().map(String::as_str), Some("Inter"));
-    assert!(proportional.iter().any(|name| name == "Noto Sans SC"));
-    assert!(proportional.iter().any(|name| name == "Noto Sans KR"));
+    let proportional = &families[&FontFamily::Proportional];
+    let monospace = &families[&FontFamily::Monospace];
+    let heading = &families[&FontFamily::Name(tabtool_ui::fonts::HEADING_FAMILY.into())];
+
+    assert!(!proportional.is_empty(), "proportional must resolve");
+    assert!(!monospace.is_empty(), "monospace must resolve");
+    assert!(!heading.is_empty(), "the heading family must resolve");
+
     assert!(
-        !proportional.iter().any(|name| name == "Noto Emoji"),
-        "emoji must come from the color system font when the platform has one; \
-         the bundled monochrome font is only a provider fallback"
+        proportional[0].contains(":SansSerif:"),
+        "proportional must start with system sans-serif, got {proportional:?}"
     );
     assert!(
-        proportional.iter().any(|name| name == "egui-icons"),
-        "egui/default_fonts must stay enabled so the harness and app share the icon fallbacks"
+        proportional.iter().any(|name| name.contains(":Serif:")),
+        "serif must follow sans-serif, got {proportional:?}"
     );
-    assert_eq!(
-        families[&egui::FontFamily::Name("Emoji".into())],
-        vec!["Noto Emoji".to_owned()]
+    assert!(
+        proportional.iter().any(|name| name.contains(":Monospace:")),
+        "monospace must be the last fallback, got {proportional:?}"
     );
+    assert!(
+        monospace[0].contains(":Monospace:"),
+        "monospace must start with the system monospace face, got {monospace:?}"
+    );
+    assert_eq!(heading, proportional);
+    assert!(
+        ctx.fonts(|fonts| fonts
+            .definitions()
+            .font_data
+            .keys()
+            .all(|name| name.starts_with("system:"))),
+        "no bundled font may be installed"
+    );
+}
+
+#[test]
+fn heading_text_style_uses_the_heading_family() {
+    let ctx = Context::default();
+    install_fonts(&ctx);
+    apply_theme(&ctx, &Theme::desktop_light());
+
+    let heading = ctx.style_of(egui::Theme::Light).text_styles[&TextStyle::Heading].clone();
+
     assert_eq!(
-        families[&egui::FontFamily::Name("Inter Semibold".into())],
-        vec![
-            "Inter Semibold".to_owned(),
-            "Noto Sans SC".to_owned(),
-            "Noto Sans KR".to_owned()
-        ]
+        heading.family,
+        FontFamily::Name(tabtool_ui::fonts::HEADING_FAMILY.into())
+    );
+}
+
+#[test]
+fn the_startup_coverage_check_runs_against_system_fonts() {
+    let ctx = Context::default();
+    install_fonts(&ctx);
+    run_pass(&ctx);
+
+    let missing = tabtool_ui::fonts::warn_missing_scripts(&ctx);
+
+    assert!(
+        missing.len() <= tabtool_ui::fonts::Script::ALL.len(),
+        "the check must only report known scripts"
+    );
+}
+
+#[test]
+fn no_font_files_are_bundled_with_the_ui() {
+    let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../assets/fonts");
+
+    assert!(
+        !assets.exists(),
+        "bundled font assets must not return; system fonts are used instead: {}",
+        assets.display()
     );
 }

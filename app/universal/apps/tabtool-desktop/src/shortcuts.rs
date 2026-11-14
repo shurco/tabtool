@@ -83,8 +83,8 @@ pub fn hint(action: MenuAction) -> Option<String> {
     } else {
         ModifierNames::NAMES
     };
-    // egui prints arrow keys as U+23F6–U+23F9, which the bundled fonts do not
-    // cover; the plain arrows are in the same font as the toolbar symbols.
+    // egui prints arrow keys as U+23F6–U+23F9, which system fonts often leave
+    // to a symbol fallback; plain arrows are available in the UI face.
     Some(
         shortcut
             .format(&names, is_mac)
@@ -130,7 +130,7 @@ mod tests {
     use crate::menu::MenuAction;
 
     #[test]
-    fn arrow_hints_use_glyphs_the_bundled_fonts_have() {
+    fn arrow_hints_use_common_glyphs() {
         for action in [
             MenuAction::MoveRowUp,
             MenuAction::MoveRowDown,

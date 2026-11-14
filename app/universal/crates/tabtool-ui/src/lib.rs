@@ -3,7 +3,8 @@
 //! Design tokens, widgets and the deterministic test harness for the TabTool
 //! desktop UI.
 //!
-//! Start an application with [`install_fonts`], then install the appearance:
+//! Start an application with [`install_fonts`] (the operating system's fonts,
+//! not a bundled set), then install the appearance:
 //!
 //! ```no_run
 //! # let ctx = egui::Context::default();

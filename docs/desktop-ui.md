@@ -161,14 +161,43 @@ The macOS automated suites were run locally in this task.
       Settings tabs expose row/column and role information.
 - [ ] **NOT RUN** — High-contrast/system accessibility settings keep text and focus visible.
 
-## Snapshot baselines
+## Fonts
 
-The consolidated Plan 4 images live in
-`app/universal/apps/tabtool-desktop/tests/snapshots/` and are named
-`<state>-<size>-<theme>.png`. There are 88 images: 22 states × 2 sizes
-(1200×800, 640×400) × 2 appearances (light, dark), about 3.9 MB in total. They
-are macOS/Metal baselines only; the GitHub Actions workflow has not been run on
-GitHub from this machine. The comparison was run locally on macOS.
+TabTool bundles no fonts and ships no font bytes in the desktop executable. At
+startup `tabtool-ui` installs the operating system's generic families in a
+fixed order:
+
+- proportional: system sans-serif → system serif → system monospace;
+- monospace: system monospace → system sans-serif → system serif;
+- the named `UI Heading` family used by titles: the proportional order.
+
+`egui` 0.37's `egui_system_font_provider` then discovers a platform font for
+each character the installed faces lack. That provider covers Chinese,
+Japanese, Korean, Cyrillic, Greek and emoji from the OS (for example Apple
+Color Emoji on macOS, Segoe UI Emoji on Windows, Noto Color Emoji on Linux when
+installed). Font files are memory-mapped, not embedded, and no monochrome emoji
+font is bundled: platforms without a color emoji font fall back to their
+available glyphs or tofu.
+
+On the first frame the desktop app checks representative text for Chinese `中`,
+Japanese `あ`, Korean `한`, Cyrillic `Привет`, Greek `Ελλάδα` and emoji `😀`.
+For every missing script it prints one warning on stderr that names the script
+and the affected UI language (Belarusian and Ukrainian for Cyrillic; Greek and
+emoji only appear in CSV content). The check never stops startup and never
+blocks rendering: whatever the OS provides is what the app shows.
+
+## Snapshot policy
+
+Image comparison is opt-in and local. The operating system's font files and the
+GPU rasterizer differ between machines, so a PNG snapshot is only valid on the
+machine that rendered it. No image baseline is committed, and images are not a
+CI gate on macOS, Linux or Windows.
+
+The consolidated Plan 4 test in
+`app/universal/apps/tabtool-desktop/tests/visual.rs` still renders 22 states at
+1200×800 and 640×400 in light and dark, and writes
+`<state>-<size>-<theme>.png` only when enabled. The table below is the scenario
+inventory, not a set of committed images.
 
 | State | What the image pins |
 | --- | --- |
@@ -192,51 +221,41 @@ GitHub from this machine. The comparison was run locally on macOS.
 | `about` | Identity, links, MIT license |
 | `export` | Export options modal |
 
-Settings, About and Export are component-window baselines: the content is
-rendered in a 1200×800 or 640×400 harness so both documented sizes are pinned;
-the OS-drawn window frame is not part of the image. Selecting a Settings tab
-requests a content size, so the harness restores the requested baseline size
-before the snapshot; the 640×400 and 1200×800 files are not interchangeable.
+Settings, About and Export are component-window scenarios: the content is
+rendered in a 1200×800 or 640×400 harness so both documented sizes can be
+checked; the OS-drawn window frame is not part of the image. Selecting a
+Settings tab requests a content size, so the harness restores the requested
+size before the snapshot; the 640×400 and 1200×800 files are not
+interchangeable.
 
 Commands, from `app/universal`:
 
 ```sh
-cargo test -p tabtool-desktop --test visual       # compare on macOS
-UPDATE_SNAPSHOTS=1 cargo test -p tabtool-desktop --test visual
-TABTOOL_SKIP_SNAPSHOTS=1 cargo test -p tabtool-desktop --test visual
-cargo test -p tabtool-ui                          # granular UI baselines
+# Skip image tests; everything else still runs on every platform.
+cargo test --workspace
+
+# Generate local baselines for this machine, then compare.
+TABTOOL_RENDER_SNAPSHOTS=1 UPDATE_SNAPSHOTS=1 \
+    cargo test -p tabtool-desktop --test visual
+TABTOOL_RENDER_SNAPSHOTS=1 cargo test -p tabtool-desktop --test visual
+
+# The same policy for the granular widget, grid and chrome snapshots.
+TABTOOL_RENDER_SNAPSHOTS=1 UPDATE_SNAPSHOTS=1 cargo test -p tabtool-ui
+TABTOOL_RENDER_SNAPSHOTS=1 cargo test -p tabtool-ui
 ```
 
-Review every changed image before committing it: `UPDATE_SNAPSHOTS=1` rewrites
-files, and a layout regression would otherwise be accepted silently. The
-comparison budget is `threshold = 2.0`, `max_failed_pixels = 4` in
-`apps/tabtool-desktop/kittest.toml`; do not raise it to hide a layout change.
+Without `TABTOOL_RENDER_SNAPSHOTS=1`, image tests print one skip notice and
+return. Review every changed image before keeping it: `UPDATE_SNAPSHOTS=1`
+rewrites files, and a layout regression would otherwise be accepted silently.
+The local comparison budget is `threshold = 2.0`, `max_failed_pixels = 4` in
+`apps/tabtool-desktop/kittest.toml` and `crates/tabtool-ui/kittest.toml`; do
+not raise it to hide a layout change.
 
-The older granular baselines under `crates/tabtool-ui/tests/snapshots/` remain
-in place for widget, grid and document-chrome regressions. Both sets are
-macOS-only.
-
-### Per-OS baselines
-
-The committed images were rendered on macOS 26.6.2 with Metal (Apple M4 Pro),
-`pixels_per_point = 1.0`, and the bundled Inter, Noto Sans SC, Noto Sans KR and
-Noto Emoji fonts. Linux and Windows use different GPU backends and font
-rasterizers, so they must not compare these images until they have their own
-baselines.
-
-To enable per-OS comparison later:
-
-1. render and review the set on the target OS with `UPDATE_SNAPSHOTS=1`;
-2. store it under a per-OS path (for example
-   `tests/snapshots/<os>/<state>-<size>-<theme>.png`) or add `[windows]` /
-   `[linux]` entries to `kittest.toml`;
-3. remove the macOS-only `cfg` from the image test and point it at the per-OS
-   path;
-4. keep scenario, interaction and accessibility tests on all three jobs.
-
-Until then the CI split is: macOS compares images; Linux runs the scenario
-suite under `xvfb-run`; Windows runs it directly. Image comparison stays off
-on runners without a usable GPU.
+Baselines are per machine and per OS version. Regenerate them after changing
+the OS, display scale, GPU driver, font set or theme. Do not add them to the
+repository and do not make them a CI gate; scenario, interaction and
+accessibility tests are the cross-platform gates. Linux CI runs the scenario
+suite under `xvfb-run`; Windows and macOS run it directly.
 
 ## Performance evidence
 

@@ -17,7 +17,7 @@ pub fn show(ui: &mut Ui, language: Language, phase: &DocumentPhase, can_detect: 
         ui.add_space(theme.metrics.window_padding * 3.0);
         ui.label(
             RichText::new(phase_title(language, phase))
-                .font(crate::fonts::semibold_font(theme.typography.title_large))
+                .font(crate::fonts::heading_font(theme.typography.title_large))
                 .color(theme.colors.label),
         );
         ui.add_space(theme.metrics.item_spacing);
