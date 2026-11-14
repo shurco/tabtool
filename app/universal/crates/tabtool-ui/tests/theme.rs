@@ -241,7 +241,7 @@ fn font_families_resolve_in_a_deterministic_order() {
             .definitions()
             .font_data
             .keys()
-            .all(|name| name.starts_with("system:"))),
+            .all(|name| name.starts_with("system:") || name.starts_with("system-heading:"))),
         "no bundled font may be installed"
     );
 }

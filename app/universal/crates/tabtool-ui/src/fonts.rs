@@ -224,7 +224,10 @@ fn ensure_fonts(families: &SystemFamilies) -> Result<(), MissingSystemFonts> {
 }
 
 fn system_font_definitions() -> FontDefinitions {
-    let families = &*SYSTEM_FAMILIES;
+    font_definitions(&SYSTEM_FAMILIES)
+}
+
+fn font_definitions(families: &SystemFamilies) -> FontDefinitions {
     let mut definitions = FontDefinitions::empty();
 
     let ordered = [&families.sans, &families.serif, &families.mono];
@@ -269,6 +272,29 @@ fn heading_names(heading: Option<&FamilyFont>, proportional: &[String]) -> Vec<S
     names
 }
 
+/// The role a face plays, which keeps its [`FontData`] key separate.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FaceRole {
+    /// The proportional, serif and monospace families.
+    Body,
+    /// The heavier face used by [`HEADING_FAMILY`].
+    Heading,
+}
+
+/// The `FontData` key for one face.
+///
+/// Heading faces live under their own namespace: a regular and a bold face can
+/// share a family name and a file index when they are separate files (DejaVu,
+/// Segoe UI), and a shared key would let the last insert overwrite the other
+/// face.
+fn face_name(role: FaceRole, generic: GenericFamily, family: &str, index: u32) -> String {
+    let namespace = match role {
+        FaceRole::Body => "system",
+        FaceRole::Heading => "system-heading",
+    };
+    format!("{namespace}:{generic:?}:{family}:{index}")
+}
+
 fn family_names(fonts: [&Option<FamilyFont>; 3]) -> Vec<String> {
     fonts
         .into_iter()
@@ -304,7 +330,7 @@ fn resolve_system_families() -> SystemFamilies {
             .family(font.family.0)
             .and_then(|family| family.fonts().get(font.family.1).map(|info| info.weight()))
             .unwrap_or(FontWeight::NORMAL);
-        let name = format!("system:{generic:?}:{family_name}:{}", font.index);
+        let name = face_name(FaceRole::Body, generic, &family_name, font.index);
         let (blob, _) = font.blob.into_raw_parts();
 
         Some(FamilyFont {
@@ -359,7 +385,7 @@ fn resolve_heading(
             let Some(blob) = font.load(Some(source_cache)) else {
                 continue;
             };
-            let name = format!("system:{generic:?}:{}:{}", family.name(), font.index());
+            let name = face_name(FaceRole::Heading, generic, family.name(), font.index());
             let (data, _) = blob.into_raw_parts();
 
             return Some(FamilyFont {
@@ -375,12 +401,13 @@ fn resolve_heading(
 
 #[cfg(test)]
 mod tests {
-    use egui::FontData;
-    use fontique::FontWeight;
+    use egui::{FontData, FontFamily};
+    use fontique::{FontWeight, GenericFamily};
 
     use super::{
-        FamilyFont, HEADING_WEIGHT, MissingSystemFonts, SYSTEM_FAMILIES, Script, SystemFamilies,
-        ensure_fonts, heading_names, missing_scripts,
+        FaceRole, FamilyFont, HEADING_FAMILY, HEADING_WEIGHT, MissingSystemFonts, SYSTEM_FAMILIES,
+        Script, SystemFamilies, ensure_fonts, face_name, font_definitions, heading_names,
+        missing_scripts,
     };
 
     fn test_font(weight: FontWeight) -> FamilyFont {
@@ -407,6 +434,53 @@ mod tests {
         };
 
         assert_eq!(ensure_fonts(&families), Ok(()));
+    }
+
+    #[test]
+    fn heading_faces_with_the_same_family_and_index_keep_their_own_data() {
+        // DejaVu Sans and Segoe UI ship regular and bold as separate files at
+        // face index 0, so only the namespace separates the two keys.
+        let body = FamilyFont {
+            name: face_name(FaceRole::Body, GenericFamily::SansSerif, "DejaVu Sans", 0),
+            weight: FontWeight::NORMAL,
+            data: FontData::from_static(b"regular"),
+        };
+        let heading = FamilyFont {
+            name: face_name(
+                FaceRole::Heading,
+                GenericFamily::SansSerif,
+                "DejaVu Sans",
+                0,
+            ),
+            weight: FontWeight::BOLD,
+            data: FontData::from_static(b"bold"),
+        };
+        let families = SystemFamilies {
+            sans: Some(body),
+            heading: Some(heading),
+            ..SystemFamilies::default()
+        };
+
+        let definitions = font_definitions(&families);
+        let proportional = &definitions.families[&FontFamily::Proportional];
+        let heading = &definitions.families[&FontFamily::Name(HEADING_FAMILY.into())];
+
+        assert_eq!(
+            definitions.font_data.len(),
+            2,
+            "the regular and bold face must not share one FontData key"
+        );
+        assert_ne!(proportional[0], heading[0]);
+        assert_eq!(
+            definitions.font_data[&proportional[0]].bytes(),
+            b"regular",
+            "the body family must keep the regular face"
+        );
+        assert_eq!(
+            definitions.font_data[&heading[0]].bytes(),
+            b"bold",
+            "the heading family must use the bold face"
+        );
     }
 
     #[test]
