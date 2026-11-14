@@ -82,15 +82,20 @@ by `tabtool-platform::android`. Results are `OK`, `OK:<value>`, `CANCELLED` or
 | `openUrl(url): String` | `OpenUrl::open` | http, https and mailto only |
 | `isDocumentOperationPending(): Boolean` | `AndroidPlatform::document_operation_pending` | lets the app poll SAF without relaunching the picker |
 | `takeBack(): Boolean` | `BackHandler::take_back` | back is consumed and queued; the app exits at its root with `finishActivity` |
-| `showTextEditor(left, top, width, height, text, multiline)` | `TextInput::open` | rectangle in points; Kotlin converts with the display density |
+| `showTextEditor(left, top, width, height, text, multiline)` | `TextInput::open` | rectangle in points; Kotlin converts with the display density; returns false when it cannot open |
 | `hideTextEditor()` | `TextInput::close` | removes the editor without committing or cancelling |
 | `throwSecurityException()` | spike self-test | proves JNI exceptions are cleared instead of crashing |
 
-`TabToolTextEditor` (real `AppCompatEditText`) calls back into Rust via
-`nativeTextCommitted(text)` / `nativeTextCancelled()`. The callbacks store the
-outcome in a `Mutex<Option<TextInputOutcome>>` that `TextInput::poll` drains.
-Back cancels; the IME Done action and focus loss commit; rotation cancels the
-edit without touching the committed value.
+`TabToolBridge.nativeTextCommitted(text)` / `nativeTextCancelled()` are the JNI
+callbacks the editor uses. They store the outcome in the shared editor session,
+which `TextInput::poll` drains. A root view that disappears before the editor
+opens reports a cancel, so `is_active` can never stick. Back cancels; the IME
+Done action and focus loss commit; rotation cancels the edit without touching
+the committed value.
+
+SAF, share and link failures are queued as `PlatformError { message_key,
+detail }` and drained with `PlatformErrors::take_error`. The app resolves
+`message_key` through `tabtool-i18n`; `detail` stays in logcat.
 
 ## Platform services checklist (Plan 5 Task 1)
 

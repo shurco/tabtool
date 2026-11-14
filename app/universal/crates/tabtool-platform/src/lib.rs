@@ -5,6 +5,7 @@
 #[cfg(target_os = "android")]
 #[allow(unsafe_code)]
 pub mod android;
+mod bridge_result;
 #[cfg(not(target_os = "android"))]
 pub mod desktop;
 pub mod locale;
@@ -18,7 +19,8 @@ pub use locale::{SystemInfo, decimal_separator};
 #[cfg(not(target_os = "android"))]
 pub use locale::{SystemLocale, system_locale};
 pub use services::{
-    BackHandler, Clipboard, DocumentFiles, Insets, OpenUrl, Share, TABLE_EXTENSIONS,
+    BackHandler, Clipboard, DocumentFiles, Insets, OpenUrl, PlatformError, PlatformErrors, Share,
+    TABLE_EXTENSIONS,
 };
 pub use settings::{
     DEFAULT_ROW_HEIGHT, LARGE_FILE_THRESHOLDS_MIB, QuoteStyle, RECENT_DOCUMENTS_LIMIT, ROW_HEIGHTS,

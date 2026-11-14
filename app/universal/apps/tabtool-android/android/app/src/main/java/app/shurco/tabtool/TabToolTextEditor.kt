@@ -83,9 +83,9 @@ class TabToolTextEditor(context: Context) : AppCompatEditText(context) {
         finished = true
         val value = text?.toString().orEmpty()
         if (commit) {
-            nativeTextCommitted(value)
+            TabToolBridge.nativeTextCommitted(value)
         } else {
-            nativeTextCancelled()
+            TabToolBridge.nativeTextCancelled()
         }
         hideAndRemove()
     }
@@ -100,8 +100,4 @@ class TabToolTextEditor(context: Context) : AppCompatEditText(context) {
         manager.hideSoftInputFromWindow(windowToken, 0)
         (parent as? ViewGroup)?.removeView(this)
     }
-
-    private external fun nativeTextCommitted(text: String)
-
-    private external fun nativeTextCancelled()
 }

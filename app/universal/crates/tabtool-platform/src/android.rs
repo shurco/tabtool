@@ -9,9 +9,9 @@
 //! `CANCELLED` or `ERROR:<message>`. Pending file operations return `null` and
 //! are polled again later.
 
+use std::collections::VecDeque;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use jni::objects::{GlobalRef, JIntArray, JObject, JObjectArray, JString, JValue, JValueOwned};
@@ -19,9 +19,13 @@ use jni::sys::jobject;
 use jni::{JNIEnv, JavaVM};
 use log::{error, info};
 
+use crate::bridge_result::{BridgeResult, parse_result};
 use crate::locale::{SystemInfo, decimal_separator, normalize_tag};
-use crate::services::{BackHandler, Clipboard, DocumentFiles, Insets, OpenUrl, Share};
-use crate::text_input::{TextInput, TextInputOutcome, TextInputRequest};
+use crate::services::{
+    BackHandler, Clipboard, DocumentFiles, ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Insets, OpenUrl,
+    PlatformError, PlatformErrors, Share,
+};
+use crate::text_input::{EditorSessions, TextInput, TextInputOutcome, TextInputRequest};
 
 const BRIDGE_CLASS: &str = "app/shurco/tabtool/TabToolBridge";
 
@@ -31,9 +35,9 @@ struct Bridge {
 }
 
 static BRIDGE: OnceLock<Option<Bridge>> = OnceLock::new();
-static DOCUMENTS_DIR: OnceLock<Option<PathBuf>> = OnceLock::new();
-static OUTCOME: Mutex<Option<TextInputOutcome>> = Mutex::new(None);
-static EDITOR_ACTIVE: AtomicBool = AtomicBool::new(false);
+static DOCUMENTS_DIR: OnceLock<PathBuf> = OnceLock::new();
+static SESSIONS: EditorSessions = EditorSessions::new();
+static ERRORS: Mutex<VecDeque<PlatformError>> = Mutex::new(VecDeque::new());
 
 /// The Android platform services.
 #[derive(Clone, Copy, Debug, Default)]
@@ -58,10 +62,17 @@ impl AndroidPlatform {
 
 impl TextInput for AndroidPlatform {
     fn open(&self, request: TextInputRequest) {
-        set_outcome(None);
+        SESSIONS.reset();
+        if !request.is_valid() {
+            error!(
+                "Refusing an editor request with rect {:?}: the size is not usable",
+                request.rect
+            );
+            return;
+        }
+
         let [left, top, width, height] = request.rect;
-        EDITOR_ACTIVE.store(true, Ordering::Release);
-        with_env("showTextEditor", (), |env, bridge| {
+        let shown = with_env("showTextEditor", false, |env, bridge| {
             let text = env.new_string(&request.text)?;
             let args = [
                 JValue::Float(left),
@@ -71,42 +82,43 @@ impl TextInput for AndroidPlatform {
                 JValue::from(&text),
                 JValue::Bool(u8::from(request.multiline)),
             ];
-            env.call_static_method(
+            match env.call_static_method(
                 &bridge.class,
                 "showTextEditor",
-                "(FFFFLjava/lang/String;Z)V",
+                "(FFFFLjava/lang/String;Z)Z",
                 &args,
-            )?;
-            Ok(())
+            )? {
+                JValueOwned::Bool(value) => Ok(value != 0),
+                _ => Err(jni::errors::Error::WrongJValueType("boolean", "other")),
+            }
         });
+        if shown {
+            SESSIONS.activate();
+        } else {
+            error!("The native editor did not open; no session is active");
+        }
     }
 
     fn close(&self) {
-        set_outcome(None);
-        EDITOR_ACTIVE.store(false, Ordering::Release);
+        SESSIONS.reset();
         call_void("hideTextEditor", "()V", &[]);
     }
 
     fn poll(&self) -> Option<TextInputOutcome> {
-        OUTCOME
-            .lock()
-            .map(|mut slot| slot.take())
-            .unwrap_or_else(|poisoned| poisoned.into_inner().take())
+        SESSIONS.poll()
     }
 
     fn is_active(&self) -> bool {
-        EDITOR_ACTIVE.load(Ordering::Acquire)
+        SESSIONS.is_active()
     }
 }
 
 impl DocumentFiles for AndroidPlatform {
     fn documents_dir(&self) -> PathBuf {
-        DOCUMENTS_DIR
-            .get_or_init(|| {
-                call_string("documentsDir", "()Ljava/lang/String;", &[]).map(PathBuf::from)
-            })
-            .clone()
-            .unwrap_or_default()
+        crate::services::cached_path(&DOCUMENTS_DIR, || {
+            call_string("documentsDir", "()Ljava/lang/String;", &[]).map(PathBuf::from)
+        })
+        .unwrap_or_default()
     }
 
     fn list_documents(&self) -> Vec<PathBuf> {
@@ -121,14 +133,17 @@ impl DocumentFiles for AndroidPlatform {
                 if path.is_file() {
                     Some(path)
                 } else {
-                    error!("The imported document is missing at {}", path.display());
+                    record_error(
+                        ERROR_OPEN,
+                        format!("the imported document is missing at {}", path.display()),
+                    );
                     None
                 }
             }
             BridgeResult::Ok(None) => None,
             BridgeResult::Cancelled => None,
             BridgeResult::Failed(message) => {
-                error!("Import failed: {message}");
+                record_error(ERROR_OPEN, format!("import: {message}"));
                 None
             }
         }
@@ -148,35 +163,22 @@ impl DocumentFiles for AndroidPlatform {
             BridgeResult::Ok(_) => true,
             BridgeResult::Cancelled => false,
             BridgeResult::Failed(message) => {
-                error!("Export failed: {message}");
+                record_error(ERROR_SAVE, format!("export: {message}"));
                 false
             }
         }
     }
 
     fn delete(&self, path: &Path) -> io::Result<()> {
-        self.ensure_document(path)?;
+        crate::services::ensure_within(&self.documents_dir(), path)?;
         std::fs::remove_file(path)
     }
 
     fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
-        self.ensure_document(from)?;
-        self.ensure_document(to)?;
+        let directory = self.documents_dir();
+        crate::services::ensure_within(&directory, from)?;
+        crate::services::ensure_within(&directory, to)?;
         std::fs::rename(from, to)
-    }
-}
-
-impl AndroidPlatform {
-    /// Refuses paths outside the private documents directory.
-    fn ensure_document(self, path: &Path) -> io::Result<()> {
-        if path.parent() == Some(self.documents_dir().as_path()) {
-            Ok(())
-        } else {
-            Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("{} is outside the documents directory", path.display()),
-            ))
-        }
     }
 }
 
@@ -208,7 +210,7 @@ impl Share for AndroidPlatform {
             return;
         };
         if let BridgeResult::Failed(message) = parse_result(&raw) {
-            error!("Share failed: {message}");
+            record_error(ERROR_GENERIC, format!("share: {message}"));
         }
     }
 }
@@ -245,7 +247,7 @@ impl OpenUrl for AndroidPlatform {
             return;
         };
         if let BridgeResult::Failed(message) = parse_result(&raw) {
-            error!("Opening {url} failed: {message}");
+            record_error(ERROR_GENERIC, format!("open {url}: {message}"));
         }
     }
 }
@@ -266,38 +268,26 @@ impl SystemInfo for AndroidPlatform {
     }
 }
 
-/// The bridge's typed result.
-#[derive(Debug, PartialEq, Eq)]
-enum BridgeResult {
-    /// The operation succeeded, with an optional payload.
-    Ok(Option<String>),
-    /// The user dismissed the picker.
-    Cancelled,
-    /// The operation failed with a message for the log and the UI.
-    Failed(String),
+impl PlatformErrors for AndroidPlatform {
+    fn take_error(&self) -> Option<PlatformError> {
+        ERRORS
+            .lock()
+            .map(|mut errors| errors.pop_front())
+            .unwrap_or_else(|poisoned| poisoned.into_inner().pop_front())
+    }
 }
 
-fn parse_result(raw: &str) -> BridgeResult {
-    if raw == "CANCELLED" {
-        return BridgeResult::Cancelled;
+/// Queues a failure for the UI and logs its diagnostic detail.
+fn record_error(message_key: &'static str, detail: String) {
+    error!("Platform error ({message_key}): {detail}");
+    let mut errors = match ERRORS.lock() {
+        Ok(errors) => errors,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    if errors.len() >= 8 {
+        let _ = errors.pop_front();
     }
-    if let Some(message) = raw.strip_prefix("ERROR:") {
-        return BridgeResult::Failed(message.to_owned());
-    }
-    if raw == "OK" {
-        return BridgeResult::Ok(None);
-    }
-    if let Some(value) = raw.strip_prefix("OK:") {
-        return BridgeResult::Ok(Some(value.to_owned()));
-    }
-    BridgeResult::Failed(format!("malformed bridge result: {raw}"))
-}
-
-fn set_outcome(outcome: Option<TextInputOutcome>) {
-    match OUTCOME.lock() {
-        Ok(mut slot) => *slot = outcome,
-        Err(poisoned) => *poisoned.into_inner() = outcome,
-    }
+    errors.push_back(PlatformError::new(message_key, detail));
 }
 
 // --- JNI plumbing -----------------------------------------------------------
@@ -520,23 +510,20 @@ fn take_string(
 
 // --- JNI callbacks ----------------------------------------------------------
 
-/// JNI callback from `TabToolTextEditor.nativeTextCommitted`.
+/// JNI callback from `TabToolBridge.nativeTextCommitted`.
 ///
 /// # Safety
 ///
 /// The JVM calls this on the UI thread of the attached app; the `JNIEnv` and
 /// `JString` arguments are valid for the duration of the call.
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_app_shurco_tabtool_TabToolTextEditor_nativeTextCommitted(
+pub extern "system" fn Java_app_shurco_tabtool_TabToolBridge_nativeTextCommitted(
     mut env: JNIEnv<'_>,
     _this: JObject<'_>,
     text: JString<'_>,
 ) {
     match env.get_string(&text) {
-        Ok(text) => {
-            set_outcome(Some(TextInputOutcome::Committed(text.into())));
-            EDITOR_ACTIVE.store(false, Ordering::Release);
-        }
+        Ok(text) => SESSIONS.finish(TextInputOutcome::Committed(text.into())),
         Err(error) => {
             log_jni_error(&mut env, "nativeTextCommitted", &error);
             error!("Dropping a text commit that could not be read from the JVM");
@@ -544,19 +531,18 @@ pub extern "system" fn Java_app_shurco_tabtool_TabToolTextEditor_nativeTextCommi
     }
 }
 
-/// JNI callback from `TabToolTextEditor.nativeTextCancelled`.
+/// JNI callback from `TabToolBridge.nativeTextCancelled`.
 ///
 /// # Safety
 ///
 /// The JVM calls this on the UI thread of the attached app; both references are
 /// valid for the duration of the call.
 #[unsafe(no_mangle)]
-pub extern "system" fn Java_app_shurco_tabtool_TabToolTextEditor_nativeTextCancelled(
+pub extern "system" fn Java_app_shurco_tabtool_TabToolBridge_nativeTextCancelled(
     _env: JNIEnv<'_>,
     _this: JObject<'_>,
 ) {
-    set_outcome(Some(TextInputOutcome::Cancelled));
-    EDITOR_ACTIVE.store(false, Ordering::Release);
+    SESSIONS.finish(TextInputOutcome::Cancelled);
 }
 
 // --- Spike self-test --------------------------------------------------------

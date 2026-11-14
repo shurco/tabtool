@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 
 use tabtool_platform::{
-    BackHandler, Clipboard, DesktopPlatform, DocumentFiles, FileDialogs, Insets, OpenUrl, Share,
-    SystemInfo, TextInput,
+    BackHandler, Clipboard, DesktopPlatform, DocumentFiles, FileDialogs, Insets, OpenUrl,
+    PlatformErrors, Share, SystemInfo, TextInput,
 };
 
 #[derive(Default)]
@@ -107,6 +107,7 @@ fn the_desktop_platform_implements_every_service() {
     fn assert_insets<T: Insets>() {}
     fn assert_share<T: Share>() {}
     fn assert_back_handler<T: BackHandler>() {}
+    fn assert_platform_errors<T: PlatformErrors>() {}
 
     assert_dialogs::<DesktopPlatform>();
     assert_clipboard::<DesktopPlatform>();
@@ -117,4 +118,5 @@ fn the_desktop_platform_implements_every_service() {
     assert_insets::<DesktopPlatform>();
     assert_share::<DesktopPlatform>();
     assert_back_handler::<DesktopPlatform>();
+    assert_platform_errors::<DesktopPlatform>();
 }

@@ -34,6 +34,7 @@ object TabToolBridge {
     private const val CANCELLED = "CANCELLED"
     private const val ERROR = "ERROR:"
     private const val COPY_BUFFER = 64 * 1024
+    private const val MAX_FILE_NAME = 120
     private val tableExtensions = setOf("csv", "tsv", "txt", "tab", "dat")
 
     private val lock = Any()
@@ -52,10 +53,16 @@ object TabToolBridge {
     private var importPending = false
 
     @Volatile
+    private var importAwaitingDrain = false
+
+    @Volatile
     private var importResult: String? = null
 
     @Volatile
     private var exportPending = false
+
+    @Volatile
+    private var exportAwaitingDrain = false
 
     @Volatile
     private var exportResult: String? = null
@@ -75,10 +82,13 @@ object TabToolBridge {
         textEditor = null
         synchronized(lock) {
             importPending = false
+            importAwaitingDrain = false
             importResult = null
             exportPending = false
+            exportAwaitingDrain = false
             exportResult = null
             exportSource = null
+            pendingBack = false
         }
         activity = null
     }
@@ -145,9 +155,13 @@ object TabToolBridge {
     @JvmStatic
     fun importDocument(): String? {
         synchronized(lock) {
-            importResult?.let { result ->
+            if (importAwaitingDrain) {
+                importAwaitingDrain = false
+                val result = importResult
                 importResult = null
-                return result
+                if (result != null) {
+                    return result
+                }
             }
         }
         if (importPending) {
@@ -177,9 +191,13 @@ object TabToolBridge {
     @JvmStatic
     fun exportDocument(sourcePath: String, suggestedName: String): String? {
         synchronized(lock) {
-            exportResult?.let { result ->
+            if (exportAwaitingDrain) {
+                exportAwaitingDrain = false
+                val result = exportResult
                 exportResult = null
-                return result
+                if (result != null) {
+                    return result
+                }
             }
         }
         if (exportPending) {
@@ -190,9 +208,9 @@ object TabToolBridge {
         if (!source.isFile || !source.canRead()) {
             return failure("The source document cannot be read")
         }
+        val name = safeName(suggestedName) ?: return failure("The suggested file name is invalid")
         exportSource = source
         exportPending = true
-        val name = safeName(suggestedName)
         activity.runOnUiThread {
             val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
@@ -297,15 +315,18 @@ object TabToolBridge {
         height: Float,
         text: String,
         multiline: Boolean,
-    ) {
-        val activity = activity ?: return
+    ): Boolean {
+        val activity = activity ?: return false
+        if (!width.isFinite() || !height.isFinite() || width <= 0f || height <= 0f) {
+            return false
+        }
         activity.runOnUiThread {
-            if (width <= 0f || height <= 0f) {
+            val root = activity.findViewById<FrameLayout>(android.R.id.content)
+            if (root == null) {
+                nativeTextCancelled()
                 return@runOnUiThread
             }
             val density = activity.resources.displayMetrics.density
-            val root = activity.findViewById<FrameLayout>(android.R.id.content)
-                ?: return@runOnUiThread
             val editor = textEditor ?: TabToolTextEditor(activity).also { textEditor = it }
             val params =
                 FrameLayout.LayoutParams(
@@ -323,6 +344,7 @@ object TabToolBridge {
             editor.elevation = 24f
             editor.configure(text, multiline)
         }
+        return true
     }
 
     @JvmStatic
@@ -345,6 +367,12 @@ object TabToolBridge {
         textEditor = null
         return true
     }
+
+    /** Called by the native editor when the user commits. */
+    external fun nativeTextCommitted(text: String)
+
+    /** Called by the native editor when the user cancels or it cannot open. */
+    external fun nativeTextCancelled()
 
     /** Spike-only self-test: proves the Rust bridge clears JNI exceptions. */
     @JvmStatic
@@ -409,7 +437,7 @@ object TabToolBridge {
     /** Streams a content URI into the private directory and returns the new name. */
     private fun copyIntoDocuments(activity: Activity, uri: Uri): String? {
         val displayName = displayName(activity, uri) ?: uri.lastPathSegment?.substringAfterLast('/')
-        val name = safeName(displayName ?: "Imported")
+        val name = safeName(displayName ?: "Imported") ?: throw IOException("The file name is invalid")
         if (name.substringAfterLast('.', "").lowercase() !in tableExtensions) {
             throw IOException("The file type is not supported")
         }
@@ -446,9 +474,26 @@ object TabToolBridge {
         }
     }
 
-    /** A file name with path separators removed. */
-    private fun safeName(name: String): String =
-        File(name).name.replace('/', '_').replace('\\', '_').ifBlank { "Untitled" }
+    /** A bounded file name with path separators and control characters removed. */
+    private fun safeName(name: String): String? {
+        val base = File(name).name
+            .replace('/', '_')
+            .replace('\\', '_')
+            .map { if (it.isISOControl()) '_' else it }
+            .joinToString("")
+            .trim()
+        if (base.isEmpty() || base == "." || base == "..") {
+            return null
+        }
+        if (base.length <= MAX_FILE_NAME) {
+            return base
+        }
+        val dot = base.lastIndexOf('.')
+        val extension = if (dot > 0) base.substring(dot) else ""
+        val suffix = if (extension.length <= 10) extension else ""
+        val stem = if (dot > 0) base.substring(0, dot) else base
+        return stem.take(MAX_FILE_NAME - suffix.length).trimEnd() + suffix
+    }
 
     /** `directory/name`, or `directory/name 2.ext` when taken (case-insensitive). */
     private fun uniqueDestination(directory: File, name: String): File {
@@ -487,6 +532,7 @@ object TabToolBridge {
         synchronized(lock) {
             importResult = result
             importPending = false
+            importAwaitingDrain = true
         }
     }
 
@@ -494,6 +540,7 @@ object TabToolBridge {
         synchronized(lock) {
             exportResult = result
             exportPending = false
+            exportAwaitingDrain = true
             exportSource = null
         }
     }

@@ -34,6 +34,9 @@ impl FakeTextInput {
 
 impl TextInput for FakeTextInput {
     fn open(&self, request: TextInputRequest) {
+        if !request.is_valid() {
+            return;
+        }
         let mut state = self.state.borrow_mut();
         state.request = Some(request);
         state.outcome = None;
@@ -122,6 +125,19 @@ fn opening_again_drops_the_previous_outcome() {
     input.open(request("second"));
 
     assert!(input.is_active());
+    assert_eq!(input.poll(), None);
+}
+
+#[test]
+fn a_refused_request_leaves_the_input_inactive() {
+    let input = FakeTextInput::default();
+    let mut invalid = request("cell");
+    invalid.rect[2] = 0.0;
+
+    input.open(invalid);
+
+    assert!(!input.is_active());
+    assert_eq!(input.request(), None);
     assert_eq!(input.poll(), None);
 }
 

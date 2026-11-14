@@ -6,8 +6,8 @@ use std::time::Duration;
 use eframe::egui;
 use tabtool_platform::android::{AndroidPlatform, throw_test_security_exception};
 use tabtool_platform::{
-    BackHandler, Clipboard, DocumentFiles, Insets, OpenUrl, Share, SystemInfo, TextInput,
-    TextInputOutcome, TextInputRequest,
+    BackHandler, Clipboard, DocumentFiles, Insets, OpenUrl, PlatformErrors, Share, SystemInfo,
+    TextInput, TextInputOutcome, TextInputRequest,
 };
 
 const CLIPBOARD_TEXT: &str = "TabTool clipboard";
@@ -31,6 +31,7 @@ pub struct SpikeApp {
     keyboard_height: f32,
     languages: Vec<String>,
     status: String,
+    error_banner: Option<String>,
     last_outcome: String,
     editor_active: bool,
     pending: Option<Pending>,
@@ -48,6 +49,7 @@ impl Default for SpikeApp {
             keyboard_height: 0.0,
             languages: Vec::new(),
             status: "ready".to_owned(),
+            error_banner: None,
             last_outcome: String::new(),
             editor_active: false,
             pending: None,
@@ -134,6 +136,10 @@ impl eframe::App for SpikeApp {
         self.editor_active = self.platform.is_active();
         if self.platform.take_back() {
             self.status = "back: taken".to_owned();
+        }
+        if let Some(error) = self.platform.take_error() {
+            let language = tabtool_i18n::language_from_system(&self.platform.languages());
+            self.error_banner = Some(tabtool_i18n::tr(language, error.message_key).to_owned());
         }
         self.safe_area = self.platform.safe_area();
         self.keyboard_height = self.platform.keyboard_height();
@@ -224,6 +230,9 @@ impl eframe::App for SpikeApp {
                 ));
                 ui.label(format!("last outcome: {}", self.last_outcome));
                 ui.label(format!("status: {}", self.status));
+                if let Some(error) = &self.error_banner {
+                    ui.label(format!("error: {error}"));
+                }
                 ui.label(format!("clipboard: {:?}", self.clipboard));
                 ui.label(format!("document: {:?}", self.document));
                 ui.label(format!(

@@ -3,7 +3,9 @@
 use std::path::{Path, PathBuf};
 
 pub use crate::locale::{SystemInfo, SystemLocale, decimal_separator, system_locale};
-use crate::services::{BackHandler, DocumentFiles, Insets, Share, TABLE_EXTENSIONS};
+use crate::services::{
+    BackHandler, DocumentFiles, Insets, PlatformError, PlatformErrors, Share, TABLE_EXTENSIONS,
+};
 use crate::text_input::{TextInput, TextInputOutcome, TextInputRequest};
 
 /// The file dialogs a view needs. Tests use a fake; the app uses [`DesktopPlatform`].
@@ -139,11 +141,22 @@ impl DocumentFiles for DesktopPlatform {
     }
 
     fn delete(&self, path: &Path) -> std::io::Result<()> {
+        crate::services::ensure_within(&self.documents_dir(), path)?;
         std::fs::remove_file(path)
     }
 
     fn rename(&self, from: &Path, to: &Path) -> std::io::Result<()> {
+        let directory = self.documents_dir();
+        crate::services::ensure_within(&directory, from)?;
+        crate::services::ensure_within(&directory, to)?;
         std::fs::rename(from, to)
+    }
+}
+
+impl PlatformErrors for DesktopPlatform {
+    /// Desktop dialogs report failures directly; no queued platform error.
+    fn take_error(&self) -> Option<PlatformError> {
+        None
     }
 }
 
