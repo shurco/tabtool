@@ -22,8 +22,8 @@ pub use action_bar::{
 };
 pub use library::{
     DocumentEntry, DocumentFiles, DocumentMetadata, ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE,
-    FileMetadata, LibraryError, LibraryErrors, LibraryResponse, LibrarySort, LibraryView,
-    SystemMetadata, available_name, format_modified, format_size, new_document_name,
+    FileMetadata, LibraryClock, LibraryError, LibraryErrors, LibraryResponse, LibrarySort,
+    LibraryView, SystemMetadata, available_name, format_modified, format_size, new_document_name,
 };
 pub use list::{ListRow, ListRowResponse};
 pub use metrics::{

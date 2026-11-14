@@ -2,6 +2,7 @@
 //! and the touch screen that composes them.
 
 use core::cell::{Cell, RefCell};
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::{Duration, UNIX_EPOCH};
@@ -12,10 +13,10 @@ use tabtool_ui::Theme;
 use tabtool_ui::UiHarness;
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::mobile::{
-    DocumentFiles, ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, LibraryError, LibraryErrors,
-    LibraryResponse, LibrarySort, LibraryView, MobileMetrics, SystemMetadata, TouchTextInput,
-    TouchTextInputOutcome, TouchTextInputRequest, available_name, format_modified, format_size,
-    new_document_name,
+    DocumentFiles, ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, LibraryClock, LibraryError,
+    LibraryErrors, LibraryResponse, LibrarySort, LibraryView, MobileMetrics, SystemMetadata,
+    TouchTextInput, TouchTextInputOutcome, TouchTextInputRequest, available_name, format_modified,
+    format_size, new_document_name,
 };
 use tempfile::TempDir;
 
@@ -43,6 +44,7 @@ struct TestFiles {
     picker: RefCell<Option<PathBuf>>,
     extra: RefCell<Vec<PathBuf>>,
     in_progress: Cell<bool>,
+    create_calls: Cell<usize>,
     fail_delete: Cell<bool>,
     fail_rename: Cell<bool>,
 }
@@ -60,6 +62,7 @@ impl TestFiles {
             picker: RefCell::new(None),
             extra: RefCell::new(Vec::new()),
             in_progress: Cell::new(false),
+            create_calls: Cell::new(0),
             fail_delete: Cell::new(false),
             fail_rename: Cell::new(false),
         }
@@ -85,6 +88,26 @@ impl DocumentFiles for TestFiles {
             .collect();
         documents.extend(self.extra.borrow().iter().cloned());
         documents
+    }
+
+    fn existing_names(&self) -> Vec<String> {
+        std::fs::read_dir(&self.directory)
+            .into_iter()
+            .flatten()
+            .flatten()
+            .filter_map(|entry| entry.file_name().into_string().ok())
+            .collect()
+    }
+
+    fn create_document(&self, name: &str, data: &[u8]) -> std::io::Result<PathBuf> {
+        self.create_calls.set(self.create_calls.get() + 1);
+        let path = self.directory.join(name);
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)?;
+        file.write_all(data)?;
+        Ok(path)
     }
 
     fn import_from_picker(&self) -> Option<PathBuf> {
@@ -139,11 +162,20 @@ impl LibraryErrors for TestErrors {
 }
 
 fn library<'a>(files: &'a TestFiles, errors: &'a TestErrors) -> LibraryView<'a> {
+    library_with_clock(files, errors, LibraryClock::default())
+}
+
+fn library_with_clock<'a>(
+    files: &'a TestFiles,
+    errors: &'a TestErrors,
+    clock: LibraryClock,
+) -> LibraryView<'a> {
     LibraryView::new(
         files,
         errors,
         &SystemMetadata,
         en_locale(),
+        clock,
         MobileMetrics::phone(),
         EN,
     )
@@ -269,6 +301,19 @@ fn a_listed_file_that_is_gone_is_skipped() {
 }
 
 #[test]
+fn hidden_files_are_not_listed() {
+    let (_directory, files) = TestFiles::new();
+    files.write(".notes.csv", "a\n");
+    files.write("notes.csv", "a\n");
+    let errors = TestErrors::default();
+    let mut view = library(&files, &errors);
+
+    view.refresh();
+
+    assert_eq!(names(&view), ["notes.csv"]);
+}
+
+#[test]
 fn sizes_and_dates_come_from_the_file_metadata() {
     let (_directory, files) = TestFiles::new();
     let path = files.write("notes.csv", "a,b\n1,2\n");
@@ -298,11 +343,47 @@ fn sizes_use_the_locale_decimal_separator() {
 #[test]
 fn dates_use_the_locale_short_order() {
     let modified = UNIX_EPOCH + Duration::from_secs(1_700_000_000);
+    let clock = LibraryClock::default();
 
-    assert_eq!(format_modified(modified, &en_locale()), "11/14/2023, 22:13");
-    assert_eq!(format_modified(modified, &de_locale()), "14.11.2023, 22:13");
-    assert_eq!(format_modified(modified, &gb_locale()), "14/11/2023, 22:13");
-    assert_eq!(format_modified(modified, &fr_locale()), "14/11/2023, 22:13");
+    assert_eq!(
+        format_modified(modified, &en_locale(), clock),
+        "11/14/2023, 22:13"
+    );
+    assert_eq!(
+        format_modified(modified, &de_locale(), clock),
+        "14.11.2023, 22:13"
+    );
+    assert_eq!(
+        format_modified(modified, &gb_locale(), clock),
+        "14/11/2023, 22:13"
+    );
+    assert_eq!(
+        format_modified(modified, &fr_locale(), clock),
+        "14/11/2023, 22:13"
+    );
+}
+
+#[test]
+fn dates_use_the_platform_clock() {
+    let noon = UNIX_EPOCH + Duration::from_secs(1_700_000_000);
+    // 22:13 UTC is 14:13 the same day at UTC−8.
+    let pacific = LibraryClock::new(-480, true);
+    assert_eq!(
+        format_modified(noon, &en_locale(), pacific),
+        "11/14/2023, 2:13 PM"
+    );
+    // 06:13 UTC is 22:13 the previous day at UTC−8.
+    let before_midnight = UNIX_EPOCH + Duration::from_secs(1_699_942_400);
+    assert_eq!(
+        format_modified(before_midnight, &en_locale(), pacific),
+        "11/13/2023, 10:13 PM"
+    );
+    // The same instant is the next hour in Berlin on a 24-hour clock.
+    let berlin = LibraryClock::new(60, false);
+    assert_eq!(
+        format_modified(noon, &de_locale(), berlin),
+        "14.11.2023, 23:13"
+    );
 }
 
 // -- Create, import, rename, delete ---------------------------------------
@@ -317,6 +398,7 @@ fn creates_a_blank_document_and_lists_it() {
 
     assert_eq!(path.file_name().expect("a file name"), "Untitled.csv");
     assert!(path.is_file());
+    assert_eq!(files.create_calls.get(), 1, "the platform creates the file");
     assert_eq!(names(&view), ["Untitled.csv"]);
 
     let bytes = std::fs::read(&path).expect("the new document is readable");
@@ -399,6 +481,34 @@ fn a_cancelled_import_returns_nothing() {
     let mut view = library(&files, &errors);
 
     assert_eq!(view.import_document(), None);
+}
+
+#[test]
+fn an_unsupported_import_is_removed_and_reported() {
+    let (_directory, files) = TestFiles::new();
+    let source_directory = TempDir::new().expect("a temporary import folder");
+    let source = source_directory.path().join("notes.md");
+    std::fs::write(&source, "# notes\n").expect("the import source is written");
+    *files.picker.borrow_mut() = Some(source);
+    let errors = TestErrors::default();
+    let mut view = library(&files, &errors);
+
+    assert_eq!(view.import_document(), None);
+    assert!(!files.documents_dir().join("notes.md").exists());
+}
+
+#[test]
+fn a_hidden_import_is_removed_and_reported() {
+    let (_directory, files) = TestFiles::new();
+    let source_directory = TempDir::new().expect("a temporary import folder");
+    let source = source_directory.path().join(".notes.csv");
+    std::fs::write(&source, "a\n").expect("the import source is written");
+    *files.picker.borrow_mut() = Some(source);
+    let errors = TestErrors::default();
+    let mut view = library(&files, &errors);
+
+    assert_eq!(view.import_document(), None);
+    assert!(!files.documents_dir().join(".notes.csv").exists());
 }
 
 #[test]
@@ -518,6 +628,7 @@ fn a_rename_cannot_escape_the_documents_folder() {
         ".hidden",
         ".csv",
         "notes.",
+        "C:notes.csv",
     ] {
         let error = view
             .rename_document(&path, proposed)
@@ -535,6 +646,23 @@ fn a_rename_cannot_escape_the_documents_folder() {
             .exists()
     );
     assert_eq!(names(&view), ["Untitled.csv"]);
+}
+
+#[test]
+fn a_case_only_rename_keeps_the_same_file() {
+    let (_directory, files) = TestFiles::new();
+    let path = files.write("Notes.csv", "a\n");
+    let errors = TestErrors::default();
+    let mut view = library(&files, &errors);
+    view.refresh();
+
+    let renamed = view
+        .rename_document(&path, "notes.csv")
+        .expect("the document keeps its name");
+
+    assert_eq!(renamed.file_name().expect("a file name"), "notes.csv");
+    assert_eq!(names(&view), ["notes.csv"]);
+    assert!(!files.documents_dir().join("notes 2.csv").exists());
 }
 
 #[test]
@@ -643,7 +771,17 @@ fn harness_library<'a>(
     outcome: &Outcome,
     input: &FakeTouchInput,
 ) -> UiHarness<'a> {
-    let mut view = library(files, errors);
+    harness_library_with_clock(files, errors, outcome, input, LibraryClock::default())
+}
+
+fn harness_library_with_clock<'a>(
+    files: &'a TestFiles,
+    errors: &'a TestErrors,
+    outcome: &Outcome,
+    input: &FakeTouchInput,
+    clock: LibraryClock,
+) -> UiHarness<'a> {
+    let mut view = library_with_clock(files, errors, clock);
     let mut input = input.clone();
     let outcome = outcome.0.clone();
     UiHarness::new(Theme::desktop_light(), [360.0, 800.0], move |ui| {
@@ -771,6 +909,31 @@ fn an_async_picker_reports_the_import_when_it_finishes() {
         .clone()
         .expect("the finished import opens");
     assert_eq!(opened.file_name().expect("a file name"), "later.csv");
+}
+
+#[test]
+fn an_unsupported_import_shows_a_localized_banner() {
+    let (_directory, files) = TestFiles::new();
+    let source_directory = TempDir::new().expect("a temporary import folder");
+    let source = source_directory.path().join("notes.md");
+    std::fs::write(&source, "# notes\n").expect("the import source is written");
+    *files.picker.borrow_mut() = Some(source);
+    let errors = TestErrors::default();
+    let outcome = Outcome::default();
+    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    harness.run();
+
+    harness.get_by_label(tr(EN, "Add Document")).click();
+    harness.run();
+    harness.get_by_label(tr(EN, "Import…")).click();
+    harness.run();
+
+    assert!(
+        harness
+            .query_by_label(tr(EN, "The file could not be opened"))
+            .is_some()
+    );
+    assert!(!files.documents_dir().join("notes.md").exists());
 }
 
 #[test]
@@ -971,5 +1134,29 @@ fn the_library_subtitle_uses_the_locale_for_size_and_date() {
     assert!(
         harness.query_by_label("8 B · 11/14/2023, 22:13").is_some(),
         "the row shows the localized size and short date"
+    );
+}
+
+#[test]
+fn the_row_uses_the_platform_clock() {
+    let (_directory, files) = TestFiles::new();
+    let path = files.write("notes.csv", "a,b\n1,2\n");
+    set_modified(&path, 1_700_000_000);
+    let errors = TestErrors::default();
+    let outcome = Outcome::default();
+    let mut harness = harness_library_with_clock(
+        &files,
+        &errors,
+        &outcome,
+        &FakeTouchInput::default(),
+        LibraryClock::new(-480, true),
+    );
+    harness.run();
+
+    assert!(
+        harness
+            .query_by_label("8 B · 11/14/2023, 2:13 PM")
+            .is_some(),
+        "the row uses the platform's local offset and 12-hour clock"
     );
 }

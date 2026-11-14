@@ -291,8 +291,7 @@ impl LibraryView<'_> {
         }
         self.importing = false;
         if let Some(path) = self.files.import_from_picker() {
-            self.refresh();
-            self.pending_open = Some(path);
+            self.pending_open = self.accept_import(path);
         }
     }
 
@@ -300,7 +299,7 @@ impl LibraryView<'_> {
         format!(
             "{} \u{00B7} {}",
             format_size(document.size(), &self.locale),
-            format_modified(document.modified(), &self.locale)
+            format_modified(document.modified(), &self.locale, self.clock)
         )
     }
 }

@@ -2,11 +2,35 @@
 //!
 //! The interface languages use two decimal marks and three date orders; the
 //! app has no ICU number or calendar formatter, so the supported locales are
-//! mapped explicitly, as the status line does for digit grouping.
+//! mapped explicitly, as the status line does for digit grouping. The local
+//! UTC offset and the 12/24-hour preference come from the platform through
+//! [`LibraryClock`].
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tabtool_core::Locale;
+use tabtool_i18n::{Language, tr};
+
+/// The clock facts a platform supplies for file dates.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct LibraryClock {
+    /// The device's offset from UTC in minutes east of UTC.
+    ///
+    /// UTC−8 is `-480`. The platform supplies this in Task 6.
+    pub utc_offset_minutes: i32,
+    /// Whether the interface locale uses a 12-hour clock.
+    pub twelve_hour: bool,
+}
+
+impl LibraryClock {
+    /// A clock with an offset and a 12/24-hour preference.
+    pub const fn new(utc_offset_minutes: i32, twelve_hour: bool) -> Self {
+        Self {
+            utc_offset_minutes,
+            twelve_hour,
+        }
+    }
+}
 
 /// The locale's decimal separator: a comma in the continental languages.
 fn decimal_separator(locale: &Locale) -> &'static str {
@@ -47,29 +71,69 @@ pub fn format_size(bytes: u64, locale: &Locale) -> String {
     format!("{number} {unit}")
 }
 
-/// A modification time in the locale's short date and 24-hour time.
-pub fn format_modified(modified: SystemTime, locale: &Locale) -> String {
-    let seconds = modified
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or(Duration::ZERO)
-        .as_secs();
-    let days = (seconds / 86_400) as i64;
-    let time = seconds % 86_400;
+/// A modification time in the locale's short date and local time.
+pub fn format_modified(modified: SystemTime, locale: &Locale, clock: LibraryClock) -> String {
+    let seconds = i64::try_from(
+        modified
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or(Duration::ZERO)
+            .as_secs(),
+    )
+    .unwrap_or(i64::MAX);
+    let local = seconds.saturating_add(i64::from(clock.utc_offset_minutes) * 60);
+    let days = local.div_euclid(86_400);
+    let time = local.rem_euclid(86_400);
     let (year, month, day) = civil_from_days(days);
     let (hours, minutes) = (time / 3_600, (time % 3_600) / 60);
+    let date = short_date(locale, year, month, day);
+    let time = short_time(clock, locale, hours, minutes);
+    format!("{date}, {time}")
+}
+
+fn short_date(locale: &Locale, year: i64, month: u32, day: u32) -> String {
     let language = locale.id.language.as_str();
     let us_english = language == "en"
         && locale
             .id
             .region
             .is_some_and(|region| region.as_str().eq_ignore_ascii_case("US"));
-    let date = match language {
+    match language {
         "en" if us_english => format!("{month:02}/{day:02}/{year}"),
         "zh" | "ja" | "ko" => format!("{year}/{month:02}/{day:02}"),
         "de" | "pl" | "be" | "uk" => format!("{day:02}.{month:02}.{year}"),
         _ => format!("{day:02}/{month:02}/{year}"),
+    }
+}
+
+fn short_time(clock: LibraryClock, locale: &Locale, hours: i64, minutes: i64) -> String {
+    if !clock.twelve_hour {
+        return format!("{hours:02}:{minutes:02}");
+    }
+    let (hour, key) = match hours {
+        0 => (12, "AM"),
+        1..=11 => (hours, "AM"),
+        12 => (12, "PM"),
+        _ => (hours - 12, "PM"),
     };
-    format!("{date}, {hours:02}:{minutes:02}")
+    let language = language_for(locale);
+    format!("{hour}:{minutes:02} {}", tr(language, key))
+}
+
+/// The catalog language for a date locale.
+fn language_for(locale: &Locale) -> Language {
+    match locale.id.language.as_str() {
+        "fr" => Language::Fr,
+        "es" => Language::Es,
+        "de" => Language::De,
+        "it" => Language::It,
+        "pl" => Language::Pl,
+        "be" => Language::Be,
+        "uk" => Language::Uk,
+        "zh" => Language::ZhHans,
+        "ja" => Language::Ja,
+        "ko" => Language::Ko,
+        _ => Language::En,
+    }
 }
 
 /// The Gregorian date for a count of days since 1 January 1970.

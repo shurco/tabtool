@@ -22,7 +22,7 @@ use super::MobileMetrics;
 mod format;
 mod screen;
 
-pub use format::{format_modified, format_size};
+pub use format::{LibraryClock, format_modified, format_size};
 
 /// The extensions the library lists.
 ///
@@ -152,6 +152,16 @@ pub trait DocumentFiles {
     /// The table files in [`DocumentFiles::documents_dir`].
     fn list_documents(&self) -> Vec<PathBuf>;
 
+    /// The names in the documents directory, including files the library
+    /// does not list, for new-name collisions.
+    fn existing_names(&self) -> Vec<String>;
+
+    /// Writes a new document named `name` and returns its path.
+    ///
+    /// The platform creates the documents directory if needed and must not
+    /// replace an existing file.
+    fn create_document(&self, name: &str, data: &[u8]) -> io::Result<PathBuf>;
+
     /// Asks the user to pick a file and copies it into the documents
     /// directory, returning the copy.
     ///
@@ -209,6 +219,7 @@ pub struct LibraryView<'a> {
     metadata: &'a dyn FileMetadata,
     new_document: CsvConfiguration,
     locale: Locale,
+    clock: LibraryClock,
     metrics: MobileMetrics,
     language: Language,
     documents: Vec<DocumentEntry>,
@@ -222,12 +233,14 @@ pub struct LibraryView<'a> {
 }
 
 impl<'a> LibraryView<'a> {
-    /// A library over `files`, formatting sizes and dates for `locale`.
+    /// A library over `files`, formatting sizes and dates for `locale` and
+    /// `clock`.
     pub fn new(
         files: &'a dyn DocumentFiles,
         errors: &'a dyn LibraryErrors,
         metadata: &'a dyn FileMetadata,
         locale: Locale,
+        clock: LibraryClock,
         metrics: MobileMetrics,
         language: Language,
     ) -> Self {
@@ -237,6 +250,7 @@ impl<'a> LibraryView<'a> {
             metadata,
             new_document: CsvConfiguration::default(),
             locale,
+            clock,
             metrics,
             language,
             documents: Vec::new(),
@@ -270,7 +284,7 @@ impl<'a> LibraryView<'a> {
     pub fn refresh(&mut self) {
         let mut documents = Vec::new();
         for path in self.files.list_documents() {
-            if !has_table_extension(&path) {
+            if !is_library_file(&path) {
                 continue;
             }
             let Ok(metadata) = self.metadata.metadata(&path) else {
@@ -297,16 +311,12 @@ impl<'a> LibraryView<'a> {
 
     /// Creates a new document and returns its path.
     pub fn create_document(&mut self) -> Result<PathBuf, LibraryError> {
-        let directory = self.files.documents_dir();
-        if let Err(error) = std::fs::create_dir_all(&directory) {
-            return Err(LibraryError::new(ERROR_SAVE, error.to_string()));
-        }
-        let name = new_document_name(self.existing_names(), NEW_DOCUMENT_EXTENSION);
-        let path = directory.join(name);
+        let name = new_document_name(self.files.existing_names(), NEW_DOCUMENT_EXTENSION);
         let data = new_document_data(&self.new_document)?;
-        if let Err(error) = std::fs::write(&path, data) {
-            return Err(LibraryError::new(ERROR_SAVE, error.to_string()));
-        }
+        let path = self
+            .files
+            .create_document(&name, &data)
+            .map_err(|error| LibraryError::new(ERROR_SAVE, error.to_string()))?;
         self.refresh();
         Ok(path)
     }
@@ -314,16 +324,28 @@ impl<'a> LibraryView<'a> {
     /// Asks the platform for a file and imports it under the picked name.
     ///
     /// `None` covers an open picker, a cancel and a failed copy; a failed
-    /// copy is reported through [`LibraryErrors`]. While an asynchronous
-    /// picker is open, [`LibraryView::show`] keeps polling and reports the
-    /// imported document once it arrives.
+    /// copy is reported through [`LibraryErrors`]. A picked file the library
+    /// cannot show is deleted and reported. While an asynchronous picker is
+    /// open, [`LibraryView::show`] keeps polling and reports the imported
+    /// document once it arrives.
     pub fn import_document(&mut self) -> Option<PathBuf> {
         if let Some(path) = self.files.import_from_picker() {
-            self.refresh();
-            return Some(path);
+            return self.accept_import(path);
         }
         self.importing = self.files.import_in_progress();
         None
+    }
+
+    fn accept_import(&mut self, path: PathBuf) -> Option<PathBuf> {
+        if !is_library_file(&path) {
+            let detail = format!("unsupported import: {}", path.display());
+            let _ = self.files.delete(&path);
+            self.notice = Some(LibraryError::new(ERROR_OPEN, detail));
+            self.refresh();
+            return None;
+        }
+        self.refresh();
+        Some(path)
     }
 
     /// Renames `path` to `proposed`, keeping the extension when it is omitted.
@@ -345,6 +367,7 @@ impl<'a> LibraryView<'a> {
             || trimmed.ends_with('.')
             || trimmed.contains('/')
             || trimmed.contains('\\')
+            || trimmed.contains(':')
         {
             return Err(LibraryError::new(
                 ERROR_GENERIC,
@@ -374,7 +397,20 @@ impl<'a> LibraryView<'a> {
         if name == current {
             return Ok(path.to_path_buf());
         }
-        let available = available_name(&name, self.existing_names());
+        let existing = self.files.existing_names();
+        if name.eq_ignore_ascii_case(current) {
+            // A case-only rename keeps the same file; numbering it would
+            // leave two names for one document.
+            if !existing.iter().any(|existing| existing == &name) {
+                let destination = path.with_file_name(&name);
+                if let Err(error) = self.files.rename(path, &destination) {
+                    return Err(LibraryError::new(ERROR_GENERIC, error.to_string()));
+                }
+                self.refresh();
+                return Ok(destination);
+            }
+        }
+        let available = available_name(&name, existing);
         let destination = path.with_file_name(available);
         if let Err(error) = self.files.rename(path, &destination) {
             return Err(LibraryError::new(ERROR_GENERIC, error.to_string()));
@@ -390,15 +426,6 @@ impl<'a> LibraryView<'a> {
         }
         self.refresh();
         Ok(())
-    }
-
-    fn existing_names(&self) -> BTreeSet<String> {
-        std::fs::read_dir(self.files.documents_dir())
-            .into_iter()
-            .flatten()
-            .flatten()
-            .filter_map(|entry| entry.file_name().into_string().ok())
-            .collect()
     }
 }
 
@@ -458,6 +485,14 @@ fn lowercased(names: impl IntoIterator<Item = impl AsRef<str>>) -> BTreeSet<Stri
         .into_iter()
         .map(|name| name.as_ref().to_lowercase())
         .collect()
+}
+
+/// Whether `path` is a visible table file the library lists.
+fn is_library_file(path: &Path) -> bool {
+    let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+        return false;
+    };
+    !name.starts_with('.') && has_table_extension(path)
 }
 
 fn has_table_extension(path: &Path) -> bool {
