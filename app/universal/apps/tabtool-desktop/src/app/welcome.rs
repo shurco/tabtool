@@ -23,7 +23,11 @@ impl DesktopApp {
                 if let Some(action) = crate::menu::show(ui, &tree) {
                     self.perform(action, ui.ctx());
                 }
-                if let Some(action) = shortcuts::consume_enabled(ui.ctx(), &tree) {
+                let blocked = self.quit.prompt
+                    || self.quit.busy
+                    || self.quit.issue.is_some()
+                    || !self.quit.saving.is_empty();
+                if let Some(action) = shortcuts::consume_enabled(ui.ctx(), &tree, blocked) {
                     self.perform(action, ui.ctx());
                 }
                 ui.separator();

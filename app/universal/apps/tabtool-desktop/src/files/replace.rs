@@ -3,7 +3,6 @@
 use std::path::Path;
 
 use tabtool_document::{Document, DocumentError, LargeStatus};
-use tabtool_i18n::Language;
 
 use super::{OpenedDocument, SaveOutcome};
 
@@ -66,7 +65,6 @@ impl FilePolicy {
         path: &Path,
         decision: Option<UnsavedChoice>,
         suggested_name: &str,
-        language: Language,
     ) -> ReplaceOutcome {
         if matches!(document.large_status(), LargeStatus::Saving(_)) {
             return ReplaceOutcome::Busy;
@@ -86,6 +84,6 @@ impl FilePolicy {
                 SaveOutcome::Failed(error) => return ReplaceOutcome::Failed(error),
             },
         }
-        ReplaceOutcome::Opened(Box::new(self.load(path, language)))
+        ReplaceOutcome::Opened(Box::new(self.load(path)))
     }
 }

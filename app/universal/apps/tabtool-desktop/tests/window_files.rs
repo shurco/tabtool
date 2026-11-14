@@ -43,6 +43,7 @@ fn window(
             dialogs,
             storage,
             settings,
+            prefers_chinese: false,
         },
     )
 }

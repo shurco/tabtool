@@ -54,6 +54,8 @@ pub struct DocumentUiState {
     pub alert: Option<ChromeAlert>,
     /// A document notice the user has not dismissed.
     pub notice: Option<DocumentNotice>,
+    /// When the large-file source was last checked for staleness.
+    pub last_stale_check: Option<Instant>,
 }
 
 /// How long a requested paste waits for the platform event.
@@ -136,6 +138,8 @@ pub struct DocumentView<'a> {
     pub clipboard: &'a mut dyn Clipboard,
     /// The interface language.
     pub language: Language,
+    /// Whether the system language prefers GBK over CP1252.
+    pub prefers_chinese: bool,
     /// The system locale for clipboard formatting.
     pub locale: &'a Locale,
     /// The system decimal separator for clipboard formatting.
@@ -144,6 +148,8 @@ pub struct DocumentView<'a> {
     pub show_format_bar: bool,
     /// The grid row height, alternating rows and row numbers.
     pub appearance: GridAppearance,
+    /// Whether a modal owns the keyboard, so the grid must not take keys.
+    pub input_blocked: bool,
     /// A failed save the window wants to explain.
     pub save_error: Option<DocumentError>,
 }
@@ -174,6 +180,9 @@ impl DocumentView<'_> {
         ) && self.document.has_content();
         if show_content {
             let response = toolbar::show(ui, self.document, self.state, self.language);
+            if !response.actions.is_empty() || response.export {
+                self.commit_active_editor();
+            }
             for action in response.actions {
                 self.run_grid_action(action, &ctx, paste_attempted);
                 paste_attempted = paste_attempted || self.ui_state.pending_paste;
@@ -190,6 +199,8 @@ impl DocumentView<'_> {
         self.show_notice(ui);
         self.show_needs_attention(ui, &mut actions);
         if self.show_stale(ui) {
+            // The reload replaces the mapped rows; keep typed text first.
+            self.commit_active_editor();
             actions.push(DocumentAction::Large(LargeUiAction::ReloadStale));
         }
         self.show_large_banner(ui);

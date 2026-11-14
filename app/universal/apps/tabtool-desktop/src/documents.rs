@@ -62,6 +62,7 @@ impl DocumentWindow {
             dialogs,
             storage,
             settings,
+            prefers_chinese,
         } = services;
         let autosave = Autosave::new(&document);
         let viewport_id_for_state = viewport_id;
@@ -77,7 +78,7 @@ impl DocumentWindow {
             grid: GridState::default(),
             chrome: DocumentUiState::default(),
             autosave,
-            file_ops: FilePolicy::new(dialogs, storage, settings),
+            file_ops: FilePolicy::new(dialogs, storage, settings, prefers_chinese),
             language,
             show_format_bar,
             appearance,
@@ -86,7 +87,7 @@ impl DocumentWindow {
             decimal_separator: decimal_separator(&platform),
             requests: Vec::new(),
             app_actions: Vec::new(),
-            pending_actions: Vec::new(),
+            prefers_chinese,
             close_prompt: false,
             revert_prompt: false,
             open: open::OpenState::default(),
@@ -96,6 +97,7 @@ impl DocumentWindow {
             close_after_save: false,
             should_close: false,
             issue: None,
+            modal_blocked: false,
         };
         Self {
             viewport_id,
@@ -119,13 +121,30 @@ impl DocumentWindow {
     }
 
     /// The document's unsaved state.
+    ///
+    /// An open editor counts as unsaved until its text is in the document.
     pub fn is_dirty(&self) -> bool {
-        self.lock().document.is_dirty()
+        let mut state = self.lock();
+        state.commit_editor();
+        state.document.is_dirty()
     }
 
     /// What closing the window should do now.
     pub fn close_decision(&self) -> CloseDecision {
-        close_decision(&self.lock().document)
+        let mut state = self.lock();
+        state.commit_editor();
+        close_decision(&state.document)
+    }
+
+    /// Whether a prompt or modal owns this window's input.
+    pub fn has_modal(&self) -> bool {
+        self.lock().blocks_input()
+    }
+
+    /// Blocks this window's shortcuts and grid keys while the app-level quit
+    /// prompt or progress alert is visible.
+    pub fn set_modal_blocked(&self, blocked: bool) {
+        self.lock().modal_blocked = blocked;
     }
 
     /// Whether the window has finished closing and should leave the app list.
@@ -164,14 +183,13 @@ impl DocumentWindow {
             state.issue = None;
         }
 
-        let outcome =
-            if state.close_prompt || state.revert_prompt || state.open.prompt || state.saving {
-                crate::autosave::AutosaveOutcome::Idle
-            } else {
-                state
-                    .autosave
-                    .tick(now, &mut state.document, &*state.file_ops.storage)
-            };
+        let outcome = if state.autosave_paused() {
+            crate::autosave::AutosaveOutcome::Idle
+        } else {
+            state
+                .autosave
+                .tick(now, &mut state.document, &*state.file_ops.storage)
+        };
         match outcome {
             crate::autosave::AutosaveOutcome::Saved => state.issue = None,
             crate::autosave::AutosaveOutcome::Blocked(error) => state.issue = Some(error),
@@ -212,6 +230,7 @@ impl DocumentWindow {
     /// alert, or an immediate close, is visible to the renderer.
     pub fn request_close(&self) {
         let mut state = self.lock();
+        state.commit_editor();
         match close_decision(&state.document) {
             CloseDecision::Close => state.should_close = true,
             CloseDecision::Ask => state.close_prompt = true,
@@ -263,5 +282,110 @@ impl DocumentWindow {
         self.state
             .lock()
             .expect("the document window lock is not poisoned")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+    use std::sync::Arc;
+
+    use egui::ViewportId;
+    use tabtool_core::CsvConfiguration;
+    use tabtool_document::{Document, StdStorage};
+    use tabtool_i18n::Language;
+    use tabtool_platform::{DesktopPlatform, FileDialogs, Settings};
+
+    use super::{DocumentWindow, WindowServices};
+
+    struct NoDialogs;
+
+    impl FileDialogs for NoDialogs {
+        fn open_files(&self) -> Vec<PathBuf> {
+            Vec::new()
+        }
+
+        fn save_file(&self, _suggested_name: &str, _extension: &str) -> Option<PathBuf> {
+            None
+        }
+
+        fn choose_folder(&self) -> Option<PathBuf> {
+            None
+        }
+    }
+
+    fn window() -> DocumentWindow {
+        let configuration = CsvConfiguration::default();
+        let mut document = Document::new(configuration.clone());
+        document
+            .new_document(configuration)
+            .expect("create the empty document");
+        DocumentWindow::new(
+            ViewportId::ROOT,
+            document,
+            "Untitled".to_owned(),
+            Language::En,
+            true,
+            WindowServices {
+                platform: DesktopPlatform,
+                dialogs: Arc::new(NoDialogs),
+                storage: Arc::new(StdStorage),
+                settings: Settings::default(),
+                prefers_chinese: false,
+            },
+        )
+    }
+
+    #[test]
+    fn every_prompt_modal_and_pending_reparse_pauses_autosave() {
+        let window = window();
+        let mut state = window.lock();
+        assert!(!state.autosave_paused());
+
+        state.close_prompt = true;
+        assert!(state.autosave_paused(), "close prompt");
+        state.close_prompt = false;
+
+        state.revert_prompt = true;
+        assert!(state.autosave_paused(), "revert prompt");
+        state.revert_prompt = false;
+
+        state.open.prompt = true;
+        assert!(state.autosave_paused(), "open prompt");
+        state.open.prompt = false;
+
+        state.busy = true;
+        assert!(state.autosave_paused(), "busy alert");
+        state.busy = false;
+
+        state.saving = true;
+        assert!(state.autosave_paused(), "running save");
+        state.saving = false;
+
+        state.modal_blocked = true;
+        assert!(state.autosave_paused(), "app-level quit prompt");
+        state.modal_blocked = false;
+
+        state.chrome.pending_reparse = Some(CsvConfiguration::default());
+        assert!(state.autosave_paused(), "pending reparse");
+        state.chrome.pending_reparse = None;
+
+        state.export.session = state.file_ops.export_session(&state.document);
+        assert!(state.export.session.is_some());
+        assert!(state.autosave_paused(), "export panel");
+        state.export.session = None;
+
+        state.export.confirmation = true;
+        assert!(state.autosave_paused(), "export confirmation");
+        state.export.confirmation = false;
+
+        state.export.alert = Some(super::export::ExportAlert {
+            title: "Export Not Completed",
+            message: String::new(),
+        });
+        assert!(state.autosave_paused(), "export alert");
+        state.export.alert = None;
+
+        assert!(!state.autosave_paused());
     }
 }

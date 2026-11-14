@@ -32,9 +32,10 @@ cargo build -p tabtool-desktop --release
 ```
 
 Windows has no extra setup. Linux needs X11 or Wayland, a Vulkan/GL driver and
-the GUI development libraries installed for CI: `libxkbcommon-dev`,
-`libwayland-dev` and `libgtk-3-dev`. `--smoke` opens no window and prints
-`tabtool 0.1.0`.
+the GUI development libraries installed for CI: `libxkbcommon-dev` and
+`libwayland-dev`. File dialogs go through the XDG desktop portal over D-Bus
+(`rfd`'s `xdg-portal` backend), so GTK development headers are not required.
+`--smoke` opens no window and prints `tabtool 0.1.0`.
 
 ## Manual visual and behavior checklist
 
@@ -51,11 +52,12 @@ The macOS automated suites were run locally in this task.
 
 ### Launch and window lifecycle — NOT RUN
 
-- [ ] **NOT RUN** — Launch with no arguments: the root window shows “No Documents”, the
-      New Document button, and the full menu bar.
+- [ ] **NOT RUN** — Launch with no arguments: one untitled document window opens with
+      the full menu bar; after its last window closes, the root shows “No Documents,”
+      the New Document button and the full menu bar.
 - [ ] **NOT RUN** — Launch with a CSV path: one document window opens with the file name and
       the detected format; the root window stays hidden.
-- [ ] **NOT RUN** — New, Open, Open Recent, Save, Save As, Revert, Duplicate and Export open
+- [ ] **NOT RUN** — New, Open, Open Recent, Save, Save As, Revert and Export open
       the expected dialogs and update the title/dirty state.
 - [ ] **NOT RUN** — Closing a dirty document asks Save / Don’t Save / Cancel; closing a clean
       document closes at once; quitting with several documents follows the same
@@ -77,7 +79,7 @@ The macOS automated suites were run locally in this task.
 - [ ] **NOT RUN** — Menu-initiated Paste still asks the platform for the clipboard text and
       applies it when the paste event arrives.
 - [ ] **NOT RUN** — Large mode disables Select All, structural rows/columns, Sort, Filter,
-      decimal-mark changes, Export and Duplicate.
+      decimal-mark changes and Export.
 
 ### IME and text entry — NOT RUN
 
@@ -114,8 +116,9 @@ The macOS automated suites were run locally in this task.
 - [ ] **NOT RUN** — Drop one CSV on the root window and on a document window: each opens a
       document.
 - [ ] **NOT RUN** — Drop several files: each opens in its own window.
-- [ ] **NOT RUN** — Drop a directory or an unreadable file: the typed error is shown without
-      losing the current document.
+- [ ] **NOT RUN** — Drop an unreadable table file: the typed error is shown without
+      losing the current document. A dropped directory is ignored because only
+      table-file extensions open.
 - [ ] **NOT RUN** — Drag a row or column inside the grid: the drop indicator appears and the
       move lands in the expected slot.
 - [ ] **NOT RUN** — Drag out of the window: known deviation, only internal drags are
@@ -322,8 +325,9 @@ notes for the manual pass and must be fixed or promoted to §14 before release.
 | Area | Gap or observation |
 | --- | --- |
 | Drop target | No blue drop-target highlight while files are dragged over a window. This is a visual-parity gap, not a design difference. |
-| Header rename | Double-clicking a header does not start renaming; only the context-menu entry does. The brief specifies the menu, but this is still a macOS parity gap. |
-| Filter hints | The filter-bar shortcut hints show ⌘ glyphs on every platform even where the bound modifier is Ctrl. The shortcuts themselves follow the platform modifier. |
+| Header rename | Double-clicking a header does not start renaming; only the context-menu and Table-menu entries do. The brief specifies the menus, but this is still a macOS parity gap. |
+| Duplicate | The Apple File menu's Duplicate command is not implemented in the desktop port and is not offered in the menu. |
+| Dropped folders | A dropped directory is ignored because opening is gated on table-file extensions; the Apple app also only opens files. |
 | Settings timing | Settings apply immediately; the Apple README mentions a restart for some preferences. This behavior is not in §14. |
 | Native dialogs | Native file dialogs use the platform locale; the app language applies to in-app chrome created after a language switch. |
 | Status line | A grid mutation reaches the status line on the next frame because the bottom panel is laid out before the central grid; it settles immediately and is covered by tests. |

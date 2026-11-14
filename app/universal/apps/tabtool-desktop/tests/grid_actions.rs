@@ -72,6 +72,7 @@ fn window_at(
             dialogs: shared_dialogs,
             storage: shared_storage,
             settings: tabtool_platform::Settings::default(),
+            prefers_chinese: false,
         },
     )
 }

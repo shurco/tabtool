@@ -60,9 +60,17 @@ impl FilterAction {
 
 /// Draws the filter bar for `document`; returns the action the user chose.
 ///
+/// `keys_enabled` is false while a modal owns the keyboard; the bar still
+/// draws, but its shortcuts are left for the alert.
+///
 /// The draft criteria are edited in place. Rows are re-evaluated only by the
 /// caller's Apply actions, so typing never hides the row being edited.
-pub fn show(ui: &mut Ui, document: &mut Document, language: Language) -> Option<FilterAction> {
+pub fn show(
+    ui: &mut Ui,
+    document: &mut Document,
+    language: Language,
+    keys_enabled: bool,
+) -> Option<FilterAction> {
     let columns = column_options(document);
     let (first_column, _) = columns.first()?;
     document
@@ -71,7 +79,11 @@ pub fn show(ui: &mut Ui, document: &mut Document, language: Language) -> Option<
 
     let theme = current(ui.ctx());
     let mut criteria = document.row_filter().criteria.clone();
-    let mut action = keyboard_action(ui, &criteria);
+    let mut action = if keys_enabled {
+        keyboard_action(ui, &criteria)
+    } else {
+        None
+    };
     ui.spacing_mut().item_spacing.x = 6.0;
 
     for criterion in &mut criteria {
@@ -181,18 +193,16 @@ pub fn show(ui: &mut Ui, document: &mut Document, language: Language) -> Option<
         }
         let hint_width = (ui.available_width() - 170.0).max(0.0);
         if hint_width > 0.0 {
+            let hint = shortcut_hint(language);
             ui.allocate_ui_with_layout(
                 Vec2::new(hint_width, theme.metrics.control_height),
                 Layout::left_to_right(Align::Center),
                 |ui| {
                     ui.add(
                         egui::Label::new(
-                            RichText::new(tr(
-                                language,
-                                "Show ⌘F   Insert ⌘I   Remove ⌘⇧⌫   Apply All ⌘↩   Exit ⎋",
-                            ))
-                            .size(theme.typography.caption)
-                            .color(theme.colors.secondary_label),
+                            RichText::new(hint)
+                                .size(theme.typography.caption)
+                                .color(theme.colors.secondary_label),
                         )
                         .truncate(),
                     );
@@ -231,6 +241,22 @@ fn column_options(document: &Document) -> Vec<(ColumnId, String)> {
         .enumerate()
         .map(|(index, id)| (id, presenter.header(index)))
         .collect()
+}
+
+/// The footer hint with this platform's modifier names.
+fn shortcut_hint(language: Language) -> String {
+    let text = tr(
+        language,
+        "Show ⌘F   Insert ⌘I   Remove ⌘⇧⌫   Apply All ⌘↩   Exit ⎋",
+    );
+    if cfg!(target_os = "macos") {
+        return text.to_owned();
+    }
+    text.replace('⌘', "Ctrl+")
+        .replace('⇧', "Shift+")
+        .replace('⌫', "Backspace")
+        .replace('↩', "Enter")
+        .replace('⎋', "Esc")
 }
 
 /// The keyboard shortcuts the footer advertises.

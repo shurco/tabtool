@@ -83,24 +83,33 @@ pub fn hint(action: MenuAction) -> Option<String> {
     } else {
         ModifierNames::NAMES
     };
-    Some(shortcut.format(&names, is_mac))
+    // egui prints arrow keys as U+23F6–U+23F9, which the bundled fonts do not
+    // cover; the plain arrows are in the same font as the toolbar symbols.
+    Some(
+        shortcut
+            .format(&names, is_mac)
+            .replace('⏶', "↑")
+            .replace('⏷', "↓")
+            .replace('⏴', "←")
+            .replace('⏵', "→"),
+    )
 }
 
 /// Consumes one shortcut whose menu item is enabled.
 ///
 /// This is the dispatch entry point: it applies the same capability checks as
 /// the menu, so ⌘S cannot save a document whose Save item is disabled.
-pub fn consume_enabled(ctx: &Context, tree: &MenuTree) -> Option<MenuAction> {
-    let action = consume(ctx)?;
+pub fn consume_enabled(ctx: &Context, tree: &MenuTree, blocked: bool) -> Option<MenuAction> {
+    let action = consume(ctx, blocked)?;
     crate::menu::is_enabled(tree, action).then_some(action)
 }
 
 /// Consumes one command shortcut from this frame's input.
 ///
-/// Returns `None` while a text field has focus; the shortcut is left in the
-/// event queue so the field receives the key.
-pub fn consume(ctx: &Context) -> Option<MenuAction> {
-    if ctx.text_edit_focused() {
+/// Returns `None` while a text field has focus or a modal owns input; the
+/// shortcut is left in the event queue so the field or alert receives the key.
+pub fn consume(ctx: &Context, blocked: bool) -> Option<MenuAction> {
+    if blocked || ctx.text_edit_focused() {
         return None;
     }
     let mut chosen = None;
@@ -113,4 +122,30 @@ pub fn consume(ctx: &Context) -> Option<MenuAction> {
         }
     });
     chosen
+}
+
+#[cfg(test)]
+mod tests {
+    use super::hint;
+    use crate::menu::MenuAction;
+
+    #[test]
+    fn arrow_hints_use_glyphs_the_bundled_fonts_have() {
+        for action in [
+            MenuAction::MoveRowUp,
+            MenuAction::MoveRowDown,
+            MenuAction::MoveColumnLeft,
+            MenuAction::MoveColumnRight,
+        ] {
+            let hint = hint(action).expect("the move commands have a hint");
+            assert!(
+                !hint.contains(['⏶', '⏷', '⏴', '⏵']),
+                "{action:?} still uses a missing glyph: {hint}"
+            );
+            assert!(
+                hint.contains(['↑', '↓', '←', '→']),
+                "{action:?} lost its arrow: {hint}"
+            );
+        }
+    }
 }

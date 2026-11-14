@@ -69,7 +69,7 @@ pub fn save_document(
     if document.is_large_mode() {
         return match document.start_large_save(None) {
             Ok(_) => SaveOutcome::LargeStarted,
-            Err(_) => SaveOutcome::Failed(DocumentError::CannotWriteFile),
+            Err(error) => SaveOutcome::Failed(error.into()),
         };
     }
     match document.save(storage) {
@@ -91,7 +91,7 @@ fn save_as(
     if document.is_large_mode() {
         return match document.start_large_save(Some(&path)) {
             Ok(_) => SaveOutcome::LargeStarted,
-            Err(_) => SaveOutcome::Failed(DocumentError::CannotWriteFile),
+            Err(error) => SaveOutcome::Failed(error.into()),
         };
     }
     match document.save_as(&path, storage) {

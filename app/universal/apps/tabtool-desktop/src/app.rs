@@ -17,13 +17,14 @@ use std::time::Instant;
 use egui::{Context, Ui};
 use tabtool_document::Document;
 use tabtool_i18n::Language;
-use tabtool_platform::{DesktopPlatform, Settings, settings_path};
+use tabtool_platform::{DesktopPlatform, Settings, SystemInfo, settings_path};
 
 use crate::about_window::AboutAction;
 use crate::documents::DocumentWindow;
 use crate::files::FileWorkflow;
 use crate::platform::{
-    SharedDialogs, SharedStorage, interface_language, standard_dialogs, standard_storage,
+    SharedDialogs, SharedStorage, interface_language_for, prefers_chinese_encoding,
+    standard_dialogs, standard_storage,
 };
 use crate::settings_window::SettingsWindow;
 
@@ -51,6 +52,10 @@ pub struct DesktopApp {
     next_window: u64,
     untitled_count: usize,
     language: Language,
+    /// The system languages, cached because `sys_locale` is process-wide and
+    /// must not be queried every frame.
+    system_languages: Vec<String>,
+    prefers_chinese: bool,
     recent_picker: bool,
     root_visible: Option<bool>,
     about_closed: Arc<AtomicBool>,
@@ -110,14 +115,16 @@ impl DesktopApp {
         dialogs: SharedDialogs,
         settings_path: Option<PathBuf>,
     ) -> Self {
-        let language = interface_language(&settings, &platform);
-        let mut files = FileWorkflow::new(
+        let system_languages = platform.languages();
+        let prefers_chinese = prefers_chinese_encoding(&system_languages);
+        let language = interface_language_for(&settings, &system_languages);
+        let files = FileWorkflow::new(
             Arc::clone(&dialogs),
             Arc::clone(&storage),
             settings.clone(),
             settings_path.clone(),
+            prefers_chinese,
         );
-        files.set_language(language);
         // The workflow owns the canonical recent list; settings keeps a mirror
         // so the persisted JSON always matches what the UI shows.
         settings.recent_documents = files.recent().to_vec();
@@ -136,6 +143,8 @@ impl DesktopApp {
             next_window: 0,
             untitled_count: 0,
             language,
+            system_languages,
+            prefers_chinese,
             recent_picker: false,
             root_visible: None,
             about_closed: Arc::new(AtomicBool::new(false)),
@@ -189,20 +198,28 @@ impl DesktopApp {
 
     /// Advances timers, dispatches window requests and registers viewports.
     pub fn tick(&mut self, ctx: &Context) {
+        self.tick_at(Instant::now(), ctx);
+    }
+
+    /// The scheduler pass with an injected clock, for deterministic tests.
+    pub fn tick_at(&mut self, now: Instant, ctx: &Context) {
         self.sync_settings_window();
         self.sync_language();
         self.files.set_settings(self.settings.clone());
-        self.files.set_language(self.language);
         self.sync_recent();
         self.handle_root_close(ctx);
         self.close_finished_aux_windows();
         self.take_about_action();
 
-        let now = Instant::now();
         let has_recent = self.files.has_recent();
+        let quit_modal = self.quit.prompt
+            || self.quit.busy
+            || self.quit.issue.is_some()
+            || !self.quit.saving.is_empty();
         for window in &self.documents {
             window.set_chrome(self.language, self.settings.show_format_bar, has_recent);
             window.set_settings(self.settings.clone());
+            window.set_modal_blocked(quit_modal);
         }
 
         let mut actions = Vec::new();

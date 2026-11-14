@@ -2,6 +2,7 @@
 //! the status line.
 
 mod banners;
+mod editor_commit;
 mod format_bar;
 mod status;
 mod support;

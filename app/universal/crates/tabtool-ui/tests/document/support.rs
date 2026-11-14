@@ -120,6 +120,8 @@ pub struct Fixture {
     ui_state: Rc<RefCell<DocumentUiState>>,
     actions: Rc<RefCell<Vec<DocumentAction>>>,
     storage: Rc<MemoryStorage>,
+    /// Whether the chrome is told a modal owns the keyboard.
+    input_blocked: Rc<Cell<bool>>,
     /// A large fixture's file lives as long as the harness does.
     _directory: Option<tempfile::TempDir>,
 }
@@ -154,6 +156,7 @@ impl Fixture {
         let ui_state = Rc::new(RefCell::new(ui_state));
         let actions = Rc::new(RefCell::new(Vec::new()));
         let storage = Rc::new(storage);
+        let input_blocked = Rc::new(Cell::new(false));
         let locale = Locale::try_from_str("en").expect("English is a valid locale");
 
         let ui_document = Rc::clone(&document);
@@ -161,6 +164,7 @@ impl Fixture {
         let ui_actions = Rc::clone(&actions);
         let ui_storage = Rc::clone(&storage);
         let ui_grid = Rc::clone(&state);
+        let ui_blocked = Rc::clone(&input_blocked);
         let ui = UiHarness::new(Theme::desktop_light(), size, move |ui| {
             let mut document = ui_document.borrow_mut();
             let mut state = ui_grid.borrow_mut();
@@ -173,10 +177,12 @@ impl Fixture {
                 storage: &*ui_storage,
                 clipboard: &mut clipboard,
                 language: tabtool_i18n::Language::En,
+                prefers_chinese: false,
                 locale: &locale,
                 decimal_separator: ".",
                 show_format_bar,
                 appearance: tabtool_ui::grid::GridAppearance::default(),
+                input_blocked: ui_blocked.get(),
                 save_error,
             }
             .show(ui);
@@ -190,6 +196,7 @@ impl Fixture {
             ui_state,
             actions,
             storage,
+            input_blocked,
             _directory: None,
         }
     }
@@ -239,6 +246,18 @@ impl Fixture {
     /// Changes the grid selection.
     pub fn set_selection(&self, selection: tabtool_ui::grid::GridSelection) {
         self.state.borrow_mut().selection = selection;
+    }
+
+    /// Seeds an open cell editor, as if the user double-clicked and typed.
+    pub fn edit_cell(&self, row: usize, column: usize, text: &str) {
+        let mut state = self.state.borrow_mut();
+        state.editing = Some(tabtool_ui::grid::CellEditor::new(row, column, text));
+        state.focus = Some(tabtool_ui::grid::GridFocus::new(row, column));
+    }
+
+    /// Tells the chrome that a modal owns the keyboard.
+    pub fn set_input_blocked(&self, blocked: bool) {
+        self.input_blocked.set(blocked);
     }
 
     /// The storage behind the fixture.

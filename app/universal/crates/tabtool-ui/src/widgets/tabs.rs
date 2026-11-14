@@ -52,6 +52,7 @@ pub fn tab_bar(ui: &mut Ui, tabs: &[&str], selected: &mut usize) -> Response {
                                     ),
                                 )
                                 .frame(true)
+                                .selected(is_selected)
                                 .min_size(Vec2::new(0.0, theme.metrics.control_height - 4.0)),
                             )
                         })

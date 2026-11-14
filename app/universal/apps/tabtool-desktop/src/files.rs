@@ -20,9 +20,9 @@ pub use revert::RevertOutcome;
 pub use save::{SaveMode, SaveOutcome, save_document};
 
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 use tabtool_document::{Document, DocumentPhase};
-use tabtool_i18n::Language;
 pub use tabtool_platform::TABLE_EXTENSIONS;
 use tabtool_platform::{RECENT_DOCUMENTS_LIMIT, Settings, save_settings};
 
@@ -54,7 +54,7 @@ pub(crate) fn load_document(
     path: &Path,
     storage: &dyn tabtool_document::Storage,
     settings: &Settings,
-    language: Language,
+    prefers_chinese: bool,
 ) -> OpenedDocument {
     let configuration = settings.new_document_configuration();
     let mut document = Document::new(configuration);
@@ -62,7 +62,7 @@ pub(crate) fn load_document(
         path,
         storage,
         None,
-        matches!(language, Language::ZhHans),
+        prefers_chinese,
         settings.large_file_threshold_bytes(),
     );
     let loaded = matches!(
@@ -95,10 +95,14 @@ impl core::fmt::Debug for OpenedDocument {
 pub struct FileWorkflow {
     policy: FilePolicy,
     settings_path: Option<PathBuf>,
-    language: Language,
     /// The canonical recent list; the settings mirror is rebuilt from it.
     recent: Vec<PathBuf>,
+    /// When the missing-path check last ran; `None` means the next tick runs it.
+    last_prune: Option<Instant>,
 }
+
+/// How often a missing recent path is noticed without an explicit Open Recent.
+const RECENT_PRUNE_INTERVAL: Duration = Duration::from_secs(5);
 
 impl FileWorkflow {
     /// Creates the workflow for `settings`.
@@ -109,18 +113,15 @@ impl FileWorkflow {
         storage: SharedStorage,
         settings: Settings,
         settings_path: Option<PathBuf>,
+        prefers_chinese: bool,
     ) -> Self {
-        let language = match settings.app_language {
-            Language::System => Language::En,
-            language => language,
-        };
         let mut settings = settings;
         let recent = std::mem::take(&mut settings.recent_documents);
         let mut workflow = Self {
-            policy: FilePolicy::new(dialogs, storage, settings),
+            policy: FilePolicy::new(dialogs, storage, settings, prefers_chinese),
             settings_path,
-            language,
             recent,
+            last_prune: None,
         };
         workflow.prune_recent();
         workflow
@@ -129,15 +130,17 @@ impl FileWorkflow {
     /// Replaces the non-recent settings and drops disappeared recent paths.
     ///
     /// The recent list belongs to the workflow; the incoming settings mirror
-    /// cannot overwrite it.
+    /// cannot overwrite it. Checking the filesystem every frame would be idle
+    /// I/O, so the check runs at most once per [`RECENT_PRUNE_INTERVAL`].
     pub fn set_settings(&mut self, settings: Settings) {
         self.policy.set_settings(settings);
-        self.prune_recent();
-    }
-
-    /// Updates the interface language used for format detection.
-    pub fn set_language(&mut self, language: Language) {
-        self.language = language;
+        if self
+            .last_prune
+            .is_none_or(|at| at.elapsed() >= RECENT_PRUNE_INTERVAL)
+        {
+            self.last_prune = Some(Instant::now());
+            self.prune_recent();
+        }
     }
 
     /// The existing recent documents, newest first.
@@ -172,7 +175,7 @@ impl FileWorkflow {
     /// Opens `path` through the size router; a failed read still returns the
     /// document so the window can show the read-error overlay.
     pub fn open_path(&mut self, path: &Path) -> OpenedDocument {
-        let opened = self.policy.load(path, self.language);
+        let opened = self.policy.load(path);
         if opened.loaded {
             self.remember(path);
         }
@@ -245,9 +248,9 @@ impl FileWorkflow {
         decision: Option<UnsavedChoice>,
         suggested_name: &str,
     ) -> ReplaceOutcome {
-        let outcome =
-            self.policy
-                .replace_with(document, path, decision, suggested_name, self.language);
+        let outcome = self
+            .policy
+            .replace_with(document, path, decision, suggested_name);
         let opened_path = match &outcome {
             ReplaceOutcome::Opened(opened) if opened.loaded => {
                 opened.document.file_path().map(Path::to_path_buf)
@@ -286,7 +289,9 @@ impl FileWorkflow {
         if let Some(path) = &self.settings_path {
             let mut settings = self.policy.settings.clone();
             settings.recent_documents = self.recent.clone();
-            let _ = save_settings(&settings, path);
+            if let Err(error) = save_settings(&settings, path) {
+                eprintln!("tabtool: could not save recent documents: {error}");
+            }
         }
     }
 }

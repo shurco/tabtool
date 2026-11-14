@@ -53,6 +53,9 @@ pub struct GridOptions {
     pub header_offset: usize,
     /// Whether cells can enter the editor.
     pub editable: bool,
+    /// Whether the grid reads keyboard shortcuts. A modal clears this so its
+    /// backdrop cannot leak arrows, Delete or select-all into the document.
+    pub keys_enabled: bool,
     /// The document's decimal mark, used for numeric right alignment.
     pub decimal_mark: String,
     /// The width assigned to a column that has never been resized.
@@ -79,6 +82,7 @@ impl Default for GridOptions {
             shows_row_numbers: appearance.shows_row_numbers,
             header_offset: 0,
             editable: true,
+            keys_enabled: true,
             decimal_mark: ".".to_string(),
             default_column_width: DEFAULT_COLUMN_WIDTH,
             min_column_width: MIN_COLUMN_WIDTH,

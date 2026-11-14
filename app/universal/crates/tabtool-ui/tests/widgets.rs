@@ -274,8 +274,8 @@ fn alert_click_reports_the_action_index() {
     let clicked = Rc::new(Cell::new(None));
     let state = Rc::clone(&clicked);
     let actions = [
-        AlertAction::new(en("Cancel"), ButtonKind::Bordered),
         AlertAction::new(en("Delete"), ButtonKind::Destructive),
+        AlertAction::new(en("Cancel"), ButtonKind::Bordered),
     ];
     let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
         if let Some(index) = modal(
@@ -293,7 +293,63 @@ fn alert_click_reports_the_action_index() {
     harness.get_by_label(en("Delete")).click();
     harness.run();
 
-    assert_eq!(clicked.get(), Some(1));
+    assert_eq!(clicked.get(), Some(0));
+}
+
+#[test]
+fn return_activates_the_default_action() {
+    let clicked = Rc::new(Cell::new(None));
+    let state = Rc::clone(&clicked);
+    let actions = [
+        AlertAction::new(en("Save"), ButtonKind::Prominent),
+        AlertAction::new(en("Don’t Save"), ButtonKind::Destructive),
+        AlertAction::new(en("Cancel"), ButtonKind::Bordered),
+    ];
+    let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
+        if let Some(index) = modal(
+            ui,
+            "quit-prompt",
+            en("Quit"),
+            en("Your changes will be lost if you don’t save them."),
+            &actions,
+        ) {
+            state.set(Some(index));
+        }
+    });
+
+    harness.run();
+    harness.key_press(egui::Key::Enter);
+    harness.run();
+
+    assert_eq!(clicked.get(), Some(0), "Return picks the first action");
+}
+
+#[test]
+fn escape_reports_the_cancel_action() {
+    let clicked = Rc::new(Cell::new(None));
+    let state = Rc::clone(&clicked);
+    let actions = [
+        AlertAction::new(en("Save"), ButtonKind::Prominent),
+        AlertAction::new(en("Don’t Save"), ButtonKind::Destructive),
+        AlertAction::new(en("Cancel"), ButtonKind::Bordered),
+    ];
+    let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
+        if let Some(index) = modal(
+            ui,
+            "quit-prompt",
+            en("Quit"),
+            en("Your changes will be lost if you don’t save them."),
+            &actions,
+        ) {
+            state.set(Some(index));
+        }
+    });
+
+    harness.run();
+    harness.key_press(egui::Key::Escape);
+    harness.run();
+
+    assert_eq!(clicked.get(), Some(2), "Escape picks the last action");
 }
 
 #[test]
@@ -354,6 +410,24 @@ fn list_row_click_is_reported() {
 }
 
 #[test]
+fn a_focused_list_row_activates_from_the_keyboard() {
+    let clicked = Rc::new(Cell::new(false));
+    let state = Rc::clone(&clicked);
+    let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
+        let response = list_row(ui, en("Documents"), en("Settings"), false);
+        state.set(state.get() || response.clicked());
+    });
+    harness.run();
+
+    harness.get_by_label(en("Documents")).focus();
+    harness.run();
+    harness.key_press(egui::Key::Enter);
+    harness.run();
+
+    assert!(clicked.get(), "Enter activates a focused list row");
+}
+
+#[test]
 fn tab_bar_click_changes_the_selection() {
     let value = Rc::new(Cell::new(0));
     let state = Rc::clone(&value);
@@ -398,8 +472,8 @@ fn alert_matches_the_snapshot() {
         return;
     }
     let actions = [
-        AlertAction::new(en("Cancel"), ButtonKind::Bordered),
         AlertAction::new(en("Delete"), ButtonKind::Destructive),
+        AlertAction::new(en("Cancel"), ButtonKind::Bordered),
     ];
     let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
         ui.label(en("Documents"));

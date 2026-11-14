@@ -16,17 +16,24 @@ impl crate::documents::WindowState {
             return;
         }
         self.collect_dropped_files(ui.ctx());
+        if self.blocks_input() {
+            // A prompt or modal owns the keyboard now; keep the typed text in
+            // the document instead of leaving a focused editor underneath.
+            self.commit_editor();
+        }
 
         let theme = current(ui.ctx());
         let tree = self.menu_tree();
-        if let Some(action) = crate::shortcuts::consume_enabled(ui.ctx(), &tree) {
+        let blocked = self.blocks_input();
+        if let Some(action) = crate::shortcuts::consume_enabled(ui.ctx(), &tree, blocked) {
             self.requests.push(WindowRequest::Menu(action));
         }
         egui::Frame::new()
             .fill(theme.colors.window_background)
             .inner_margin(theme.metrics.window_padding)
             .show(ui, |ui| {
-                if let Some(action) = crate::menu::show(ui, &tree) {
+                let chosen = crate::menu::show(ui, &tree);
+                if !blocked && let Some(action) = chosen {
                     self.requests.push(WindowRequest::Menu(action));
                 }
                 ui.separator();
@@ -38,11 +45,16 @@ impl crate::documents::WindowState {
 
         // Menu clicks, shortcut presses, alert answers and direct edits are
         // handled by the root viewport's logic pass. A child repaint alone
-        // does not wake it.
-        if !self.requests.is_empty()
-            || self.should_close
-            || self.autosave.has_unobserved_change(&self.document)
-        {
+        // does not wake it. Queued drops and one-shot app actions must wake it
+        // too, or the next dropped file stays queued.
+        if should_wake_root(
+            !self.requests.is_empty(),
+            self.should_close,
+            !self.autosave_paused() && self.autosave.has_unobserved_change(&self.document),
+            !self.open.opened_paths.is_empty(),
+            !self.open.dropped.is_empty(),
+            !self.app_actions.is_empty(),
+        ) {
             ui.ctx().request_repaint_of(ViewportId::ROOT);
         }
     }
@@ -53,6 +65,7 @@ impl crate::documents::WindowState {
         let locale = self.locale.clone();
         let decimal_separator = self.decimal_separator.clone();
         let save_error = self.issue;
+        let input_blocked = self.blocks_input();
         let actions = DocumentView {
             document: &mut self.document,
             state: &mut self.grid,
@@ -60,10 +73,12 @@ impl crate::documents::WindowState {
             storage: &*self.file_ops.storage,
             clipboard: &mut clipboard,
             language: self.language,
+            prefers_chinese: self.prefers_chinese,
             locale: &locale,
             decimal_separator: &decimal_separator,
             show_format_bar: self.show_format_bar,
             appearance: self.appearance,
+            input_blocked,
             save_error,
         }
         .show(ui);
@@ -112,6 +127,7 @@ impl crate::documents::WindowState {
         if self.should_close {
             return;
         }
+        self.commit_editor();
         match close_decision(&self.document) {
             CloseDecision::Close => self.should_close = true,
             CloseDecision::Ask => {
@@ -132,5 +148,44 @@ impl crate::documents::WindowState {
             self.show_format_bar,
             self.has_recent,
         )
+    }
+}
+
+/// Whether a child window must wake the root logic pass.
+///
+/// Drops and app-level actions are consumed by the root, so a queued second
+/// dropped file or a format-bar request must repaint it even though the child
+/// itself has no menu request.
+fn should_wake_root(
+    requests: bool,
+    should_close: bool,
+    autosave_change: bool,
+    opened_paths: bool,
+    dropped: bool,
+    app_actions: bool,
+) -> bool {
+    requests || should_close || autosave_change || opened_paths || dropped || app_actions
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_wake_root;
+
+    #[test]
+    fn each_root_consumer_wakes_the_logic_pass() {
+        for case in [
+            (true, false, false, false, false, false),
+            (false, true, false, false, false, false),
+            (false, false, true, false, false, false),
+            (false, false, false, true, false, false),
+            (false, false, false, false, true, false),
+            (false, false, false, false, false, true),
+        ] {
+            assert!(
+                should_wake_root(case.0, case.1, case.2, case.3, case.4, case.5),
+                "{case:?} must wake the root"
+            );
+        }
+        assert!(!should_wake_root(false, false, false, false, false, false));
     }
 }

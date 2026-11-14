@@ -38,6 +38,21 @@ pub(crate) fn issue_message(language: Language, error: DocumentError) -> String 
             "The document changed while the operation was running. Try again.",
         )
         .to_owned(),
+        DocumentError::IndexingNotFinished => tr(
+            language,
+            "Indexing is not finished. Save again when it completes.",
+        )
+        .to_owned(),
+        DocumentError::SourceChanged => tr(
+            language,
+            "The file changed on disk since it was opened. Reload it before saving.",
+        )
+        .to_owned(),
+        DocumentError::InsufficientDiskSpace => tr(
+            language,
+            "There is not enough free disk space to save this file.",
+        )
+        .to_owned(),
         DocumentError::Csv(_) => tr(language, "The file could not be saved").to_owned(),
     }
 }
@@ -64,6 +79,9 @@ mod tests {
             tabtool_document::DocumentError::CannotReadFile,
             tabtool_document::DocumentError::CannotWriteFile,
             tabtool_document::DocumentError::Busy,
+            tabtool_document::DocumentError::IndexingNotFinished,
+            tabtool_document::DocumentError::SourceChanged,
+            tabtool_document::DocumentError::InsufficientDiskSpace,
             tabtool_document::DocumentError::Csv(CsvError::AmbiguousOutput),
             tabtool_document::DocumentError::Csv(CsvError::UnencodableText),
             tabtool_document::DocumentError::Csv(CsvError::CannotDecodeData),

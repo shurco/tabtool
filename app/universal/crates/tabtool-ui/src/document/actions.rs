@@ -1,13 +1,13 @@
 //! Chrome actions: grid dispatch, pending paste and format changes.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use egui::Context;
 use tabtool_core::CsvConfiguration;
 use tabtool_document::{
     DocumentError, DocumentPhase, FormatChange, LargeStatus, plan_format_change,
 };
-use tabtool_i18n::{Language, tr};
+use tabtool_i18n::tr;
 
 use crate::filter::FilterAction;
 use crate::grid::{ActionOutcome, GridAction};
@@ -17,6 +17,28 @@ use super::{DocumentView, FormatBarAction, alert_message};
 
 /// How often a large document rechecks the file at rest.
 pub(crate) const STALE_CHECK_INTERVAL: Duration = Duration::from_secs(1);
+
+/// Whether a grid command changes rows, columns or their order.
+///
+/// The context menu returns these next to the editor's own commit action, so
+/// the editor text must be written first; otherwise an inserted row takes the
+/// text meant for the row it came from.
+fn needs_editor_commit(action: &GridAction) -> bool {
+    matches!(
+        action,
+        GridAction::AddRowAbove
+            | GridAction::AddRowBelow
+            | GridAction::AddColumnLeft
+            | GridAction::AddColumnRight
+            | GridAction::DeleteSelection
+            | GridAction::MoveRows { .. }
+            | GridAction::MoveColumn { .. }
+            | GridAction::Sort { .. }
+            | GridAction::RemoveSort
+            | GridAction::RenameColumn { .. }
+            | GridAction::Paste
+    )
+}
 
 /// The next repaint delay for a large document, or `None` when it is idle.
 pub(crate) fn repaint_interval(is_large: bool, status: LargeStatus) -> Option<Duration> {
@@ -30,7 +52,19 @@ pub(crate) fn repaint_interval(is_large: bool, status: LargeStatus) -> Option<Du
 impl DocumentView<'_> {
     pub(super) fn poll_large_state(&mut self, ctx: &Context) {
         self.document.poll_large_indexing();
-        self.document.refresh_large_staleness();
+        let large_ready = self.document.is_large_mode()
+            && matches!(self.document.large_status(), LargeStatus::Ready);
+        let now = Instant::now();
+        if !large_ready
+            || self.ui_state.last_stale_check.is_none_or(|checked| {
+                now.saturating_duration_since(checked) >= STALE_CHECK_INTERVAL
+            })
+        {
+            self.document.refresh_large_staleness();
+            if large_ready {
+                self.ui_state.last_stale_check = Some(now);
+            }
+        }
         if let Some(interval) =
             repaint_interval(self.document.is_large_mode(), self.document.large_status())
         {
@@ -47,6 +81,9 @@ impl DocumentView<'_> {
         let is_paste = matches!(action, GridAction::Paste);
         if paste_handled && is_paste {
             return;
+        }
+        if needs_editor_commit(&action) {
+            self.commit_active_editor();
         }
         let result = apply_grid_action(
             self.document,
@@ -101,14 +138,21 @@ impl DocumentView<'_> {
             FilterAction::Remove(id) => self.document.row_filter_mut().remove_criterion(id),
             FilterAction::Hide => self.document.row_filter_mut().is_bar_visible = false,
         }
+        if action.changes_rows() {
+            // Display indexes from the previous filter no longer name the same
+            // rows. Rebuild them from the document's model selection before
+            // the grid paints or the end-of-frame sync writes them back.
+            super::dispatch::sync_selection_to_grid(self.document, self.state);
+        }
     }
 
-    /// Writes an open cell editor before a filter changes the visible rows.
+    /// Writes an open cell editor before a filter or chrome action changes the
+    /// document under it.
     ///
     /// The commit uses the display row under the filter that is still applied,
     /// so it lands on the row the user was editing, not on whatever row takes
     /// that display position afterwards.
-    fn commit_active_editor(&mut self) {
+    pub(super) fn commit_active_editor(&mut self) {
         let Some(editing) = self.state.editing.take() else {
             return;
         };
@@ -123,6 +167,7 @@ impl DocumentView<'_> {
     }
 
     pub(super) fn apply_format_action(&mut self, action: FormatBarAction) {
+        self.commit_active_editor();
         match action {
             FormatBarAction::Configuration(configuration) => {
                 self.request_configuration(configuration);
@@ -181,7 +226,7 @@ impl DocumentView<'_> {
         }
         match self
             .document
-            .detect_format_from_disk(self.storage, matches!(self.language, Language::ZhHans))
+            .detect_format_from_disk(self.storage, self.prefers_chinese)
         {
             Ok(detected) => {
                 if !self.document.has_content() {
@@ -208,9 +253,31 @@ impl DocumentView<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::{STALE_CHECK_INTERVAL, repaint_interval};
+    use super::{STALE_CHECK_INTERVAL, needs_editor_commit, repaint_interval};
+    use crate::grid::GridAction;
     use std::time::Duration;
     use tabtool_document::LargeStatus;
+
+    #[test]
+    fn structure_commands_commit_the_editor_first() {
+        for action in [
+            GridAction::AddRowAbove,
+            GridAction::AddRowBelow,
+            GridAction::AddColumnLeft,
+            GridAction::AddColumnRight,
+            GridAction::DeleteSelection,
+            GridAction::RemoveSort,
+            GridAction::Paste,
+        ] {
+            assert!(needs_editor_commit(&action), "{action:?} must commit first");
+        }
+        for action in [GridAction::Copy, GridAction::SelectAll] {
+            assert!(
+                !needs_editor_commit(&action),
+                "{action:?} must not commit first"
+            );
+        }
+    }
 
     #[test]
     fn only_large_documents_poll_at_rest() {

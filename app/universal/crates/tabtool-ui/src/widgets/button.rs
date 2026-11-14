@@ -75,7 +75,7 @@ impl<'a> PushButton<'a> {
 
         let text_color = if self.enabled {
             match self.kind {
-                ButtonKind::Prominent => colors.control_background,
+                ButtonKind::Prominent => Color32::WHITE,
                 ButtonKind::Destructive => colors.error,
                 ButtonKind::Plain | ButtonKind::Bordered => colors.label,
             }
@@ -99,10 +99,10 @@ impl<'a> PushButton<'a> {
                 style.visuals.widgets.hovered.weak_bg_fill = colors.accent_pressed;
                 style.visuals.widgets.hovered.bg_fill = colors.accent_pressed;
                 style.visuals.widgets.hovered.bg_stroke = Stroke::NONE;
-                style.visuals.widgets.hovered.fg_stroke.color = colors.control_background;
+                style.visuals.widgets.hovered.fg_stroke.color = Color32::WHITE;
                 style.visuals.widgets.active.weak_bg_fill = colors.accent_pressed;
                 style.visuals.widgets.active.bg_fill = colors.accent_pressed;
-                style.visuals.widgets.active.fg_stroke.color = colors.control_background;
+                style.visuals.widgets.active.fg_stroke.color = Color32::WHITE;
             }
             ButtonKind::Destructive => {
                 style.visuals.widgets.inactive.fg_stroke.color = colors.error;

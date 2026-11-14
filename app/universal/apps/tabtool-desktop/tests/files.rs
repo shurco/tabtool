@@ -21,9 +21,25 @@ fn workflow(
     settings: Settings,
     settings_path: Option<PathBuf>,
 ) -> FileWorkflow {
+    workflow_for_system(dialogs, storage, settings, settings_path, false)
+}
+
+fn workflow_for_system(
+    dialogs: &Arc<FakeDialogs>,
+    storage: SharedStorage,
+    settings: Settings,
+    settings_path: Option<PathBuf>,
+    prefers_chinese: bool,
+) -> FileWorkflow {
     let dialogs_clone = Arc::clone(dialogs);
     let shared_dialogs: SharedDialogs = dialogs_clone;
-    FileWorkflow::new(shared_dialogs, storage, settings, settings_path)
+    FileWorkflow::new(
+        shared_dialogs,
+        storage,
+        settings,
+        settings_path,
+        prefers_chinese,
+    )
 }
 
 fn std_storage() -> SharedStorage {
@@ -51,6 +67,44 @@ fn load_defaults(path: &Path) -> Document {
         .load_from_path(path, &StdStorage, Some(configuration), false)
         .expect("the fixture loads");
     document
+}
+
+#[test]
+fn the_system_language_chooses_gbk_even_with_a_french_ui() {
+    // "日本" in GBK; the same bytes also decode as CP1252 text.
+    let bytes = b"a\n\xC8\xD5\xB1\xBE\n";
+    let storage: SharedStorage = Arc::new(MemoryStorage::new(bytes));
+    let dialogs = FakeDialogs::cancelled();
+    let settings = Settings {
+        app_language: tabtool_i18n::Language::Fr,
+        ..Settings::default()
+    };
+    let mut workflow = workflow_for_system(&dialogs, storage, settings, None, true);
+
+    let opened = workflow.open_path(Path::new("/virtual/chinese.csv"));
+
+    assert!(opened.loaded);
+    assert_eq!(opened.document.configuration().encoding, Encoding::Gbk);
+    assert_eq!(
+        opened.document.table().expect("table").cell(0, 0),
+        "日本".to_owned()
+    );
+}
+
+#[test]
+fn a_western_system_reads_the_same_bytes_as_cp1252() {
+    let bytes = b"a\n\xC8\xD5\xB1\xBE\n";
+    let storage: SharedStorage = Arc::new(MemoryStorage::new(bytes));
+    let dialogs = FakeDialogs::cancelled();
+    let mut workflow = workflow(&dialogs, storage, Settings::default(), None);
+
+    let opened = workflow.open_path(Path::new("/virtual/chinese.csv"));
+
+    assert!(opened.loaded);
+    assert_eq!(
+        opened.document.configuration().encoding,
+        Encoding::Windows1252
+    );
 }
 
 #[test]
@@ -273,6 +327,27 @@ fn a_new_document_uses_the_new_document_settings_and_is_dirty() {
     assert_eq!(document.configuration().encoding, Encoding::Windows1252);
     assert!(document.is_dirty());
     assert_eq!(document.file_path(), None);
+}
+
+#[test]
+fn save_on_an_untitled_document_uses_the_panel() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let path = directory.path().join("Untitled.csv");
+    let dialogs = FakeDialogs::scripted([Some(path.clone())]);
+    let workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
+    let mut document = workflow.new_document();
+    document.set_cell(0, 0, "edited");
+
+    let outcome = workflow.save(&mut document, "Untitled");
+
+    assert_eq!(outcome, SaveOutcome::Saved);
+    assert_eq!(
+        dialogs.saves(),
+        [("Untitled.csv".to_owned(), "csv".to_owned())],
+        "File > Save on an untitled document routes to Save As"
+    );
+    assert_eq!(document.file_path(), Some(path.as_path()));
+    assert!(!document.is_dirty());
 }
 
 #[test]

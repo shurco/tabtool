@@ -89,12 +89,18 @@ pub(crate) fn handle_keys(
     }
     let editing_now = active_editor.is_some() || state.editing.is_some();
     if editing_now {
+        if state.ime_composing {
+            // Escape belongs to the IME while a composition is live; closing
+            // the cell here would discard the composed text.
+            return;
+        }
         // egui clears keyboard focus when Escape is pressed before the frame's
         // widgets run, so Escape must cancel even though no text field is
         // focused any more.
         if ctx.input_mut(|input| input.consume_key(Modifiers::NONE, Key::Escape)) {
             *active_editor = None;
             state.editing = None;
+            state.ime_commit_guard = false;
             return;
         }
         if state.ime_composing || state.ime_commit_guard {

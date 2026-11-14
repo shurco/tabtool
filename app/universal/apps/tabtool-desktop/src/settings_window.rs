@@ -64,7 +64,8 @@ impl SettingsWindow {
 
     /// Draws one frame; returns whether a preference changed.
     pub fn show(&self, ui: &mut Ui, system_language: Language) -> bool {
-        if ui.ctx().input(|input| input.viewport().close_requested()) {
+        let close_requested = ui.ctx().input(|input| input.viewport().close_requested());
+        if close_requested {
             self.closed.store(true, Ordering::SeqCst);
         }
         let theme = tabtool_ui::theme::current(ui.ctx());
@@ -86,6 +87,12 @@ impl SettingsWindow {
         if response.changed {
             self.changed.store(true, Ordering::SeqCst);
         }
+        wake_root(
+            ui.ctx(),
+            response.changed,
+            response.tab_changed,
+            close_requested,
+        );
         response.changed
     }
 
@@ -101,7 +108,54 @@ impl SettingsWindow {
     }
 }
 
+/// Wakes the root pass when the Settings window has work for it.
+///
+/// The root merges the form and persists settings; a child repaint alone does
+/// not run it, so a change, a tab switch (which resizes the window) and a close
+/// each need a root pass.
+fn wake_root(ctx: &Context, changed: bool, tab_changed: bool, close_requested: bool) {
+    if changed || tab_changed || close_requested {
+        ctx.request_repaint_of(ViewportId::ROOT);
+    }
+}
+
 /// The Settings viewport identity.
 pub fn viewport_id() -> ViewportId {
     ViewportId::from_hash_of("tabtool-settings")
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use egui::{Context, ViewportId};
+
+    use super::wake_root;
+
+    fn requested(changed: bool, tab_changed: bool, close_requested: bool) -> bool {
+        let ctx = Context::default();
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let record = Arc::clone(&seen);
+        ctx.set_repaint_observer(move |info| {
+            record
+                .lock()
+                .expect("the observer lock is not poisoned")
+                .push(info.viewport_id);
+        });
+        wake_root(&ctx, changed, tab_changed, close_requested);
+        seen.lock()
+            .expect("the observer lock is not poisoned")
+            .contains(&ViewportId::ROOT)
+    }
+
+    #[test]
+    fn every_root_consumer_wakes_the_logic_pass() {
+        assert!(requested(true, false, false), "a change must wake the root");
+        assert!(
+            requested(false, true, false),
+            "a tab switch must wake the root"
+        );
+        assert!(requested(false, false, true), "a close must wake the root");
+        assert!(!requested(false, false, false));
+    }
 }

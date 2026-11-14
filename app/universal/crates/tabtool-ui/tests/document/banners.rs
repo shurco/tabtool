@@ -62,6 +62,9 @@ fn an_external_change_is_seen_without_a_user_action() {
         .write_all(b"7,8\n")
         .expect("append a row");
 
+    // The poll is throttled to the stale-check interval; make this frame the
+    // first check after an interval.
+    fixture.with_ui_state(|state| state.last_stale_check = None);
     fixture.run();
 
     assert!(

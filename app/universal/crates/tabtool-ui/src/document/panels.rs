@@ -54,7 +54,12 @@ impl DocumentView<'_> {
         let Some(source) = self.document.row_source() else {
             return Vec::new();
         };
-        let options = grid_options(self.document, self.language, self.appearance);
+        let options = grid_options(
+            self.document,
+            self.language,
+            self.appearance,
+            !self.input_blocked,
+        );
         let visible = self.document.row_filter().visible_rows.as_deref();
         let presenter = GridPresenter::new(source, visible);
         GridView {
@@ -102,7 +107,9 @@ impl DocumentView<'_> {
             )
             .show_separator_line(true)
             .show(ui, |ui| {
-                if let Some(action) = crate::filter::show(ui, self.document, self.language) {
+                if let Some(action) =
+                    crate::filter::show(ui, self.document, self.language, !self.input_blocked)
+                {
                     self.apply_filter_action(action);
                 }
             });
@@ -186,6 +193,7 @@ impl DocumentView<'_> {
             })
             .inner;
         if response.undo {
+            self.commit_active_editor();
             self.document.undo();
         }
         if response.show_format_bar {
@@ -270,6 +278,7 @@ fn grid_options(
     document: &Document,
     language: Language,
     appearance: GridAppearance,
+    keys_enabled: bool,
 ) -> GridOptions {
     let sort = document.active_sort().and_then(|sort| {
         document.row_source().and_then(|source| {
@@ -299,6 +308,7 @@ fn grid_options(
         language,
         header_offset,
         menu: GridMenuOptions::of(document),
+        keys_enabled,
         ..GridOptions::default()
     }
 }

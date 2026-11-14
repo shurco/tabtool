@@ -214,6 +214,33 @@ impl DesktopApp {
             }
         }
 
+        if !self.quit.saving.is_empty() {
+            let progress = self
+                .documents
+                .iter()
+                .filter_map(|window| window.save_progress())
+                .reduce(f64::max)
+                .unwrap_or(0.0);
+            let actions = [AlertAction::new(
+                tr(self.language, "Cancel"),
+                ButtonKind::Bordered,
+            )];
+            if modal(
+                ui,
+                "quit-saving",
+                &crate::documents::saving_text(self.language, progress),
+                "",
+                &actions,
+            )
+            .is_some()
+            {
+                for window in &self.documents {
+                    window.cancel_close_save();
+                }
+                self.abort_quit();
+            }
+        }
+
         if self.quit.busy {
             let actions = [AlertAction::new(
                 tr(self.language, "OK"),

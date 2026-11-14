@@ -300,6 +300,40 @@ fn hiding_the_bar_keeps_the_draft_and_the_applied_filter() {
 }
 
 #[test]
+fn hiding_the_selected_row_drops_the_stale_display_selection() {
+    let mut fixture = open(fixture());
+    fixture.get_by_label("carrot").click();
+    fixture.run();
+    assert_eq!(
+        fixture.grid().selection.rows,
+        [1].into_iter().collect(),
+        "the carrot row is selected before filtering"
+    );
+
+    type_value(&mut fixture, 0, "ap");
+    fixture.get_by_label("Apply").click();
+    fixture.run();
+    assert_eq!(visible_rows(&fixture), Some(vec![0, 2]));
+
+    assert!(
+        fixture.grid().selection.rows.is_empty(),
+        "display row 1 now names apricot, not the hidden carrot row"
+    );
+    assert_eq!(
+        fixture.with_document(|document| document.selection().rows.clone()),
+        Default::default(),
+        "the hidden row must not stay selected in the document either"
+    );
+
+    fixture.get_by_label("Clear").click();
+    fixture.run();
+    assert!(
+        fixture.grid().selection.rows.is_empty(),
+        "clearing the filter must not resurrect a selection that was written back"
+    );
+}
+
+#[test]
 fn applying_a_filter_commits_the_open_cell_editor_first() {
     let mut fixture = open(fixture());
     type_value(&mut fixture, 0, "z");
@@ -363,6 +397,27 @@ fn the_advertised_filter_shortcuts_are_bound() {
     assert!(
         !fixture.with_document(|document| document.row_filter().is_bar_visible),
         "Escape hides the bar"
+    );
+}
+
+#[test]
+fn a_modal_blocks_the_filter_shortcuts() {
+    let mut fixture = open(fixture());
+    fixture.set_input_blocked(true);
+
+    fixture.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::I);
+    fixture.run();
+    assert_eq!(
+        fixture.with_document(|document| document.row_filter().criteria.len()),
+        1,
+        "a modal must keep ⌘I from adding a criterion"
+    );
+
+    fixture.key_press(egui::Key::Escape);
+    fixture.run();
+    assert!(
+        fixture.with_document(|document| document.row_filter().is_bar_visible),
+        "a modal keeps Escape from hiding the bar"
     );
 }
 

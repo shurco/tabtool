@@ -42,6 +42,7 @@ impl WindowState {
             self.app_actions.push(action);
             return;
         }
+        self.commit_editor();
         match action {
             MenuAction::Close => match crate::documents::close_decision(&self.document) {
                 crate::documents::CloseDecision::Close => self.should_close = true,
@@ -60,14 +61,21 @@ impl WindowState {
                 RevertOutcome::Reverted | RevertOutcome::Unavailable => {}
             },
             MenuAction::Export => self.open_export_panel(),
-            // The inline rename editor belongs to the grid; the shell records
-            // it so that view can consume the same command.
-            MenuAction::RenameColumn => {
-                self.pending_actions.push(action);
-            }
+            MenuAction::RenameColumn => self.rename_selected_column(),
             MenuAction::Paste => self.chrome.request_paste(ctx, self.viewport_id),
             command => self.perform_document_command(command, ctx),
         }
+    }
+
+    /// Starts the inline header editor for the selected column.
+    fn rename_selected_column(&mut self) {
+        let Some(column) = self.document.selection().columns.first().copied() else {
+            return;
+        };
+        let Some(source) = self.document.row_source() else {
+            return;
+        };
+        self.grid.start_renaming(source, column);
     }
 
     fn revert_now(&mut self) {

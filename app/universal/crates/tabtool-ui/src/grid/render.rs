@@ -31,18 +31,24 @@ pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
     let mut scroll_to = None;
     let was_editing = state.editing.is_some();
     let mut active_editor = state.editing.take();
-    keyboard::handle_keys(
-        &ctx,
-        source,
-        state,
-        base_id,
-        editor_id,
-        &options,
-        &mut active_editor,
-        &mut actions,
-        &mut scroll_to,
-    );
-    active_editor = state.editing.take().or(active_editor);
+    if options.keys_enabled {
+        keyboard::handle_keys(
+            &ctx,
+            source,
+            state,
+            base_id,
+            editor_id,
+            &options,
+            &mut active_editor,
+            &mut actions,
+            &mut scroll_to,
+        );
+        active_editor = state.editing.take().or(active_editor);
+    } else if let Some(editing) = active_editor.take() {
+        // A modal opened while the editor was live; keep its text so the
+        // owner can commit it once the modal closes.
+        state.editing = Some(editing);
+    }
     if state.pending_editor_focus {
         if let Some(editing) = &active_editor {
             editor::focus_with_caret_end(&ctx, editor_id, editing.caret);
@@ -217,6 +223,10 @@ pub(crate) fn show(view: GridView<'_>, ui: &mut Ui) -> Vec<GridAction> {
             || editor_lost_focus
         {
             actions.push(editing.commit_action());
+            // A pointer commit never sends the IME Enter that would clear the
+            // guard, so the next real Enter must start a fresh edit.
+            state.ime_composing = false;
+            state.ime_commit_guard = false;
         } else {
             state.editing = Some(editing);
         }

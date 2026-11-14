@@ -140,14 +140,74 @@ fn move_column(document: &mut Document, from: usize, to: usize) {
     };
     let column_count = source.column_count();
     let selected = document.selection().columns.contains(&from);
+    let selection = document.selection().columns.clone();
     let revision = document.revision();
     document.move_columns(&BTreeSet::from([from]), to);
-    if !selected || document.revision() == revision || column_count == 0 {
+    if document.revision() == revision || column_count == 0 {
         return;
     }
-    let moved = if to > from { to.saturating_sub(1) } else { to };
-    *document.selection_mut() = GridSelection {
-        rows: BTreeSet::new(),
-        columns: [moved.min(column_count - 1)].into_iter().collect(),
-    };
+    if selected {
+        let moved = if to > from { to.saturating_sub(1) } else { to };
+        *document.selection_mut() = GridSelection {
+            rows: BTreeSet::new(),
+            columns: [moved.min(column_count - 1)].into_iter().collect(),
+        };
+    } else if !selection.is_empty() {
+        // Moving an unselected column past a selected one shifts its index;
+        // keep the selection on the same columns.
+        let remapped: BTreeSet<usize> = selection
+            .iter()
+            .map(|&column| column_after_move(column, from, to))
+            .filter(|&column| column < column_count)
+            .collect();
+        document.selection_mut().columns = remapped;
+    }
+}
+
+/// Where `column` lands after moving `from` to insertion slot `to`.
+fn column_after_move(column: usize, from: usize, to: usize) -> usize {
+    let target = if to > from { to.saturating_sub(1) } else { to };
+    if column == from {
+        target
+    } else if from < column && column <= target {
+        column - 1
+    } else if target <= column && column < from {
+        column + 1
+    } else {
+        column
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::column_after_move;
+
+    #[test]
+    fn a_selected_column_keeps_its_identity_when_another_column_moves() {
+        assert_eq!(
+            column_after_move(1, 0, 2),
+            0,
+            "moving column 0 right over 1 shifts 1 left"
+        );
+        assert_eq!(
+            column_after_move(1, 2, 0),
+            2,
+            "moving column 2 left over 1 shifts 1 right"
+        );
+        assert_eq!(
+            column_after_move(2, 0, 3),
+            1,
+            "a long move right shifts every column in between"
+        );
+        assert_eq!(
+            column_after_move(0, 1, 3),
+            0,
+            "a column before the move stays put"
+        );
+        assert_eq!(
+            column_after_move(3, 1, 0),
+            3,
+            "a column after the move stays put"
+        );
+    }
 }

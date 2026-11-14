@@ -30,8 +30,10 @@ impl DesktopApp {
             return;
         }
         self.settings_dirty = false;
-        if let Some(path) = &self.settings_path {
-            let _ = save_settings(&self.settings, path);
+        if let Some(path) = &self.settings_path
+            && let Err(error) = save_settings(&self.settings, path)
+        {
+            eprintln!("tabtool: could not save settings: {error}");
         }
     }
 

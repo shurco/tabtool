@@ -106,6 +106,21 @@ pub(crate) fn error_message(language: Language, error: DocumentError) -> String 
             "Check that the folder exists and that you have permission to save it.",
         )
         .to_owned(),
+        DocumentError::IndexingNotFinished => tr(
+            language,
+            "Indexing is not finished. Save again when it completes.",
+        )
+        .to_owned(),
+        DocumentError::SourceChanged => tr(
+            language,
+            "The file changed on disk since it was opened. Reload it before saving.",
+        )
+        .to_owned(),
+        DocumentError::InsufficientDiskSpace => tr(
+            language,
+            "There is not enough free disk space to save this file.",
+        )
+        .to_owned(),
         DocumentError::Csv(error) => csv_message(language, error),
     }
 }
@@ -122,6 +137,18 @@ fn error_hint(language: Language, error: DocumentError) -> Option<&'static str> 
         | DocumentError::RequiresConfirmation
         | DocumentError::CannotWriteFile
         | DocumentError::Busy => None,
+        DocumentError::IndexingNotFinished => Some(tr(
+            language,
+            "Wait for indexing to finish, or reload the file if it changed on disk.",
+        )),
+        DocumentError::SourceChanged => Some(tr(
+            language,
+            "The file changed on disk. Reload to continue.",
+        )),
+        DocumentError::InsufficientDiskSpace => Some(tr(
+            language,
+            "Saving a large file needs free space of about twice its size.",
+        )),
     }
 }
 

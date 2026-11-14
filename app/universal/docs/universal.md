@@ -65,7 +65,7 @@ build. Plan 5 owns `tabtool-app`, Android navigation, SAF and packaging.
 | Swift | Xcode 27.1 / Swift 6.4 (golden tool, macOS only) |
 
 The desktop target also needs the platform GUI libraries: on Linux CI install
-`libxkbcommon-dev`, `libwayland-dev` and `libgtk-3-dev` before building.
+`libxkbcommon-dev` and `libwayland-dev` before building.
 
 ## Build and run
 
@@ -673,8 +673,8 @@ Apple app remains the visual source of truth; the reference screenshots are
   Settings and About windows are deferred viewports too. The menu bar is drawn
   inside each viewport (a documented deviation from the macOS system menu bar).
 - `FileWorkflow` handles New, Open, Open Recent, Save, Save As, Revert, Export,
-  Duplicate, close prompts and quit. Autosave waits 800 ms after a change and
-  never autosaves large files.
+  close prompts and quit. Autosave waits 800 ms after a change and never
+  autosaves large files. The macOS Duplicate command is not implemented.
 - A large file opened at or above the configured threshold uses the mapped
   source. The window shows indexing progress, the large-mode explanation, a
   stale-file Reload banner and a streaming-save progress bar with Cancel.

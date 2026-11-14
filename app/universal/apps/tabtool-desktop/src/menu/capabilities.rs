@@ -75,6 +75,7 @@ impl Capabilities {
                 document.phase(),
                 DocumentPhase::Ready | DocumentPhase::NeedsAttention(_)
             );
+        let writable = editable && document.save_error().is_none();
         let large_ready = document.is_large_mode() && document.large_status() == LargeStatus::Ready;
         let selection = document.selection();
         let column_count = table.map_or(0, |table| table.columns.len());
@@ -93,7 +94,7 @@ impl Capabilities {
 
         Self {
             document: true,
-            save: document.can_save() || large_ready,
+            save: writable || large_ready,
             save_as: (editable || large_ready)
                 && !matches!(
                     document.large_status(),
@@ -103,9 +104,11 @@ impl Capabilities {
             export: editable,
             undo: document.can_undo(),
             redo: document.can_redo(),
-            cut: editable && has_selection,
+            cut: editable
+                && has_selection
+                && (document.can_edit_row_structure() || selection.rows.is_empty()),
             copy: document.has_content() && has_selection,
-            paste: editable,
+            paste: editable && document.can_edit_row_structure(),
             delete: document.can_delete_selection(),
             select_all: editable && row_count > 0,
             insert_rows: document.can_insert_rows(),

@@ -37,6 +37,26 @@ pub enum DocumentError {
     /// Serializing the table failed with a typed CSV error, such as
     /// [`CsvError::AmbiguousOutput`] or [`CsvError::UnencodableText`].
     Csv(CsvError),
+    /// A large save needs the whole index before it can write.
+    IndexingNotFinished,
+    /// The large file no longer matches the mapped source; reload before saving.
+    SourceChanged,
+    /// The volume holding the large file has too little free space.
+    InsufficientDiskSpace,
+}
+
+impl From<tabtool_large::LargeFileSaveError> for DocumentError {
+    fn from(error: tabtool_large::LargeFileSaveError) -> Self {
+        use tabtool_large::LargeFileSaveError;
+
+        match error {
+            LargeFileSaveError::IndexingNotFinished => Self::IndexingNotFinished,
+            LargeFileSaveError::SourceChanged => Self::SourceChanged,
+            LargeFileSaveError::InsufficientDiskSpace => Self::InsufficientDiskSpace,
+            LargeFileSaveError::Csv(error) => Self::Csv(error),
+            LargeFileSaveError::Io(_) => Self::CannotWriteFile,
+        }
+    }
 }
 
 /// The rows and columns selected in the grid.
@@ -93,4 +113,35 @@ pub enum DocumentNotice {
     EditRejected(CsvError),
     /// A copy would produce more cells than the large-file limit.
     CopyLimitExceeded,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DocumentError;
+    use tabtool_core::CsvError;
+    use tabtool_large::LargeFileSaveError;
+
+    #[test]
+    fn each_large_save_failure_keeps_its_reason() {
+        assert_eq!(
+            DocumentError::from(LargeFileSaveError::IndexingNotFinished),
+            DocumentError::IndexingNotFinished
+        );
+        assert_eq!(
+            DocumentError::from(LargeFileSaveError::SourceChanged),
+            DocumentError::SourceChanged
+        );
+        assert_eq!(
+            DocumentError::from(LargeFileSaveError::InsufficientDiskSpace),
+            DocumentError::InsufficientDiskSpace
+        );
+        assert_eq!(
+            DocumentError::from(LargeFileSaveError::Csv(CsvError::UnencodableText)),
+            DocumentError::Csv(CsvError::UnencodableText)
+        );
+        assert_eq!(
+            DocumentError::from(LargeFileSaveError::Io(std::io::Error::other("disk"))),
+            DocumentError::CannotWriteFile
+        );
+    }
 }

@@ -81,14 +81,12 @@ impl WindowState {
 
     /// Opens `path` now, asks first when dirty, or queues it behind a large save.
     pub(crate) fn request_open(&mut self, path: PathBuf) {
+        self.commit_editor();
         let suggested_name = self.title();
-        match self.file_ops.replace_with(
-            &mut self.document,
-            &path,
-            None,
-            &suggested_name,
-            self.language,
-        ) {
+        match self
+            .file_ops
+            .replace_with(&mut self.document, &path, None, &suggested_name)
+        {
             ReplaceOutcome::Opened(opened) => self.adopt(*opened),
             ReplaceOutcome::NeedsConfirmation => {
                 self.open.prompt = true;
@@ -115,7 +113,6 @@ impl WindowState {
         self.grid = GridState::default();
         self.chrome = DocumentUiState::default();
         self.export = super::export::ExportState::default();
-        self.pending_actions.clear();
         self.autosave = Autosave::new(&self.document);
         self.issue = None;
         self.close_prompt = false;
@@ -144,7 +141,6 @@ impl WindowState {
             &path,
             Some(UnsavedChoice::Save),
             &suggested_name,
-            self.language,
         ) {
             ReplaceOutcome::Opened(opened) => self.adopt(*opened),
             ReplaceOutcome::NeedsConfirmation => {}
@@ -167,7 +163,6 @@ impl WindowState {
                         &path,
                         Some(UnsavedChoice::DontSave),
                         &suggested_name,
-                        self.language,
                     ) {
                         ReplaceOutcome::Opened(opened) => self.adopt(*opened),
                         ReplaceOutcome::Busy => self.queue_open(path),

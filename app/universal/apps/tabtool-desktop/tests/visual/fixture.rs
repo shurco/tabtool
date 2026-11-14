@@ -67,10 +67,12 @@ impl DocumentFixture {
                 storage: &*ui_storage,
                 clipboard: &mut clipboard,
                 language: Language::En,
+                prefers_chinese: false,
                 locale: &locale,
                 decimal_separator: ".",
                 show_format_bar,
                 appearance: GridAppearance::default(),
+                input_blocked: false,
                 save_error,
             }
             .show(ui);

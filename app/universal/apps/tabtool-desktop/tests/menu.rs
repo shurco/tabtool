@@ -5,7 +5,7 @@ mod support;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use tabtool_core::{CsvConfiguration, Locale, SortDirection};
+use tabtool_core::{CsvConfiguration, Locale, RowSource, SortDirection};
 use tabtool_desktop::menu::{Capabilities, MenuAction, MenuTree, menus};
 use tabtool_desktop::shortcuts;
 use tabtool_i18n::{Language, tr};
@@ -314,11 +314,41 @@ fn large_documents_disable_the_in_memory_commands() {
 }
 
 #[test]
-fn an_untitled_document_cannot_save_in_place_but_can_save_as() {
+fn a_filtered_view_disables_row_paste_and_cut_but_keeps_copy() {
+    let storage = MemoryStorage::new(b"a,b\n1,2\n3,4\n");
+    let mut document = support::loaded(&storage, CsvConfiguration::default());
+    document.selection_mut().rows = [0].into_iter().collect();
+    let column_id = document.table().expect("table").column_ids()[0];
+    document.row_filter_mut().criteria = vec![tabtool_core::FilterCriterion {
+        id: 1,
+        is_enabled: true,
+        column_id: Some(column_id),
+        op: tabtool_core::FilterOperator::Equals,
+        value: "a".to_owned(),
+    }];
+    document.apply_all_filters();
+    let tree = english_tree(&document);
+
+    assert!(
+        !enabled(&tree, MenuAction::Paste),
+        "paste inserts rows and the filtered view cannot place them"
+    );
+    assert!(
+        !enabled(&tree, MenuAction::Cut),
+        "cut deletes the selected rows and the filtered view cannot remap them"
+    );
+    assert!(
+        enabled(&tree, MenuAction::Copy),
+        "copy only reads the visible rows"
+    );
+}
+
+#[test]
+fn an_untitled_document_can_save_through_save_as() {
     let document = support::untitled(CsvConfiguration::default());
     let tree = english_tree(&document);
 
-    assert!(!enabled(&tree, MenuAction::Save));
+    assert!(enabled(&tree, MenuAction::Save));
     assert!(enabled(&tree, MenuAction::SaveAs));
     assert!(!enabled(&tree, MenuAction::RevertToSaved));
 }
@@ -380,7 +410,7 @@ fn disabled_menu_commands_ignore_their_shortcuts() {
     let tree = Rc::new(RefCell::new(saving_tree));
     let active_tree = Rc::clone(&tree);
     let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
-        if let Some(action) = shortcuts::consume_enabled(ui.ctx(), &active_tree.borrow()) {
+        if let Some(action) = shortcuts::consume_enabled(ui.ctx(), &active_tree.borrow(), false) {
             recorded.borrow_mut().push(action);
         }
         ui.label("Background");
@@ -421,7 +451,7 @@ fn command_shortcuts_do_not_fire_while_a_text_field_has_focus() {
     let recorded = Rc::clone(&actions);
     let field = Rc::clone(&value);
     let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
-        if let Some(action) = shortcuts::consume(ui.ctx()) {
+        if let Some(action) = shortcuts::consume(ui.ctx(), false) {
             recorded.borrow_mut().push(action);
         }
         text_field(ui, "Name", &mut field.borrow_mut(), "Name");
@@ -445,7 +475,7 @@ fn command_shortcuts_fire_without_text_focus() {
     let actions = Rc::new(RefCell::new(Vec::new()));
     let recorded = Rc::clone(&actions);
     let mut harness = UiHarness::compact(Theme::desktop_light(), move |ui| {
-        if let Some(action) = shortcuts::consume(ui.ctx()) {
+        if let Some(action) = shortcuts::consume(ui.ctx(), false) {
             recorded.borrow_mut().push(action);
         }
         ui.label("Background");

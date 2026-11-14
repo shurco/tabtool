@@ -1,6 +1,6 @@
 //! Large-file progress wording and the compact progress bar.
 
-use egui::{CornerRadius, Sense, Ui, Vec2};
+use egui::{CornerRadius, Role, Sense, Ui, Vec2, WidgetInfo};
 use tabtool_core::Locale;
 use tabtool_i18n::{Language, tr};
 
@@ -29,7 +29,18 @@ pub fn saving_text(language: Language, fraction: f64) -> String {
 pub fn progress_bar(ui: &mut Ui, fraction: f64, width: f32) {
     let theme = current(ui.ctx());
     let height = 4.0;
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
+    response.widget_info(|| WidgetInfo {
+        role: Role::ProgressIndicator,
+        enabled: true,
+        label: None,
+        current_text_value: None,
+        prev_text_value: None,
+        selected: None,
+        value: Some(fraction.clamp(0.0, 1.0)),
+        text_selection: None,
+        hint_text: None,
+    });
     let radius = CornerRadius::same(2);
     ui.painter()
         .rect_filled(rect, radius, theme.colors.separator);

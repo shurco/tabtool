@@ -47,16 +47,19 @@ pub enum CloseSave {
 impl WindowState {
     /// Saves the document for a close request.
     pub(crate) fn save_for_close(&mut self) -> CloseSave {
+        self.commit_editor();
         self.save(true, false)
     }
 
     /// Saves the document through File > Save.
     pub(crate) fn save_auto(&mut self) -> CloseSave {
+        self.commit_editor();
         self.save(false, false)
     }
 
     /// Saves the document through File > Save As.
     pub(crate) fn save_with_dialog(&mut self) -> CloseSave {
+        self.commit_editor();
         self.save(false, true)
     }
 
@@ -108,14 +111,17 @@ impl WindowState {
         let result = self
             .document
             .wait_for_large_save()
-            .map_err(|_| DocumentError::CannotWriteFile);
+            .map_err(DocumentError::from);
         self.saving = false;
         if let Err(error) = result {
             self.issue = Some(error);
             self.open.after_save = None;
             self.open.path = None;
+            self.close_after_save = false;
+            self.busy = false;
         }
         if result.is_ok() {
+            self.issue = None;
             if self.close_after_save {
                 self.close_after_save = false;
                 self.should_close = true;
@@ -126,7 +132,6 @@ impl WindowState {
                     &path,
                     Some(UnsavedChoice::DontSave),
                     &suggested,
-                    self.language,
                 ) {
                     ReplaceOutcome::Opened(opened) => self.adopt(*opened),
                     ReplaceOutcome::Busy => self.open.after_save = Some(path),

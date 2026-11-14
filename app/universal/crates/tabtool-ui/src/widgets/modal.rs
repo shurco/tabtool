@@ -37,6 +37,10 @@ impl<'a> AlertAction<'a> {
 
 /// Show a modal alert; returns the index of the pressed action.
 ///
+/// The first action is the default: it sits at the trailing edge and Return
+/// activates it. The last action is the cancel action: Escape, a backdrop
+/// click and the window close button all report it.
+///
 /// The alert stays visible until the caller hides it after receiving an index.
 pub fn modal(
     ui: &mut Ui,
@@ -56,7 +60,7 @@ pub fn modal(
         .inner_margin(Margin::same(theme.metrics.alert_padding as i8))
         .shadow(ui.style().visuals.popup_shadow);
 
-    egui::Modal::new(Id::unique(id_salt))
+    let response = egui::Modal::new(Id::unique(id_salt))
         .frame(frame)
         .backdrop_color(Color32::from_black_alpha(60))
         .show(ui.ctx(), |ui| {
@@ -74,7 +78,9 @@ pub fn modal(
             );
             ui.add_space(14.0);
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                for (index, action) in actions.iter().enumerate().rev() {
+                // macOS puts the default action at the trailing edge and
+                // Cancel at the leading edge.
+                for (index, action) in actions.iter().enumerate() {
                     let response = PushButton::new(action.label, action.kind)
                         .enabled(action.enabled)
                         .show(ui);
@@ -84,6 +90,21 @@ pub fn modal(
                 }
             });
         });
+
+    if pressed.is_none() {
+        if response.should_close() {
+            // Escape and a backdrop click cancel through the last action,
+            // which every alert uses for Cancel or its single OK button.
+            pressed = actions.len().checked_sub(1);
+        } else if response.is_top_modal
+            && ui
+                .ctx()
+                .input_mut(|input| input.consume_key(egui::Modifiers::NONE, egui::Key::Enter))
+        {
+            // Return activates the default (first) action.
+            pressed = (!actions.is_empty()).then_some(0);
+        }
+    }
 
     pressed
 }

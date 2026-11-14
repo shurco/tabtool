@@ -9,7 +9,6 @@ use tabtool_platform::OpenUrl;
 
 use crate::documents::{DocumentWindow, WindowServices};
 use crate::menu::MenuAction;
-use crate::platform::interface_language;
 use crate::settings_window::SettingsWindow;
 
 use super::{DesktopApp, QuitDecision, quit_decision};
@@ -30,6 +29,7 @@ impl DesktopApp {
                 dialogs: Arc::clone(&self.dialogs),
                 storage: Arc::clone(&self.storage),
                 settings: self.settings.clone(),
+                prefers_chinese: self.prefers_chinese,
             },
         );
         self.documents.push(window);
@@ -60,7 +60,8 @@ impl DesktopApp {
     }
 
     pub(super) fn sync_language(&mut self) {
-        self.language = interface_language(&self.settings, &self.platform);
+        self.language =
+            crate::platform::interface_language_for(&self.settings, &self.system_languages);
     }
 
     pub(super) fn handle_root_close(&mut self, ctx: &Context) {
