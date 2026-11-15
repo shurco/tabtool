@@ -2,11 +2,10 @@
 //! sheet.
 
 use egui::Ui;
-use tabtool_core::Encoding;
+use tabtool_core::{CsvConfiguration, Encoding};
 use tabtool_i18n::{Language, tr};
 use tabtool_settings::QuoteStyle;
 
-use super::ExportOptions;
 use crate::format_options::{DECIMALS, SEPARATORS};
 use crate::widgets::Picker;
 
@@ -32,7 +31,7 @@ impl PickerSize {
 
 pub(crate) fn encoding_picker(
     ui: &mut Ui,
-    options: &mut ExportOptions,
+    configuration: &mut CsvConfiguration,
     language: Language,
     size: PickerSize,
 ) {
@@ -40,7 +39,7 @@ pub(crate) fn encoding_picker(
         .iter()
         .map(|encoding| tr(language, encoding.display_name()))
         .collect();
-    let selected = tr(language, options.configuration.encoding.display_name());
+    let selected = tr(language, configuration.encoding.display_name());
     if let Some(index) = picker(
         ui,
         "export-encoding",
@@ -49,13 +48,13 @@ pub(crate) fn encoding_picker(
         &values,
         size,
     ) {
-        options.configuration.encoding = Encoding::ALL[index];
+        configuration.encoding = Encoding::ALL[index];
     }
 }
 
 pub(crate) fn separator_picker(
     ui: &mut Ui,
-    options: &mut ExportOptions,
+    configuration: &mut CsvConfiguration,
     language: Language,
     size: PickerSize,
 ) {
@@ -65,11 +64,10 @@ pub(crate) fn separator_picker(
         .collect();
     let selected = SEPARATORS
         .iter()
-        .find(|(separator, _)| *separator == options.configuration.column_separator)
-        .map_or(
-            options.configuration.column_separator.as_str(),
-            |(_, key)| tr(language, key),
-        );
+        .find(|(separator, _)| *separator == configuration.column_separator)
+        .map_or(configuration.column_separator.as_str(), |(_, key)| {
+            tr(language, key)
+        });
     if let Some(index) = picker(
         ui,
         "export-separator",
@@ -78,13 +76,13 @@ pub(crate) fn separator_picker(
         &values,
         size,
     ) {
-        options.configuration.column_separator = SEPARATORS[index].0.to_owned();
+        configuration.column_separator = SEPARATORS[index].0.to_owned();
     }
 }
 
 pub(crate) fn quote_picker(
     ui: &mut Ui,
-    options: &mut ExportOptions,
+    configuration: &mut CsvConfiguration,
     language: Language,
     size: PickerSize,
 ) {
@@ -93,7 +91,7 @@ pub(crate) fn quote_picker(
         tr(language, "Backslash"),
         tr(language, "None"),
     ];
-    let style = QuoteStyle::of(&options.configuration);
+    let style = QuoteStyle::of(configuration);
     if let Some(index) = picker(
         ui,
         "export-quote",
@@ -102,21 +100,21 @@ pub(crate) fn quote_picker(
         &values,
         size,
     ) {
-        QuoteStyle::ALL[index].apply(&mut options.configuration);
+        QuoteStyle::ALL[index].apply(configuration);
     }
 }
 
 pub(crate) fn decimal_picker(
     ui: &mut Ui,
-    options: &mut ExportOptions,
+    configuration: &mut CsvConfiguration,
     language: Language,
     size: PickerSize,
 ) {
     let values: Vec<&str> = DECIMALS.iter().map(|(_, key)| tr(language, key)).collect();
     let selected = DECIMALS
         .iter()
-        .find(|(mark, _)| *mark == options.configuration.decimal_mark)
-        .map_or(options.configuration.decimal_mark.as_str(), |(_, key)| {
+        .find(|(mark, _)| *mark == configuration.decimal_mark)
+        .map_or(configuration.decimal_mark.as_str(), |(_, key)| {
             tr(language, key)
         });
     if let Some(index) = picker(
@@ -127,7 +125,7 @@ pub(crate) fn decimal_picker(
         &values,
         size,
     ) {
-        options.configuration.decimal_mark = DECIMALS[index].0.to_owned();
+        configuration.decimal_mark = DECIMALS[index].0.to_owned();
     }
 }
 

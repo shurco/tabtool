@@ -13,7 +13,7 @@ mod replace;
 mod revert;
 mod save;
 
-pub use export::{ExportOutcome, ExportSession, export_session, run_export};
+pub use export::{ExportOutcome, ExportSession};
 pub(crate) use policy::FilePolicy;
 pub use replace::{ReplaceOutcome, UnsavedChoice};
 pub use revert::RevertOutcome;

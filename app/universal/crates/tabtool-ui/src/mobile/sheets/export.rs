@@ -3,16 +3,14 @@
 use std::path::PathBuf;
 
 use egui::{Align, Layout, Ui};
-use tabtool_core::{CsvConfiguration, CsvError};
+use tabtool_core::{CsvConfiguration, CsvError, CsvWriteIssue};
 use tabtool_document::{Document, DocumentError};
 use tabtool_i18n::{Language, tr};
 
 use super::export_file::{clean_stale_exports, remove_temporary_export, temporary_export};
 use super::{SheetScreenResponse, SheetStyle, caption, form_row, touch_button, touch_toggle};
 use crate::document::{alert_message, can_export};
-use crate::export::ExportDecision;
-use crate::export::ExportOptions;
-use crate::export::ExportPlan;
+use crate::export;
 use crate::export::controls::{
     PickerSize, decimal_picker, encoding_picker, quote_picker, separator_picker,
 };
@@ -24,7 +22,7 @@ const EXPORT_NOT_COMPLETED: &str = "Export Not Completed";
 
 /// The Export sheet state.
 pub struct ExportSheet {
-    options: ExportOptions,
+    configuration: CsvConfiguration,
     base_name: String,
     confirm: Option<CsvConfiguration>,
     pending: Option<PendingExport>,
@@ -50,8 +48,8 @@ impl ExportSheet {
     /// table this sheet reads is the settled one.
     pub fn new(document: &Document) -> Self {
         Self {
-            options: ExportOptions::new(document.configuration().clone()),
-            base_name: ExportPlan::base_name(document.file_path()),
+            configuration: document.configuration().clone(),
+            base_name: export::base_name(document.file_path()),
             confirm: None,
             pending: None,
             notice: None,
@@ -114,7 +112,7 @@ impl ExportSheet {
                         let width = ui.available_width();
                         encoding_picker(
                             ui,
-                            &mut self.options,
+                            &mut self.configuration,
                             language,
                             PickerSize { width, ..size },
                         );
@@ -123,7 +121,7 @@ impl ExportSheet {
                         let width = ui.available_width();
                         separator_picker(
                             ui,
-                            &mut self.options,
+                            &mut self.configuration,
                             language,
                             PickerSize { width, ..size },
                         );
@@ -132,7 +130,7 @@ impl ExportSheet {
                         let width = ui.available_width();
                         quote_picker(
                             ui,
-                            &mut self.options,
+                            &mut self.configuration,
                             language,
                             PickerSize { width, ..size },
                         );
@@ -141,7 +139,7 @@ impl ExportSheet {
                         let width = ui.available_width();
                         decimal_picker(
                             ui,
-                            &mut self.options,
+                            &mut self.configuration,
                             language,
                             PickerSize { width, ..size },
                         );
@@ -151,7 +149,7 @@ impl ExportSheet {
                         ui,
                         style,
                         tr(language, "Write Header Row"),
-                        &mut self.options.configuration.first_row_as_header,
+                        &mut self.configuration.first_row_as_header,
                         true,
                     );
                     caption(
@@ -171,7 +169,7 @@ impl ExportSheet {
                         }
                     });
                 });
-                let name = self.options.suggested_name(&self.base_name);
+                let name = export::filename(&self.base_name, &self.configuration);
                 caption(ui, style, &name);
             },
         );
@@ -198,18 +196,14 @@ impl ExportSheet {
             });
             return;
         };
-        match ExportPlan::decision(
-            &table,
-            document.configuration(),
-            &self.options.configuration,
-        ) {
-            ExportDecision::Proceed => {
+        match export::preflight(&table, document.configuration(), &self.configuration) {
+            None => {
                 self.write_export(&table, document, files, language, false);
             }
-            ExportDecision::ConfirmAmbiguous => {
-                self.confirm = Some(self.options.configuration.clone());
+            Some(CsvWriteIssue::AmbiguousOutput) => {
+                self.confirm = Some(self.configuration.clone());
             }
-            ExportDecision::BlockedUnencodable => {
+            Some(CsvWriteIssue::UnencodableText) => {
                 self.notice = Some(self.encoding_notice(language));
             }
         }
@@ -223,15 +217,15 @@ impl ExportSheet {
         language: Language,
         allow_ambiguous: bool,
     ) {
-        match ExportPlan::data(
+        match export::data(
             table,
             document.configuration(),
-            &self.options.configuration,
+            &self.configuration,
             allow_ambiguous,
         ) {
             Ok(data) => self.start_copy(&data, files, language),
             Err(CsvError::AmbiguousOutput) if !allow_ambiguous => {
-                self.confirm = Some(self.options.configuration.clone());
+                self.confirm = Some(self.configuration.clone());
             }
             Err(error) => {
                 self.notice = Some(ExportNotice {
@@ -243,7 +237,7 @@ impl ExportSheet {
     }
 
     fn start_copy(&mut self, data: &[u8], files: &dyn DocumentFiles, language: Language) {
-        let name = self.options.suggested_name(&self.base_name);
+        let name = export::filename(&self.base_name, &self.configuration);
         let base = files.documents_dir();
         clean_stale_exports(&base);
         let source = match temporary_export(&base, data, &name) {
@@ -319,7 +313,7 @@ impl ExportSheet {
         };
         self.confirm = None;
         if index == 0 {
-            self.options.configuration = configuration;
+            self.configuration = configuration;
             if let Some(table) = document.visible_table() {
                 self.write_export(&table, document, files, language, true);
             }

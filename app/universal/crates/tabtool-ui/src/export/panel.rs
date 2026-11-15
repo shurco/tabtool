@@ -9,7 +9,6 @@ use tabtool_i18n::{Language, tr};
 use crate::theme::current;
 use crate::widgets::{ButtonKind, PushButton, sheet, toggle};
 
-use super::ExportOptions;
 use super::controls::{
     PickerSize, decimal_picker, encoding_picker, quote_picker, separator_picker,
 };
@@ -27,7 +26,7 @@ pub enum ExportPanelAction {
 pub fn export_panel(
     ui: &mut Ui,
     id_salt: impl Hash + std::fmt::Debug,
-    options: &mut ExportOptions,
+    configuration: &mut CsvConfiguration,
     language: Language,
 ) -> Option<ExportPanelAction> {
     let theme = current(ui.ctx());
@@ -43,28 +42,28 @@ pub fn export_panel(
                 .spacing([12.0, 8.0])
                 .show(ui, |ui| {
                     ui.label(tr(language, "Encoding"));
-                    encoding_picker(ui, options, language, PickerSize::DESKTOP);
+                    encoding_picker(ui, configuration, language, PickerSize::DESKTOP);
                     ui.end_row();
 
                     ui.label(tr(language, "Separator"));
-                    separator_picker(ui, options, language, PickerSize::DESKTOP);
+                    separator_picker(ui, configuration, language, PickerSize::DESKTOP);
                     ui.end_row();
 
                     ui.label(tr(language, "Quote"));
-                    quote_picker(ui, options, language, PickerSize::DESKTOP);
+                    quote_picker(ui, configuration, language, PickerSize::DESKTOP);
                     ui.end_row();
 
                     ui.label(tr(language, "Decimal"));
-                    decimal_picker(ui, options, language, PickerSize::DESKTOP);
+                    decimal_picker(ui, configuration, language, PickerSize::DESKTOP);
                     ui.end_row();
 
                     ui.label(tr(language, "Header"));
-                    let mut header = options.configuration.first_row_as_header;
+                    let mut header = configuration.first_row_as_header;
                     let response = toggle(ui, "", &mut header)
                         .accessible_name(tr(language, "Write Header Row"))
                         .on_hover_text(tr(language, "Write Header Row"));
                     if response.changed() {
-                        options.configuration.first_row_as_header = header;
+                        configuration.first_row_as_header = header;
                     }
                     ui.end_row();
                 });
@@ -94,7 +93,7 @@ pub fn export_panel(
     if response.close_requested {
         Some(ExportPanelAction::Cancel)
     } else if response.inner {
-        Some(ExportPanelAction::Export(options.configuration.clone()))
+        Some(ExportPanelAction::Export(configuration.clone()))
     } else {
         None
     }

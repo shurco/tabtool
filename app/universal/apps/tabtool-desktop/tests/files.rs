@@ -524,7 +524,7 @@ fn an_export_session_uses_the_document_name_and_configuration() {
     assert_eq!(session.base_name, "Sales-export");
     assert_eq!(session.suggested_name(), "Sales-export.csv");
     assert_eq!(session.file_extension(), "csv");
-    assert_eq!(session.options.configuration, *document.configuration());
+    assert_eq!(session.export_configuration, *document.configuration());
 }
 
 #[test]
@@ -538,7 +538,7 @@ fn a_tab_export_suggests_tsv_and_writes_tsv() {
     let mut session = workflow
         .export_session(&document)
         .expect("an export session");
-    session.options.configuration.column_separator = "\t".to_owned();
+    session.export_configuration.column_separator = "\t".to_owned();
 
     let outcome = workflow.export(&session, false);
 
@@ -564,9 +564,9 @@ fn an_ambiguous_export_asks_and_writes_only_after_confirmation() {
     let mut session = workflow
         .export_session(&document)
         .expect("an export session");
-    session.options.configuration.quote_character.clear();
-    session.options.configuration.escape_character.clear();
-    session.options.configuration.decimal_mark = ",".to_owned();
+    session.export_configuration.quote_character.clear();
+    session.export_configuration.escape_character.clear();
+    session.export_configuration.decimal_mark = ",".to_owned();
 
     let outcome = workflow.export(&session, false);
 
@@ -601,7 +601,7 @@ fn an_unencodable_export_is_refused_without_a_panel_or_file() {
     let mut session = workflow
         .export_session(&document)
         .expect("an export session");
-    session.options.configuration.encoding = Encoding::Windows1252;
+    session.export_configuration.encoding = Encoding::Windows1252;
 
     let outcome = workflow.export(&session, false);
 

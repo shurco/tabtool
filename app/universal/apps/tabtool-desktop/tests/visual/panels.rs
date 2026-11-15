@@ -12,7 +12,7 @@ use tabtool_i18n::Language;
 use tabtool_platform::DesktopPlatform;
 use tabtool_settings::Settings;
 use tabtool_ui::UiHarness;
-use tabtool_ui::export::{ExportOptions, export_panel};
+use tabtool_ui::export::export_panel;
 use tabtool_ui::harness::kittest::Queryable;
 
 use super::fixture::{csv_configuration, paint_background};
@@ -70,9 +70,9 @@ pub fn about_harness(theme: tabtool_ui::Theme, size: [f32; 2]) -> UiHarness<'sta
 
 /// The export options modal over the document surface.
 pub fn export_harness(theme: tabtool_ui::Theme, size: [f32; 2]) -> UiHarness<'static> {
-    let mut options = ExportOptions::new(csv_configuration());
+    let mut configuration = csv_configuration();
     let mut harness = UiHarness::new(theme, size, move |ui| {
-        let _ = export_panel(ui, "visual-export", &mut options, Language::En);
+        let _ = export_panel(ui, "visual-export", &mut configuration, Language::En);
     });
     harness.run();
     harness.remove_cursor();

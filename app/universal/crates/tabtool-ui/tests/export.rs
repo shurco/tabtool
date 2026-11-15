@@ -5,9 +5,7 @@ use std::path::Path;
 use std::rc::Rc;
 
 use tabtool_core::{CsvConfiguration, CsvParser, CsvTable, CsvWriteIssue, Encoding};
-use tabtool_ui::export::{
-    ExportDecision, ExportOptions, ExportPanelAction, ExportPlan, export_panel,
-};
+use tabtool_ui::export::{self, ExportPanelAction, export_panel};
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::{Theme, UiHarness};
 
@@ -39,22 +37,19 @@ fn no_quote() -> CsvConfiguration {
 #[test]
 fn base_name_appends_the_export_suffix() {
     assert_eq!(
-        ExportPlan::base_name(Some(Path::new("/tmp/Sales.csv"))),
+        export::base_name(Some(Path::new("/tmp/Sales.csv"))),
         "Sales-export"
     );
     assert_eq!(
-        ExportPlan::base_name(Some(Path::new("/tmp/Quarter.Sales.csv"))),
+        export::base_name(Some(Path::new("/tmp/Quarter.Sales.csv"))),
         "Quarter.Sales-export"
     );
 }
 
 #[test]
 fn base_name_falls_back_to_untitled() {
-    assert_eq!(ExportPlan::base_name(None), "Untitled-export");
-    assert_eq!(
-        ExportPlan::base_name(Some(Path::new("/"))),
-        "Untitled-export"
-    );
+    assert_eq!(export::base_name(None), "Untitled-export");
+    assert_eq!(export::base_name(Some(Path::new("/"))), "Untitled-export");
 }
 
 #[test]
@@ -65,10 +60,10 @@ fn the_filename_uses_csv_for_non_tab_separators() {
             ..CsvConfiguration::default()
         };
         assert_eq!(
-            ExportPlan::filename("Sales-export", &configuration),
+            export::filename("Sales-export", &configuration),
             "Sales-export.csv"
         );
-        assert_eq!(ExportPlan::file_extension(&configuration), "csv");
+        assert_eq!(export::file_extension(&configuration), "csv");
     }
 }
 
@@ -79,10 +74,10 @@ fn the_filename_uses_tsv_for_a_tab_separator() {
         ..CsvConfiguration::default()
     };
     assert_eq!(
-        ExportPlan::filename("Sales-export", &configuration),
+        export::filename("Sales-export", &configuration),
         "Sales-export.tsv"
     );
-    assert_eq!(ExportPlan::file_extension(&configuration), "tsv");
+    assert_eq!(export::file_extension(&configuration), "tsv");
 }
 
 #[test]
@@ -95,8 +90,8 @@ fn converted_decimal_ambiguity_asks_for_confirmation() {
     };
 
     assert_eq!(
-        ExportPlan::decision(&table, &document, &export),
-        ExportDecision::ConfirmAmbiguous
+        export::preflight(&table, &document, &export),
+        Some(CsvWriteIssue::AmbiguousOutput)
     );
 }
 
@@ -109,41 +104,14 @@ fn converted_decimal_output_is_not_blocked_by_original_ambiguity() {
         ..no_quote()
     };
 
-    assert_eq!(
-        ExportPlan::decision(&table, &document, &export),
-        ExportDecision::Proceed
-    );
-}
-
-#[test]
-fn a_clean_output_exports_without_confirmation() {
-    assert_eq!(
-        ExportPlan::decision_for_issue(None),
-        ExportDecision::Proceed
-    );
-}
-
-#[test]
-fn an_ambiguous_output_requires_confirmation() {
-    assert_eq!(
-        ExportPlan::decision_for_issue(Some(CsvWriteIssue::AmbiguousOutput)),
-        ExportDecision::ConfirmAmbiguous
-    );
-}
-
-#[test]
-fn an_unencodable_output_is_blocked() {
-    assert_eq!(
-        ExportPlan::decision_for_issue(Some(CsvWriteIssue::UnencodableText)),
-        ExportDecision::BlockedUnencodable
-    );
+    assert_eq!(export::preflight(&table, &document, &export), None);
 }
 
 #[test]
 fn export_data_converts_a_copy_only() {
     let table = table(&[&["1,5", "text,5"]], None);
-    let data = ExportPlan::data(&table, &document(","), &document("."), false)
-        .expect("the export succeeds");
+    let data =
+        export::data(&table, &document(","), &document("."), false).expect("the export succeeds");
     assert_eq!(
         String::from_utf8(data).expect("UTF-8"),
         "\"1.5\",\"text,5\""
@@ -169,7 +137,7 @@ fn writing_and_reimporting_preserves_values_and_header() {
         ..CsvConfiguration::default()
     };
 
-    let data = ExportPlan::data(&table, &document, &export, false).expect("the export succeeds");
+    let data = export::data(&table, &document, &export, false).expect("the export succeeds");
     let text = String::from_utf8(data.clone()).expect("UTF-8");
     assert_eq!(
         text,
@@ -186,23 +154,23 @@ fn writing_and_reimporting_preserves_values_and_header() {
 
 #[test]
 fn options_default_to_the_document_separator_and_csv() {
-    let options = ExportOptions::new(CsvConfiguration::default());
+    let configuration = CsvConfiguration::default();
     assert_eq!(
-        options.suggested_name("Untitled-export"),
+        export::filename("Untitled-export", &configuration),
         "Untitled-export.csv"
     );
-    assert_eq!(options.file_extension(), "csv");
+    assert_eq!(export::file_extension(&configuration), "csv");
 
-    let tab = ExportOptions::new(CsvConfiguration {
+    let tab = CsvConfiguration {
         column_separator: "\t".to_owned(),
         ..CsvConfiguration::default()
-    });
-    assert_eq!(tab.suggested_name("Sales-export"), "Sales-export.tsv");
-    assert_eq!(tab.file_extension(), "tsv");
+    };
+    assert_eq!(export::filename("Sales-export", &tab), "Sales-export.tsv");
+    assert_eq!(export::file_extension(&tab), "tsv");
 }
 
 fn panel_harness(
-    options: &Rc<RefCell<ExportOptions>>,
+    options: &Rc<RefCell<CsvConfiguration>>,
     actions: &Rc<RefCell<Vec<ExportPanelAction>>>,
 ) -> UiHarness<'static> {
     let options = Rc::clone(options);
@@ -219,9 +187,7 @@ fn panel_harness(
 
 #[test]
 fn the_panel_shows_every_export_control_and_the_header_note() {
-    let options = Rc::new(RefCell::new(
-        ExportOptions::new(CsvConfiguration::default()),
-    ));
+    let options = Rc::new(RefCell::new(CsvConfiguration::default()));
     let actions = Rc::new(RefCell::new(Vec::new()));
     let mut harness = panel_harness(&options, &actions);
     harness.run();
@@ -249,9 +215,7 @@ fn the_panel_shows_every_export_control_and_the_header_note() {
 
 #[test]
 fn changing_the_separator_updates_the_candidate_and_its_extension() {
-    let options = Rc::new(RefCell::new(
-        ExportOptions::new(CsvConfiguration::default()),
-    ));
+    let options = Rc::new(RefCell::new(CsvConfiguration::default()));
     let actions = Rc::new(RefCell::new(Vec::new()));
     let mut harness = panel_harness(&options, &actions);
     harness.run();
@@ -263,15 +227,13 @@ fn changing_the_separator_updates_the_candidate_and_its_extension() {
     harness.get_by_label("Tab (⇥)").click();
     harness.run();
 
-    assert_eq!(options.borrow().configuration.column_separator, "\t");
-    assert_eq!(options.borrow().file_extension(), "tsv");
+    assert_eq!(options.borrow().column_separator, "\t");
+    assert_eq!(export::file_extension(&options.borrow()), "tsv");
 }
 
 #[test]
 fn changing_the_quote_style_updates_both_quote_and_escape() {
-    let options = Rc::new(RefCell::new(
-        ExportOptions::new(CsvConfiguration::default()),
-    ));
+    let options = Rc::new(RefCell::new(CsvConfiguration::default()));
     let actions = Rc::new(RefCell::new(Vec::new()));
     let mut harness = panel_harness(&options, &actions);
     harness.run();
@@ -283,15 +245,13 @@ fn changing_the_quote_style_updates_both_quote_and_escape() {
     harness.get_by_label("None").click();
     harness.run();
 
-    assert!(options.borrow().configuration.quote_character.is_empty());
-    assert!(options.borrow().configuration.escape_character.is_empty());
+    assert!(options.borrow().quote_character.is_empty());
+    assert!(options.borrow().escape_character.is_empty());
 }
 
 #[test]
 fn the_header_toggle_changes_only_the_export_candidate() {
-    let options = Rc::new(RefCell::new(
-        ExportOptions::new(CsvConfiguration::default()),
-    ));
+    let options = Rc::new(RefCell::new(CsvConfiguration::default()));
     let actions = Rc::new(RefCell::new(Vec::new()));
     let mut harness = panel_harness(&options, &actions);
     harness.run();
@@ -301,14 +261,12 @@ fn the_header_toggle_changes_only_the_export_candidate() {
         .click();
     harness.run();
 
-    assert!(options.borrow().configuration.first_row_as_header);
+    assert!(options.borrow().first_row_as_header);
 }
 
 #[test]
 fn the_export_button_reports_the_candidate_and_cancel_reports_cancel() {
-    let options = Rc::new(RefCell::new(
-        ExportOptions::new(CsvConfiguration::default()),
-    ));
+    let options = Rc::new(RefCell::new(CsvConfiguration::default()));
     let actions = Rc::new(RefCell::new(Vec::new()));
     let mut harness = panel_harness(&options, &actions);
     harness.run();
@@ -335,9 +293,7 @@ fn the_export_button_reports_the_candidate_and_cancel_reports_cancel() {
 
 #[test]
 fn the_panel_encoding_list_is_the_supported_set() {
-    let options = Rc::new(RefCell::new(
-        ExportOptions::new(CsvConfiguration::default()),
-    ));
+    let options = Rc::new(RefCell::new(CsvConfiguration::default()));
     let actions = Rc::new(RefCell::new(Vec::new()));
     let mut harness = panel_harness(&options, &actions);
     harness.run();
@@ -349,8 +305,5 @@ fn the_panel_encoding_list_is_the_supported_set() {
     harness.get_by_label("Western (Windows Latin 1)").click();
     harness.run();
 
-    assert_eq!(
-        options.borrow().configuration.encoding,
-        Encoding::Windows1252
-    );
+    assert_eq!(options.borrow().encoding, Encoding::Windows1252);
 }
