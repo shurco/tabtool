@@ -18,11 +18,11 @@ use jni::objects::{GlobalRef, JIntArray, JObject, JObjectArray, JString, JValue,
 use jni::sys::jobject;
 use jni::{JNIEnv, JavaVM};
 use log::{error, info};
-use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE};
+use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, LocalizedError};
 
 use crate::bridge_result::{BridgeResult, parse_result};
 use crate::locale::{SystemInfo, decimal_separator, normalize_tag};
-use crate::services::{Clipboard, CopyOutcome, OpenUrl, PlatformError};
+use crate::services::{Clipboard, CopyOutcome, OpenUrl};
 use crate::text_input::{EditorSessions, TextInput, TextInputOutcome, TextInputRequest};
 
 const BRIDGE_CLASS: &str = "app/shurco/tabtool/TabToolBridge";
@@ -35,7 +35,7 @@ struct Bridge {
 static BRIDGE: OnceLock<Option<Bridge>> = OnceLock::new();
 static DOCUMENTS_DIR: OnceLock<PathBuf> = OnceLock::new();
 static SESSIONS: EditorSessions = EditorSessions::new();
-static ERRORS: Mutex<VecDeque<PlatformError>> = Mutex::new(VecDeque::new());
+static ERRORS: Mutex<VecDeque<LocalizedError>> = Mutex::new(VecDeque::new());
 
 /// A document another app asked TabTool to open.
 ///
@@ -332,7 +332,7 @@ impl AndroidPlatform {
     }
 
     /// Takes the next failure, if any.
-    pub fn take_error(self) -> Option<PlatformError> {
+    pub fn take_error(self) -> Option<LocalizedError> {
         ERRORS
             .lock()
             .map(|mut errors| errors.pop_front())
@@ -397,7 +397,7 @@ fn record_error(message_key: &'static str, detail: String) {
     if errors.len() >= 8 {
         let _ = errors.pop_front();
     }
-    errors.push_back(PlatformError::new(message_key, detail));
+    errors.push_back(LocalizedError::new(message_key, detail));
 }
 
 // --- JNI plumbing -----------------------------------------------------------

@@ -30,9 +30,8 @@ pub use action_bar::{
 pub use editor::{MobileEditor, MobileEditorResponse};
 pub use editor_state::{MobileEdit, MobileEditTarget, MobileEditorState};
 pub use library::{
-    DocumentEntry, DocumentFiles, DocumentMetadata, ExportOutcome, LibraryClock, LibraryError,
-    LibraryResponse, LibrarySort, LibraryView, available_name, format_modified, format_size,
-    new_document_name,
+    DocumentEntry, DocumentFiles, DocumentMetadata, ExportOutcome, LibraryClock, LibraryResponse,
+    LibrarySort, LibraryView, available_name, format_modified, format_size, new_document_name,
 };
 pub use list::{ListRow, ListRowResponse};
 pub use metrics::{

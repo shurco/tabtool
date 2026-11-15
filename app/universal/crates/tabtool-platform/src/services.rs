@@ -7,30 +7,6 @@ use std::sync::OnceLock;
 
 use tabtool_core::has_table_extension;
 
-/// A platform failure the UI can show as a localized banner.
-///
-/// The platform keeps the user-facing text out of the data: the app resolves
-/// [`PlatformError::message_key`] through `tabtool-i18n`. `detail` is for
-/// logcat only and is never shown raw.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PlatformError {
-    /// The `tabtool-i18n` catalog key for the banner.
-    pub message_key: &'static str,
-    /// The technical cause, for logs.
-    pub detail: String,
-}
-
-impl PlatformError {
-    /// Builds a failure with a catalog key and a diagnostic detail.
-    #[must_use]
-    pub fn new(message_key: &'static str, detail: impl Into<String>) -> Self {
-        Self {
-            message_key,
-            detail: detail.into(),
-        }
-    }
-}
-
 /// The table files in `directory`, sorted by path.
 #[cfg_attr(not(target_os = "android"), allow(dead_code))]
 pub(crate) fn table_files(directory: &Path) -> Vec<PathBuf> {
@@ -87,7 +63,8 @@ pub enum CopyOutcome {
     Copied,
     /// The user dismissed the picker.
     Cancelled,
-    /// The copy failed; the cause is queued as a [`PlatformError`].
+    /// The copy failed; the cause is queued as a
+    /// [`tabtool_i18n::LocalizedError`].
     Failed,
 }
 

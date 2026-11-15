@@ -8,14 +8,14 @@ use std::rc::Rc;
 use std::time::{Duration, UNIX_EPOCH};
 
 use tabtool_core::{CsvConfiguration, CsvParser, Locale};
-use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Language, tr};
+use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Language, LocalizedError, tr};
 use tabtool_ui::Theme;
 use tabtool_ui::UiHarness;
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::mobile::{
-    DocumentFiles, ExportOutcome, LibraryClock, LibraryError, LibraryResponse, LibrarySort,
-    LibraryView, MobileMetrics, TouchTextInputOutcome, available_name, format_modified,
-    format_size, new_document_name,
+    DocumentFiles, ExportOutcome, LibraryClock, LibraryResponse, LibrarySort, LibraryView,
+    MobileMetrics, TouchTextInputOutcome, available_name, format_modified, format_size,
+    new_document_name,
 };
 use tempfile::TempDir;
 
@@ -45,7 +45,7 @@ struct TestFiles {
     create_calls: Cell<usize>,
     fail_delete: Cell<bool>,
     fail_rename: Cell<bool>,
-    pending_error: RefCell<Option<LibraryError>>,
+    pending_error: RefCell<Option<LocalizedError>>,
 }
 
 impl TestFiles {
@@ -143,7 +143,7 @@ impl DocumentFiles for TestFiles {
         std::fs::rename(from, to)
     }
 
-    fn take_error(&self) -> Option<LibraryError> {
+    fn take_error(&self) -> Option<LocalizedError> {
         self.pending_error.borrow_mut().take()
     }
 }
@@ -1011,7 +1011,7 @@ fn cancelling_the_native_editor_keeps_the_name() {
 #[test]
 fn a_platform_error_shows_a_localized_banner_and_dismisses() {
     let (_directory, files) = TestFiles::new();
-    files.pending_error.replace(Some(LibraryError::new(
+    files.pending_error.replace(Some(LocalizedError::new(
         "The file could not be saved",
         "the disk is full",
     )));

@@ -15,7 +15,7 @@ use std::time::SystemTime;
 use egui::Rect;
 use tabtool_core::{CsvConfiguration, Locale, has_table_extension};
 use tabtool_document::Document;
-use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Language};
+use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Language, LocalizedError};
 
 use super::MobileMetrics;
 
@@ -171,7 +171,7 @@ pub trait DocumentFiles {
     /// localized banner after an asynchronous import.
     ///
     /// A platform that reports failures directly answers `None`.
-    fn take_error(&self) -> Option<LibraryError> {
+    fn take_error(&self) -> Option<LocalizedError> {
         None
     }
 
@@ -194,25 +194,6 @@ pub trait DocumentFiles {
     }
 }
 
-/// A platform failure the library can show as a localized banner.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct LibraryError {
-    /// The catalog key for the banner.
-    pub message_key: &'static str,
-    /// The technical cause, for logs only.
-    pub detail: String,
-}
-
-impl LibraryError {
-    /// Builds a failure with a catalog key and a diagnostic detail.
-    pub fn new(message_key: &'static str, detail: impl Into<String>) -> Self {
-        Self {
-            message_key,
-            detail: detail.into(),
-        }
-    }
-}
-
 /// The screen state: documents, sort order and the pending prompt.
 pub struct LibraryView {
     files: Rc<dyn DocumentFiles>,
@@ -228,7 +209,7 @@ pub struct LibraryView {
     pending_delete: Option<PathBuf>,
     renaming: Option<PathBuf>,
     rename_request: Option<(PathBuf, Rect)>,
-    notice: Option<LibraryError>,
+    notice: Option<LocalizedError>,
 }
 
 impl LibraryView {
@@ -308,13 +289,13 @@ impl LibraryView {
     }
 
     /// Creates a new document and returns its path.
-    pub fn create_document(&mut self) -> Result<PathBuf, LibraryError> {
+    pub fn create_document(&mut self) -> Result<PathBuf, LocalizedError> {
         let name = new_document_name(self.files.existing_names(), NEW_DOCUMENT_EXTENSION);
         let data = new_document_data(&self.new_document)?;
         let path = self
             .files
             .create_document(&name, &data)
-            .map_err(|error| LibraryError::new(ERROR_SAVE, error.to_string()))?;
+            .map_err(|error| LocalizedError::new(ERROR_SAVE, error.to_string()))?;
         self.refresh();
         Ok(path)
     }
@@ -338,7 +319,7 @@ impl LibraryView {
         if !is_library_file(&path) {
             let detail = format!("unsupported import: {}", path.display());
             let _ = self.files.delete(&path);
-            self.notice = Some(LibraryError::new(ERROR_OPEN, detail));
+            self.notice = Some(LocalizedError::new(ERROR_OPEN, detail));
             self.refresh();
             return None;
         }
@@ -354,7 +335,7 @@ impl LibraryView {
         &mut self,
         path: &Path,
         proposed: &str,
-    ) -> Result<PathBuf, LibraryError> {
+    ) -> Result<PathBuf, LocalizedError> {
         let trimmed = proposed.trim();
         if trimmed.is_empty() {
             return Ok(path.to_path_buf());
@@ -367,14 +348,14 @@ impl LibraryView {
             || trimmed.contains('\\')
             || trimmed.contains(':')
         {
-            return Err(LibraryError::new(
+            return Err(LocalizedError::new(
                 ERROR_GENERIC,
                 "the document name would hide the file or leave the folder",
             ));
         }
         let proposed_path = Path::new(trimmed);
         if proposed_path.extension().is_some() && !has_table_extension(proposed_path) {
-            return Err(LibraryError::new(
+            return Err(LocalizedError::new(
                 ERROR_GENERIC,
                 "the document name must end in a table extension",
             ));
@@ -402,7 +383,7 @@ impl LibraryView {
             if !existing.iter().any(|existing| existing == &name) {
                 let destination = path.with_file_name(&name);
                 if let Err(error) = self.files.rename(path, &destination) {
-                    return Err(LibraryError::new(ERROR_GENERIC, error.to_string()));
+                    return Err(LocalizedError::new(ERROR_GENERIC, error.to_string()));
                 }
                 self.refresh();
                 return Ok(destination);
@@ -411,16 +392,16 @@ impl LibraryView {
         let available = available_name(&name, existing);
         let destination = path.with_file_name(available);
         if let Err(error) = self.files.rename(path, &destination) {
-            return Err(LibraryError::new(ERROR_GENERIC, error.to_string()));
+            return Err(LocalizedError::new(ERROR_GENERIC, error.to_string()));
         }
         self.refresh();
         Ok(destination)
     }
 
     /// Deletes `path` after the caller has confirmed.
-    pub fn delete_document(&mut self, path: &Path) -> Result<(), LibraryError> {
+    pub fn delete_document(&mut self, path: &Path) -> Result<(), LocalizedError> {
         if let Err(error) = self.files.delete(path) {
-            return Err(LibraryError::new(ERROR_GENERIC, error.to_string()));
+            return Err(LocalizedError::new(ERROR_GENERIC, error.to_string()));
         }
         self.refresh();
         Ok(())
@@ -501,12 +482,12 @@ fn sort_documents(documents: &mut [DocumentEntry]) {
     });
 }
 
-fn new_document_data(configuration: &CsvConfiguration) -> Result<Vec<u8>, LibraryError> {
+fn new_document_data(configuration: &CsvConfiguration) -> Result<Vec<u8>, LocalizedError> {
     let mut document = Document::new(configuration.clone());
     document
         .new_document(configuration.clone())
-        .map_err(|error| LibraryError::new(ERROR_SAVE, format!("{error:?}")))?;
+        .map_err(|error| LocalizedError::new(ERROR_SAVE, format!("{error:?}")))?;
     document
         .encoded_data()
-        .map_err(|error| LibraryError::new(ERROR_SAVE, format!("{error:?}")))
+        .map_err(|error| LocalizedError::new(ERROR_SAVE, format!("{error:?}")))
 }

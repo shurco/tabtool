@@ -1,10 +1,10 @@
 //! The Documents library snapshots: empty, populated and a read failure.
 
-use tabtool_i18n::ERROR_OPEN;
+use tabtool_i18n::{ERROR_OPEN, LocalizedError};
 use tabtool_ui::Theme;
 use tabtool_ui::UiHarness;
 use tabtool_ui::harness::SnapshotResults;
-use tabtool_ui::mobile::{LibraryError, MobileMetrics};
+use tabtool_ui::mobile::MobileMetrics;
 use tempfile::TempDir;
 
 use super::support::{FOLD_OUTER, PHONE, TABLET, VisualFiles, library_harness};
@@ -93,7 +93,7 @@ pub fn list_folded_outer(results: &mut SnapshotResults) {
 pub fn read_error(results: &mut SnapshotResults) {
     let directory = TempDir::new().expect("a temporary documents folder");
     let files = VisualFiles::new(directory.path());
-    files.push(LibraryError::new(ERROR_OPEN, "permission denied"));
+    files.push(LocalizedError::new(ERROR_OPEN, "permission denied"));
     render(
         library_harness(Theme::desktop_light(), PHONE, MobileMetrics::phone(), files),
         "mobile-library-read-error-phone",

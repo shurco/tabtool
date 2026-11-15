@@ -11,13 +11,13 @@ use std::rc::Rc;
 use std::time::UNIX_EPOCH;
 
 use tabtool_document::{Document, StdStorage};
-use tabtool_i18n::Language;
+use tabtool_i18n::{Language, LocalizedError};
 use tabtool_settings::Settings;
 use tabtool_ui::Theme;
 use tabtool_ui::UiHarness;
 use tabtool_ui::mobile::{
     DocumentFiles, ExportOutcome, ExportSheet, FiltersSheet, FoldRegion, FormatSheet, LibraryClock,
-    LibraryError, LibraryView, MobileMetrics, SheetStyle, about_sheet, settings_sheet,
+    LibraryView, MobileMetrics, SheetStyle, about_sheet, settings_sheet,
 };
 
 use crate::support::{FakeTouchInput, en_locale};
@@ -47,7 +47,7 @@ pub fn sheet_style(metrics: MobileMetrics) -> SheetStyle {
 #[derive(Clone)]
 pub struct VisualFiles {
     directory: Rc<PathBuf>,
-    pending: Rc<RefCell<Option<LibraryError>>>,
+    pending: Rc<RefCell<Option<LocalizedError>>>,
 }
 
 impl VisualFiles {
@@ -60,7 +60,7 @@ impl VisualFiles {
     }
 
     /// Queues `error` for the next library frame.
-    pub fn push(&self, error: LibraryError) {
+    pub fn push(&self, error: LocalizedError) {
         self.pending.borrow_mut().replace(error);
     }
 
@@ -138,7 +138,7 @@ impl DocumentFiles for VisualFiles {
         std::fs::rename(from, to)
     }
 
-    fn take_error(&self) -> Option<LibraryError> {
+    fn take_error(&self) -> Option<LocalizedError> {
         self.pending.borrow_mut().take()
     }
 }

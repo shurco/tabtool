@@ -17,14 +17,13 @@ use main::app::{
 };
 use main::intents::{IntentEvent, StagedIntent};
 use tabtool_document::AUTOSAVE_DELAY;
-use tabtool_i18n::{ERROR_OPEN, ERROR_SAVE};
+use tabtool_i18n::{ERROR_OPEN, ERROR_SAVE, LocalizedError};
 use tabtool_platform::CopyOutcome;
 use tabtool_settings::Settings;
 use tabtool_ui::grid::Clipboard as GridClipboard;
 use tabtool_ui::mobile::{
-    DocumentFiles, ExportOutcome, LibraryClock, LibraryError, MobileEditorResponse,
-    MobileToolbarResponse, OverflowItem, Screen, SheetKind, TouchTextInput, TouchTextInputOutcome,
-    TouchTextInputRequest,
+    DocumentFiles, ExportOutcome, LibraryClock, MobileEditorResponse, MobileToolbarResponse,
+    OverflowItem, Screen, SheetKind, TouchTextInput, TouchTextInputOutcome, TouchTextInputRequest,
 };
 use tempfile::TempDir;
 
@@ -42,7 +41,7 @@ struct Fake {
     back: Cell<bool>,
     background: Cell<bool>,
     intents: RefCell<VecDeque<IntentEvent>>,
-    errors: RefCell<VecDeque<LibraryError>>,
+    errors: RefCell<VecDeque<LocalizedError>>,
     export_outcomes: RefCell<VecDeque<ExportOutcome>>,
     export_pending: Cell<bool>,
     exports: RefCell<Vec<(PathBuf, String)>>,
@@ -83,7 +82,7 @@ impl Fake {
         *self.settings.borrow_mut() = settings;
     }
 
-    fn error(&self, error: LibraryError) {
+    fn error(&self, error: LocalizedError) {
         self.errors.borrow_mut().push_back(error);
     }
 
@@ -158,7 +157,7 @@ impl DocumentFiles for Fake {
         std::fs::rename(from, to)
     }
 
-    fn take_error(&self) -> Option<LibraryError> {
+    fn take_error(&self) -> Option<LocalizedError> {
         self.errors.borrow_mut().pop_front()
     }
 }
@@ -948,7 +947,9 @@ fn a_failed_export_shows_the_save_failure_banner() {
 #[test]
 fn platform_errors_become_localized_banners() {
     let fixture = Fixture::new();
-    fixture.fake.error(LibraryError::new(ERROR_OPEN, "detail"));
+    fixture
+        .fake
+        .error(LocalizedError::new(ERROR_OPEN, "detail"));
     let mut app = fixture.app();
 
     app.poll(Instant::now());

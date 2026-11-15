@@ -160,6 +160,30 @@ pub const ERROR_OPEN: &str = "The file could not be opened";
 /// The catalog key for a document that could not be written.
 pub const ERROR_SAVE: &str = "The file could not be saved";
 
+/// A platform failure the UI can show as a localized banner.
+///
+/// The user-facing text stays out of the data: the app resolves
+/// [`LocalizedError::message_key`] through the catalog. `detail` is for logs
+/// only and is never shown raw.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LocalizedError {
+    /// The catalog key for the banner.
+    pub message_key: &'static str,
+    /// The technical cause, for logs only.
+    pub detail: String,
+}
+
+impl LocalizedError {
+    /// Builds a failure with a catalog key and a diagnostic detail.
+    #[must_use]
+    pub fn new(message_key: &'static str, detail: impl Into<String>) -> Self {
+        Self {
+            message_key,
+            detail: detail.into(),
+        }
+    }
+}
+
 /// The interface language for an ordered system language list.
 ///
 /// The first tag wins. Chinese variants all use the Simplified catalog, and an

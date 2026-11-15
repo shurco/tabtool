@@ -11,12 +11,13 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use tabtool_i18n::LocalizedError;
 use tabtool_platform::android::{AndroidPlatform, IntentImport};
 use tabtool_platform::{Clipboard, OpenUrl, SystemInfo, TextInput, TextInputRequest};
 use tabtool_ui::grid::Clipboard as GridClipboard;
 use tabtool_ui::mobile::{
-    DocumentFiles, ExportOutcome, LibraryClock, LibraryError, TouchTextInput,
-    TouchTextInputOutcome, TouchTextInputRequest,
+    DocumentFiles, ExportOutcome, LibraryClock, TouchTextInput, TouchTextInputOutcome,
+    TouchTextInputRequest,
 };
 
 use crate::app::{AndroidApp, Host};
@@ -116,10 +117,8 @@ impl DocumentFiles for AndroidHost {
         AndroidPlatform.rename(from, to)
     }
 
-    fn take_error(&self) -> Option<LibraryError> {
-        AndroidPlatform
-            .take_error()
-            .map(|error| LibraryError::new(error.message_key, error.detail))
+    fn take_error(&self) -> Option<LocalizedError> {
+        AndroidPlatform.take_error()
     }
 }
 
