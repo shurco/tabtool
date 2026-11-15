@@ -30,7 +30,7 @@ app/universal/
 │   └── tabtool-testdata/      # dev-only fixtures, manifest and generators
 ├── apps/
 │   ├── tabtool-desktop/       # eframe app, document windows and `--smoke`
-│   └── tabtool-android/       # cdylib, Gradle host, Kotlin bridge (spike)
+│   └── tabtool-android/       # cdylib, Gradle host, Kotlin bridge
 ├── xtask/                     # golden regeneration and check
 ├── testdata/
 │   ├── fixtures/              # Apple fixtures, byte-for-byte
@@ -859,7 +859,7 @@ Regenerating on a different macOS or Foundation version can change the
 collation expectations; review a diff as a behavior change instead of editing
 goldens by hand. See `testdata/golden/README.md` for details.
 
-## Android host and spike result
+## Android host
 
 `apps/tabtool-android` is a `cdylib` plus a Gradle project. Its
 `MainActivity : GameActivity` hosts eframe and handles Back; `TabToolBridge.kt`
@@ -867,8 +867,8 @@ exposes clipboard, SAF open, insets and a native text editor through JNI. It
 does not expose a system language list or a Back callback to Rust; Back lives
 in `MainActivity`.
 
-The decisive spike finding: winit 0.30.13 drops GameActivity's `TextEvent`, so
-an egui `TextEdit` never receives soft-keyboard text. The spike therefore
+The decisive Plan 1 finding: winit 0.30.13 drops GameActivity's `TextEvent`,
+so an egui `TextEdit` never receives soft-keyboard text. The app therefore
 opens a real Android `EditText` over the egui control and returns the committed
 text through JNI. The Kotlin/Rust API and the emulator evidence are in
 `apps/tabtool-android/README.md`.
@@ -887,14 +887,14 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n app.shurco.tabtool/.MainActivity
 ```
 
-The spike passed all seven checks on the `Medium_Phone_API_36.1` AVD
+The Plan 1 feasibility run passed all seven checks on the `Medium_Phone_API_36.1` AVD
 (Android 16, arm64, `-gpu host`): Latin, Cyrillic and Chinese text entry with
 the Gboard IME; clipboard set/get with another app; SAF open returning a
 `content://` URI; keyboard and rotation insets; and Back/rotation without data
 loss or crash. Two environment notes from that run: the AVD's Vulkan driver
 crashes during wgpu adapter setup, so the app pins wgpu to GL on Android, and
-eframe's default fonts lack CJK glyphs (the payload itself was exact). This is
-a spike app, not product UI.
+eframe's default fonts lack CJK glyphs (the payload itself was exact). That run used a developer smoke screen; Plan 5
+replaced it with the single-window app.
 
 ## Plan 1 boundary
 
@@ -904,7 +904,7 @@ Delivered in this plan:
 - `tabtool-core` with Swift-golden parity for detection, parsing, writing,
   sorting, filtering, clipboard, export and the encoding oracle; the table
   model is covered by ported unit tests;
-- the Android input/clipboard/SAF/insets spike.
+- the Android input/clipboard/SAF/insets feasibility checks.
 
 Not in Plan 1 (later plans):
 

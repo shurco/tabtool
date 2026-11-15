@@ -7,7 +7,6 @@
 
 use std::io;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use serde_json::{Map, Value};
 use tabtool_document::{Autosave, AutosaveOutcome, Document, DocumentError, Storage};
@@ -15,16 +14,12 @@ use tabtool_ui::mobile::SheetKind;
 
 use crate::nav::{NavSnapshot, sheet_from_name, sheet_name};
 
-/// How long a backgrounding app keeps polling a running large save.
-///
-/// The UI thread must not block, so the app polls the job across frames and
-/// stops waiting after this budget; the saver keeps running on its worker.
-pub const BACKGROUND_LARGE_WAIT: Duration = Duration::from_millis(250);
-
 /// The JSON key of the open document.
 const DOCUMENT_KEY: &str = "document";
-/// The JSON key of the top sheet.
+/// The JSON key of the top sheet, kept for older state files.
 const SHEET_KEY: &str = "sheet";
+/// The JSON key of the full sheet stack.
+const SHEETS_KEY: &str = "sheets";
 /// The JSON version, so a future format can migrate rather than misread.
 const VERSION_KEY: &str = "version";
 /// The current JSON version.
@@ -44,15 +39,25 @@ pub fn load_state(path: Option<&Path>) -> NavSnapshot {
     if object.get(VERSION_KEY).and_then(Value::as_u64) != Some(VERSION) {
         return NavSnapshot::default();
     }
+    let sheets = match object.get(SHEETS_KEY).and_then(Value::as_array) {
+        Some(sheets) => sheets
+            .iter()
+            .filter_map(Value::as_str)
+            .filter_map(sheet_from_name)
+            .collect(),
+        None => object
+            .get(SHEET_KEY)
+            .and_then(Value::as_str)
+            .and_then(sheet_from_name)
+            .into_iter()
+            .collect(),
+    };
     NavSnapshot {
         document: object
             .get(DOCUMENT_KEY)
             .and_then(Value::as_str)
             .map(PathBuf::from),
-        sheet: object
-            .get(SHEET_KEY)
-            .and_then(Value::as_str)
-            .and_then(sheet_from_name),
+        sheets,
     }
 }
 
@@ -69,9 +74,15 @@ pub fn save_state(path: Option<&Path>, snapshot: &NavSnapshot) -> io::Result<()>
             Value::from(document.to_string_lossy().into_owned()),
         );
     }
-    if let Some(sheet) = snapshot.sheet {
-        object.insert(SHEET_KEY.to_owned(), Value::from(sheet_name(sheet)));
+    if let Some(sheet) = snapshot.sheets.last() {
+        object.insert(SHEET_KEY.to_owned(), Value::from(sheet_name(*sheet)));
     }
+    let sheets: Vec<Value> = snapshot
+        .sheets
+        .iter()
+        .map(|sheet| Value::from(sheet_name(*sheet)))
+        .collect();
+    object.insert(SHEETS_KEY.to_owned(), Value::Array(sheets));
     let data = serde_json::to_vec(&Value::Object(object))
         .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
     if let Some(parent) = path.parent() {
@@ -154,7 +165,7 @@ mod tests {
         let path = directory.path().join("app-state.json");
         let snapshot = NavSnapshot {
             document: Some(PathBuf::from("/data/files/documents/a.csv")),
-            sheet: Some(SheetKind::Filters),
+            sheets: vec![SheetKind::Settings, SheetKind::About],
         };
 
         save_state(Some(&path), &snapshot).expect("the state is written");

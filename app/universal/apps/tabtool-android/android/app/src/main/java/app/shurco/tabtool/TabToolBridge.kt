@@ -78,11 +78,7 @@ object TabToolBridge {
     @Volatile
     private var backgroundPending = false
 
-    @Volatile
-    private var intentAwaitingDrain = false
-
-    @Volatile
-    private var intentResult: String? = null
+    private val intentResults = ArrayDeque<String>()
 
     private var intentSequence = 0
 
@@ -103,8 +99,7 @@ object TabToolBridge {
             exportSource = null
             pendingBack = false
             backgroundPending = false
-            intentAwaitingDrain = false
-            intentResult = null
+            intentResults.clear()
         }
         activity = null
     }
@@ -164,17 +159,16 @@ object TabToolBridge {
         }
     }
 
-    /** Returns `OK:<staging file name>\n<display name>` once a copy finishes. */
+    /**
+     * Returns `OK:<staging file name>\n<display name>` once a copy finishes.
+     *
+     * Several VIEW/SEND intents can arrive before the native loop polls; each
+     * copy is queued, so no document is dropped or left as an orphan.
+     */
     @JvmStatic
     fun takeIntentImport(): String? {
         synchronized(lock) {
-            if (!intentAwaitingDrain) {
-                return null
-            }
-            intentAwaitingDrain = false
-            val result = intentResult
-            intentResult = null
-            return result
+            return intentResults.removeFirstOrNull()
         }
     }
 
@@ -382,9 +376,6 @@ object TabToolBridge {
         }
     }
 
-    @JvmStatic
-    fun isDocumentOperationPending(): Boolean = importPending || exportPending
-
     /**
      * Handles a system back press: a visible editor is cancelled, otherwise the
      * event is queued for the native app. Always consumed so the activity only
@@ -579,8 +570,7 @@ object TabToolBridge {
 
     private fun finishIntent(result: String) {
         synchronized(lock) {
-            intentResult = result
-            intentAwaitingDrain = true
+            intentResults.addLast(result)
         }
         nativeWake()
     }

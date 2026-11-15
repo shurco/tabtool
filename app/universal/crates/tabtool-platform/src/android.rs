@@ -63,16 +63,6 @@ pub enum IntentImport {
 pub struct AndroidPlatform;
 
 impl AndroidPlatform {
-    /// Whether a SAF import or export is still running.
-    ///
-    /// The neutral [`DocumentFiles`] methods return their result on a later
-    /// call. The app polls this first so it does not relaunch the picker after
-    /// the previous request.
-    #[must_use]
-    pub fn document_operation_pending(self) -> bool {
-        call_bool("isDocumentOperationPending")
-    }
-
     /// Closes the activity when the app's navigation stack cannot take back.
     pub fn finish_activity(self) {
         call_void("finishActivity", "()V", &[]);

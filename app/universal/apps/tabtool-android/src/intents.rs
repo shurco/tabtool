@@ -18,6 +18,12 @@ const TABLE_EXTENSIONS: [&str; 5] = ["csv", "tsv", "txt", "tab", "dat"];
 /// The longest file name the store keeps, before the extension.
 const MAX_STEM: usize = 100;
 
+/// The prefix of an intent staging file.
+const STAGING_PREFIX: &str = ".incoming-";
+
+/// How old an abandoned intent copy must be before startup removes it.
+pub const STALE_STAGING_AGE: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+
 /// A staged intent copy reported by the platform.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StagedIntent {
@@ -147,6 +153,34 @@ pub fn existing_names(directory: &Path) -> Vec<String> {
         .collect()
 }
 
+/// Removes abandoned intent staging files older than `older_than`.
+///
+/// A freshly written staging file may belong to a copy that is still running,
+/// so only old files are swept. Returns how many were removed.
+pub fn clean_stale(directory: &Path, older_than: std::time::Duration) -> usize {
+    let now = std::time::SystemTime::now();
+    let mut removed = 0;
+    for entry in fs::read_dir(directory).into_iter().flatten().flatten() {
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else {
+            continue;
+        };
+        if !name.starts_with(STAGING_PREFIX) {
+            continue;
+        }
+        let stale = entry
+            .metadata()
+            .ok()
+            .and_then(|metadata| metadata.modified().ok())
+            .and_then(|modified| now.duration_since(modified).ok())
+            .is_some_and(|age| age >= older_than);
+        if stale && fs::remove_file(entry.path()).is_ok() {
+            removed += 1;
+        }
+    }
+    removed
+}
+
 /// Whether `path` is directly inside `directory`.
 pub fn is_within(directory: &Path, path: &Path) -> bool {
     path.parent() == Some(directory)
@@ -208,5 +242,31 @@ mod tests {
 
         assert!(error.is_err());
         assert!(!directory.path().join(".incoming-2.bin").exists());
+    }
+
+    #[test]
+    fn startup_removes_only_old_staging_files() {
+        use super::{STALE_STAGING_AGE, clean_stale};
+        use std::time::{Duration, UNIX_EPOCH};
+
+        let directory = tempfile::tempdir().expect("temporary directory");
+        let old = directory.path().join(".incoming-1.csv");
+        let fresh = directory.path().join(".incoming-2.csv");
+        let document = directory.path().join("keep.csv");
+        fs::write(&old, b"old").expect("the old staging file");
+        fs::write(&fresh, b"fresh").expect("the fresh staging file");
+        fs::write(&document, b"doc").expect("the document");
+        let file = std::fs::OpenOptions::new()
+            .write(true)
+            .open(&old)
+            .expect("the old file is writable");
+        file.set_times(std::fs::FileTimes::new().set_modified(UNIX_EPOCH + Duration::from_secs(1)))
+            .expect("the old time is set");
+
+        assert_eq!(clean_stale(directory.path(), STALE_STAGING_AGE), 1);
+
+        assert!(!old.exists());
+        assert!(fresh.exists());
+        assert!(document.exists());
     }
 }

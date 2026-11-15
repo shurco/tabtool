@@ -4,6 +4,7 @@ use egui::{Rect, Ui, Vec2, pos2};
 use tabtool_i18n::{Language, tr};
 
 use super::{MobileMetrics, TouchCell, bar_fill, hairline};
+use crate::icons::Icon;
 
 /// The action the accessory bar asked for.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -37,20 +38,20 @@ pub fn editor_accessory(
     let inset = 4.0;
     let cell = metrics.control_height;
     let mut trailing = rect.right() - inset;
-    let mut button = |ui: &Ui, glyph: &str, name: &str, salt: &str, action: AccessoryAction| {
+    let mut button = |ui: &Ui, icon: Icon, name: &str, salt: &str, action: AccessoryAction| {
         trailing -= cell;
         let cell_rect = Rect::from_min_size(
             pos2(trailing, rect.top()),
             Vec2::new(cell, metrics.accessory_height),
         );
-        let response = TouchCell::new(glyph, name).show(ui, cell_rect, salt);
+        let response = TouchCell::icon(icon, name).show(ui, cell_rect, salt);
         response.clicked().then_some(action)
     };
 
     let mut chosen = None;
     if let Some(action) = button(
         ui,
-        "\u{2713}",
+        Icon::Done,
         tr(language, "Done"),
         "editor-accessory-done",
         AccessoryAction::Done,
@@ -60,7 +61,7 @@ pub fn editor_accessory(
     if moves {
         if let Some(action) = button(
             ui,
-            "\u{203A}",
+            Icon::Next,
             tr(language, "Next Cell"),
             "editor-accessory-next",
             AccessoryAction::Next,
@@ -69,7 +70,7 @@ pub fn editor_accessory(
         }
         if let Some(action) = button(
             ui,
-            "\u{2039}",
+            Icon::Previous,
             tr(language, "Previous Cell"),
             "editor-accessory-previous",
             AccessoryAction::Previous,

@@ -15,7 +15,7 @@ winit 0.30.13's Android backend handles only `InputEvent::KeyEvent` and
 `InputEvent::MotionEvent`; GameActivity's soft-keyboard commits arrive as
 `android_activity::input::InputEvent::TextEvent` and are dropped before
 `egui-winit`. A stock egui `TextEdit` therefore never receives IME text on this
-stack (verified in the first spike run).
+stack (verified in the Plan 1 feasibility run).
 
 The design keeps egui for everything else and opens a real Android
 `AppCompatEditText` above the egui surface for text entry. The editor reports
@@ -80,7 +80,6 @@ by `tabtool-platform::android`. Results are `OK`, `OK:<value>`, `CANCELLED` or
 | `insets(): IntArray` | `Insets::safe_area` / `keyboard_height` | `[left, top, right, bottom, keyboard]` in dp |
 | `languages(): Array<String>` | `SystemInfo::languages` | system language tags, most preferred first |
 | `openUrl(url): String` | `OpenUrl::open` | http, https and mailto only |
-| `isDocumentOperationPending(): Boolean` | `AndroidPlatform::document_operation_pending` | lets the app poll SAF without relaunching the picker |
 | `isImportPending()` / `isExportPending()` | `AndroidPlatform::import_pending` / `export_pending` | keeps the library and export sheet on their own polling paths |
 | `takeBack(): Boolean` | `BackHandler::take_back` | back is consumed and queued; the app exits at its root with `finishActivity` |
 | `showTextEditor(left, top, width, height, text, multiline)` | `TextInput::open` | rectangle in points; Kotlin converts with the display density; returns false when it cannot open |
@@ -119,7 +118,7 @@ Verified on the `Medium_Phone_API_36.1` AVD (arm64, Android 16, headless,
 | 6 | Back closes the editor without committing | **PASS** | With the keyboard visible, the first back hides the IME; the next back produced `last outcome: cancelled` and kept the committed text. Later backs produced `status: back: taken` and the activity stayed alive. |
 | 7 | Text input commit | **PASS** | `Platform` typed through Gboard committed once on IME Done. |
 | 8 | System languages and links | **PASS** | `languages: ["en-US"]`; `Open URL` resumed Chrome. |
-| 9 | JNI exception containment | **PASS** | Forced `SecurityException` logged and cleared; `SecurityException contained: true`, process alive. |
+| 9 | JNI exception containment | **PASS** | Historical Plan 1 check; the current bridge still clears any pending JNI exception before logging. |
 | 10 | Import cancel leaves no file and no stuck picker | **PASS** | Backing out of the picker left the documents dir unchanged and a second import opened normally. |
 
 ## Plan 1 feasibility checklist (historical)
@@ -155,9 +154,7 @@ layouts). Screenshots were taken with `adb exec-out screencap`.
    itself is exact (verified by code points). A product build needs a CJK font.
 4. `Clipboard set` → Chrome paste showed "TabTool clipboard" plus the system
    toast "Chrome pasted from your clipboard"; copying in Chrome and pressing
-   `Clipboard get` returned `Some("TabTool clipboard")`. The forced
-   `throwSecurityException` self-test still shows
-   `SecurityException contained: true`, process alive.
+   `Clipboard get` returned `Some("TabTool clipboard")`.
 5. `Open document` opened DocumentsUI filtered to `text/*`; picking
    `/sdcard/Download/sample.csv` yielded
    `content://com.android.providers.downloads.documents/document/msf%3A54`.

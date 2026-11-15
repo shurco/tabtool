@@ -108,19 +108,37 @@ pub trait TouchTextInput {
     fn is_active(&self) -> bool;
 }
 
-/// A square touch cell painted from a symbol and an accessible name.
+/// A square touch cell painted from a symbol or icon and an accessible name.
 pub(crate) struct TouchCell<'a> {
-    glyph: &'a str,
+    glyph: Glyph<'a>,
     name: &'a str,
     enabled: bool,
     destructive: bool,
+}
+
+/// The mark a touch cell draws.
+enum Glyph<'a> {
+    /// A short text label, e.g. `+`.
+    Text(&'a str),
+    /// A deterministic vector icon.
+    Icon(crate::icons::Icon),
 }
 
 impl<'a> TouchCell<'a> {
     /// An enabled, plain cell.
     pub(crate) fn new(glyph: &'a str, name: &'a str) -> Self {
         Self {
-            glyph,
+            glyph: Glyph::Text(glyph),
+            name,
+            enabled: true,
+            destructive: false,
+        }
+    }
+
+    /// An enabled, plain cell painted from a vector icon.
+    pub(crate) fn icon(icon: crate::icons::Icon, name: &'a str) -> Self {
+        Self {
+            glyph: Glyph::Icon(icon),
             name,
             enabled: true,
             destructive: false,
@@ -163,13 +181,20 @@ impl<'a> TouchCell<'a> {
         } else {
             colors.accent
         };
-        ui.painter().text(
-            rect.center(),
-            Align2::CENTER_CENTER,
-            self.glyph,
-            FontId::proportional(theme.typography.body),
-            color,
-        );
+        match self.glyph {
+            Glyph::Text(glyph) => {
+                ui.painter().text(
+                    rect.center(),
+                    Align2::CENTER_CENTER,
+                    glyph,
+                    FontId::proportional(theme.typography.body),
+                    color,
+                );
+            }
+            Glyph::Icon(icon) => {
+                crate::icons::paint_icon(ui.painter(), rect, icon, color);
+            }
+        }
         response.widget_info(|| WidgetInfo::labeled(egui::Role::Button, self.enabled, self.name));
         crate::widgets::focus_ring(ui, &response);
         response

@@ -7,7 +7,6 @@ use egui::{
 use tabtool_i18n::{Language, tr};
 
 use super::MobileMetrics;
-use crate::fonts::heading_font;
 use crate::theme::current;
 
 /// The width of the revealed delete action.
@@ -154,11 +153,14 @@ impl<'a> ListRow<'a> {
                 .widget_info(|| WidgetInfo::labeled(egui::Role::Label, true, subtitle));
         }
         if self.chevron {
-            ui.painter().text(
-                pos2(content.right() - ROW_INSET, rect.center().y),
-                Align2::RIGHT_CENTER,
-                "\u{203A}",
-                heading_font(20.0),
+            let chevron = Rect::from_center_size(
+                pos2(content.right() - ROW_INSET - 8.0, rect.center().y),
+                Vec2::splat(16.0),
+            );
+            crate::icons::paint_icon(
+                ui.painter(),
+                chevron,
+                crate::icons::Icon::Chevron,
                 colors.tertiary_label,
             );
         }

@@ -245,5 +245,18 @@
     "zh-Hans": "已将副本存储到 %@",
     "ja": "%@ にコピーを保存しました",
     "ko": "%@에 복사본을 저장했습니다"
+  },
+  "Share": {
+    "en": "Share",
+    "fr": "Partager",
+    "es": "Compartir",
+    "de": "Teilen",
+    "it": "Condividi",
+    "pl": "Udostępnij",
+    "be": "Падзяліцца",
+    "uk": "Поділитися",
+    "zh-Hans": "共享",
+    "ja": "共有",
+    "ko": "공유"
   }
 }

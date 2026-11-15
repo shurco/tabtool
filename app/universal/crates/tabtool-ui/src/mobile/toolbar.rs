@@ -5,6 +5,7 @@ use tabtool_i18n::{Language, tr};
 
 use super::{MobileMetrics, TouchCell, bar_fill, hairline};
 use crate::fonts::heading_font;
+use crate::icons::Icon;
 use crate::theme::current;
 
 /// An item in the overflow menu.
@@ -16,6 +17,8 @@ pub enum OverflowItem {
     Settings,
     /// About TabTool.
     About,
+    /// Share the current document.
+    Share,
     /// Save a copy of a large document.
     SaveAs,
 }
@@ -27,6 +30,7 @@ impl OverflowItem {
             Self::Format => "Format",
             Self::Settings => "Settings",
             Self::About => "About",
+            Self::Share => "Share",
             Self::SaveAs => "Save As",
         }
     }
@@ -87,6 +91,7 @@ pub struct MobileToolbar<'a> {
     can_filter: bool,
     filter_count: usize,
     can_export: bool,
+    can_share: bool,
     large: bool,
 }
 
@@ -103,6 +108,7 @@ impl<'a> MobileToolbar<'a> {
             can_filter: false,
             filter_count: 0,
             can_export: false,
+            can_share: false,
             large: false,
         }
     }
@@ -133,6 +139,12 @@ impl<'a> MobileToolbar<'a> {
         self
     }
 
+    /// Offer Share in the overflow menu for a file-backed document.
+    pub fn share(mut self, can_share: bool) -> Self {
+        self.can_share = can_share;
+        self
+    }
+
     /// Offer Save As in the overflow menu for a large document.
     pub fn large(mut self, large: bool) -> Self {
         self.large = large;
@@ -155,20 +167,20 @@ impl<'a> MobileToolbar<'a> {
         let cell = self.metrics.control_height;
         let inset = 4.0;
         let mut leading = rect.left() + inset;
-        let mut leading_cell = |ui: &Ui, glyph: &str, name: &str, enabled: bool, salt: &str| {
+        let mut leading_cell = |ui: &Ui, icon: Icon, name: &str, enabled: bool, salt: &str| {
             let cell_rect = Rect::from_min_size(
                 pos2(leading, rect.top()),
                 Vec2::new(cell, self.metrics.toolbar_height),
             );
             leading += cell;
-            TouchCell::new(glyph, name)
+            TouchCell::icon(icon, name)
                 .enabled(enabled)
                 .show(ui, cell_rect, salt)
         };
 
         if leading_cell(
             ui,
-            "\u{2039}",
+            Icon::Back,
             tr(self.language, "Documents"),
             true,
             "mobile-toolbar-back",
@@ -179,7 +191,7 @@ impl<'a> MobileToolbar<'a> {
         }
         if leading_cell(
             ui,
-            "\u{21BA}",
+            Icon::Undo,
             tr(self.language, "Undo"),
             self.can_undo,
             "mobile-toolbar-undo",
@@ -190,7 +202,7 @@ impl<'a> MobileToolbar<'a> {
         }
         if leading_cell(
             ui,
-            "\u{21BB}",
+            Icon::Redo,
             tr(self.language, "Redo"),
             self.can_redo,
             "mobile-toolbar-redo",
@@ -202,27 +214,27 @@ impl<'a> MobileToolbar<'a> {
 
         let trailing_right = rect.right() - inset;
         let mut trailing_left = trailing_right - cell;
-        let mut trailing_cell = |ui: &Ui, glyph: &str, name: &str, enabled: bool, salt: &str| {
+        let mut trailing_cell = |ui: &Ui, icon: Icon, name: &str, enabled: bool, salt: &str| {
             let cell_rect = Rect::from_min_size(
                 pos2(trailing_left, rect.top()),
                 Vec2::new(cell, self.metrics.toolbar_height),
             );
             trailing_left -= cell;
-            TouchCell::new(glyph, name)
+            TouchCell::icon(icon, name)
                 .enabled(enabled)
                 .show(ui, cell_rect, salt)
         };
 
         let overflow = trailing_cell(
             ui,
-            "\u{2026}",
+            Icon::Overflow,
             tr(self.language, "More"),
             true,
             "mobile-toolbar-overflow",
         );
         if trailing_cell(
             ui,
-            "\u{2197}",
+            Icon::Export,
             tr(self.language, "Export"),
             self.can_export,
             "mobile-toolbar-export",
@@ -238,7 +250,7 @@ impl<'a> MobileToolbar<'a> {
         };
         let filter = trailing_cell(
             ui,
-            "\u{25BD}",
+            Icon::Filter,
             &filter_name,
             self.can_filter,
             "mobile-toolbar-filter",
@@ -274,6 +286,18 @@ impl<'a> MobileToolbar<'a> {
         );
         title_response
             .widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, title.as_str()));
+        let title = elide_title(&title, center.width(), |candidate| {
+            ui.ctx().fonts_mut(|fonts| {
+                fonts
+                    .layout_no_wrap(
+                        candidate.to_owned(),
+                        heading_font(self.metrics.title),
+                        colors.label,
+                    )
+                    .size()
+                    .x
+            })
+        });
         ui.painter().text(
             center.center(),
             egui::Align2::CENTER_CENTER,
@@ -287,6 +311,9 @@ impl<'a> MobileToolbar<'a> {
             OverflowItem::Settings,
             OverflowItem::About,
         ];
+        if self.can_share {
+            items.push(OverflowItem::Share);
+        }
         if self.large {
             items.push(OverflowItem::SaveAs);
         }
@@ -305,5 +332,51 @@ impl<'a> MobileToolbar<'a> {
         });
 
         response
+    }
+}
+
+/// Shortens `title` with an ASCII ellipsis until `measure` fits `max_width`.
+fn elide_title(title: &str, max_width: f32, measure: impl Fn(&str) -> f32) -> String {
+    if max_width <= 0.0 {
+        return String::new();
+    }
+    if measure(title) <= max_width {
+        return title.to_owned();
+    }
+    let characters: Vec<char> = title.chars().collect();
+    let mut end = characters.len();
+    while end > 0 {
+        end -= 1;
+        let candidate = format!("{}...", characters[..end].iter().collect::<String>());
+        if measure(&candidate) <= max_width {
+            return candidate;
+        }
+    }
+    "...".to_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::elide_title;
+
+    #[test]
+    fn a_fitting_title_is_unchanged() {
+        assert_eq!(
+            elide_title("Budget.csv", 100.0, |text| text.len() as f32),
+            "Budget.csv"
+        );
+    }
+
+    #[test]
+    fn a_long_title_is_shortened_with_an_ascii_ellipsis() {
+        assert_eq!(
+            elide_title("a long document name.csv", 10.0, |text| text.len() as f32),
+            "a long ..."
+        );
+    }
+
+    #[test]
+    fn a_title_wider_than_its_cell_still_ends_in_three_dots() {
+        assert_eq!(elide_title("abcdef", 2.0, |text| text.len() as f32), "...");
     }
 }

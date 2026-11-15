@@ -186,6 +186,7 @@ impl MobileEditor<'_> {
                         enabled_filter_count(self.document),
                     )
                     .export(can_export(self.document))
+                    .share(self.document.file_path().is_some())
                     .large(self.document.is_large_mode())
                     .show(ui)
             })

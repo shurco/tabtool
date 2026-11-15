@@ -31,6 +31,7 @@ mod format_options;
 pub mod grid;
 #[cfg(feature = "test-support")]
 pub mod harness;
+pub mod icons;
 pub mod mobile;
 pub mod settings;
 pub mod theme;

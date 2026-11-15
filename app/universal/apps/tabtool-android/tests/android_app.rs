@@ -286,6 +286,14 @@ impl TouchTextInput for FakeText {
     }
 }
 
+impl FakeText {
+    fn finish(&self, outcome: TouchTextInputOutcome) {
+        let mut state = self.state.borrow_mut();
+        state.request = None;
+        state.pending = Some(outcome);
+    }
+}
+
 #[derive(Clone, Default)]
 struct FakeClipboard {
     text: Rc<RefCell<Option<String>>>,
@@ -514,6 +522,46 @@ fn a_large_document_is_never_autosaved() {
     assert!(app.editor().expect("editor").document().is_dirty());
 }
 
+#[test]
+fn an_untitled_document_is_never_autosaved() {
+    let fixture = Fixture::new();
+    let path = fixture.write("a.csv", "a,b\n1,2\n");
+    let mut app = fixture.app();
+    open_document(&mut app, &path);
+    let editor = app.editor_mut().expect("an open editor");
+    editor
+        .document_mut()
+        .set_file_path(None)
+        .expect("the document becomes untitled");
+    editor.document_mut().set_cell(0, 0, "edited");
+
+    app.poll(Instant::now() + Duration::from_secs(60));
+
+    assert_eq!(fixture.read("a.csv"), "a,b\n1,2\n");
+    assert!(app.editor().expect("editor").document().is_dirty());
+}
+
+#[test]
+fn back_defers_while_a_native_edit_is_open() {
+    let fixture = Fixture::new();
+    let path = fixture.write("a.csv", "a,b\n1,2\n");
+    let mut app = fixture.app();
+    open_document(&mut app, &path);
+    let mut input = fixture.input.clone();
+    input.open(TouchTextInputRequest {
+        rect: egui::Rect::from_min_size(egui::pos2(10.0, 20.0), egui::vec2(80.0, 44.0)),
+        text: "draft".to_owned(),
+        multiline: false,
+    });
+
+    assert_eq!(app.back(), BackResult::Deferred);
+    assert!(matches!(app.screen(), Screen::Editor(_)));
+
+    input.finish(TouchTextInputOutcome::Committed("draft".to_owned()));
+    app.poll(Instant::now());
+    assert!(matches!(app.screen(), Screen::Library));
+}
+
 // -- Background ---------------------------------------------------------------
 
 #[test]
@@ -658,6 +706,27 @@ fn the_editor_and_sheet_are_restored_after_process_death() {
 }
 
 #[test]
+fn the_full_sheet_stack_is_restored_after_process_death() {
+    let fixture = Fixture::new();
+    let path = fixture.write("a.csv", "a,b\n1,2\n");
+    {
+        let mut app = fixture.app();
+        open_document(&mut app, &path);
+        app.open_sheet(SheetKind::Settings);
+        app.open_sheet(SheetKind::About);
+    }
+
+    let mut restored = fixture.app();
+
+    assert_eq!(
+        restored.nav().sheets(),
+        &[SheetKind::Settings, SheetKind::About]
+    );
+    assert_eq!(restored.back(), BackResult::ClosedSheet);
+    assert_eq!(restored.nav().sheet(), Some(SheetKind::Settings));
+}
+
+#[test]
 fn a_missing_restored_document_returns_to_the_library_with_a_notice() {
     let fixture = Fixture::new();
     let path = fixture.write("a.csv", "a,b\n1,2\n");
@@ -731,6 +800,77 @@ fn sharing_hands_the_current_document_to_the_platform() {
         fixture.fake.shared.borrow().as_slice(),
         std::slice::from_ref(&path)
     );
+}
+
+#[test]
+fn the_overflow_share_saves_a_dirty_document_before_sharing() {
+    let fixture = Fixture::new();
+    let path = fixture.write("a.csv", "a,b\n1,2\n");
+    let mut app = fixture.app();
+    open_document(&mut app, &path);
+    edit_cell(&mut app, "saved first");
+
+    app.apply_editor_response(&MobileEditorResponse {
+        toolbar: MobileToolbarResponse {
+            overflow: Some(OverflowItem::Share),
+            ..MobileToolbarResponse::default()
+        },
+        ..MobileEditorResponse::default()
+    });
+
+    assert!(fixture.read("a.csv").contains("saved first"));
+    assert_eq!(
+        fixture.fake.shared.borrow().as_slice(),
+        std::slice::from_ref(&path)
+    );
+}
+
+#[test]
+fn two_quick_intents_are_both_adopted() {
+    let fixture = Fixture::new();
+    fixture.write(".incoming-1.csv", "one,1\n");
+    fixture.write(".incoming-2.csv", "two,2\n");
+    fixture.fake.intent(IntentEvent::Staged(StagedIntent {
+        file_name: ".incoming-1.csv".to_owned(),
+        display_name: "one.csv".to_owned(),
+    }));
+    fixture.fake.intent(IntentEvent::Staged(StagedIntent {
+        file_name: ".incoming-2.csv".to_owned(),
+        display_name: "two.csv".to_owned(),
+    }));
+    let mut app = fixture.app();
+
+    app.poll(Instant::now());
+
+    assert!(fixture.path("one.csv").exists());
+    assert!(fixture.path("two.csv").exists());
+    assert!(!fixture.path(".incoming-1.csv").exists());
+    assert!(!fixture.path(".incoming-2.csv").exists());
+    let Screen::Editor(document) = app.screen() else {
+        panic!("the last imported document opens: {:?}", app.screen());
+    };
+    assert_eq!(
+        document.path().file_name().and_then(|name| name.to_str()),
+        Some("two.csv")
+    );
+}
+
+#[test]
+fn startup_removes_an_abandoned_staging_file() {
+    let fixture = Fixture::new();
+    let old = fixture.write(".incoming-9.csv", "old");
+    let file = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&old)
+        .expect("the staging file is writable");
+    file.set_times(
+        std::fs::FileTimes::new().set_modified(std::time::UNIX_EPOCH + Duration::from_secs(1)),
+    )
+    .expect("the old time is set");
+
+    let _app = fixture.app();
+
+    assert!(!old.exists());
 }
 
 #[test]

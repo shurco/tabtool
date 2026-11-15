@@ -13,8 +13,8 @@ use tabtool_ui::mobile::{BackOutcome, DocumentId, NavStack, Screen, SheetKind};
 pub struct NavSnapshot {
     /// The document open in the editor, if any.
     pub document: Option<PathBuf>,
-    /// The top sheet, if any.
-    pub sheet: Option<SheetKind>,
+    /// The open sheets, bottom first.
+    pub sheets: Vec<SheetKind>,
 }
 
 /// The Android navigation stack.
@@ -80,11 +80,6 @@ impl AndroidNav {
         self.stack.document_missing();
     }
 
-    /// Queues a catalog key for the next notice.
-    pub fn notify(&mut self, key: &'static str) {
-        self.stack.notify(key);
-    }
-
     /// Takes the queued notice, if any.
     pub fn take_notice(&mut self) -> Option<&'static str> {
         self.stack.take_notice()
@@ -94,7 +89,7 @@ impl AndroidNav {
     pub fn snapshot(&self) -> NavSnapshot {
         NavSnapshot {
             document: self.document().map(Path::to_path_buf),
-            sheet: self.sheet(),
+            sheets: self.sheets().to_vec(),
         }
     }
 }

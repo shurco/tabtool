@@ -133,12 +133,10 @@ The repository follows these conventions:
 
 ## Universal (Rust)
 
-`app/universal` is the Rust port for Windows, Linux and Android. Plan 1 covers
-the pure CSV core only: `tabtool-core` implements parsing, writing, detection,
-tables, sorting, filters, clipboard and export, with a committed Swift golden
-suite proving parity with the Apple core. The desktop app is a smoke window and
-`tabtool-android` is a validated input spike; large-file mode, the document
-layer and production UI are later plans.
+`app/universal` is the Rust port for Windows, Linux and Android. It ships the
+CSV core, the large-file model, the document layer, the desktop app and the
+single-window Android app; the Swift golden suite proves core parity with the
+Apple implementation.
 
 Build and test from `app/universal` with Rust 1.99.1 (`cargo test --workspace`,
 `cargo run -p tabtool-desktop -- --smoke`); the [universal

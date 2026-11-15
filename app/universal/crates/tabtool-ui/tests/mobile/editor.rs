@@ -32,6 +32,29 @@ fn the_editor_composes_the_toolbar_grid_and_status() {
 }
 
 #[test]
+fn the_overflow_offers_share_only_for_a_file_backed_document() {
+    let mut fixture = EditorFixture::phone(support::small_document());
+    fixture.run();
+    fixture.click("More");
+    assert!(
+        !fixture.has_label("Share"),
+        "an untitled document has nothing to share"
+    );
+
+    let mut document = support::small_document();
+    document
+        .set_file_path(Some(std::path::Path::new("/tmp/Budget.csv")))
+        .expect("the fixture is file-backed");
+    let mut fixture = EditorFixture::phone(document);
+    fixture.run();
+    fixture.click("More");
+    assert!(
+        fixture.has_label("Share"),
+        "a file-backed document offers Share"
+    );
+}
+
+#[test]
 fn a_fast_second_tap_is_the_edit_gesture_and_never_zooms() {
     let mut fixture = EditorFixture::phone(support::small_document());
     fixture.run();

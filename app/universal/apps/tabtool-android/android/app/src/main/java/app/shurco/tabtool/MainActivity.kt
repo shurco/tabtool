@@ -19,7 +19,12 @@ class MainActivity : GameActivity() {
         super.onCreate(savedInstanceState)
         TabToolBridge.attach(this)
         onBackPressedDispatcher.addCallback(this, editorBackCallback)
-        TabToolBridge.handleIntent(intent)
+        // A restored process already has its document in app-state.json. A
+        // task opened from Recents is not a fresh VIEW/SEND either.
+        val fromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (savedInstanceState == null && !fromHistory) {
+            TabToolBridge.handleIntent(intent)
+        }
         window.decorView.post { window.decorView.requestApplyInsets() }
     }
 
