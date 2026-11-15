@@ -6,10 +6,12 @@
 //! or absent from every column. Column ids are process-unique and only carry
 //! identity: [`CsvTable`] equality compares content alone.
 
+mod columns;
+mod rows;
+
 use std::collections::BTreeSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::reorder::is_permutation;
 use crate::{column_name, convert_decimal_mark, is_numeric};
 
 /// Process-unique identity of a column, stable for the session.
@@ -225,147 +227,6 @@ impl CsvTable {
         true
     }
 
-    /// Inserts a blank row, clamping the index to the table bounds.
-    pub fn add_row(&mut self, index: usize) {
-        let insertion = index.min(self.row_count());
-        for column in &mut self.columns {
-            let safe_insertion = insertion.min(column.cells.len());
-            column.cells.insert(safe_insertion, String::new());
-        }
-    }
-
-    /// Removes the rows at `indexes`; out-of-range indexes are ignored.
-    ///
-    /// Every column is rebuilt in one pass. Removing selected indexes one by
-    /// one costs O(rows × selected) and is too slow for a large selection on a
-    /// 100k-row table.
-    pub fn delete_rows(&mut self, indexes: &RowSet) {
-        let row_count = self.row_count();
-        let selected: RowSet = indexes
-            .iter()
-            .copied()
-            .filter(|&row| row < row_count)
-            .collect();
-        if selected.is_empty() {
-            return;
-        }
-
-        let order: Vec<usize> = (0..row_count)
-            .filter(|row| !selected.contains(row))
-            .collect();
-        self.apply_row_order(&order);
-    }
-
-    /// Moves the rows at `indexes` so they end up before `destination`.
-    ///
-    /// `destination` is an index in the pre-move table, clamped to the table
-    /// bounds. The insertion point is adjusted for selected rows removed above
-    /// it, and moved rows keep their original order. Each column is rebuilt in
-    /// one pass so a large move stays linear in the table size.
-    pub fn move_rows(&mut self, indexes: &RowSet, destination: usize) {
-        let row_count = self.row_count();
-        let selected: RowSet = indexes
-            .iter()
-            .copied()
-            .filter(|&row| row < row_count)
-            .collect();
-        if selected.is_empty() {
-            return;
-        }
-
-        let destination = destination.min(row_count);
-        let insertion = destination - selected.iter().filter(|&&row| row < destination).count();
-
-        let mut remaining = Vec::with_capacity(row_count - selected.len());
-        let mut moving = Vec::with_capacity(selected.len());
-        for row in 0..row_count {
-            if selected.contains(&row) {
-                moving.push(row);
-            } else {
-                remaining.push(row);
-            }
-        }
-
-        let target = insertion.min(remaining.len());
-        remaining.splice(target..target, moving);
-        self.apply_row_order(&remaining);
-    }
-
-    /// Reorders rows so result row `i` is current row `order[i]`.
-    ///
-    /// Input that is not a permutation of the row indexes is ignored.
-    pub fn reorder_rows(&mut self, order: &[usize]) {
-        if !is_permutation(order, self.row_count()) {
-            return;
-        }
-        self.apply_row_order(order);
-    }
-
-    /// Reorders columns so result column `i` is current column `order[i]`.
-    ///
-    /// Input that is not a permutation of the column indexes is ignored.
-    pub fn reorder_columns(&mut self, order: &[usize]) {
-        if !is_permutation(order, self.columns.len()) {
-            return;
-        }
-
-        let mut slots: Vec<Option<CsvColumn>> = std::mem::take(&mut self.columns)
-            .into_iter()
-            .map(Some)
-            .collect();
-        self.columns = order
-            .iter()
-            .map(|&index| slots[index].take().expect("order is a permutation"))
-            .collect();
-    }
-
-    /// Inserts a blank column, clamping the index to the table bounds.
-    ///
-    /// `header` is used only when the table already has headers; otherwise the
-    /// new column keeps headers disabled.
-    pub fn add_column(&mut self, index: usize, header: Option<&str>) {
-        let insertion = index.min(self.columns.len());
-        let new_header = if self.has_headers() {
-            Some(header.unwrap_or_default().to_owned())
-        } else {
-            None
-        };
-        let cells = vec![String::new(); self.row_count()];
-        self.columns
-            .insert(insertion, CsvColumn::new(new_header, cells));
-    }
-
-    /// Removes the columns at `indexes`; out-of-range indexes are ignored.
-    ///
-    /// Deleting every column leaves one empty column so a table always keeps at
-    /// least one.
-    pub fn delete_columns(&mut self, indexes: &RowSet) {
-        let row_count = self.row_count();
-        let selected: RowSet = indexes
-            .iter()
-            .copied()
-            .filter(|&index| index < self.columns.len())
-            .collect();
-        for index in selected.iter().rev() {
-            self.columns.remove(*index);
-        }
-        if self.columns.is_empty() {
-            self.columns
-                .push(CsvColumn::new(None, vec![String::new(); row_count]));
-        }
-    }
-
-    /// Moves a column to a new position, clamping both indexes.
-    pub fn move_column(&mut self, from: usize, to: usize) {
-        if from >= self.columns.len() {
-            return;
-        }
-
-        let target = to.min(self.columns.len() - 1);
-        let column = self.columns.remove(from);
-        self.columns.insert(target, column);
-    }
-
     /// Converts the decimal mark in numeric cells from `from` to `to`.
     ///
     /// An empty source mark and identical marks are no-ops; an empty target
@@ -394,20 +255,6 @@ impl CsvTable {
             .iter()
             .map(|column| column.id)
             .eq(other.columns.iter().map(|column| column.id))
-    }
-
-    /// Rebuilds every column from a row-index order in one pass.
-    fn apply_row_order(&mut self, order: &[usize]) {
-        for column in &mut self.columns {
-            let mut cells: Vec<Option<String>> = std::mem::take(&mut column.cells)
-                .into_iter()
-                .map(Some)
-                .collect();
-            column.cells = order
-                .iter()
-                .map(|&index| cells[index].take().expect("order is a permutation"))
-                .collect();
-        }
     }
 }
 

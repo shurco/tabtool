@@ -4,6 +4,7 @@
 //! file, its atomic replace and its platform config-directory location.
 
 mod encoding;
+mod path_json;
 mod persisted;
 
 use std::path::{Path, PathBuf};
