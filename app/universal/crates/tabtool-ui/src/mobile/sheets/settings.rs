@@ -1,19 +1,14 @@
 //! The Settings sheet: one scrollable form with a section per group.
 
 use egui::Ui;
-use tabtool_core::Encoding;
-use tabtool_i18n::{Language, tr};
-use tabtool_settings::{LARGE_FILE_THRESHOLDS_MIB, QuoteStyle, Settings};
+use tabtool_i18n::tr;
+use tabtool_settings::Settings;
 
 use super::{
     SheetStyle, caption, form_row, section_title, touch_picker, touch_toggle, touch_wide_button,
 };
-use crate::format_options::{DECIMALS, SEPARATORS};
 use crate::mobile::{MOBILE_ROW_HEIGHTS, SheetOptions, sheet};
-use crate::settings::options::{
-    decimal_index, default_encoding_index, default_threshold_index, separator_index,
-    threshold_label,
-};
+use crate::settings::options::SettingPicker;
 use crate::widgets::ButtonKind;
 
 /// What the Settings sheet asked its host to do.
@@ -47,113 +42,22 @@ pub fn settings_sheet(
         SheetOptions::new(tr(language, "Settings"), tr(language, "Done")),
         |ui| {
             section_title(ui, style, tr(language, "General"));
-            let names: Vec<&str> = Language::ALL
-                .iter()
-                .map(|candidate| {
-                    candidate
-                        .native_name()
-                        .unwrap_or_else(|| tr(language, "System"))
-                })
-                .collect();
-            let selected = Language::ALL
-                .iter()
-                .position(|candidate| *candidate == settings.app_language)
-                .unwrap_or(0);
-            if let Some(index) = form_row(ui, style, tr(language, "Language"), |ui| {
-                touch_picker(
-                    ui,
-                    style,
-                    ("mobile-settings-language", ui.ctx().viewport_id()),
-                    tr(language, "Language"),
-                    names[selected],
-                    &names,
-                    true,
-                )
-            }) {
-                settings.app_language = Language::ALL[index];
-                changed = true;
-            }
+            changed |= picker_row(
+                ui,
+                style,
+                "mobile-settings-language",
+                SettingPicker::Language,
+                settings,
+            );
 
             section_title(ui, style, tr(language, "New Document"));
-            let names: Vec<&str> = Encoding::ALL
-                .iter()
-                .map(|encoding| tr(language, encoding.display_name()))
-                .collect();
-            let selected = Encoding::ALL
-                .iter()
-                .position(|encoding| *encoding == settings.new_document_encoding)
-                .unwrap_or_else(default_encoding_index);
-            if let Some(index) = form_row(ui, style, tr(language, "Encoding"), |ui| {
-                touch_picker(
-                    ui,
-                    style,
-                    ("mobile-settings-encoding", ui.ctx().viewport_id()),
-                    tr(language, "Encoding"),
-                    names[selected],
-                    &names,
-                    true,
-                )
-            }) {
-                settings.new_document_encoding = Encoding::ALL[index];
-                changed = true;
-            }
-
-            let labels: Vec<&str> = SEPARATORS
-                .iter()
-                .map(|(_, key)| tr(language, key))
-                .collect();
-            let selected = separator_index(&settings.new_document_separator);
-            if let Some(index) = form_row(ui, style, tr(language, "Separator"), |ui| {
-                touch_picker(
-                    ui,
-                    style,
-                    ("mobile-settings-separator", ui.ctx().viewport_id()),
-                    tr(language, "Separator"),
-                    labels[selected],
-                    &labels,
-                    true,
-                )
-            }) {
-                settings.new_document_separator = SEPARATORS[index].0.to_owned();
-                changed = true;
-            }
-
-            let quotes = [
-                tr(language, "Doubled"),
-                tr(language, "Backslash"),
-                tr(language, "None"),
-            ];
-            let selected = settings.new_document_quote_style.index();
-            if let Some(index) = form_row(ui, style, tr(language, "Quote"), |ui| {
-                touch_picker(
-                    ui,
-                    style,
-                    ("mobile-settings-quote", ui.ctx().viewport_id()),
-                    tr(language, "Quote"),
-                    quotes[selected],
-                    &quotes,
-                    true,
-                )
-            }) {
-                settings.new_document_quote_style = QuoteStyle::ALL[index];
-                changed = true;
-            }
-
-            let decimals: Vec<&str> = DECIMALS.iter().map(|(_, key)| tr(language, key)).collect();
-            let selected = decimal_index(&settings.new_document_decimal_mark);
-            if let Some(index) = form_row(ui, style, tr(language, "Decimal Mark"), |ui| {
-                touch_picker(
-                    ui,
-                    style,
-                    ("mobile-settings-decimal", ui.ctx().viewport_id()),
-                    tr(language, "Decimal Mark"),
-                    decimals[selected],
-                    &decimals,
-                    true,
-                )
-            }) {
-                settings.new_document_decimal_mark = DECIMALS[index].0.to_owned();
-                changed = true;
+            for (id, picker) in [
+                ("mobile-settings-encoding", SettingPicker::Encoding),
+                ("mobile-settings-separator", SettingPicker::Separator),
+                ("mobile-settings-quote", SettingPicker::Quote),
+                ("mobile-settings-decimal", SettingPicker::DecimalMark),
+            ] {
+                changed |= picker_row(ui, style, id, picker, settings);
             }
 
             if touch_toggle(
@@ -189,30 +93,13 @@ pub fn settings_sheet(
                 changed = true;
             }
 
-            let heights = [
-                tr(language, "Compact"),
-                tr(language, "Default"),
-                tr(language, "Comfortable"),
-            ];
-            let current = tabtool_settings::valid_mobile_row_height(settings.grid_row_height);
-            let selected = MOBILE_ROW_HEIGHTS
-                .iter()
-                .position(|height| *height == current)
-                .unwrap_or(1);
-            if let Some(index) = form_row(ui, style, tr(language, "Row Height"), |ui| {
-                touch_picker(
-                    ui,
-                    style,
-                    ("mobile-settings-row-height", ui.ctx().viewport_id()),
-                    tr(language, "Row Height"),
-                    heights[selected],
-                    &heights,
-                    true,
-                )
-            }) {
-                settings.grid_row_height = MOBILE_ROW_HEIGHTS[index];
-                changed = true;
-            }
+            changed |= picker_row(
+                ui,
+                style,
+                "mobile-settings-row-height",
+                SettingPicker::RowHeight(&MOBILE_ROW_HEIGHTS),
+                settings,
+            );
 
             if touch_toggle(
                 ui,
@@ -227,29 +114,13 @@ pub fn settings_sheet(
             }
 
             section_title(ui, style, tr(language, "Large Files"));
-            let labels: Vec<String> = LARGE_FILE_THRESHOLDS_MIB
-                .iter()
-                .map(|mebibytes| threshold_label(language, *mebibytes))
-                .collect();
-            let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
-            let selected = LARGE_FILE_THRESHOLDS_MIB
-                .iter()
-                .position(|mebibytes| *mebibytes == settings.large_file_threshold_mib)
-                .unwrap_or_else(default_threshold_index);
-            if let Some(index) = form_row(ui, style, tr(language, "Large File Threshold"), |ui| {
-                touch_picker(
-                    ui,
-                    style,
-                    ("mobile-settings-large-threshold", ui.ctx().viewport_id()),
-                    tr(language, "Large File Threshold"),
-                    labels[selected],
-                    &labels,
-                    true,
-                )
-            }) {
-                settings.large_file_threshold_mib = LARGE_FILE_THRESHOLDS_MIB[index];
-                changed = true;
-            }
+            changed |= picker_row(
+                ui,
+                style,
+                "mobile-settings-large-threshold",
+                SettingPicker::LargeFileThreshold,
+                settings,
+            );
             caption(
                 ui,
                 style,
@@ -272,4 +143,33 @@ pub fn settings_sheet(
         changed,
         about,
     }
+}
+
+/// One labelled picker row; reports whether the user chose an option.
+fn picker_row(
+    ui: &mut Ui,
+    style: SheetStyle,
+    id: &'static str,
+    picker: SettingPicker,
+    settings: &mut Settings,
+) -> bool {
+    let title = tr(style.language, picker.title());
+    let labels = picker.labels(style.language);
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    let selected = picker.selected(settings);
+    let chosen = form_row(ui, style, title, |ui| {
+        touch_picker(
+            ui,
+            style,
+            (id, ui.ctx().viewport_id()),
+            title,
+            labels[selected],
+            &labels,
+            true,
+        )
+    });
+    if let Some(index) = chosen {
+        picker.apply(settings, index);
+    }
+    chosen.is_some()
 }

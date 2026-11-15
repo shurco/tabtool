@@ -1,18 +1,13 @@
 //! The four Settings tab forms.
 
 use egui::{Grid, RichText, Ui};
-use tabtool_core::Encoding;
 use tabtool_i18n::{Language, tr};
-use tabtool_settings::{LARGE_FILE_THRESHOLDS_MIB, QuoteStyle, ROW_HEIGHTS, Settings};
+use tabtool_settings::{ROW_HEIGHTS, Settings};
 
-use crate::format_options::{DECIMALS, SEPARATORS};
 use crate::theme::current;
 use crate::widgets::{Picker, toggle};
 
-use super::options::{
-    decimal_index, default_encoding_index, default_threshold_index, separator_index,
-    threshold_label,
-};
+use super::options::SettingPicker;
 
 /// Settings > General: language and the format bar.
 pub(super) fn general(
@@ -22,32 +17,14 @@ pub(super) fn general(
     changed: &mut bool,
 ) {
     form_grid(ui, "settings-general", |ui| {
-        ui.label(tr(language, "Language"));
-        let names: Vec<&str> = Language::ALL
-            .iter()
-            .map(|candidate| {
-                candidate
-                    .native_name()
-                    .unwrap_or_else(|| tr(language, "System"))
-            })
-            .collect();
-        let selected = Language::ALL
-            .iter()
-            .position(|candidate| *candidate == settings.app_language)
-            .unwrap_or(0);
-        if let Some(index) = Picker::new(
-            (ui.ctx().viewport_id(), "settings-language"),
-            tr(language, "Language"),
-            names[selected],
-            &names,
-        )
-        .width(210.0)
-        .show(ui)
-        {
-            settings.app_language = Language::ALL[index];
-            *changed = true;
-        }
-        ui.end_row();
+        picker_row(
+            ui,
+            "settings-language",
+            SettingPicker::Language,
+            settings,
+            language,
+            changed,
+        );
 
         ui.label("");
         if toggle(
@@ -71,86 +48,14 @@ pub(super) fn new_document(
     changed: &mut bool,
 ) {
     form_grid(ui, "settings-new-document", |ui| {
-        ui.label(tr(language, "Encoding"));
-        let names: Vec<&str> = Encoding::ALL
-            .iter()
-            .map(|encoding| tr(language, encoding.display_name()))
-            .collect();
-        let selected = Encoding::ALL
-            .iter()
-            .position(|encoding| *encoding == settings.new_document_encoding)
-            .unwrap_or(default_encoding_index());
-        if let Some(index) = Picker::new(
-            (ui.ctx().viewport_id(), "settings-encoding"),
-            tr(language, "Encoding"),
-            names[selected],
-            &names,
-        )
-        .width(210.0)
-        .show(ui)
-        {
-            settings.new_document_encoding = Encoding::ALL[index];
-            *changed = true;
+        for (id, picker) in [
+            ("settings-encoding", SettingPicker::Encoding),
+            ("settings-separator", SettingPicker::Separator),
+            ("settings-quote", SettingPicker::Quote),
+            ("settings-decimal", SettingPicker::DecimalMark),
+        ] {
+            picker_row(ui, id, picker, settings, language, changed);
         }
-        ui.end_row();
-
-        ui.label(tr(language, "Separator"));
-        let labels: Vec<&str> = SEPARATORS
-            .iter()
-            .map(|(_, key)| tr(language, key))
-            .collect();
-        let selected = separator_index(&settings.new_document_separator);
-        if let Some(index) = Picker::new(
-            (ui.ctx().viewport_id(), "settings-separator"),
-            tr(language, "Separator"),
-            labels[selected],
-            &labels,
-        )
-        .width(210.0)
-        .show(ui)
-        {
-            settings.new_document_separator = SEPARATORS[index].0.to_owned();
-            *changed = true;
-        }
-        ui.end_row();
-
-        ui.label(tr(language, "Quote"));
-        let labels = [
-            tr(language, "Doubled"),
-            tr(language, "Backslash"),
-            tr(language, "None"),
-        ];
-        let selected = settings.new_document_quote_style.index();
-        if let Some(index) = Picker::new(
-            (ui.ctx().viewport_id(), "settings-quote"),
-            tr(language, "Quote"),
-            labels[selected],
-            &labels,
-        )
-        .width(210.0)
-        .show(ui)
-        {
-            settings.new_document_quote_style = QuoteStyle::ALL[index];
-            *changed = true;
-        }
-        ui.end_row();
-
-        ui.label(tr(language, "Decimal Mark"));
-        let labels: Vec<&str> = DECIMALS.iter().map(|(_, key)| tr(language, key)).collect();
-        let selected = decimal_index(&settings.new_document_decimal_mark);
-        if let Some(index) = Picker::new(
-            (ui.ctx().viewport_id(), "settings-decimal"),
-            tr(language, "Decimal Mark"),
-            labels[selected],
-            &labels,
-        )
-        .width(210.0)
-        .show(ui)
-        {
-            settings.new_document_decimal_mark = DECIMALS[index].0.to_owned();
-            *changed = true;
-        }
-        ui.end_row();
 
         ui.label("");
         if toggle(
@@ -186,30 +91,14 @@ pub(super) fn grid(ui: &mut Ui, settings: &mut Settings, language: Language, cha
         }
         ui.end_row();
 
-        ui.label(tr(language, "Row Height"));
-        let labels = [
-            tr(language, "Compact"),
-            tr(language, "Default"),
-            tr(language, "Comfortable"),
-        ];
-        let current = settings.row_height();
-        let selected = ROW_HEIGHTS
-            .iter()
-            .position(|height| *height == current)
-            .unwrap_or(1);
-        if let Some(index) = Picker::new(
-            (ui.ctx().viewport_id(), "settings-row-height"),
-            tr(language, "Row Height"),
-            labels[selected],
-            &labels,
-        )
-        .width(210.0)
-        .show(ui)
-        {
-            settings.grid_row_height = ROW_HEIGHTS[index];
-            *changed = true;
-        }
-        ui.end_row();
+        picker_row(
+            ui,
+            "settings-row-height",
+            SettingPicker::RowHeight(&ROW_HEIGHTS),
+            settings,
+            language,
+            changed,
+        );
 
         ui.label("");
         if toggle(
@@ -233,35 +122,48 @@ pub(super) fn large_files(
     changed: &mut bool,
 ) {
     form_grid(ui, "settings-large-files", |ui| {
-        ui.label(tr(language, "Large File Threshold"));
-        let labels: Vec<String> = LARGE_FILE_THRESHOLDS_MIB
-            .iter()
-            .map(|mebibytes| threshold_label(language, *mebibytes))
-            .collect();
-        let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
-        let selected = LARGE_FILE_THRESHOLDS_MIB
-            .iter()
-            .position(|mebibytes| *mebibytes == settings.large_file_threshold_mib)
-            .unwrap_or_else(default_threshold_index);
-        if let Some(index) = Picker::new(
-            (ui.ctx().viewport_id(), "settings-large-threshold"),
-            tr(language, "Large File Threshold"),
-            labels[selected],
-            &labels,
-        )
-        .width(210.0)
-        .show(ui)
-        {
-            settings.large_file_threshold_mib = LARGE_FILE_THRESHOLDS_MIB[index];
-            *changed = true;
-        }
-        ui.end_row();
+        picker_row(
+            ui,
+            "settings-large-threshold",
+            SettingPicker::LargeFileThreshold,
+            settings,
+            language,
+            changed,
+        );
     });
     caption(
         ui,
         language,
         "Files at or above this size open in large file mode.",
     );
+}
+
+/// One labelled picker row of a form grid.
+fn picker_row(
+    ui: &mut Ui,
+    id: &'static str,
+    picker: SettingPicker,
+    settings: &mut Settings,
+    language: Language,
+    changed: &mut bool,
+) {
+    let title = tr(language, picker.title());
+    ui.label(title);
+    let labels = picker.labels(language);
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    if let Some(index) = Picker::new(
+        (ui.ctx().viewport_id(), id),
+        title,
+        labels[picker.selected(settings)],
+        &labels,
+    )
+    .width(210.0)
+    .show(ui)
+    {
+        picker.apply(settings, index);
+        *changed = true;
+    }
+    ui.end_row();
 }
 
 fn form_grid(ui: &mut Ui, id: &'static str, add_contents: impl FnOnce(&mut Ui)) {
