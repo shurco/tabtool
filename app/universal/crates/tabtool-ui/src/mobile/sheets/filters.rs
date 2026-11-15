@@ -13,11 +13,11 @@ use crate::document::rows_text;
 use crate::filter::FilterAction;
 use crate::filter::bar::{column_options, operator_title};
 use crate::icons::Icon;
-use crate::mobile::{
-    SheetOptions, TouchTextInput, TouchTextInputOutcome, TouchTextInputRequest, sheet,
-};
+use crate::mobile::{SheetOptions, TouchTextInput, TouchTextInputRequest, sheet};
 use crate::theme::current;
 use crate::widgets::ButtonKind;
+
+mod session;
 
 /// The Filters sheet's native text session.
 #[derive(Default)]
@@ -280,85 +280,6 @@ impl FiltersSheet {
 
         SheetScreenResponse {
             close_requested: response.close_requested,
-        }
-    }
-
-    /// Requests a native commit before the host closes the sheet from
-    /// navigation.
-    ///
-    /// Returns whether the sheet can close now. When it returns `false`, the
-    /// host must keep presenting the sheet so [`Self::show`] can drain the
-    /// commit and then report its close.
-    pub fn finish(&mut self, text_input: &mut dyn TouchTextInput) -> bool {
-        if self.editing.is_some() {
-            self.pending_close = true;
-            text_input.commit();
-            false
-        } else {
-            true
-        }
-    }
-
-    fn apply(
-        &mut self,
-        action: FilterAction,
-        document: &mut Document,
-        text_input: &mut dyn TouchTextInput,
-    ) {
-        match action {
-            FilterAction::ApplyAll => document.apply_all_filters(),
-            FilterAction::Apply(id) => document.apply_filter(id),
-            FilterAction::Clear => {
-                document.clear_filter();
-                if self.editing.is_some() {
-                    self.editing = None;
-                    text_input.close();
-                }
-            }
-            FilterAction::Add(id) => document.row_filter_mut().add_criterion(id),
-            FilterAction::Remove(id) => {
-                document.row_filter_mut().remove_criterion(id);
-                if self.editing == Some(id) {
-                    self.editing = None;
-                    text_input.close();
-                }
-            }
-            FilterAction::Hide => {}
-        }
-    }
-
-    fn poll_text_input(
-        &mut self,
-        document: &mut Document,
-        text_input: &mut dyn TouchTextInput,
-    ) -> bool {
-        let Some(id) = self.editing else {
-            return false;
-        };
-        match text_input.poll() {
-            Some(TouchTextInputOutcome::Committed(text)) => {
-                self.editing = None;
-                if let Some(criterion) = document
-                    .row_filter_mut()
-                    .criteria
-                    .iter_mut()
-                    .find(|criterion| criterion.id == id)
-                {
-                    criterion.value = text;
-                }
-                true
-            }
-            Some(TouchTextInputOutcome::Cancelled) => {
-                self.editing = None;
-                self.pending_action = None;
-                false
-            }
-            None if !text_input.is_active() => {
-                self.editing = None;
-                self.pending_action = None;
-                false
-            }
-            None => false,
         }
     }
 }

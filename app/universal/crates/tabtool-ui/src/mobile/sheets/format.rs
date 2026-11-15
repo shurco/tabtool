@@ -3,19 +3,18 @@
 use egui::Ui;
 use tabtool_core::{CsvConfiguration, Encoding};
 use tabtool_document::{Document, Storage};
-use tabtool_i18n::{Language, tr};
+use tabtool_i18n::tr;
 use tabtool_settings::QuoteStyle;
 
 use super::{
     SheetScreenResponse, SheetStyle, caption, form_row, touch_button, touch_picker, touch_toggle,
 };
-use crate::document::{
-    ChromeAlert, FormatApplyOutcome, apply_format_configuration, detect_format_configuration,
-    is_document_busy, request_format_configuration,
-};
+use crate::document::{ChromeAlert, is_document_busy};
 use crate::format_options::{DECIMALS, SEPARATORS};
 use crate::mobile::{SheetOptions, sheet};
-use crate::widgets::{AlertAction, BannerKind, ButtonKind, banner, modal};
+use crate::widgets::{BannerKind, ButtonKind, banner};
+
+mod apply;
 
 /// What one format interaction asks for.
 enum FormatChoice {
@@ -228,79 +227,5 @@ impl FormatSheet {
             self.alert = None;
         }
         SheetScreenResponse { close_requested }
-    }
-
-    fn apply(
-        &mut self,
-        choice: FormatChoice,
-        document: &mut Document,
-        storage: &dyn Storage,
-        language: Language,
-        prefers_chinese: bool,
-    ) {
-        match choice {
-            FormatChoice::Configuration(configuration) => {
-                self.request(document, storage, language, configuration);
-            }
-            FormatChoice::Detect => {
-                match detect_format_configuration(document, storage, language, prefers_chinese) {
-                    Ok(detected) => self.request(document, storage, language, detected),
-                    Err(alert) => self.alert = Some(alert),
-                }
-            }
-        }
-    }
-
-    fn request(
-        &mut self,
-        document: &mut Document,
-        storage: &dyn Storage,
-        language: Language,
-        configuration: CsvConfiguration,
-    ) {
-        match request_format_configuration(document, storage, language, configuration) {
-            FormatApplyOutcome::Applied => self.alert = None,
-            FormatApplyOutcome::NeedsConfirmation(configuration) => {
-                self.pending = Some(configuration);
-            }
-            FormatApplyOutcome::Failed(alert) => self.alert = Some(alert),
-        }
-    }
-
-    fn show_confirmation(
-        &mut self,
-        ui: &mut Ui,
-        style: SheetStyle,
-        document: &mut Document,
-        storage: &dyn Storage,
-    ) {
-        let Some(configuration) = self.pending.clone() else {
-            return;
-        };
-        let language = style.language;
-        let actions = [
-            AlertAction::new(tr(language, "Re-read"), ButtonKind::Destructive),
-            AlertAction::new(tr(language, "Cancel"), ButtonKind::Bordered),
-        ];
-        let pressed = modal(
-            ui,
-            "mobile-format-reread",
-            tr(language, "Re-read the file and discard unsaved edits?"),
-            tr(
-                language,
-                "The table will be replaced with the last saved version from disk. The file itself is not changed.",
-            ),
-            &actions,
-        );
-        let Some(index) = pressed else {
-            return;
-        };
-        self.pending = None;
-        if index == 0
-            && let Some(alert) =
-                apply_format_configuration(document, storage, language, &configuration, true)
-        {
-            self.alert = Some(alert);
-        }
     }
 }

@@ -5,7 +5,9 @@
 //! whole lifecycle is testable without an Android device.
 
 mod actions;
+mod host;
 mod poll;
+mod prompt;
 mod render;
 
 use std::path::{Path, PathBuf};
@@ -16,12 +18,12 @@ use eframe::egui::{Frame, Panel, Ui, UiBuilder};
 use tabtool_core::Locale;
 use tabtool_document::{Document, DocumentError, LargeStatus, StdStorage};
 use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Language, tr};
-use tabtool_platform::{decimal_separator, load_settings, prefers_chinese_encoding, save_settings};
+use tabtool_platform::prefers_chinese_encoding;
 use tabtool_settings::Settings;
 use tabtool_ui::about::AboutAction;
 use tabtool_ui::grid::{Clipboard as GridClipboard, GridAppearance, GridState};
 use tabtool_ui::mobile::{
-    CopyResult, DocumentFiles, ExportOutcome, ExportSheet, FiltersSheet, FormatSheet, LibraryClock,
+    CopyResult, ExportOutcome, ExportSheet, FiltersSheet, FormatSheet, LibraryClock,
     LibraryResponse, LibraryView, MobileEditor, MobileEditorResponse, MobileEditorState,
     MobileMetrics, NavStack, OverflowItem, SaveCopy, Screen, SheetKind, SheetStyle, about_sheet,
     saved_copy_message, settings_sheet,
@@ -34,132 +36,13 @@ use crate::library;
 use crate::lifecycle;
 use crate::nav::{self, NavSnapshot};
 
+pub use host::Host;
+pub use prompt::{AfterSaveAction, BackResult, Notice, PromptChoice, SavePrompt};
+
 /// The project website the About sheet opens.
 pub const WEBSITE_URL: &str = "https://tabtool.shurco.app";
 /// The MIT license bundled beside the workspace.
 pub const LICENSE: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../LICENSE"));
-
-/// Everything the app needs from the platform except the live text and
-/// clipboard seams, which are separate because the editor holds both at once.
-pub trait Host: DocumentFiles {
-    /// `[left, top, right, bottom]` safe-area insets in points.
-    fn safe_area(&self) -> [f32; 4];
-    /// The soft-keyboard height in points, or zero.
-    fn keyboard_height(&self) -> f32;
-    /// Takes a pending system back gesture.
-    fn take_back(&self) -> bool;
-    /// Shares a private document through the system share sheet.
-    fn share(&self, path: &Path);
-    /// Closes the activity.
-    fn finish_activity(&self);
-    /// The system language tags, most preferred first.
-    fn languages(&self) -> Vec<String>;
-    /// Whether the system is in night mode, when the platform can say.
-    fn dark_mode(&self) -> Option<bool> {
-        None
-    }
-    /// The system locale tag, for example `de_DE`.
-    fn locale(&self) -> String;
-    /// The device clock facts for file dates.
-    fn clock(&self) -> LibraryClock {
-        LibraryClock::default()
-    }
-    /// The locale's decimal separator.
-    fn decimal_separator(&self) -> String {
-        decimal_separator(&self.locale())
-    }
-    /// The settings file, if the platform has one.
-    fn settings_path(&self) -> Option<PathBuf>;
-    /// Reads the persisted settings.
-    fn load_settings(&self) -> Settings {
-        self.settings_path()
-            .map_or_else(Settings::default, |path| load_settings(&path))
-    }
-    /// Persists the settings; a failure is logged and otherwise ignored.
-    fn save_settings(&self, settings: &Settings) {
-        if let Some(path) = self.settings_path()
-            && let Err(error) = save_settings(settings, &path)
-        {
-            log::error!("could not save settings: {error}");
-        }
-    }
-    /// The process-death state file, if the platform has one.
-    fn state_path(&self) -> Option<PathBuf> {
-        None
-    }
-    /// Takes one transition from the foreground to the background.
-    fn take_background_event(&self) -> bool {
-        false
-    }
-    /// Takes one document another app sent.
-    fn take_intent(&self) -> Option<intents::IntentEvent> {
-        None
-    }
-    /// Reports that a requested background save finished, for platforms that
-    /// wait on the activity's pause path.
-    fn background_save_finished(&self) {}
-    /// Opens a web or mail link.
-    fn open_url(&self, url: &str);
-}
-
-/// A one-shot banner the app shows above the screen.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Notice {
-    /// A localized failure, by catalog key.
-    Error(&'static str),
-    /// A ready-made informational message.
-    Message(String),
-}
-
-/// What the app should do after the prompt's save or discard.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum AfterSaveAction {
-    /// Close the editor and return to the library.
-    CloseEditor,
-    /// Open this document.
-    Open(PathBuf),
-    /// Share the current document.
-    Share,
-}
-
-/// The Save / Don't Save / Cancel prompt.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SavePrompt {
-    /// What happens when the user saves or discards.
-    pub action: AfterSaveAction,
-    /// The document name the prompt shows.
-    pub name: String,
-}
-
-/// The user's answer to the unsaved-changes prompt.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum PromptChoice {
-    /// Write the document, then continue.
-    Save,
-    /// Discard the in-memory edits, then continue.
-    DontSave,
-    /// Stay where the user was.
-    Cancel,
-}
-
-/// What one back gesture did.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum BackResult {
-    /// A sheet closed.
-    ClosedSheet,
-    /// The editor closed and the library is showing.
-    ClosedDocument,
-    /// A prompt is showing.
-    Prompt,
-    /// A commit is pending; the back runs after it lands.
-    Deferred,
-    /// The app kept the screen, for example while a save runs.
-    Ignored,
-    /// The prompt was cancelled.
-    CancelledPrompt,
-    /// The library is at the root, so the activity exits.
-    Exit,
-}
 
 /// The work that waits for an open native edit to commit.
 #[derive(Clone, Debug, Eq, PartialEq)]
