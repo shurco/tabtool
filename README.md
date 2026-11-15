@@ -73,7 +73,7 @@ TabTool runs on both iPhone Duo displays and follows the system pose rules:
 
 ## Settings
 
-On macOS, `TabTool > Settings…` (`⌘,`) opens one window with four tabs: General, New Document, Grid, and Large Files. The window fits the selected tab and reopens on the tab used last. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the language the next launch. A stored value that is not one of the offered options falls back to the default.
+On macOS, `TabTool > Settings…` (`⌘,`) opens one window with four tabs: General, New Document, Grid, and Large Files. The window fits the selected tab and opens on General. Every change is stored at once in the app's own `UserDefaults`. The format bar and grid settings update open windows immediately; the New Document settings affect the next new document, the large file threshold the next opened file, and the interface language applies as soon as it is picked. A stored value that is not one of the offered options falls back to the default. The defaults in this table follow `Preferences.Default` in the Swift app and its `tabtool-settings` counterpart in the Rust port; that model is the source of truth when the two disagree.
 
 On iOS, Settings is a sheet opened from the gear on the Documents screen or from the document's overflow menu: one form with sections for General, New Document, Grid, Large Files, and About. It writes the same defaults at once, and the row height options are the iOS ones in the table.
 
@@ -88,7 +88,8 @@ The interface language applies as soon as it is picked on both platforms: every 
 | New Document | Quote | `newDocumentQuoteStyle` | Doubled |
 | New Document | Decimal Mark | `newDocumentDecimalMark` | Dot (.) |
 | New Document | First Row as Header | `newDocumentFirstRowAsHeader` | off |
-| Grid | Alternating Row Colors | `gridAlternatingRows` | on |
+| Grid | Alternating Row Colors | `gridAlternatingRows` | off |
+| Grid | Show Row Numbers | `gridShowsRowNumbers` | on |
 | Grid | Row Height: macOS Compact 20 pt, Default 24 pt, Comfortable 32 pt; iOS Compact 32 pt, Default 44 pt, Comfortable 56 pt | `gridRowHeight` | Default (macOS 24 pt, iOS 44 pt) |
 | Large Files | Large File Threshold: 25, 50, 100, 250, 500, or 1024 MiB | `largeFileThresholdMiB` | 100 MiB |
 
@@ -129,6 +130,20 @@ The repository follows these conventions:
 - `web` — the promotional site: SvelteKit, prerendered static output for Cloudflare Pages (see [web/README.md](web/README.md)).
 - `.superpowers/sdd` — working spec/plan artifacts, not tracked by git.
 - `TabTool.xcodeproj` is generated and not committed.
+
+## Universal (Rust)
+
+`app/universal` is the Rust port for Windows, Linux and Android. It ships the
+CSV core, the large-file model, the document layer, the desktop app and the
+single-window Android app; the Swift golden suite proves core parity with the
+Apple implementation.
+
+Build and test from `app/universal` with Rust 1.99.1 (`cargo test --workspace`,
+`cargo run -p tabtool-desktop -- --smoke`); the [universal
+docs](app/universal/docs/universal.md) cover the toolchain, goldens and Android host.
+A `v*` tag builds Windows and Linux (x86_64 and aarch64) and Android and publishes a
+GitHub Release; Actions > Release > Run workflow builds selected platforms on demand
+([release docs](docs/release.md)).
 
 ## Build
 
@@ -206,6 +221,9 @@ Known limits: an accessibility client (VoiceOver, automation tools) reading the 
 - [Build and versions](docs/building.md)
 - [App Store and privacy](docs/app-store-compliance.md)
 - [CSV format and editor behavior](docs/csv-format.md)
+- [Desktop UI parity, snapshots and manual checks](docs/desktop-ui.md)
+- [Android build, signing and release](docs/android.md)
+- [Rust app releases: tags, manual builds and files](docs/release.md)
 
 The local working spec/plan and execution log live in `.superpowers/sdd/` and are not part of git.
 

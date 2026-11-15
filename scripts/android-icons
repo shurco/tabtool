@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Generates the Android launcher icons from the Apple app icon.
+#
+# One source: app/apple/Shared/Assets.xcassets/AppIcon.appiconset/
+# icon_ios_1024.png. The image is full-bleed and each platform masks it, so the
+# legacy mipmaps use the whole image. The adaptive foreground keeps the frame
+# inside the launcher mask: the glyph covers the middle 63% of the artwork, so
+# the artwork is drawn at 66 dp of the 108 dp canvas (19.4% inset per side) and
+# the glyph is about 42 dp, whose circumscribed circle (59 dp) fits the 66 dp
+# adaptive safe zone.
+#
+# The generated resources are committed. Run this only after the Apple icon
+# changes, and on macOS: it needs sips.
+#
+# Usage: scripts/android-icons
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "${here}/.." && pwd)"
+# shellcheck source=scripts/_helper
+source "${here}/_helper"
+
+source_icon="${root}/app/apple/Shared/Assets.xcassets/AppIcon.appiconset/icon_ios_1024.png"
+res="${root}/app/universal/apps/tabtool-android/android/app/src/main/res"
+# The background of the Apple icon, which the adaptive layer repeats.
+background="#121310"
+
+if ! command_exists sips; then
+  print_answer "sips not found — Android icons are generated on macOS from the Apple icon" red
+  exit 1
+fi
+if [ ! -f "${source_icon}" ]; then
+  print_answer "Apple app icon not found: ${source_icon}" red
+  exit 1
+fi
+
+# density:legacy px:adaptive foreground px
+densities="mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432"
+
+for entry in ${densities}; do
+  IFS=: read -r density legacy adaptive <<<"${entry}"
+  mkdir -p "${res}/mipmap-${density}"
+  sips --resampleHeightWidth "${legacy}" "${legacy}" "${source_icon}" \
+    --out "${res}/mipmap-${density}/ic_launcher.png" >/dev/null
+  sips --resampleHeightWidth "${adaptive}" "${adaptive}" "${source_icon}" \
+    --out "${res}/mipmap-${density}/ic_launcher_foreground.png" >/dev/null
+done
+
+mkdir -p "${res}/mipmap-anydpi-v26" "${res}/values"
+
+cat >"${res}/mipmap-anydpi-v26/ic_launcher.xml" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The glyph covers the middle 63% of the Apple artwork. The artwork is drawn
+     at 66 dp of the 108 dp canvas, so the glyph is about 42 dp and its
+     circumscribed circle (59 dp) stays inside the 66 dp adaptive safe zone and
+     a circular or squircle mask never cuts the frame. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground>
+        <inset
+            android:drawable="@mipmap/ic_launcher_foreground"
+            android:inset="19.4%" />
+    </foreground>
+</adaptive-icon>
+XML
+
+cat >"${res}/values/ic_launcher_background.xml" <<XML
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">${background}</color>
+</resources>
+XML
+
+print_answer "Generated Android icons in ${res}" green

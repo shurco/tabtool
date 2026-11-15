@@ -1,0 +1,23 @@
+[package]
+name = "tabtool-document"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "UI-free document state, storage and undo for TabTool."
+
+[features]
+default = []
+# Deterministic large-file progress states for UI snapshots, plus the shared
+# test doubles in `test_support`.
+test-support = []
+
+[dependencies]
+tabtool-core = { path = "../tabtool-core" }
+tabtool-large = { path = "../tabtool-large" }
+
+[dev-dependencies]
+# Enables `test-support` for this package's own tests without enabling it for
+# downstream consumers.
+tabtool-document = { path = ".", features = ["test-support"] }
+tempfile = "3"

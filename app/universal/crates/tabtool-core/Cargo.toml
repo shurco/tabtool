@@ -1,0 +1,23 @@
+[package]
+name = "tabtool-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Pure CSV engine shared by every TabTool app."
+
+[dependencies]
+encoding_rs = "0.8"
+icu_collator = "2.4"
+icu_locale_core = "2.4"
+regex = "1"
+unicode-normalization = "0.1"
+
+[build-dependencies]
+serde_json.workspace = true
+
+[dev-dependencies]
+base64 = "0.22"
+proptest = "1"
+serde_json.workspace = true
+tabtool-testdata = { path = "../tabtool-testdata" }

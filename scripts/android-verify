@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Checks a built TabTool APK against the packaging contract.
+#
+# Always checked: the version matches app/universal/version.json, both ABIs are
+# present, the app requests no network, and the native libraries are stored
+# uncompressed and 16 KB page-aligned. With --release the APK must also verify
+# and must not carry the debug certificate, so a release build that silently
+# fell back to the debug keystore fails instead of being uploaded.
+#
+# Usage: scripts/android-verify [--release] APK
+#
+# Needs ANDROID_HOME or ANDROID_SDK_ROOT, python3 and the newest build-tools.
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "${here}/.." && pwd)"
+# shellcheck source=scripts/_helper
+source "${here}/_helper"
+
+release=false
+if [ "${1:-}" = "--release" ]; then
+  release=true
+  shift
+fi
+apk="${1:-}"
+if [ -z "${apk}" ] || [ ! -f "${apk}" ]; then
+  print_answer "usage: scripts/android-verify [--release] APK" red
+  exit 1
+fi
+
+sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+if [ -z "${sdk}" ] || [ ! -d "${sdk}/build-tools" ]; then
+  print_answer "ANDROID_HOME (or ANDROID_SDK_ROOT) must point at an Android SDK with build-tools" red
+  exit 1
+fi
+
+# The newest build-tools, so the script follows the installed SDK instead of a
+# pinned version.
+newest_tool() {
+  ls -d "${sdk}"/build-tools/*/"$1" 2>/dev/null | sort -V | tail -1
+}
+
+aapt2="$(newest_tool aapt2)"
+apksigner="$(newest_tool apksigner)"
+zipalign="$(newest_tool zipalign)"
+if [ -z "${aapt2}" ] || [ -z "${apksigner}" ] || [ -z "${zipalign}" ]; then
+  print_answer "aapt2, apksigner and zipalign are needed; install the Android build-tools" red
+  exit 1
+fi
+
+temporary="$(mktemp -d)"
+trap 'rm -rf "${temporary}"' EXIT
+
+"${aapt2}" dump badging "${apk}" >"${temporary}/badging.txt"
+
+python3 - "${temporary}/badging.txt" "${root}/app/universal/version.json" "${apk}" <<'PY'
+import json, sys
+
+badging = open(sys.argv[1]).read()
+version = json.load(open(sys.argv[2]))
+apk = sys.argv[3]
+
+expected = f"versionCode='{version['build']}' versionName='{version['name']}'"
+if expected not in badging:
+    sys.exit(f"{apk}: expected {expected} from version.json")
+if "native-code: 'arm64-v8a' 'x86_64'" not in badging:
+    sys.exit(f"{apk}: both arm64-v8a and x86_64 native libraries are required")
+if "android.permission.INTERNET" in badging:
+    sys.exit(f"{apk}: the app must not request the network")
+if "application-debuggable" in badging:
+    print(f"{apk}: debug build", file=sys.stderr)
+PY
+
+# 16 KB page alignment, required by devices with 16 KB pages. Older build-tools
+# have no -P, so the check reports that it was skipped instead of failing.
+zipalign_usage="$("${zipalign}" 2>&1 || true)"
+if [[ "${zipalign_usage}" == *"-P"* ]]; then
+  if ! "${zipalign}" -c -P 16 -v 4 "${apk}" >/dev/null; then
+    print_answer "${apk}: native libraries are not 16 KB page-aligned" red
+    exit 1
+  fi
+else
+  print_answer "zipalign has no -P: 16 KB page alignment not checked" yellow
+fi
+
+if [ "${release}" = true ]; then
+  # apksigner is a Java tool; the build already needs a JDK, so only explain a
+  # missing one instead of reporting a broken signature.
+  if [ -n "${JAVA_HOME:-}" ] && [ -x "${JAVA_HOME}/bin/java" ]; then
+    :
+  elif ! java -version >/dev/null 2>&1; then
+    print_answer "apksigner needs a JDK: set JAVA_HOME to a JDK 17-21" red
+    exit 1
+  fi
+  if ! "${apksigner}" verify --print-certs "${apk}" >"${temporary}/certs.txt" 2>&1; then
+    print_answer "${apk}: signature does not verify" red
+    cat "${temporary}/certs.txt" >&2
+    exit 1
+  fi
+  if grep -q "CN=Android Debug" "${temporary}/certs.txt"; then
+    print_answer "${apk}: signed with the debug keystore; a release needs TABTOOL_ANDROID_* signing" red
+    exit 1
+  fi
+fi
+
+print_answer "${apk}: version, ABIs, permissions, alignment and signature ok" green

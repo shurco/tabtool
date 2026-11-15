@@ -1,0 +1,32 @@
+[package]
+name = "tabtool-ui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Design tokens, widgets and the deterministic egui test harness for TabTool."
+
+[features]
+default = []
+# The kittest harness is only needed by tests.
+test-support = ["dep:egui_kittest", "tabtool-document/test-support"]
+
+[dependencies]
+egui.workspace = true
+# System faces for the configured families and per-script fallbacks.
+egui_system_font_provider = "=0.37.0"
+fontique = "=0.11.1"
+tabtool-core = { path = "../tabtool-core" }
+tabtool-document = { path = "../tabtool-document" }
+tabtool-i18n = { path = "../tabtool-i18n" }
+tabtool-settings = { path = "../tabtool-settings" }
+egui_kittest = { workspace = true, optional = true, default-features = false, features = [
+    "snapshot",
+    "wgpu",
+] }
+
+[dev-dependencies]
+# Enables `test-support` for this package's own tests without enabling it for
+# downstream consumers.
+tabtool-ui = { path = ".", features = ["test-support"] }
+tempfile = "3"

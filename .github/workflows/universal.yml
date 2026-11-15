@@ -1,0 +1,101 @@
+name: Universal
+
+on:
+  push:
+    paths:
+      - "app/universal/**"
+      - "docs/desktop-ui.md"
+      - "tools/swift-golden/**"
+      - ".github/workflows/universal.yml"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "app/universal/**"
+      - "docs/desktop-ui.md"
+      - "tools/swift-golden/**"
+      - ".github/workflows/universal.yml"
+      - ".github/workflows/android.yml"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    working-directory: app/universal
+
+jobs:
+  # Scenario, interaction and accessibility tests run on every OS. Image
+  # snapshots use the operating system's fonts and are opt-in per machine, so
+  # no CI job compares them (see docs/desktop-ui.md).
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install --yes libxkbcommon-dev libwayland-dev libgtk-3-dev xvfb mesa-vulkan-drivers libgl1-mesa-dri fonts-noto-cjk
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          components: rustfmt, clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/universal/target
+          key: ${{ runner.os }}-cargo-1.99.1-${{ hashFiles('app/universal/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-1.99.1-
+      - run: cargo fmt --check
+      - run: cargo run -p xtask -- i18n --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Run UI scenario and accessibility tests headlessly
+        run: xvfb-run -a cargo test --workspace --no-fail-fast
+      - run: cargo clippy -p tabtool-large --features bench --all-targets -- -D warnings
+
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/universal/target
+          key: ${{ runner.os }}-cargo-1.99.1-${{ hashFiles('app/universal/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-1.99.1-
+      - name: Run UI scenario and accessibility tests
+        run: cargo test --workspace --no-fail-fast
+      - run: cargo run -p xtask -- i18n --check
+      - run: cargo clippy -p tabtool-large --features bench --all-targets -- -D warnings
+
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/universal/target
+          key: ${{ runner.os }}-cargo-1.99.1-${{ hashFiles('app/universal/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-1.99.1-
+      - name: Run the cross-platform scenario and accessibility tests
+        run: cargo test --workspace --no-fail-fast
+      - run: cargo run -p xtask -- i18n --check
+      - run: cargo test -p tabtool-core --test golden
+      - run: cargo clippy -p tabtool-large --features bench --all-targets -- -D warnings
+      - run: cargo run -p tabtool-desktop -- --smoke
+
+  # Debug APK on every change; the signed release only when the secrets exist.
+  android:
+    uses: ./.github/workflows/android.yml
+    secrets: inherit

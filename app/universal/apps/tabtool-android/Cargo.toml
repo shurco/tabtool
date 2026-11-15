@@ -1,0 +1,32 @@
+[package]
+name = "tabtool-android"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "TabTool Android application."
+
+[lib]
+name = "main"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+eframe = { version = "=0.37.0", default-features = false, features = ["default_fonts", "wgpu", "android-game-activity", "accesskit"] }
+log = "0.4"
+serde_json = { workspace = true }
+tabtool-core = { path = "../../crates/tabtool-core" }
+tabtool-document = { path = "../../crates/tabtool-document" }
+tabtool-i18n = { path = "../../crates/tabtool-i18n" }
+tabtool-platform = { path = "../../crates/tabtool-platform" }
+tabtool-settings = { path = "../../crates/tabtool-settings" }
+tabtool-ui = { path = "../../crates/tabtool-ui" }
+
+# The Android entry point is declared by this crate, so it must name winit's
+# `AndroidApp` type directly. The features match what eframe enables transitively.
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.15"
+jni = "0.21"
+winit = { version = "0.30.13", default-features = false, features = ["rwh_06", "android-game-activity"] }
+
+[dev-dependencies]
+tempfile = "3"

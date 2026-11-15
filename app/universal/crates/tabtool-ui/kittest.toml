@@ -1,0 +1,11 @@
+# Snapshot comparison for the widget gallery.
+#
+# `threshold` is the per-pixel YIQ distance (0..=255 scale weighted by YIQ) that
+# a pixel may differ by before it counts as failing. `max_failed_pixels` is the
+# budget above that threshold. The values are deliberately nonzero: different
+# GPU backends and font rasterizers can shift a few antialiased pixels even
+# when the layout is identical. A real visual change moves many pixels and
+# still fails.
+threshold = 2.0
+max_failed_pixels = 4
+output_path = "tests/snapshots"
