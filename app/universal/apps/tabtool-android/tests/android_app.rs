@@ -49,6 +49,7 @@ struct Fake {
     urls: RefCell<Vec<String>>,
     finished: Cell<usize>,
     background_finishes: Cell<usize>,
+    dark_mode: Cell<Option<bool>>,
 }
 
 impl Fake {
@@ -73,6 +74,7 @@ impl Fake {
             urls: RefCell::new(Vec::new()),
             finished: Cell::new(0),
             background_finishes: Cell::new(0),
+            dark_mode: Cell::new(None),
         })
     }
 
@@ -189,6 +191,10 @@ impl Host for Fake {
 
     fn languages(&self) -> Vec<String> {
         self.languages.borrow().clone()
+    }
+
+    fn dark_mode(&self) -> Option<bool> {
+        self.dark_mode.get()
     }
 
     fn locale(&self) -> String {
@@ -1018,5 +1024,163 @@ fn the_system_locale_is_parsed_with_an_english_fallback() {
             .language
             .as_str(),
         "en"
+    );
+}
+
+// -- End-to-end scenarios -----------------------------------------------------
+//
+// These chain the per-behavior tests above into the journeys the emulator
+// checklist walks: open, edit, autosave, export, share and back; two intents
+// that collide on a name; process death while a sheet is open; and the large
+// document's read-only structure and prompt on back.
+
+#[test]
+fn an_edit_survives_autosave_export_share_and_back() {
+    let fixture = Fixture::new();
+    let path = fixture.write("Budget.csv", "Name,Amount\nAlice,1\n");
+    let mut app = fixture.app();
+    open_document(&mut app, &path);
+    edit_cell(&mut app, "42");
+
+    let start = Instant::now();
+    app.poll(start);
+    app.poll(start + AUTOSAVE_DELAY);
+    assert!(fixture.read("Budget.csv").contains("42"));
+    assert!(!app.editor().expect("editor").document().is_dirty());
+
+    app.open_sheet(SheetKind::Export);
+    assert_eq!(app.nav().sheet(), Some(SheetKind::Export));
+    assert_eq!(app.back(), BackResult::ClosedSheet);
+    assert_eq!(app.nav().sheet(), None);
+
+    app.share_current_document();
+    assert_eq!(
+        fixture.fake.shared.borrow().as_slice(),
+        std::slice::from_ref(&path)
+    );
+
+    assert_eq!(app.back(), BackResult::ClosedDocument);
+    assert!(matches!(app.screen(), Screen::Library));
+    assert_eq!(app.back(), BackResult::Exit);
+    assert_eq!(fixture.fake.finished.get(), 1);
+}
+
+#[test]
+fn two_imports_with_the_same_name_get_distinct_names() {
+    let fixture = Fixture::new();
+    fixture.write("data.csv", "old\n1\n");
+    fixture.write(".incoming-1.csv", "one,1\n");
+    fixture.write(".incoming-2.csv", "two,2\n");
+    fixture.fake.intent(IntentEvent::Staged(StagedIntent {
+        file_name: ".incoming-1.csv".to_owned(),
+        display_name: "data.csv".to_owned(),
+    }));
+    fixture.fake.intent(IntentEvent::Staged(StagedIntent {
+        file_name: ".incoming-2.csv".to_owned(),
+        display_name: "data.csv".to_owned(),
+    }));
+    let mut app = fixture.app();
+
+    app.poll(Instant::now());
+    let Screen::Editor(opened) = app.screen() else {
+        panic!("the last import opens: {:?}", app.screen());
+    };
+    assert_eq!(
+        opened.path().file_name().and_then(|name| name.to_str()),
+        Some("data 3.csv")
+    );
+    assert_eq!(app.back(), BackResult::ClosedDocument);
+    assert!(matches!(app.screen(), Screen::Library));
+    assert_eq!(fixture.read("data.csv"), "old\n1\n");
+    assert_eq!(fixture.read("data 2.csv"), "one,1\n");
+    assert_eq!(fixture.read("data 3.csv"), "two,2\n");
+    assert!(!fixture.path(".incoming-1.csv").exists());
+    assert!(!fixture.path(".incoming-2.csv").exists());
+}
+
+#[test]
+fn process_death_restores_the_document_and_each_sheet_in_order() {
+    let fixture = Fixture::new();
+    let path = fixture.write("a.csv", "a,b\n1,2\n");
+    {
+        let mut app = fixture.app();
+        open_document(&mut app, &path);
+        edit_cell(&mut app, "unsaved");
+        app.open_sheet(SheetKind::Settings);
+        app.open_sheet(SheetKind::About);
+    }
+
+    let mut restored = fixture.app();
+    let Screen::Editor(id) = restored.screen() else {
+        panic!("the editor is restored: {:?}", restored.screen());
+    };
+    assert_eq!(id.path(), path);
+    assert!(
+        !restored.editor().expect("editor").document().is_dirty(),
+        "process death keeps the last save"
+    );
+    assert_eq!(
+        restored.nav().sheets(),
+        &[SheetKind::Settings, SheetKind::About]
+    );
+    assert_eq!(restored.back(), BackResult::ClosedSheet);
+    assert_eq!(restored.back(), BackResult::ClosedSheet);
+    assert_eq!(restored.back(), BackResult::ClosedDocument);
+    assert!(matches!(restored.screen(), Screen::Library));
+}
+
+#[test]
+fn a_large_document_is_read_only_until_it_is_saved_or_discarded() {
+    let fixture = Fixture::new();
+    large_settings(&fixture);
+    let path = fixture.write("large.csv", "a,b\n1,2\n");
+    let mut app = fixture.app();
+    open_document(&mut app, &path);
+    wait_for_large_index(&mut app);
+
+    {
+        let document = app.editor().expect("editor").document();
+        assert!(document.is_large_mode());
+        assert!(!document.can_edit_structure());
+        assert!(!document.can_select_all());
+    }
+
+    edit_cell(&mut app, "edited");
+    app.poll(Instant::now() + Duration::from_secs(60));
+    assert_eq!(
+        fixture.read("large.csv"),
+        "a,b\n1,2\n",
+        "a large document is never autosaved"
+    );
+
+    assert_eq!(app.back(), BackResult::Prompt);
+    app.answer_prompt(PromptChoice::DontSave);
+    assert!(matches!(app.screen(), Screen::Library));
+    assert_eq!(fixture.read("large.csv"), "a,b\n1,2\n");
+}
+
+#[test]
+fn the_system_theme_is_applied_and_followed() {
+    use eframe::egui::{Context, ThemePreference};
+
+    let fixture = Fixture::new();
+    let app = fixture.app();
+    let ctx = Context::default();
+
+    for (reported, expected) in [
+        (Some(false), ThemePreference::Light),
+        (Some(true), ThemePreference::Dark),
+    ] {
+        fixture.fake.dark_mode.set(reported);
+        app.apply_system_theme(&ctx);
+        assert_eq!(ctx.options(|options| options.theme_preference), expected);
+    }
+
+    fixture.fake.dark_mode.set(None);
+    app.apply_system_theme(&ctx);
+    assert_eq!(
+        ctx.options(|options| options.theme_preference),
+        ThemePreference::Dark,
+        "a platform without a theme leaves the last one alone"
     );
 }

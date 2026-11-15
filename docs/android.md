@@ -90,6 +90,124 @@ adb shell am start -n app.shurco.tabtool/.MainActivity
 The debug build has the same behavior with `app-debug.apk`. `./gradlew
 installDebug` does the install step when exactly one device is attached.
 
+## Intents and file handoff
+
+`MainActivity` is `singleTask` and exported. It declares four intent filters:
+
+- the launcher;
+- `ACTION_VIEW` for `text/csv`, `text/comma-separated-values`,
+  `application/csv`, `text/tab-separated-values` and `text/plain`;
+- `ACTION_VIEW` for `file://` URIs ending in `.csv`, `.tsv`, `.txt`, `.tab` or
+  `.dat`, the form older file managers send;
+- `ACTION_SEND` with the same table MIME types.
+
+A `VIEW` or `SEND` stream is copied, not read into memory: Kotlin writes it to a
+hidden `.incoming-*` file inside the private documents directory and reports the
+staging name and the display name to Rust. `apps/tabtool-android/src/intents.rs`
+then:
+
+- reduces the display name to one safe segment (control characters and path
+  separators removed, a leading dot stripped, the stem capped at 100
+  characters);
+- keeps an accepted table extension and otherwise uses the staging file's
+  extension;
+- picks a free name case-insensitively, so `data.csv` becomes `data 2.csv`
+  instead of replacing a document;
+- removes the staging file on every failure and reports a localized banner.
+
+Two quick intents are both adopted; the last one opens. The intent that was
+already consumed is remembered in the saved instance state, so a recreation
+does not import it twice. Startup removes abandoned staging files older than an
+hour. The share path is the same private file through `FileProvider`
+(`app.shurco.tabtool.fileprovider`, paths XML, `exported="false"`).
+
+`adb` checks:
+
+```sh
+adb shell am start -a android.intent.action.VIEW -d content://... -t text/csv
+adb shell am start -a android.intent.action.SEND -t text/csv \
+  --eu android.intent.extra.STREAM content://...
+adb shell "run-as app.shurco.tabtool ls files/documents"
+```
+
+## Storage access framework
+
+The app declares no storage permission and does not use `WRITE_EXTERNAL_STORAGE`
+or `MANAGE_EXTERNAL_STORAGE`.
+
+- Import uses `ACTION_OPEN_DOCUMENT` with `CATEGORY_OPENABLE` and `text/*`.
+  Kotlin streams the chosen `content://` URI into the private documents
+  directory, deletes a copy the library cannot list, and returns the private
+  path.
+- Export writes a converted temporary CSV, then `ACTION_CREATE_DOCUMENT` streams
+  that file to the user's location. A failed or cancelled export leaves the
+  working document untouched.
+- Save As for a large document copies the mapped file through the same SAF
+  create flow. The editor keeps its private working file and shows the
+  localized “Saved a copy to …” notice; the copy is not reopened.
+- The pickers answer `null` while open and report their result on a later poll,
+  so the UI never blocks the frame.
+
+## Lifecycle, autosave and process death
+
+Rotating, folding, resizing and showing the keyboard do not recreate the
+activity: the manifest lists `density`, `keyboard`, `keyboardHidden`,
+`navigation`, `orientation`, `screenLayout`, `screenSize`, `smallestScreenSize`
+and `uiMode` in `configChanges`. The app re-lays out from the new size, safe
+area and keyboard inset, and keeps the document, selection and open native edit.
+
+- Small file-backed documents autosave 0.8 s after the last change
+  (`tabtool-document`'s `AUTOSAVE_DELAY`). Untitled, large and write-blocked
+  documents never autosave.
+- Sending the app to the background requests a save from the pause path. Rust
+  acknowledges within 400 ms so the activity does not hang; a large document is
+  left dirty because only the explicit streaming save may write it.
+- Back closes one sheet at a time, then prompts when the document is dirty and
+  cannot be saved safely (large or write-blocked), then closes the editor, and
+  only exits at the library.
+- The only process-death state is `files/app-state.json`:
+  `{"version":1,"document":"…","sheet":"settings","sheets":["settings"]}`. It is
+  written atomically through a `.json.part` file. A missing or malformed file
+  falls back to the library. Unsaved edits are not part of it; the last save on
+  disk wins.
+- The system theme is read from the activity's night bit on every frame, because
+  winit reports no theme on Android. Light mode also sets dark status and
+  navigation bar icons.
+
+## Known deviations
+
+- Android always uses the mobile layout. There is no desktop layout, menu bar,
+  multiple windows or desktop format/filter bars on Android.
+- Save As is a copy through SAF; the editor stays on its private working file.
+  There is no “save in place to another location”.
+- There is no review prompt. The About sheet's Rate link opens the project
+  website until a store listing exists.
+- Fonts come from the system. A device without a CJK or emoji font shows the
+  fallback glyph for that character; no font is bundled.
+- The app has no network permission, no account, no cloud sync and no store
+  metadata in this repository.
+- The fold-aware action bar is implemented and unit-tested, but the platform
+  host has no foldable AVD in CI or on this machine; hinge placement is verified
+  in `tests/mobile/fold.rs` and on a foldable device only.
+
+## Verification
+
+The mobile suites are cross-platform and need no device:
+
+```sh
+cd app/universal
+cargo test -p tabtool-ui --test mobile          # scenarios, touch, sheets, a11y
+cargo test -p tabtool-android --test android_app # lifecycle, intents, autosave
+TABTOOL_RENDER_SNAPSHOTS=1 UPDATE_SNAPSHOTS=1 \
+  cargo test -p tabtool-ui --test mobile visual:: # local image baselines
+```
+
+The image baselines cover the phone (360×800), tablet (800×1280), a closed
+foldable (411×797) and the open inner display (841×701) with an active hinge.
+They are per-machine and not committed. The manual emulator pass, with its
+PASS/FAIL/NOT VERIFIED evidence, is in
+[android-checklist.md](android-checklist.md).
+
 ## Version
 
 The Android version lives in `app/universal/version.json`, apart from the Apple

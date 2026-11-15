@@ -82,6 +82,7 @@ jniLibs/
 
 # Local visual snapshots (opt-in, per machine; never committed)
 app/universal/**/tests/snapshots/*.png
+app/universal/**/tests/snapshots/*.jpg
 
 # Project
 .superpowers/

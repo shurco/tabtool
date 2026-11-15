@@ -99,6 +99,15 @@ impl AndroidPlatform {
         call_string("filesDir", "()Ljava/lang/String;", &[]).map(PathBuf::from)
     }
 
+    /// Whether the system is in night mode.
+    ///
+    /// winit answers `None` on Android, so the app asks the activity for the
+    /// configuration's night bit instead.
+    #[must_use]
+    pub fn dark_mode(self) -> bool {
+        call_bool("isDarkMode")
+    }
+
     /// The device's UTC offset in minutes and whether it uses a 12-hour clock.
     #[must_use]
     pub fn clock(self) -> Option<(i32, bool)> {

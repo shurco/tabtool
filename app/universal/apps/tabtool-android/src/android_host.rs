@@ -164,6 +164,10 @@ impl Host for AndroidHost {
         SystemInfo::languages(&AndroidPlatform)
     }
 
+    fn dark_mode(&self) -> Option<bool> {
+        Some(AndroidPlatform.dark_mode())
+    }
+
     fn locale(&self) -> String {
         SystemInfo::locale(&AndroidPlatform)
     }

@@ -1,6 +1,6 @@
 //! Inline banners for indexes, stale files and failed saves.
 
-use egui::{Align, CornerRadius, Frame, Layout, Margin, Response, RichText, Stroke, Ui};
+use egui::{Align, CornerRadius, Frame, Label, Layout, Margin, Response, RichText, Stroke, Ui};
 
 use super::{ButtonKind, PushButton};
 use crate::theme::current;
@@ -49,26 +49,9 @@ pub fn banner(
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                ui.label(
-                    RichText::new(icon)
-                        .size(theme.typography.title)
-                        .color(foreground),
-                );
-                ui.vertical(|ui| {
-                    ui.label(
-                        RichText::new(title)
-                            .font(crate::fonts::heading_font(theme.typography.body))
-                            .color(colors.label),
-                    );
-                    if !message.is_empty() {
-                        ui.label(
-                            RichText::new(message)
-                                .size(theme.typography.caption)
-                                .color(colors.secondary_label),
-                        );
-                    }
-                });
                 if let Some(action) = action {
+                    // The action takes the trailing edge first, so the wrapping
+                    // text can never run underneath it on a narrow phone.
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if PushButton::new(action, ButtonKind::Bordered)
                             .show(ui)
@@ -76,7 +59,12 @@ pub fn banner(
                         {
                             action_clicked = true;
                         }
+                        ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                            banner_text(ui, icon, title, message, foreground);
+                        });
                     });
+                } else {
+                    banner_text(ui, icon, title, message, foreground);
                 }
             });
         });
@@ -85,4 +73,34 @@ pub fn banner(
         response: frame.response,
         action_clicked,
     }
+}
+
+fn banner_text(ui: &mut Ui, icon: &str, title: &str, message: &str, foreground: egui::Color32) {
+    let theme = current(ui.ctx());
+    let colors = theme.colors;
+    ui.label(
+        RichText::new(icon)
+            .size(theme.typography.title)
+            .color(foreground),
+    );
+    ui.vertical(|ui| {
+        ui.add(
+            Label::new(
+                RichText::new(title)
+                    .font(crate::fonts::heading_font(theme.typography.body))
+                    .color(colors.label),
+            )
+            .wrap(),
+        );
+        if !message.is_empty() {
+            ui.add(
+                Label::new(
+                    RichText::new(message)
+                        .size(theme.typography.caption)
+                        .color(colors.secondary_label),
+                )
+                .wrap(),
+            );
+        }
+    });
 }

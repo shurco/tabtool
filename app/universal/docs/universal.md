@@ -933,6 +933,22 @@ crashes during wgpu adapter setup, so the app pins wgpu to GL on Android, and
 eframe's default fonts lack CJK glyphs (the payload itself was exact). That run used a developer smoke screen; Plan 5
 replaced it with the single-window app.
 
+### Plan 5 status
+
+Plan 5 delivered the Android app on the shared mobile UI: the Documents library,
+the touch editor with native text input and fold-aware action bars, the Format,
+Filters, Settings, About and Export sheets, SAF import/export and Save As
+copies, share, intents, lifecycle autosave, process-death restore and the signed
+APK/AAB flow. The manual acceptance pass with its evidenced PASS/FAIL/NOT
+VERIFIED rows is in [docs/android-checklist.md](../../../docs/android-checklist.md);
+build, signing and behavior details are in
+[docs/android.md](../../../docs/android.md).
+
+The Android app always uses the mobile layout. Known deviations from Apple: Save
+As writes a copy and keeps the private working file (design §14.11), text entry
+uses a native `EditText` overlay (§14.14), Select All is disabled in large-file
+mode (§14.18), there is no review prompt, and fonts come from the system.
+
 ## Plan 1 boundary
 
 Delivered in this plan:

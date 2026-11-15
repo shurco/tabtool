@@ -76,27 +76,29 @@ pub fn stale(ui: &mut Ui, language: Language, appended: bool) -> bool {
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
-                ui.label(
-                    RichText::new("\u{26A0}")
-                        .size(theme.typography.title)
-                        .color(theme.colors.warning),
-                );
-                ui.add(
-                    egui::Label::new(
-                        RichText::new(if appended {
-                            tr(language, "New rows were appended. Reload to see them.")
-                        } else {
-                            tr(language, "The file changed on disk. Reload to continue.")
-                        })
-                        .font(crate::fonts::heading_font(theme.typography.body))
-                        .color(theme.colors.label),
-                    )
-                    .wrap(),
-                );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     reload = PushButton::new(tr(language, "Reload"), ButtonKind::Bordered)
                         .show(ui)
                         .clicked();
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                        ui.label(
+                            RichText::new("\u{26A0}")
+                                .size(theme.typography.title)
+                                .color(theme.colors.warning),
+                        );
+                        ui.add(
+                            egui::Label::new(
+                                RichText::new(if appended {
+                                    tr(language, "New rows were appended. Reload to see them.")
+                                } else {
+                                    tr(language, "The file changed on disk. Reload to continue.")
+                                })
+                                .font(crate::fonts::heading_font(theme.typography.body))
+                                .color(theme.colors.label),
+                            )
+                            .wrap(),
+                        );
+                    });
                 });
             });
         });

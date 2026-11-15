@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.activity.OnBackPressedCallback
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.androidgamesdk.GameActivity
 
@@ -24,6 +25,7 @@ class MainActivity : GameActivity() {
         TabToolBridge.attach(this)
         onBackPressedDispatcher.addCallback(this, editorBackCallback)
         handledIntentKey = savedInstanceState?.getString(STATE_HANDLED_INTENT)
+        applySystemBarAppearance()
         val key = importIntentKey(intent)
         val fromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
         // A restored process already has its document in app-state.json. Only
@@ -67,7 +69,17 @@ class MainActivity : GameActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         TabToolBridge.cancelTextEditor()
+        applySystemBarAppearance()
         super.onConfigurationChanged(newConfig)
+    }
+
+    /** Light mode needs dark status and navigation bar icons. */
+    private fun applySystemBarAppearance() {
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        val light = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) !=
+            Configuration.UI_MODE_NIGHT_YES
+        controller.isAppearanceLightStatusBars = light
+        controller.isAppearanceLightNavigationBars = light
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

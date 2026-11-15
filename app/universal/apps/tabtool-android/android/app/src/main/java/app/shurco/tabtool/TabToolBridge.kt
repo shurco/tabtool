@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.widget.FrameLayout
@@ -234,6 +235,15 @@ object TabToolBridge {
 
     @JvmStatic
     fun insets(): IntArray = insetsDp.copyOf()
+
+    /** Whether the system is in night mode; winit does not report it. */
+    @JvmStatic
+    fun isDarkMode(): Boolean {
+        val activity = activity ?: return false
+        val mode = activity.resources.configuration.uiMode and
+            Configuration.UI_MODE_NIGHT_MASK
+        return mode == Configuration.UI_MODE_NIGHT_YES
+    }
 
     /** The app-private directory that holds working documents. */
     @JvmStatic

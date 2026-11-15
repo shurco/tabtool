@@ -6,6 +6,7 @@ impl AndroidApp {
     /// Draws one frame of the app.
     pub fn show(&mut self, ui: &mut Ui) {
         self.poll(Instant::now());
+        self.apply_system_theme(ui.ctx());
         let language = self.refresh_language();
         let metrics = self.metrics(ui.available_width());
         self.ensure_library(metrics, language);
@@ -27,6 +28,21 @@ impl AndroidApp {
         self.flush_background();
         self.show_sheets(&mut content, metrics, language);
         self.show_prompt(&mut content, language);
+    }
+
+    /// Follows the platform's night mode when it reports one.
+    pub fn apply_system_theme(&self, ctx: &eframe::egui::Context) {
+        let Some(dark) = self.host.dark_mode() else {
+            return;
+        };
+        let preference = if dark {
+            eframe::egui::ThemePreference::Dark
+        } else {
+            eframe::egui::ThemePreference::Light
+        };
+        if ctx.options(|options| options.theme_preference) != preference {
+            ctx.set_theme(preference);
+        }
     }
 
     fn metrics(&self, width: f32) -> MobileMetrics {

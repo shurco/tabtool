@@ -8,7 +8,10 @@ opt-in and local, never a CI gate.
 These are the granular widget, grid and document-chrome snapshots. The
 consolidated Plan 4 state inventory lives in
 `apps/tabtool-desktop/tests/snapshots/` and is rendered by
-`apps/tabtool-desktop/tests/visual.rs`.
+`apps/tabtool-desktop/tests/visual.rs`. The consolidated Plan 5 mobile
+inventory is rendered by `tests/mobile/visual.rs` and shares this directory:
+the library, editor, action bars, sheets and large-file states on the phone,
+tablet and foldable sizes.
 
 Generate baselines for the current machine:
 

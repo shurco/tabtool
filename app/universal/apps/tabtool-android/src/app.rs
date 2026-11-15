@@ -88,6 +88,10 @@ pub trait Host {
     fn finish_activity(&self);
     /// The system language tags, most preferred first.
     fn languages(&self) -> Vec<String>;
+    /// Whether the system is in night mode, when the platform can say.
+    fn dark_mode(&self) -> Option<bool> {
+        None
+    }
     /// The system locale tag, for example `de_DE`.
     fn locale(&self) -> String;
     /// The device clock facts for file dates.
