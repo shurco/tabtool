@@ -23,6 +23,7 @@ fn heading(ui: &mut egui::Ui, text: &str) {
     ui.label(RichText::new(text).heading());
 }
 
+#[cfg(target_os = "macos")]
 fn snapshots_enabled() -> bool {
     tabtool_ui::harness::render_snapshots_enabled()
 }

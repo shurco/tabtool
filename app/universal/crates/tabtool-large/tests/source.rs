@@ -10,11 +10,11 @@ use std::time::Duration;
 
 use support::{TempDirectory, large_csv};
 use tabtool_core::{CsvConfiguration, CsvError, CsvParser, CsvTable, Encoding, RowSource};
-#[cfg(unix)]
-use tabtool_large::replace_file;
 use tabtool_large::{
-    CellKey, CellOverlay, LargeCSVSource, LargeFile, LargeFileIndexer, MappedFile, Staleness,
+    CellKey, CellOverlay, LargeCSVSource, LargeFile, LargeFileIndexer, MappedFile,
 };
+#[cfg(unix)]
+use tabtool_large::{Staleness, replace_file};
 
 const STEP_BYTES: usize = 4096;
 

@@ -142,10 +142,15 @@ mod tests {
                 !hint.contains(['⏶', '⏷', '⏴', '⏵']),
                 "{action:?} still uses a missing glyph: {hint}"
             );
-            assert!(
-                hint.contains(['↑', '↓', '←', '→']),
-                "{action:?} lost its arrow: {hint}"
-            );
+            // macOS shows key symbols; elsewhere the hint names the key.
+            let has_arrow = if cfg!(target_os = "macos") {
+                hint.contains(['↑', '↓', '←', '→'])
+            } else {
+                ["Up", "Down", "Left", "Right"]
+                    .iter()
+                    .any(|name| hint.ends_with(name))
+            };
+            assert!(has_arrow, "{action:?} lost its arrow: {hint}");
         }
     }
 }
