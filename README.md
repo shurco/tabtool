@@ -4,7 +4,7 @@
 
 # TabTool
 
-A modern, independent CSV editor for macOS and iOS in Swift. The app opens CSV/TSV/text files, detects the format automatically, lets you edit the table, and saves/exports data in the selected encoding and with the selected delimiter.
+A modern, independent CSV editor. The macOS and iOS apps are written in Swift. Windows, Linux, and Android ports are in development in Rust. The app opens CSV/TSV/text files, detects the format automatically, lets you edit the table, and saves/exports data in the selected encoding and with the selected delimiter.
 
 TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. One listing (universal purchase) covers the Mac, iPhone, and iPad. The bundle ID is `app.shurco.tabtool`.
 
@@ -19,6 +19,10 @@ TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. One listing (uni
 If TabTool saves you time, a rating on the App Store helps other people find it:
 <https://apps.apple.com/app/id6827919069?action=write-review>. It takes a minute,
 and it is the signal the store uses to show the app to more people.
+
+## Roadmap
+
+The macOS and iOS apps are available now. Windows, Linux, and Android are a Rust port in development. No dates are promised until a build exists; the repository is the source of truth for progress.
 
 ## Screenshots
 
@@ -38,6 +42,7 @@ and it is the signal the store uses to show the app to more people.
 - Copying and pasting rows/columns as TSV, undo/redo for cells, structure, paste, and format changes.
 - Large file mode (files of 100 MiB and more by default; the threshold is a setting): the file is memory-mapped and indexed in the background, so rows appear at once and a 5 GB file with 77.7 million rows is fully indexed about 2.7 seconds after launch, using under 100 MB of memory. You can browse, jump with `⌘↑`/`⌘↓`, and edit cells with undo; structural commands, sorting, export, Duplicate and the decimal mark are unavailable. Save and Save As stream the file (only edited rows are rewritten; the 5 GB file saves in about 6 seconds with the status bar showing progress and a Cancel button); the file is never autosaved, and closing the window or quitting with unsaved edits asks Save / Don't Save / Cancel. Saving needs free disk space of about twice the file size. Supported encodings, the row-break and quoting rules, and what is unavailable are listed in [docs/csv-format.md](docs/csv-format.md#large-file-mode).
 - Saving and exporting with a different delimiter, encoding, quotes, decimal mark, and header.
+- Export to JSON (an array of objects) or XML (`<rows>` of `<row>` elements): UTF-8, column names as keys, every value a string; see [docs/csv-format.md](docs/csv-format.md#json-and-xml-export).
 - CSV, TSV, and plain text formats; UTF-8/16/32, MacRoman, Windows Latin 1/2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, Japanese encodings.
 - Settings window (`⌘,`): interface language, defaults for new documents, grid appearance, large file threshold, format bar. See [Settings](#settings).
 - Interface in 11 languages, chosen in Settings or following the system. See [Languages](#languages).
@@ -179,7 +184,7 @@ cd app/apple/TabToolKit && swift test
 ./scripts/test --ui
 ```
 
-`./scripts/test` runs the core package and the macOS app unit tests. `./scripts/app test ios` runs the iOS unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 254 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 320 app unit tests, 19 UI tests, and 196 iOS unit tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
+`./scripts/test` runs the core package and the macOS app unit tests. `./scripts/app test ios` runs the iOS unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 272 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 328 app unit tests, 19 UI tests, and 225 iOS unit tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
 
 ## Performance
 

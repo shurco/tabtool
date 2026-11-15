@@ -172,8 +172,8 @@
 		<SectionHeader
 			index="06"
 			kicker="Roadmap"
-			title="macOS and iOS now. The rest is planned."
-			lede="TabTool 1.0 is a Mac and iPhone app. Windows, Linux, and Android are on the list, with no dates attached until real builds exist."
+			title="macOS and iOS now. The rest is in development."
+			lede="TabTool 1.0 is a Mac and iPhone app. Windows, Linux, and Android are in development in Rust, with no dates attached until real builds exist."
 		/>
 		<Roadmap />
 	</div>

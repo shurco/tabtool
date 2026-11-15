@@ -43,9 +43,11 @@ final class ExportCoordinator {
         panel.prompt = String(localized: "Export")
         panel.canCreateDirectories = true
         panel.isExtensionHidden = false
-        panel.allowedContentTypes = [ExportPlan.contentType(for: options.configuration)]
+        panel.allowedContentTypes = [ExportPlan.contentType(
+            format: options.format, for: options.configuration)]
         panel.nameFieldStringValue = ExportPlan.filename(
             baseName: baseName,
+            format: options.format,
             configuration: options.configuration
         )
         panel.accessoryView = makeAccessoryView(for: panel)
@@ -61,22 +63,24 @@ final class ExportCoordinator {
     }
 
     private func makeAccessoryView(for panel: NSSavePanel) -> NSView {
-        let content = ExportOptionsView(options: options) { [weak self, weak panel] configuration in
+        let content = ExportOptionsView(options: options) { [weak self, weak panel] in
             guard let self, let panel else { return }
-            self.fileTypeDidChange(configuration, in: panel)
+            self.fileTypeDidChange(in: panel)
         }
         let hostingView = NSHostingView(rootView: content)
         hostingView.frame = NSRect(origin: .zero, size: hostingView.fittingSize)
         return hostingView
     }
 
-    /// Keeps the panel's file type and extension in step with the separator.
-    private func fileTypeDidChange(_ configuration: CSVConfiguration,
-                                   in panel: NSSavePanel) {
-        panel.allowedContentTypes = [ExportPlan.contentType(for: configuration)]
+    /// Keeps the panel's file type and extension in step with the format
+    /// and separator.
+    private func fileTypeDidChange(in panel: NSSavePanel) {
+        panel.allowedContentTypes = [ExportPlan.contentType(
+            format: options.format, for: options.configuration)]
         panel.nameFieldStringValue = ExportPlan.renaming(
             panel.nameFieldStringValue,
-            configuration: configuration
+            format: options.format,
+            configuration: options.configuration
         )
     }
 
@@ -90,17 +94,19 @@ final class ExportCoordinator {
         // The panel validated this exact URL and its replace confirmation.
         // Rewriting the extension here could overwrite a different file
         // without asking.
+        let format = options.format
         let configuration = options.configuration
         let url = selectedURL
         teardown()
 
         switch ExportPlan.decision(
             table: table,
+            format: format,
             documentConfiguration: documentConfiguration,
             exportConfiguration: configuration
         ) {
         case .proceed:
-            write(to: url, configuration: configuration)
+            write(to: url, format: format, configuration: configuration)
         case .confirmAmbiguous:
             confirmAmbiguousExport(to: url, configuration: configuration)
         case .blockedUnencodable:
@@ -117,14 +123,18 @@ final class ExportCoordinator {
         alert.addButton(withTitle: String(localized: "Export Anyway"))
         alert.addButton(withTitle: String(localized: "Cancel"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
-        write(to: url, configuration: configuration, allowAmbiguousOutput: true)
+        // Only CSV output can be ambiguous.
+        write(to: url, format: .csv, configuration: configuration,
+              allowAmbiguousOutput: true)
     }
 
-    private func write(to url: URL, configuration: CSVConfiguration,
+    private func write(to url: URL, format: ExportFormat,
+                       configuration: CSVConfiguration,
                        allowAmbiguousOutput: Bool = false) {
         do {
             try ExportPlan.write(
                 table: table,
+                format: format,
                 documentConfiguration: documentConfiguration,
                 configuration: configuration,
                 to: url,

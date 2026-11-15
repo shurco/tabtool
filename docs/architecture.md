@@ -91,7 +91,7 @@ User decision: **A**.
 - Autosave in place; atomic writes.
 - Autosave never writes a document that cannot be saved safely. On a read error, text that cannot be represented in the current encoding, or an ambiguous no-quote CSV, autosave is suspended: the document stays dirty, and a persistent banner with an explanation and actions is shown in the window. Save in such states is blocked by a typed error; the edit that caused the issue must be undone, or Export can write another encoding or quote style. Export may ask for confirmation for no-quote, but cannot write unrepresentable text. There is no silent format change or data loss.
 - Openable types: CSV (`public.comma-separated-values-text`), TSV (`public.tab-separated-values-text`), plain text (`public.plain-text`). For CSV/TSV the app is the Owner, for plain text — Alternate, so as not to intercept all `.txt`.
-- Export always goes through the save panel; default is `.csv`, the format (separator/encoding/quotes/decimal mark/header) is chosen in the panel's accessory view. Export does not change the format of the current document.
+- Export always goes through the save panel; default is `.csv`, the format (CSV/JSON/XML, then separator/encoding/quotes/decimal mark/header for CSV) is chosen in the panel's accessory view. JSON and XML disable the CSV-only controls instead of hiding them, so the accessory view keeps its size. Export does not change the format of the current document.
 - New document: 3 columns × 1 empty row. The format comes from the New Document settings (6.10); by default UTF-8, comma, quotes `"` with doubling, decimal point, no header.
 - An empty file opens as a 1×1 table; this is pinned by a test.
 - UTF-8/UTF-16 BOM is recognized, does not get into cell text, and is preserved when writing in the same encoding.
@@ -149,13 +149,14 @@ A format change must not silently lose unsaved edits. Operations are predictable
 | Copy | Numeric cells get the decimal separator of the current locale; everything else as is | Current table | — |
 | Paste | TSV is parsed; cells that are numeric by the locale are converted from the locale mark to the document mark; otherwise text as is | Clipboard | Yes, one operation |
 | Save | Writes the current table and headers with the current configuration; no additional conversions | Current table | — |
-| Export | A copy of the table is converted from the document mark to the export mark; the header is written per the export setting; the document is not changed | Current table | — |
+| Export | A copy of the table is converted from the document mark to the export mark; CSV writes the header per the export setting, JSON/XML always use field names; the document is not changed | Current table | — |
 | New document | Parsing settings re-read nothing; decimal/header transform the typed table; separator/quote/encoding affect writing | Current table | Yes |
 
 Header rules:
 - "Header" in the document format is semantics: whether the table has a header.
 - "Header" in export is output only: if enabled, we write the document's headers; if the document has no header — the generated names A, B, C…; if disabled — we do not write it.
 - Save always follows the document semantics; the export toggle does not change the document.
+- JSON/XML export ignores the header toggle: keys come from the document headers or the generated names, made unique with `_2`, `_3`… (see `docs/csv-format.md`).
 
 Decimal mark conversion is only a textual replacement in cells that pass the numeric predicate by the source mark. Leading/trailing zeros, `+`, exponent, and other formatting are preserved; `Decimal` is not used. The writer receives ready-made strings and an explicit header, so its signature does not depend on source/destination marks.
 
@@ -438,6 +439,7 @@ The iOS target compiles `Shared` and `app/apple/iOS`. It does not compile the Ap
   - format changes: decimal mark conversion, header toggle, transactional re-read (success/failure), undo snapshot, no mutation on failure;
   - save/autosave gates: unencodable text → `.needsAttention`/throw, ambiguous no-quote → `/throw`, no partial write; export confirmation path;
   - export/paste matrix: decimal conversion document↔export, locale↔document paste, header export toggle with/without document headers;
+  - JSON/XML writers: key order, escaping, XML name sanitizing, duplicate names, round-trip through `JSONSerialization`/`XMLParser`;
   - paste: TSV, CRLF, empty rows, more columns than exist, reordered columns;
   - table invariants: add/delete/move row/column, column reorder;
   - empty file/new doc defaults;

@@ -2241,6 +2241,76 @@
         }
       }
     },
+    "Column names become keys. The file is written in UTF-8.": {
+      "localizations": {
+        "be": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Назвы слупкоў становяцца ключамі. Файл запісваецца ў UTF-8."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spaltennamen werden zu Schlüsseln. Die Datei wird in UTF-8 geschrieben."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Column names become keys. The file is written in UTF-8."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los nombres de columna se convierten en claves. El archivo se escribe en UTF-8."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les noms de colonnes deviennent des clés. Le fichier est écrit en UTF-8."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I nomi delle colonne diventano chiavi. Il file viene scritto in UTF-8."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "列名がキーになります。ファイルはUTF-8で書き出されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열 이름이 키가 됩니다. 파일은 UTF-8로 저장됩니다."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nazwy kolumn stają się kluczami. Plik jest zapisywany w UTF-8."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Назви стовпців стають ключами. Файл записується в UTF-8."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "列名将作为键。文件以 UTF-8 编码写入。"
+          }
+        }
+      }
+    },
     "Comfortable": {
       "localizations": {
         "be": {

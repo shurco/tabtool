@@ -6,7 +6,7 @@
 
 	const title = 'Press kit — TabTool, a native CSV editor for macOS and iOS';
 	const description =
-		'Boilerplate, fast facts, screenshots, the app icon, and contact details for writing about TabTool, a free open-source CSV editor for macOS and iOS.';
+		'Boilerplate, fast facts, screenshots, the app icon, and contact details for writing about TabTool, a free open-source CSV editor for macOS and iOS, with Windows, Linux, and Android ports in development in Rust.';
 
 	const facts = [
 		['Name', 'TabTool'],
@@ -14,8 +14,10 @@
 		['Price', 'Free on the App Store'],
 		['License', 'MIT, source on GitHub'],
 		['Platforms', 'macOS 14+, iOS 17+ (iPhone and iPad)'],
+		['Roadmap', 'Windows, Linux, and Android ports in development in Rust; no dates yet'],
 		['Largest tested file', '5 GiB, 77.7 million rows, indexed in 2.7 seconds in the release app'],
 		['Memory after indexing', 'About 91 MB'],
+		['Export', 'CSV, TSV, JSON, and XML'],
 		['Privacy', 'Sandboxed, no network entitlement, no analytics, no account'],
 		['Languages', '11 interface languages'],
 		['Developer', 'Dmitry Shurco'],
@@ -45,9 +47,11 @@
 		<div>
 			<p class="eyebrow">Boilerplate</p>
 			<p class="prose">
-				TabTool is a free, open-source CSV editor for macOS 14+ and iOS 17+. It opens CSV, TSV,
+				TabTool is a free, open-source CSV editor for macOS 14+ and iOS 17+. Windows, Linux, and
+				Android ports are in development in Rust, with no dates yet. It opens CSV, TSV,
 				and plain text files, detects the encoding, separator, quote style, decimal mark, and
-				header row from the bytes, and lets you edit cells, rows, and columns. Large files are
+				header row from the bytes, and lets you edit cells, rows, and columns, then save the file or
+				export it to CSV, TSV, JSON, or XML. Large files are
 				memory-mapped and indexed in the background: a tested 5 GiB file with 77.7 million rows
 				was fully indexed 2.7 seconds after opening in the release app. The app is sandboxed with no network
 				entitlement, no analytics, and no account.

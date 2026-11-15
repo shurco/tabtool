@@ -51,8 +51,8 @@ cd tabtool
 ./scripts/app run macos</code></pre>
 			<div class="oss__meta">
 				<span class="mono">MIT license</span>
-				<span class="mono">254 core tests</span>
-				<span class="mono">320 app tests</span>
+				<span class="mono">272 core tests</span>
+				<span class="mono">328 app tests</span>
 			</div>
 		</div>
 	</div>

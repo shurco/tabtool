@@ -107,10 +107,11 @@ export const comparisons: Comparison[] = [
 			'A simpler feature set if all you need is a quick look and a format conversion.'
 		],
 		different: [
-			'Maintained code: Swift 6, strict concurrency, 254 core tests and 320 app unit tests in the repository.',
+			'Maintained code: Swift 6, strict concurrency, 272 core tests and 328 app unit tests in the repository.',
 			'Documented large-file mode with a 5 GiB benchmark and a streamed save path.',
 			'Sorting, iOS filters, drag-and-drop reordering, and an iPhone editor.',
-			'Format detection with an override bar for every detected value.'
+			'Format detection with an override bar for every detected value.',
+			'Windows, Linux, and Android ports are in development in Rust.'
 		],
 		verdict:
 			'If you need a free Mac CSV viewer today and never touch huge files, the original TableTool still works. If you want an editor that is maintained, handles multi-gigabyte files, and runs on iPhone, TabTool is the successor in spirit.',
@@ -134,7 +135,7 @@ export const comparisons: Comparison[] = [
 			'A cross-platform CSV workbench with analysis tools. TabTool is a narrower Mac and iOS editor, and open source.',
 		intro: [
 			'Modern CSV is the broadest tool in this comparison: Windows, macOS, and Linux, with a free tier and paid Personal and Business licenses. Its feature list goes beyond editing into pivot tables, column statistics, deduplication, regex find and replace, and JSON/XML conversion.',
-			'TabTool does none of that. It opens delimited text, lets you edit it, and writes it back in the format you choose. The trade is scope for depth: a native Apple app, a documented large-file mode, and an MIT-licensed codebase without a paid tier.'
+			'TabTool does almost none of that. It opens delimited text, lets you edit it, and writes it back in the format you choose, or exports it to JSON or XML. The trade is scope for depth: a native Apple app, a documented large-file mode, and an MIT-licensed codebase without a paid tier.'
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT', them: 'Closed source' },
@@ -142,7 +143,7 @@ export const comparisons: Comparison[] = [
 			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'Windows, macOS, Linux' },
 			{ label: 'iPhone and iPad app', tabtool: 'Yes', them: 'No' },
 			{ label: 'Pivot tables and statistics', tabtool: 'No', them: 'Yes' },
-			{ label: 'JSON/XML import and export', tabtool: 'No', them: 'Yes' },
+			{ label: 'JSON/XML import and export', tabtool: 'Export only', them: 'Yes' },
 			{ label: 'Large files', tabtool: '5 GiB tested, 2.7 s index, ~91 MB RAM', them: 'Read-only mode; vendor claims a small footprint' },
 			{ label: 'Regex find and replace', tabtool: 'No', them: 'Yes' },
 			{ label: 'Editing and undo', tabtool: 'Full structural editing, undo/redo', them: 'Yes' },
@@ -150,7 +151,7 @@ export const comparisons: Comparison[] = [
 		],
 		stronger: [
 			'Analysis: pivot tables, column statistics, unique values, and histograms.',
-			'More interchange formats, including JSON and XML, plus PDF printing.',
+			'More interchange formats, including JSON and XML import, plus PDF printing.',
 			'Three desktop operating systems, with a free tier to evaluate.',
 			'Business licensing and a lifetime license model.'
 		],
@@ -161,7 +162,7 @@ export const comparisons: Comparison[] = [
 			'No account, no license key, and no network code in the app.'
 		],
 		verdict:
-			'Modern CSV is the better pick if you need analysis, JSON/XML, or Linux and Windows. TabTool is the better pick if you want a small, open, native Apple editor that handles very large delimited files and also runs on iPhone.',
+			'Modern CSV is the better pick if you need analysis, JSON/XML import, or Linux and Windows. TabTool is the better pick if you want a small, open, native Apple editor that handles very large delimited files and also runs on iPhone.',
 		sources: [
 			{ label: 'Modern CSV', url: 'https://www.moderncsv.com' },
 			{ label: 'Modern CSV pricing', url: 'https://www.moderncsv.com/buy/' }
@@ -237,7 +238,7 @@ export const comparisons: Comparison[] = [
 			{ label: 'iPhone and iPad app', tabtool: 'Yes', them: 'No' },
 			{ label: 'Large files', tabtool: '5 GiB tested, 2.7 s index, ~91 MB RAM', them: 'Over 2 GB and 15M+ rows; 100 MB in under 5 s (vendor)' },
 			{ label: 'Macros', tabtool: 'No', them: 'JavaScript' },
-			{ label: 'JSON export', tabtool: 'No', them: 'Yes' },
+			{ label: 'JSON export', tabtool: 'Yes, plus XML', them: 'Yes' },
 			{ label: 'License for forks', tabtool: 'Permissive; keep the notice', them: 'Copyleft; derivative work stays GPL' }
 		],
 		stronger: [

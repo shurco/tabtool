@@ -9,8 +9,8 @@
 		<p class="eyebrow">Status</p>
 		<h2>TabTool 1.0 is out.<br />Free on the App Store.</h2>
 		<p class="lede cta__lede">
-			One download for macOS 14+ and iOS 17+. Follow the repository for the release notes and the
-			Windows, Linux, and Android plans.
+			One download for macOS 14+ and iOS 17+. Windows, Linux, and Android are in development in
+			Rust. Follow the repository for release notes and progress.
 		</p>
 		<StoreBadges placement="cta" />
 		<div class="cta__actions">
