@@ -10,8 +10,8 @@ consolidated Plan 4 state inventory lives in
 `apps/tabtool-desktop/tests/snapshots/` and is rendered by
 `apps/tabtool-desktop/tests/visual.rs`. The consolidated Plan 5 mobile
 inventory is rendered by `tests/mobile/visual.rs` and shares this directory:
-the library, editor, action bars, sheets and large-file states on the phone,
-tablet and foldable sizes.
+16 phone renders plus the tablet and folded-size states that change most across
+widths.
 
 Generate baselines for the current machine:
 

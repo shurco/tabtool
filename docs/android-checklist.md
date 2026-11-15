@@ -2,8 +2,9 @@
 
 The acceptance pass for the Plan 5 Android app, run on the `Medium_Phone_API_36.1`
 AVD (Android 16, arm64, 1080×2400, 420 dpi) on 2026-11-15. The build under test
-was the debug APK from the final Task 8 tree; the library, document, theme,
-rotation, process-death and back rows were re-checked after the last rebuild.
+was the debug APK from commit `cbfa2be`; the test/docs review fixes that follow
+it do not change production code. The library, document, theme, rotation,
+process-death and back rows were re-checked after the last rebuild.
 
 Every row records what was exercised and the evidence that was observed. A
 `NOT VERIFIED` row says why it could not run here; it is not a pass.

@@ -1,13 +1,13 @@
 //! Consolidated visual baselines for the Android/mobile interface.
 //!
-//! The inventory renders the empty and populated library, a read error, the
-//! editor with a column header, row selection and an open native edit, the row
-//! and column action bars, the five sheets and large indexing, saving and
-//! staleness on the phone (360×800). The states that change most across widths
-//! repeat on the tablet (800×1280), the folded outer display (411×797) and the
-//! open inner display (841×701 with an active vertical hinge): the library,
-//! the editor header, the column action bar and the Format, Settings and
-//! Export sheets.
+//! The phone (360×800) carries 16 renders: library empty/populated/read error,
+//! editor header/selection/open native edit, row and column action bars, large
+//! indexing/saving/stale, and the Format, Filters, Settings, About and Export
+//! sheets. Six repeat on the tablet (800×1280): library empty/populated, editor
+//! header, column action bar, Format and Export. The folded outer display
+//! (411×797) renders the populated library; the open inner display (841×701
+//! with an active vertical hinge) renders the editor header, column action bar
+//! and Settings.
 //!
 //! The images depend on the operating system's fonts and GPU rasterizer, so
 //! comparison is opt-in: set `TABTOOL_RENDER_SNAPSHOTS=1` to render and compare
