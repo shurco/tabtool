@@ -13,9 +13,9 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use egui::Rect;
-use tabtool_core::{CsvConfiguration, Locale};
+use tabtool_core::{CsvConfiguration, Locale, has_table_extension};
 use tabtool_document::Document;
-use tabtool_i18n::Language;
+use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Language};
 
 use super::MobileMetrics;
 
@@ -24,27 +24,11 @@ mod screen;
 
 pub use format::{LibraryClock, format_modified, format_size};
 
-/// The extensions the library lists.
-///
-/// The list matches the platform crate's `TABLE_EXTENSIONS`; the UI crate
-/// cannot import the platform crate, so the two lists are kept in step by
-/// hand.
-const TABLE_EXTENSIONS: [&str; 5] = ["csv", "tsv", "txt", "tab", "dat"];
-
 /// The base name of a new document.
 const NEW_DOCUMENT_BASE: &str = "Untitled";
 
 /// The default extension of a new document.
 const NEW_DOCUMENT_EXTENSION: &str = "csv";
-
-/// The catalog key for a platform failure with no more specific message.
-pub const ERROR_GENERIC: &str = "Something Went Wrong";
-
-/// The catalog key for a document that could not be opened.
-pub const ERROR_OPEN: &str = "The file could not be opened";
-
-/// The catalog key for a document that could not be written.
-pub const ERROR_SAVE: &str = "The file could not be saved";
 
 /// The order the library shows documents in.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -576,16 +560,6 @@ fn is_library_file(path: &Path) -> bool {
         return false;
     };
     !name.starts_with('.') && has_table_extension(path)
-}
-
-fn has_table_extension(path: &Path) -> bool {
-    path.extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| {
-            TABLE_EXTENSIONS
-                .iter()
-                .any(|known| known.eq_ignore_ascii_case(extension))
-        })
 }
 
 fn sort_documents(documents: &mut [DocumentEntry]) {

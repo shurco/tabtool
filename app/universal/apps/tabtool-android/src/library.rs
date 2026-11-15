@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 use tabtool_core::Locale;
-use tabtool_i18n::{Language, language_from_system};
+use tabtool_i18n::Language;
 use tabtool_settings::Settings;
 use tabtool_ui::mobile::{
     DocumentFiles, DocumentMetadata, ExportOutcome, FileMetadata, LibraryClock, LibraryError,
@@ -127,14 +127,6 @@ pub fn new_view(
         language,
     )
     .new_document_configuration(settings.new_document_configuration())
-}
-
-/// The interface language for a preference and the system tags.
-pub fn preferred_language(settings: &Settings, system: &[String]) -> Language {
-    match settings.app_language {
-        Language::System => language_from_system(system),
-        language => language,
-    }
 }
 
 /// The system locale, or English when the tag is not a valid ICU locale.

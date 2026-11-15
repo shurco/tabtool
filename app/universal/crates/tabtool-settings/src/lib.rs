@@ -11,7 +11,7 @@ mod quote_style;
 use std::path::PathBuf;
 
 use tabtool_core::{CsvConfiguration, Encoding};
-use tabtool_i18n::Language;
+use tabtool_i18n::{Language, language_from_system};
 
 pub use quote_style::QuoteStyle;
 
@@ -149,6 +149,17 @@ impl Default for Settings {
 }
 
 impl Settings {
+    /// The interface language for this preference and the system languages.
+    ///
+    /// [`Language::System`] follows the first system language through the
+    /// catalog mapping; an explicit preference always wins.
+    pub fn interface_language(&self, system_tags: &[String]) -> Language {
+        match self.app_language {
+            Language::System => language_from_system(system_tags),
+            language => language,
+        }
+    }
+
     /// The format a new document starts with.
     pub fn new_document_configuration(&self) -> CsvConfiguration {
         CsvConfiguration {

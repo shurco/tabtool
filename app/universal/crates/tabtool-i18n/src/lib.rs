@@ -151,6 +151,15 @@ pub fn key_count() -> usize {
     catalog::ENTRIES.len()
 }
 
+/// The catalog key for a platform failure with no more specific message.
+pub const ERROR_GENERIC: &str = "Something Went Wrong";
+
+/// The catalog key for a document that could not be opened.
+pub const ERROR_OPEN: &str = "The file could not be opened";
+
+/// The catalog key for a document that could not be written.
+pub const ERROR_SAVE: &str = "The file could not be saved";
+
 /// The interface language for an ordered system language list.
 ///
 /// The first tag wins. Chinese variants all use the Simplified catalog, and an
@@ -178,7 +187,7 @@ pub fn language_from_system(tags: &[String]) -> Language {
 
 #[cfg(test)]
 mod tests {
-    use super::{Language, resolve};
+    use super::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Language, keys, resolve};
 
     #[test]
     fn a_missing_locale_entry_falls_back_to_english() {
@@ -199,5 +208,15 @@ mod tests {
             resolve(Language::Fr, "Not in the catalog", lookup),
             "Not in the catalog"
         );
+    }
+
+    #[test]
+    fn every_platform_error_key_exists_in_the_catalog() {
+        for key in [ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE] {
+            assert!(
+                keys().any(|catalog_key| catalog_key == key),
+                "{key} is missing from the catalog"
+            );
+        }
     }
 }

@@ -3,11 +3,7 @@
 use tabtool_core::CsvError;
 use tabtool_document::DocumentError;
 use tabtool_i18n::{Language, tr};
-
-/// The localized "Saving…" label with a rounded percentage.
-pub(crate) fn saving_text(language: Language, fraction: f64) -> String {
-    tabtool_ui::document::saving_text(language, fraction)
-}
+use tabtool_ui::document::error_message;
 
 /// The localized explanation for a failed save.
 ///
@@ -23,37 +19,13 @@ pub(crate) fn issue_message(language: Language, error: DocumentError) -> String 
             "This document can’t be saved in its current encoding.",
         )
         .to_owned(),
-        DocumentError::CannotWriteFile => tr(
-            language,
-            "Check that the folder exists and that you have permission to save it.",
-        )
-        .to_owned(),
-        DocumentError::NotReady | DocumentError::CannotReadFile => tr(
+        DocumentError::CannotReadFile => tr(
             language,
             "The document is still loading or could not be read.",
         )
         .to_owned(),
-        DocumentError::Busy | DocumentError::RequiresConfirmation => tr(
-            language,
-            "The document changed while the operation was running. Try again.",
-        )
-        .to_owned(),
-        DocumentError::IndexingNotFinished => tr(
-            language,
-            "Indexing is not finished. Save again when it completes.",
-        )
-        .to_owned(),
-        DocumentError::SourceChanged => tr(
-            language,
-            "The file changed on disk since it was opened. Reload it before saving.",
-        )
-        .to_owned(),
-        DocumentError::InsufficientDiskSpace => tr(
-            language,
-            "There is not enough free disk space to save this file.",
-        )
-        .to_owned(),
         DocumentError::Csv(_) => tr(language, "The file could not be saved").to_owned(),
+        error => error_message(language, error),
     }
 }
 
@@ -61,7 +33,9 @@ pub(crate) fn issue_message(language: Language, error: DocumentError) -> String 
 mod tests {
     use tabtool_core::CsvError;
 
-    use super::{issue_message, saving_text};
+    use tabtool_ui::document::saving_text;
+
+    use super::issue_message;
 
     #[test]
     fn the_german_progress_string_keeps_its_no_break_space() {

@@ -2,10 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
-pub use crate::locale::{SystemInfo, SystemLocale, decimal_separator, system_locale};
-use crate::services::{
-    BackHandler, DocumentFiles, Insets, PlatformError, PlatformErrors, Share, TABLE_EXTENSIONS,
-};
+use tabtool_core::TABLE_EXTENSIONS;
+
+pub use crate::locale::{SystemInfo, decimal_separator, system_locale};
+use crate::services::{BackHandler, DocumentFiles, Insets, PlatformError, PlatformErrors, Share};
 use crate::text_input::{TextInput, TextInputOutcome, TextInputRequest};
 
 /// The file dialogs a view needs. Tests use a fake; the app uses [`DesktopPlatform`].
@@ -39,7 +39,7 @@ pub struct DesktopPlatform;
 
 impl FileDialogs for DesktopPlatform {
     fn open_files(&self) -> Vec<PathBuf> {
-        let language = tabtool_i18n::language_from_system(&SystemLocale.languages());
+        let language = tabtool_i18n::language_from_system(&self.languages());
         rfd::FileDialog::new()
             .add_filter(tabtool_i18n::tr(language, "Table Files"), &TABLE_EXTENSIONS)
             .pick_files()
@@ -47,7 +47,7 @@ impl FileDialogs for DesktopPlatform {
     }
 
     fn save_file(&self, suggested_name: &str, extension: &str) -> Option<PathBuf> {
-        let language = tabtool_i18n::language_from_system(&SystemLocale.languages());
+        let language = tabtool_i18n::language_from_system(&self.languages());
         rfd::FileDialog::new()
             .set_file_name(suggested_name)
             .add_filter(tabtool_i18n::tr(language, "Table Files"), &[extension])
@@ -77,7 +77,7 @@ impl OpenUrl for DesktopPlatform {
 
 impl SystemInfo for DesktopPlatform {
     fn languages(&self) -> Vec<String> {
-        crate::locale::SystemLocale.languages()
+        sys_locale::get_locales().collect()
     }
 
     fn locale(&self) -> String {
@@ -122,7 +122,7 @@ impl DocumentFiles for DesktopPlatform {
     }
 
     fn import_from_picker(&self) -> Option<PathBuf> {
-        let language = tabtool_i18n::language_from_system(&SystemLocale.languages());
+        let language = tabtool_i18n::language_from_system(&self.languages());
         let source = rfd::FileDialog::new()
             .add_filter(tabtool_i18n::tr(language, "Table Files"), &TABLE_EXTENSIONS)
             .pick_file()?;

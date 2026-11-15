@@ -90,7 +90,7 @@ pub fn save_state(path: Option<&Path>, snapshot: &NavSnapshot) -> io::Result<()>
 pub fn restorable(documents_dir: &Path, path: &Path) -> bool {
     path.is_file()
         && crate::intents::is_within(documents_dir, path)
-        && crate::intents::is_supported(path)
+        && tabtool_core::has_table_extension(path)
 }
 
 /// Saves a dirty file-backed small document immediately.

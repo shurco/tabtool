@@ -17,16 +17,13 @@ use std::time::Instant;
 use egui::{Context, Ui};
 use tabtool_document::Document;
 use tabtool_i18n::Language;
-use tabtool_platform::{DesktopPlatform, SystemInfo, settings_path};
+use tabtool_platform::{DesktopPlatform, SystemInfo, prefers_chinese_encoding, settings_path};
 use tabtool_settings::Settings;
 
 use crate::about_window::AboutAction;
 use crate::documents::DocumentWindow;
 use crate::files::FileWorkflow;
-use crate::platform::{
-    SharedDialogs, SharedStorage, interface_language_for, prefers_chinese_encoding,
-    standard_dialogs, standard_storage,
-};
+use crate::platform::{SharedDialogs, SharedStorage, standard_dialogs, standard_storage};
 use crate::settings_window::SettingsWindow;
 
 pub use quit::{QuitDecision, QuitResponse, quit_decision};
@@ -120,7 +117,7 @@ impl DesktopApp {
     ) -> Self {
         let system_languages = platform.languages();
         let prefers_chinese = prefers_chinese_encoding(&system_languages);
-        let language = interface_language_for(&settings, &system_languages);
+        let language = settings.interface_language(&system_languages);
         let files = FileWorkflow::new(
             Arc::clone(&dialogs),
             Arc::clone(&storage),

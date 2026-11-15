@@ -14,26 +14,6 @@ pub trait SystemInfo {
     fn decimal_separator(&self) -> String;
 }
 
-/// The live system locale.
-#[cfg(not(target_os = "android"))]
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SystemLocale;
-
-#[cfg(not(target_os = "android"))]
-impl SystemInfo for SystemLocale {
-    fn languages(&self) -> Vec<String> {
-        sys_locale::get_locales().collect()
-    }
-
-    fn locale(&self) -> String {
-        system_locale()
-    }
-
-    fn decimal_separator(&self) -> String {
-        decimal_separator(&system_locale())
-    }
-}
-
 /// The system locale, for example `de_DE`.
 #[cfg(not(target_os = "android"))]
 pub fn system_locale() -> String {
@@ -61,6 +41,14 @@ pub fn decimal_separator(locale: &str) -> String {
     } else {
         ".".to_string()
     }
+}
+
+/// Whether the system language makes the detector try GBK before CP1252.
+///
+/// This follows the first system language, not the interface override: a
+/// Chinese system with an English UI still prefers GBK.
+pub fn prefers_chinese_encoding(system_tags: &[String]) -> bool {
+    tabtool_i18n::language_from_system(system_tags) == tabtool_i18n::Language::ZhHans
 }
 
 /// Removes an encoding suffix and turns the tag into an underscore locale.

@@ -1,9 +1,10 @@
 //! The Documents library snapshots: empty, populated and a read failure.
 
+use tabtool_i18n::ERROR_OPEN;
 use tabtool_ui::Theme;
 use tabtool_ui::UiHarness;
 use tabtool_ui::harness::SnapshotResults;
-use tabtool_ui::mobile::{ERROR_OPEN, LibraryError, MobileMetrics};
+use tabtool_ui::mobile::{LibraryError, MobileMetrics};
 use tempfile::TempDir;
 
 use super::support::{FOLD_OUTER, PHONE, TABLET, VisualErrors, VisualFiles, library_harness};

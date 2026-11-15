@@ -86,7 +86,7 @@ pub fn alert_message(language: Language, error: DocumentError) -> String {
 }
 
 /// The message for a document error.
-pub(crate) fn error_message(language: Language, error: DocumentError) -> String {
+pub fn error_message(language: Language, error: DocumentError) -> String {
     match error {
         DocumentError::NotReady => tr(
             language,

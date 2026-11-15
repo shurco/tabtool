@@ -12,7 +12,7 @@ mod state;
 mod view;
 
 pub use grid::EguiClipboard;
-pub(crate) use messages::{issue_message, saving_text};
+pub(crate) use messages::issue_message;
 pub use state::WindowServices;
 
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -21,12 +21,13 @@ use std::time::{Duration, Instant};
 use egui::{Context, Ui, ViewportId};
 use tabtool_document::{Autosave, Document, DocumentError};
 use tabtool_i18n::Language;
+use tabtool_platform::SystemInfo;
 use tabtool_ui::document::{DocumentUiState, sync_selection_to_grid};
 use tabtool_ui::grid::GridState;
 
 use crate::files::FilePolicy;
 use crate::menu::MenuAction;
-use crate::platform::{decimal_separator, system_locale};
+use crate::platform::system_locale;
 pub use close::{CloseDecision, CloseSave, close_decision};
 pub use requests::CloseChoice;
 pub(crate) use requests::WindowRequest;
@@ -83,7 +84,7 @@ impl DocumentWindow {
             appearance,
             has_recent: false,
             locale: system_locale(&platform),
-            decimal_separator: decimal_separator(&platform),
+            decimal_separator: platform.decimal_separator(),
             requests: Vec::new(),
             app_actions: Vec::new(),
             prefers_chinese,

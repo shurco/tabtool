@@ -67,7 +67,7 @@ impl AndroidApp {
     }
 
     fn refresh_language(&mut self) -> Language {
-        self.language = library::preferred_language(&self.settings, &self.languages);
+        self.language = self.settings.interface_language(&self.languages);
         self.language
     }
 

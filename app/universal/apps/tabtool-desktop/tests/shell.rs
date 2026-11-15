@@ -11,8 +11,8 @@ use tabtool_desktop::app::{DesktopApp, QuitDecision, quit_decision};
 use tabtool_desktop::documents::{
     CloseDecision, CloseSave, DOCUMENT_MIN_INNER_SIZE, close_decision,
 };
-use tabtool_desktop::platform::{SharedStorage, interface_language, resolve_language};
-use tabtool_platform::DesktopPlatform;
+use tabtool_desktop::platform::SharedStorage;
+use tabtool_platform::{DesktopPlatform, SystemInfo};
 use tabtool_settings::Settings;
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::{Theme, UiHarness};
@@ -275,7 +275,7 @@ fn the_interface_language_follows_the_setting_then_the_system() {
         ..Settings::default()
     };
     assert_eq!(
-        interface_language(&settings, &DesktopPlatform),
+        settings.interface_language(&DesktopPlatform.languages()),
         tabtool_i18n::Language::Fr
     );
 
@@ -284,11 +284,11 @@ fn the_interface_language_follows_the_setting_then_the_system() {
         ..Settings::default()
     };
     assert_eq!(
-        resolve_language(settings.app_language, &["de-DE".to_owned()]),
+        settings.interface_language(&["de-DE".to_owned()]),
         tabtool_i18n::Language::De
     );
     assert_eq!(
-        resolve_language(settings.app_language, &["xx-YY".to_owned()]),
+        settings.interface_language(&["xx-YY".to_owned()]),
         tabtool_i18n::Language::En
     );
 }

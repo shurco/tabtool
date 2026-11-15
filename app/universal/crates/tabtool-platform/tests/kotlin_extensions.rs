@@ -1,6 +1,6 @@
 //! Keeps the Kotlin bridge's accepted extensions in sync with the Rust list.
 
-use tabtool_platform::TABLE_EXTENSIONS;
+use tabtool_core::TABLE_EXTENSIONS;
 
 const BRIDGE: &str = include_str!(
     "../../../apps/tabtool-android/android/app/src/main/java/app/shurco/tabtool/TabToolBridge.kt"

@@ -27,7 +27,7 @@ use crate::grid::{Clipboard, GridAction, GridAppearance, GridState};
 use crate::theme::current;
 
 pub use dispatch::{apply_grid_action, sync_selection_to_document, sync_selection_to_grid};
-pub use error_overlay::alert_message;
+pub use error_overlay::{alert_message, error_message};
 pub use format_bar::FormatBarAction;
 pub use panels::grid_options;
 pub use progress::{indexing_text, saving_text};

@@ -161,7 +161,7 @@ impl AndroidApp {
 
     pub(super) fn persist(&self) {
         if let Err(error) =
-            lifecycle::save_state(self.host.state_path().as_deref(), &self.nav.snapshot())
+            lifecycle::save_state(self.host.state_path().as_deref(), &nav::snapshot(&self.nav))
         {
             log::error!("could not persist the session: {error}");
         }

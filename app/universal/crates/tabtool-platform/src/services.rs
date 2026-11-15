@@ -7,23 +7,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-/// The extensions the app accepts and the open panel offers.
-///
-/// These match the Apple `Info.plist` document types and `DroppedFiles`.
-/// `tests/kotlin_extensions.rs` keeps the Kotlin bridge's copy in sync.
-pub const TABLE_EXTENSIONS: [&str; 5] = ["csv", "tsv", "txt", "tab", "dat"];
-
-/// The catalog key for a platform failure with no more specific message.
-#[cfg_attr(not(target_os = "android"), allow(dead_code))]
-pub(crate) const ERROR_GENERIC: &str = "Something Went Wrong";
-
-/// The catalog key for a document that could not be opened.
-#[cfg_attr(not(target_os = "android"), allow(dead_code))]
-pub(crate) const ERROR_OPEN: &str = "The file could not be opened";
-
-/// The catalog key for a document that could not be written.
-#[cfg_attr(not(target_os = "android"), allow(dead_code))]
-pub(crate) const ERROR_SAVE: &str = "The file could not be saved";
+use tabtool_core::has_table_extension;
 
 /// A platform failure the UI can show as a localized banner.
 ///
@@ -98,16 +82,6 @@ pub(crate) fn ensure_within(directory: &Path, path: &Path) -> io::Result<()> {
             format!("{} is outside {}", path.display(), directory.display()),
         ))
     }
-}
-
-fn has_table_extension(path: &Path) -> bool {
-    path.extension()
-        .and_then(std::ffi::OsStr::to_str)
-        .is_some_and(|extension| {
-            TABLE_EXTENSIONS
-                .iter()
-                .any(|known| known.eq_ignore_ascii_case(extension))
-        })
 }
 
 /// The app's private document store plus the user-facing file pickers.
@@ -206,7 +180,7 @@ mod tests {
     use std::path::{Path, PathBuf};
     use std::sync::OnceLock;
 
-    use super::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, cached_path, ensure_within};
+    use super::{cached_path, ensure_within};
 
     #[test]
     fn a_failed_path_resolution_is_retried_and_a_success_is_cached() {
@@ -243,15 +217,5 @@ mod tests {
         assert!(ensure_within(directory, Path::new("/sdcard/a.csv")).is_err());
         assert!(ensure_within(directory, &directory.join("nested/a.csv")).is_err());
         assert!(ensure_within(directory, Path::new("a.csv")).is_err());
-    }
-
-    #[test]
-    fn every_platform_error_key_exists_in_the_catalog() {
-        for key in [ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE] {
-            assert!(
-                tabtool_i18n::keys().any(|catalog_key| catalog_key == key),
-                "{key} is missing from the catalog"
-            );
-        }
     }
 }

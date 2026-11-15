@@ -13,11 +13,11 @@ use std::time::{Duration, Instant};
 
 use eframe::egui;
 use main::app::{
-    AndroidApp, BackResult, ERROR_OPEN, ERROR_SAVE, Host, Notice, PromptChoice, export_outcome,
-    text_input_rect,
+    AndroidApp, BackResult, Host, Notice, PromptChoice, export_outcome, text_input_rect,
 };
 use main::intents::{IntentEvent, StagedIntent};
 use tabtool_document::AUTOSAVE_DELAY;
+use tabtool_i18n::{ERROR_OPEN, ERROR_SAVE};
 use tabtool_platform::CopyOutcome;
 use tabtool_settings::Settings;
 use tabtool_ui::grid::Clipboard as GridClipboard;
@@ -107,7 +107,7 @@ impl Host for Fake {
             .flatten()
             .flatten()
             .map(|entry| entry.path())
-            .filter(|path| path.is_file() && main::intents::is_supported(path))
+            .filter(|path| path.is_file() && tabtool_core::has_table_extension(path))
             .collect();
         documents.sort();
         documents

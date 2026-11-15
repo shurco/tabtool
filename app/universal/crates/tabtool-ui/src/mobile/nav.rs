@@ -100,6 +100,14 @@ impl NavStack {
         &self.screen
     }
 
+    /// The path of the document in the editor.
+    pub fn document(&self) -> Option<&Path> {
+        match &self.screen {
+            Screen::Editor(document) => Some(document.path()),
+            Screen::Library => None,
+        }
+    }
+
     /// The open sheets, bottom first.
     pub fn sheets(&self) -> &[SheetKind] {
         &self.sheets

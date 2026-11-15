@@ -120,10 +120,7 @@ pub(super) fn new_document(
             tr(language, "Backslash"),
             tr(language, "None"),
         ];
-        let selected = QuoteStyle::ALL
-            .iter()
-            .position(|style| *style == settings.new_document_quote_style)
-            .unwrap_or(0);
+        let selected = settings.new_document_quote_style.index();
         if let Some(index) = Picker::new(
             (ui.ctx().viewport_id(), "settings-quote"),
             tr(language, "Quote"),

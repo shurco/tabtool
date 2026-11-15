@@ -22,19 +22,12 @@ pub use save::{SaveMode, SaveOutcome, save_document};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
+use tabtool_core::has_table_extension;
 use tabtool_document::{Document, DocumentPhase};
-pub use tabtool_platform::TABLE_EXTENSIONS;
 use tabtool_platform::save_settings;
 use tabtool_settings::{RECENT_DOCUMENTS_LIMIT, Settings};
 
 use crate::platform::{SharedDialogs, SharedStorage};
-
-/// Whether `path` has a table extension.
-pub fn is_table_file(path: &Path) -> bool {
-    path.extension()
-        .map(|extension| extension.to_string_lossy().to_ascii_lowercase())
-        .is_some_and(|extension| TABLE_EXTENSIONS.contains(&extension.as_str()))
-}
 
 /// The first launch argument that names a file.
 ///
@@ -277,7 +270,7 @@ impl FileWorkflow {
     fn open_paths(&mut self, paths: &[PathBuf]) -> Vec<OpenedDocument> {
         paths
             .iter()
-            .filter(|path| is_table_file(path))
+            .filter(|path| has_table_extension(path))
             .map(|path| self.open_path(path))
             .collect()
     }

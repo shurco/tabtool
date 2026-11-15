@@ -147,13 +147,13 @@ fn every_documented_table_extension_is_accepted_case_insensitively() {
     for extension in ["csv", "tsv", "txt", "tab", "dat"] {
         let path = PathBuf::from(format!("document.{extension}"));
         assert!(
-            tabtool_desktop::files::is_table_file(&path),
+            tabtool_core::has_table_extension(&path),
             "{extension} must open"
         );
         let upper = PathBuf::from(format!("document.{}", extension.to_ascii_uppercase()));
-        assert!(tabtool_desktop::files::is_table_file(&upper));
+        assert!(tabtool_core::has_table_extension(&upper));
     }
-    assert!(!tabtool_desktop::files::is_table_file(Path::new(
+    assert!(!tabtool_core::has_table_extension(Path::new(
         "document.png"
     )));
 }

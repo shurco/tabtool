@@ -4,9 +4,7 @@ use std::sync::Arc;
 
 use tabtool_core::Locale;
 use tabtool_document::{StdStorage, Storage};
-use tabtool_i18n::{Language, language_from_system};
 use tabtool_platform::{DesktopPlatform, FileDialogs, SystemInfo};
-use tabtool_settings::Settings;
 
 /// The storage every document window shares.
 ///
@@ -30,35 +28,6 @@ pub fn standard_dialogs() -> SharedDialogs {
     Arc::new(DesktopPlatform)
 }
 
-/// The language the interface uses for a preference and the system languages.
-///
-/// [`Language::System`] follows the first system language through the catalog
-/// mapping; an explicit preference always wins.
-pub fn resolve_language(preference: Language, system_tags: &[String]) -> Language {
-    match preference {
-        Language::System => language_from_system(system_tags),
-        language => language,
-    }
-}
-
-/// The interface language for the current settings and platform.
-pub fn interface_language(settings: &Settings, platform: &DesktopPlatform) -> Language {
-    interface_language_for(settings, &platform.languages())
-}
-
-/// The interface language for a preference and already-resolved system tags.
-pub fn interface_language_for(settings: &Settings, system_tags: &[String]) -> Language {
-    resolve_language(settings.app_language, system_tags)
-}
-
-/// Whether the system language makes the detector try GBK before CP1252.
-///
-/// This follows the first system language, not the interface override: a
-/// Chinese system with an English UI still prefers GBK.
-pub fn prefers_chinese_encoding(system_tags: &[String]) -> bool {
-    language_from_system(system_tags) == Language::ZhHans
-}
-
 /// The system locale, or `en` when the platform reports one the ICU parser
 /// does not accept.
 pub fn system_locale(platform: &DesktopPlatform) -> Locale {
@@ -66,17 +35,12 @@ pub fn system_locale(platform: &DesktopPlatform) -> Locale {
         .unwrap_or_else(|_| Locale::try_from_str("en").expect("English is a valid ICU locale"))
 }
 
-/// The system decimal separator, `,` or `.`.
-pub fn decimal_separator(platform: &DesktopPlatform) -> String {
-    platform.decimal_separator()
-}
-
 #[cfg(test)]
 mod tests {
     use tabtool_i18n::Language;
     use tabtool_settings::Settings;
 
-    use super::{interface_language_for, prefers_chinese_encoding};
+    use tabtool_platform::prefers_chinese_encoding;
 
     #[test]
     fn an_override_language_wins_but_the_system_still_picks_the_detector() {
@@ -86,7 +50,7 @@ mod tests {
         };
         let system = ["zh-Hans".to_owned()];
 
-        assert_eq!(interface_language_for(&settings, &system), Language::Fr);
+        assert_eq!(settings.interface_language(&system), Language::Fr);
         assert!(
             prefers_chinese_encoding(&system),
             "a French UI on a Chinese system must still try GBK"

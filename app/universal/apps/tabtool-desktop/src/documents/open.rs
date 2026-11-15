@@ -2,12 +2,13 @@
 
 use std::path::{Path, PathBuf};
 
+use tabtool_core::has_table_extension;
 use tabtool_document::{Autosave, LargeStatus};
 use tabtool_ui::document::DocumentUiState;
 use tabtool_ui::grid::GridState;
 
 use crate::documents::{CloseChoice, DocumentWindow, WindowRequest, WindowState};
-use crate::files::{OpenedDocument, ReplaceOutcome, UnsavedChoice, is_table_file};
+use crate::files::{OpenedDocument, ReplaceOutcome, UnsavedChoice};
 
 impl DocumentWindow {
     /// Accepts table files dropped on this window.
@@ -68,7 +69,7 @@ impl WindowState {
         }
         let mut files: Vec<PathBuf> = paths
             .into_iter()
-            .filter(|path| is_table_file(path))
+            .filter(|path| has_table_extension(path))
             .collect();
         if files.is_empty() {
             return;

@@ -8,8 +8,9 @@ use egui::{Frame, Margin, RichText, Stroke, Ui};
 use tabtool_core::{CsvConfiguration, Encoding};
 use tabtool_document::Document;
 use tabtool_i18n::{Language, tr};
+use tabtool_settings::QuoteStyle;
 
-use crate::format_options::{DECIMALS, QuoteStyle, SEPARATORS};
+use crate::format_options::{DECIMALS, SEPARATORS};
 use crate::theme::current;
 use crate::widgets::{ButtonKind, Picker, PushButton, toggle_enabled};
 
@@ -109,7 +110,7 @@ pub fn show(
                     .show(ui)
                     {
                         let mut candidate = configuration.clone();
-                        QuoteStyle::at(index).apply(&mut candidate);
+                        QuoteStyle::ALL[index].apply(&mut candidate);
                         chosen = Some(FormatBarAction::Configuration(candidate));
                     }
                 });

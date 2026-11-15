@@ -1,4 +1,4 @@
-use tabtool_platform::{SystemInfo, SystemLocale, decimal_separator};
+use tabtool_platform::{DesktopPlatform, SystemInfo, decimal_separator};
 
 #[test]
 fn the_decimal_separator_comes_from_the_locale() {
@@ -17,15 +17,15 @@ fn an_unknown_locale_keeps_the_dot() {
 
 #[test]
 fn the_system_locale_is_reported_as_a_catalog_like_tag() {
-    let locale = SystemLocale.locale();
+    let locale = DesktopPlatform.locale();
     assert!(!locale.contains('-'), "{locale} uses underscores");
 }
 
 #[test]
 fn the_system_locale_implements_the_system_info_trait() {
     fn assert_system_info<T: SystemInfo>() {}
-    assert_system_info::<SystemLocale>();
-    let _ = SystemLocale.languages();
-    let separator = SystemLocale.decimal_separator();
+    assert_system_info::<DesktopPlatform>();
+    let _ = DesktopPlatform.languages();
+    let separator = DesktopPlatform.decimal_separator();
     assert!(separator == "." || separator == ",", "{separator}");
 }

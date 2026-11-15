@@ -10,10 +10,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use tabtool_core::is_table_extension;
 use tabtool_ui::mobile::available_name;
-
-/// The extensions the app accepts, matching the manifest and the picker.
-const TABLE_EXTENSIONS: [&str; 5] = ["csv", "tsv", "txt", "tab", "dat"];
 
 /// The longest file name the store keeps, before the extension.
 const MAX_STEM: usize = 100;
@@ -42,17 +40,6 @@ pub enum IntentEvent {
     Failed(String),
 }
 
-/// Whether `path` has a table extension.
-pub fn is_supported(path: &Path) -> bool {
-    path.extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| {
-            TABLE_EXTENSIONS
-                .iter()
-                .any(|known| known.eq_ignore_ascii_case(extension))
-        })
-}
-
 /// Makes `display_name` a safe single-segment file name.
 ///
 /// Control characters and path separators are removed, a leading dot is
@@ -74,11 +61,7 @@ pub fn safe_name(display_name: &str, fallback_extension: &str) -> String {
     let extension = proposed
         .extension()
         .and_then(|extension| extension.to_str())
-        .filter(|extension| {
-            TABLE_EXTENSIONS
-                .iter()
-                .any(|known| known.eq_ignore_ascii_case(extension))
-        });
+        .filter(|extension| is_table_extension(extension));
     let stem = proposed
         .file_stem()
         .and_then(|stem| stem.to_str())
@@ -122,11 +105,7 @@ fn adopt_inner(
     let fallback_extension = staged_path
         .extension()
         .and_then(|extension| extension.to_str())
-        .filter(|extension| {
-            TABLE_EXTENSIONS
-                .iter()
-                .any(|known| known.eq_ignore_ascii_case(extension))
-        })
+        .filter(|extension| is_table_extension(extension))
         .ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,

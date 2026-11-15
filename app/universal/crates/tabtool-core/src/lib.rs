@@ -17,6 +17,7 @@ mod reorder;
 mod row_source;
 mod sort;
 mod table;
+mod table_extensions;
 mod write_validation;
 mod writer;
 
@@ -35,6 +36,7 @@ pub use reorder::{is_permutation, shifted};
 pub use row_source::RowSource;
 pub use sort::{SortDirection, row_order_sorted_by};
 pub use table::{ColumnId, CriterionId, CsvColumn, CsvTable, RowSet, new_column_id};
+pub use table_extensions::{TABLE_EXTENSIONS, has_table_extension, is_table_extension};
 pub use write_validation::{CsvWriteIssue, is_ambiguous, issue};
 pub use writer::CsvWriter;
 

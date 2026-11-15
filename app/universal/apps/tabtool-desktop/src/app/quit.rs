@@ -228,7 +228,7 @@ impl DesktopApp {
             if modal(
                 ui,
                 "quit-saving",
-                &crate::documents::saving_text(self.language, progress),
+                &tabtool_ui::document::saving_text(self.language, progress),
                 "",
                 &actions,
             )
@@ -255,7 +255,7 @@ impl DesktopApp {
             if modal(
                 ui,
                 "quit-busy",
-                &crate::documents::saving_text(self.language, progress),
+                &tabtool_ui::document::saving_text(self.language, progress),
                 "",
                 &actions,
             )

@@ -4,9 +4,10 @@
 use egui::Ui;
 use tabtool_core::Encoding;
 use tabtool_i18n::{Language, tr};
+use tabtool_settings::QuoteStyle;
 
 use super::ExportOptions;
-use crate::format_options::{DECIMALS, QuoteStyle, SEPARATORS};
+use crate::format_options::{DECIMALS, SEPARATORS};
 use crate::widgets::Picker;
 
 /// The closed picker geometry.
@@ -101,7 +102,7 @@ pub(crate) fn quote_picker(
         &values,
         size,
     ) {
-        QuoteStyle::at(index).apply(&mut options.configuration);
+        QuoteStyle::ALL[index].apply(&mut options.configuration);
     }
 }
 

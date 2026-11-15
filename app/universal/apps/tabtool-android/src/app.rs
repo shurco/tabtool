@@ -16,16 +16,16 @@ use std::time::Instant;
 use eframe::egui::{Frame, Panel, Ui, UiBuilder};
 use tabtool_core::Locale;
 use tabtool_document::{Document, DocumentError, LargeStatus, StdStorage};
-use tabtool_i18n::{Language, language_from_system, tr};
-use tabtool_platform::{decimal_separator, load_settings, save_settings};
+use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Language, tr};
+use tabtool_platform::{decimal_separator, load_settings, prefers_chinese_encoding, save_settings};
 use tabtool_settings::Settings;
 use tabtool_ui::about::AboutAction;
 use tabtool_ui::grid::{Clipboard as GridClipboard, GridAppearance, GridState};
 use tabtool_ui::mobile::{
     CopyResult, DocumentMetadata, ExportOutcome, ExportSheet, FiltersSheet, FormatSheet,
     LibraryClock, LibraryError, LibraryResponse, LibraryView, MobileEditor, MobileEditorResponse,
-    MobileEditorState, MobileMetrics, OverflowItem, SaveCopy, Screen, SheetKind, SheetStyle,
-    about_sheet, saved_copy_message, settings_sheet,
+    MobileEditorState, MobileMetrics, NavStack, OverflowItem, SaveCopy, Screen, SheetKind,
+    SheetStyle, about_sheet, saved_copy_message, settings_sheet,
 };
 use tabtool_ui::theme::current;
 use tabtool_ui::widgets::{AlertAction, BannerKind, ButtonKind, banner, modal};
@@ -33,14 +33,8 @@ use tabtool_ui::widgets::{AlertAction, BannerKind, ButtonKind, banner, modal};
 use crate::intents;
 use crate::library;
 use crate::lifecycle;
-use crate::nav::{AndroidNav, NavSnapshot};
+use crate::nav::{self, NavSnapshot};
 
-/// The catalog key of a generic platform failure.
-pub const ERROR_GENERIC: &str = "Something Went Wrong";
-/// The catalog key of a document that could not be opened.
-pub const ERROR_OPEN: &str = "The file could not be opened";
-/// The catalog key of a document that could not be saved.
-pub const ERROR_SAVE: &str = "The file could not be saved";
 /// The project website the About sheet opens.
 pub const WEBSITE_URL: &str = "https://tabtool.shurco.app";
 /// The MIT license bundled beside the workspace.
@@ -276,7 +270,7 @@ pub struct AndroidApp {
     locale: Locale,
     decimal_separator: String,
     clock: LibraryClock,
-    nav: AndroidNav,
+    nav: NavStack,
     library: LibraryView<'static>,
     library_key: LibraryKey,
     editor: Option<Editor>,
@@ -295,8 +289,8 @@ impl AndroidApp {
     ) -> Self {
         let settings = host.load_settings();
         let languages = host.languages();
-        let prefers_chinese = language_from_system(&languages) == Language::ZhHans;
-        let language = library::preferred_language(&settings, &languages);
+        let prefers_chinese = prefers_chinese_encoding(&languages);
+        let language = settings.interface_language(&languages);
         let locale = library::parse_locale(&host.locale());
         let decimal_separator = host.decimal_separator();
         let clock = host.clock();
@@ -335,7 +329,7 @@ impl AndroidApp {
             locale,
             decimal_separator,
             clock,
-            nav: AndroidNav::new(),
+            nav: NavStack::new(),
             library,
             library_key,
             editor: None,
@@ -349,7 +343,7 @@ impl AndroidApp {
     }
 
     /// The navigation stack.
-    pub fn nav(&self) -> &AndroidNav {
+    pub fn nav(&self) -> &NavStack {
         &self.nav
     }
 

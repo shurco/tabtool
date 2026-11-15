@@ -4,6 +4,7 @@ use egui::Ui;
 use tabtool_core::{CsvConfiguration, Encoding};
 use tabtool_document::{Document, Storage};
 use tabtool_i18n::{Language, tr};
+use tabtool_settings::QuoteStyle;
 
 use super::{
     SheetScreenResponse, SheetStyle, caption, form_row, touch_button, touch_picker, touch_toggle,
@@ -12,7 +13,7 @@ use crate::document::{
     ChromeAlert, FormatApplyOutcome, apply_format_configuration, detect_format_configuration,
     is_document_busy, request_format_configuration,
 };
-use crate::format_options::{DECIMALS, QuoteStyle, SEPARATORS};
+use crate::format_options::{DECIMALS, SEPARATORS};
 use crate::mobile::{SheetOptions, sheet};
 use crate::widgets::{AlertAction, BannerKind, ButtonKind, banner, modal};
 
@@ -141,7 +142,7 @@ impl FormatSheet {
                     )
                 }) {
                     let mut candidate = configuration.clone();
-                    QuoteStyle::at(index).apply(&mut candidate);
+                    QuoteStyle::ALL[index].apply(&mut candidate);
                     chosen = Some(FormatChoice::Configuration(candidate));
                 }
 

@@ -123,10 +123,7 @@ pub fn settings_sheet(
                 tr(language, "Backslash"),
                 tr(language, "None"),
             ];
-            let selected = QuoteStyle::ALL
-                .iter()
-                .position(|style| *style == settings.new_document_quote_style)
-                .unwrap_or(0);
+            let selected = settings.new_document_quote_style.index();
             if let Some(index) = form_row(ui, style, tr(language, "Quote"), |ui| {
                 touch_picker(
                     ui,
