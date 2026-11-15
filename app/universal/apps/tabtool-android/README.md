@@ -73,15 +73,15 @@ by `tabtool-platform::android`. Results are `OK`, `OK:<value>`, `CANCELLED` or
 | --- | --- | --- |
 | `clipboardGet(): String?` | `Clipboard::get` | `SecurityException` is caught in Kotlin and cleared in Rust |
 | `clipboardSet(text: String)` | `Clipboard::set` | |
-| `documentsDir(): String?` | `DocumentFiles::documents_dir` | app-private `files/documents`, created on demand |
-| `importDocument(): String?` | `DocumentFiles::import_from_picker` | `ACTION_OPEN_DOCUMENT` (`text/*`); streams the URI into the documents dir under a collision-free name |
-| `exportDocument(sourcePath, suggestedName): String?` | `DocumentFiles::export_copy` | `ACTION_CREATE_DOCUMENT`; streams the source file to the chosen URI |
-| `shareFile(path): String` | `Share::share` | `FileProvider` (`${applicationId}.fileprovider`) + `ACTION_SEND` chooser |
-| `insets(): IntArray` | `Insets::safe_area` / `keyboard_height` | `[left, top, right, bottom, keyboard]` in dp |
+| `documentsDir(): String?` | `AndroidPlatform::documents_dir` | app-private `files/documents`, created on demand |
+| `importDocument(): String?` | `AndroidPlatform::import_from_picker` | `ACTION_OPEN_DOCUMENT` (`text/*`); streams the URI into the documents dir under a collision-free name |
+| `exportDocument(sourcePath, suggestedName): String?` | `AndroidPlatform::export_copy` | `ACTION_CREATE_DOCUMENT`; streams the source file to the chosen URI |
+| `shareFile(path): String` | `AndroidPlatform::share` | `FileProvider` (`${applicationId}.fileprovider`) + `ACTION_SEND` chooser |
+| `insets(): IntArray` | `AndroidPlatform::safe_area` / `keyboard_height` | `[left, top, right, bottom, keyboard]` in dp |
 | `languages(): Array<String>` | `SystemInfo::languages` | system language tags, most preferred first |
 | `openUrl(url): String` | `OpenUrl::open` | http, https and mailto only |
 | `isImportPending()` / `isExportPending()` | `AndroidPlatform::import_pending` / `export_pending` | keeps the library and export sheet on their own polling paths |
-| `takeBack(): Boolean` | `BackHandler::take_back` | back is consumed and queued; the app exits at its root with `finishActivity` |
+| `takeBack(): Boolean` | `AndroidPlatform::take_back` | back is consumed and queued; the app exits at its root with `finishActivity` |
 | `showTextEditor(left, top, width, height, text, multiline)` | `TextInput::open` | rectangle in points; Kotlin converts with the display density; returns false when it cannot open |
 | `hideTextEditor()` | `TextInput::close` | removes the editor without committing or cancelling |
 | `filesDir(): String?` | `AndroidPlatform::files_dir` | settings and `app-state.json` live here |
@@ -99,8 +99,9 @@ Done action and focus loss commit; rotation cancels the edit without touching
 the committed value. `nativeSaveOnBackground()` blocks the activity's pause path
 for at most 400 ms while the app flushes the pending small-document save.
 
-SAF, share and link failures are queued as `PlatformError { message_key,
-detail }` and drained with `PlatformErrors::take_error`. The app resolves
+SAF, share and link failures are queued as `tabtool_i18n::LocalizedError
+{ message_key, detail }` and drained with `AndroidPlatform::take_error`. The
+app resolves
 `message_key` through `tabtool-i18n`; `detail` stays in logcat.
 
 ## Platform services checklist (Plan 5 Task 1)
