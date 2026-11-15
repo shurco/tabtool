@@ -43,5 +43,5 @@ pub use writer::CsvWriter;
 /// Locale used by sorting and row filters (ICU4X).
 pub use icu_locale_core::Locale;
 
-/// Crate version, taken from its package manifest.
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Release version, the `name` in `app/universal/version.json`.
+pub const VERSION: &str = env!("TABTOOL_VERSION");

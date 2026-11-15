@@ -13,6 +13,9 @@ icu_locale_core = "2.4"
 regex = "1"
 unicode-normalization = "0.1"
 
+[build-dependencies]
+serde_json.workspace = true
+
 [dev-dependencies]
 base64 = "0.22"
 proptest = "1"

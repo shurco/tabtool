@@ -14,11 +14,6 @@ pub const WEBSITE_URL: &str = "https://tabtool.shurco.app";
 /// The App Store review page.
 pub const REVIEW_URL: &str = "https://apps.apple.com/app/id6827919069?action=write-review";
 
-/// The desktop crate's version.
-pub fn version() -> &'static str {
-    env!("CARGO_PKG_VERSION")
-}
-
 /// The MIT license bundled with the app.
 pub fn license_text() -> &'static str {
     include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../LICENSE"))
@@ -40,7 +35,7 @@ pub fn show_viewport(
         if close_requested {
             closed.store(true, Ordering::SeqCst);
         }
-        let chosen = tabtool_ui::about::show(ui, language, version(), license_text());
+        let chosen = tabtool_ui::about::show(ui, language, tabtool_core::VERSION, license_text());
         if let Some(chosen) = chosen {
             *action
                 .lock()

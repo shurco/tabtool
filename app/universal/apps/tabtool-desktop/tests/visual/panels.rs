@@ -49,7 +49,7 @@ pub fn settings_harness(theme: tabtool_ui::Theme, size: [f32; 2], tab: &str) -> 
 
 /// The About window content.
 pub fn about_harness(theme: tabtool_ui::Theme, size: [f32; 2]) -> UiHarness<'static> {
-    let version = env!("CARGO_PKG_VERSION");
+    let version = tabtool_core::VERSION;
     let license = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../LICENSE"));
     let mut harness = UiHarness::new(theme, size, move |ui| {
         paint_background(ui, theme);

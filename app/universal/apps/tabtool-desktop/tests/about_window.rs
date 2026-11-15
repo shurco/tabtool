@@ -35,11 +35,6 @@ fn render(handle: &Rc<RefCell<DesktopApp>>) -> UiHarness<'static> {
 }
 
 #[test]
-fn the_version_comes_from_the_desktop_crate() {
-    assert_eq!(about_window::version(), env!("CARGO_PKG_VERSION"));
-}
-
-#[test]
 fn the_license_is_the_bundled_mit_text() {
     let license = about_window::license_text();
     assert!(license.starts_with("The MIT License (MIT)"));
@@ -67,7 +62,7 @@ fn the_about_window_shows_the_identity_and_license_notice() {
     );
     assert!(
         harness
-            .query_by_label(&format!("Version {}", env!("CARGO_PKG_VERSION")))
+            .query_by_label(&format!("Version {}", tabtool_core::VERSION))
             .is_some()
     );
     assert!(harness.query_by_label("tabtool.shurco.app").is_some());
