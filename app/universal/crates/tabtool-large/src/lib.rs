@@ -32,7 +32,7 @@ pub use index::RowIndex;
 pub use indexer::{IndexCounters, IndexProgress, LargeFileIndexer};
 pub use mapped::{FileIdentity, MappedFile, Staleness};
 pub use overlay::{CellKey, CellOverlay};
-pub use platform::{available_space, replace_file, sync_directory};
+pub use platform::{available_space, replace_file, sync_directory, write_atomic};
 pub use saver::{LargeFileSaveError, LargeFileSaver, PreparedSave, save, volume_capacity, write};
 pub use scanner::{RowScanner, ScanMode, row_ranges};
 pub use sniffer::{check, is_byte_scannable, sniff, validate};

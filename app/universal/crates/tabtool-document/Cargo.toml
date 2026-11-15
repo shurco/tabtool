@@ -15,9 +15,9 @@ test-support = []
 [dependencies]
 tabtool-core = { path = "../tabtool-core" }
 tabtool-large = { path = "../tabtool-large" }
-tempfile = "3"
 
 [dev-dependencies]
 # Enables `test-support` for this package's own tests without enabling it for
 # downstream consumers.
 tabtool-document = { path = ".", features = ["test-support"] }
+tempfile = "3"

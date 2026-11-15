@@ -18,7 +18,6 @@ use crate::source::LargeSaveSnapshot;
 /// Rows are copied in chunks of this size when nothing says otherwise.
 const COPY_BUFFER_BYTES: usize = 4 * 1_048_576;
 const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
-const TEMPORARY_DIRECTORY_PREFIX: &str = ".tabtool-save-";
 
 /// Why a large file cannot be saved right now.
 #[derive(Debug)]
@@ -200,7 +199,7 @@ impl LargeFileSaver {
             return Err(cancelled_error());
         }
 
-        let parent = parent_of(target);
+        let parent = platform::parent_directory(target);
         let name = target.file_name().ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
@@ -208,7 +207,7 @@ impl LargeFileSaver {
             )
         })?;
         let directory = tempfile::Builder::new()
-            .prefix(TEMPORARY_DIRECTORY_PREFIX)
+            .prefix(platform::TEMPORARY_PREFIX)
             .tempdir_in(parent)?;
         let temporary = directory.path().join(name);
 
@@ -267,8 +266,8 @@ impl PreparedSave {
         mut self,
         sync: impl FnOnce(&Path) -> io::Result<()>,
     ) -> Result<(), LargeFileSaveError> {
-        install_file(&self.temporary, &self.target)?;
-        if let Err(error) = sync(parent_of(&self.target)) {
+        platform::install_file(&self.temporary, &self.target)?;
+        if let Err(error) = sync(platform::parent_directory(&self.target)) {
             eprintln!(
                 "tabtool: saved {} but could not sync its directory: {error}",
                 self.target.display()
@@ -309,24 +308,6 @@ pub fn volume_capacity(path: &Path) -> Option<u64> {
             }
             _ => return None,
         }
-    }
-}
-
-/// The directory holding `target`, or `.` for a bare file name.
-fn parent_of(target: &Path) -> &Path {
-    match target.parent() {
-        Some(parent) if !parent.as_os_str().is_empty() => parent,
-        _ => Path::new("."),
-    }
-}
-
-/// Moves `temporary` onto `target`, replacing an existing file atomically.
-fn install_file(temporary: &Path, target: &Path) -> io::Result<()> {
-    if target.try_exists()? {
-        platform::replace_file(target, temporary)
-    } else {
-        // `ReplaceFileW` needs an existing target; a new file is a plain rename.
-        fs::rename(temporary, target)
     }
 }
 

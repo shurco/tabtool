@@ -1,8 +1,8 @@
 //! Operating-system file operations: mapping, positioned reads, atomic
-//! replacement and free space.
+//! replacement and writes, and free space.
 
-use std::fs::File;
-use std::io;
+use std::fs::{self, File};
+use std::io::{self, Write};
 use std::path::Path;
 
 use memmap2::{Mmap, MmapOptions};
@@ -100,6 +100,96 @@ pub fn sync_directory(path: &Path) -> io::Result<()> {
 #[cfg(not(unix))]
 pub fn sync_directory(_path: &Path) -> io::Result<()> {
     Ok(())
+}
+
+/// Prefix of the temporary file or directory a save leaves next to its target
+/// while the new bytes are being written.
+pub(crate) const TEMPORARY_PREFIX: &str = ".tabtool-save-";
+
+/// Replaces the file at `path` with `data` atomically where the platform allows.
+///
+/// A reader either sees the old bytes or the new bytes, never a partial write.
+/// The bytes are synced before the swap, and the parent directory after it. An
+/// existing file keeps its permissions; a new file gets `new_file_mode` on Unix
+/// (other platforms ignore it). The parent directory must already exist.
+pub fn write_atomic(path: &Path, data: &[u8], new_file_mode: u32) -> io::Result<()> {
+    let parent = parent_directory(path);
+    if path.file_name().is_none() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "the save target has no file name",
+        ));
+    }
+
+    let mut temporary = tempfile::Builder::new()
+        .prefix(TEMPORARY_PREFIX)
+        .tempfile_in(parent)?;
+    temporary.write_all(data)?;
+    temporary.as_file().sync_all()?;
+    #[cfg(unix)]
+    apply_permissions(path, temporary.path(), new_file_mode)?;
+    #[cfg(not(unix))]
+    let _ = new_file_mode;
+    // Close the file and stop `TempPath` from deleting the path on drop.
+    // Keeping it after the rename would fail on Windows, where keeping
+    // clears the temporary attribute by path, because that path is gone.
+    let temporary = temporary
+        .into_temp_path()
+        .keep()
+        .map_err(|error| error.error)?;
+    if let Err(error) = install_file(&temporary, path) {
+        let _ = fs::remove_file(&temporary);
+        return Err(error);
+    }
+    // The bytes are in place; a directory-sync failure is a durability
+    // warning like the large saver's, not a reason to report a failed save.
+    if let Err(error) = sync_directory(parent) {
+        eprintln!(
+            "tabtool: saved {} but could not sync its directory: {error}",
+            path.display()
+        );
+    }
+    Ok(())
+}
+
+/// The directory holding `target`, or `.` for a bare file name.
+pub(crate) fn parent_directory(target: &Path) -> &Path {
+    match target.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    }
+}
+
+/// Moves `temporary` onto `target`, replacing an existing file atomically.
+pub(crate) fn install_file(temporary: &Path, target: &Path) -> io::Result<()> {
+    if target.try_exists()? {
+        replace_file(target, temporary)
+    } else {
+        // `ReplaceFileW` needs an existing target; a new file is a plain rename.
+        fs::rename(temporary, target)
+    }
+}
+
+/// Gives `target` the permissions `source` had, or `new_file_mode` for a new
+/// file.
+///
+/// The temporary file is created private (`0600`), so without this step a save
+/// would narrow an existing document's mode or create a new document only its
+/// owner can read. A new file gets `new_file_mode` explicitly; this does not
+/// consult the process umask, which the standard library does not expose, so a
+/// restrictive umask is not observed for saves that create a file.
+#[cfg(unix)]
+fn apply_permissions(source: &Path, target: &Path, new_file_mode: u32) -> io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let permissions = match fs::metadata(source) {
+        Ok(metadata) => metadata.permissions(),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            fs::Permissions::from_mode(new_file_mode)
+        }
+        Err(error) => return Err(error),
+    };
+    fs::set_permissions(target, permissions)
 }
 
 /// Free bytes available to the current user on the volume holding `path`.
