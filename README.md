@@ -4,7 +4,7 @@
 
 # TabTool
 
-A modern, independent CSV editor. The macOS and iOS apps are written in Swift. Windows, Linux, and Android ports are in development in Rust. The app opens CSV/TSV/text files, detects the format automatically, lets you edit the table, and saves/exports data in the selected encoding and with the selected delimiter.
+A modern, independent CSV editor. The macOS and iOS apps are written in Swift. The Windows, Linux, and Android apps are written in Rust. The app opens CSV/TSV/text files, detects the format automatically, lets you edit the table, and saves/exports data in the selected encoding and with the selected delimiter.
 
 TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. One listing (universal purchase) covers the Mac, iPhone, and iPad. The bundle ID is `app.shurco.tabtool`.
 
@@ -15,14 +15,21 @@ TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. One listing (uni
 
 - Mac App Store: <https://apps.apple.com/app/tabtool-csv-editor/id6827919069?platform=mac>
 - App Store (iPhone and iPad): <https://apps.apple.com/app/tabtool-csv-editor/id6827919069>
+- Windows, Linux, and Android: <https://github.com/shurco/tabtool/releases> (zip for Windows 10/11, tar.gz for Linux with glibc 2.35+, signed APK for Android 8.0+, each with `SHA256SUMS`)
 
 If TabTool saves you time, a rating on the App Store helps other people find it:
 <https://apps.apple.com/app/id6827919069?action=write-review>. It takes a minute,
 and it is the signal the store uses to show the app to more people.
 
-## Roadmap
+## Platforms
 
-The macOS and iOS apps are available now. Windows, Linux, and Android are a Rust port in development. No dates are promised until a build exists; the repository is the source of truth for progress.
+| Platform | Requirement | Where to get it |
+| --- | --- | --- |
+| macOS | macOS 14 or later | Mac App Store |
+| iOS and iPadOS | iOS 17 or later | App Store |
+| Windows | Windows 10 or 11, x64 or ARM64 | [GitHub Releases](https://github.com/shurco/tabtool/releases) (unsigned zip) |
+| Linux | glibc 2.35 or later, x86_64 or aarch64, X11 or Wayland | [GitHub Releases](https://github.com/shurco/tabtool/releases) (tar.gz) |
+| Android | Android 8.0 or later, arm64 or x86_64 | [GitHub Releases](https://github.com/shurco/tabtool/releases) (signed APK) |
 
 ## Screenshots
 

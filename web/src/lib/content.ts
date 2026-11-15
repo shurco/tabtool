@@ -48,9 +48,10 @@ export const features: Feature[] = [
 	{
 		index: '06',
 		title: 'Nothing leaves the machine',
-		body: 'The app is sandboxed with no network entitlement, no analytics, and no third-party SDKs. The App Store privacy label reads Data Not Collected. Your CSV stays a file on your disk.',
+		body: 'The Apple apps are sandboxed with no network entitlement, and the App Store privacy label reads Data Not Collected. The Windows, Linux, and Android builds contain no network code either; the Android app does not request Internet access. No analytics, no third-party SDKs. Your CSV stays a file on your disk.',
 		tags: ['Sandbox', 'No telemetry', 'Offline']
-	},	{
+	},
+	{
 		index: '07',
 		title: 'The same editor on iPhone and iPad',
 		body: 'A touch-first grid with a keyboard accessory, contextual actions for rows and columns, format and filter sheets, and the same detection and encodings as the Mac.',
@@ -66,8 +67,8 @@ export const features: Feature[] = [
 		index: '09',
 		wide: true,
 		title: 'Native code, not a browser in a window',
-		body: 'macOS and iOS are pure Swift: a SwiftUI shell, an AppKit grid on the Mac, no Electron and no bundled web runtime. The release build is 2.7 MB on macOS and 2.5 MB on iOS, launches at once, and scrolls at native speed. Windows, Linux, and Android ports are in development in Rust.',
-		tags: ['Swift 6', 'AppKit + SwiftUI', 'No Electron', 'Rust ports in development']
+		body: 'macOS and iOS are pure Swift: a SwiftUI shell, an AppKit grid on the Mac, no Electron and no bundled web runtime. The release build is 2.7 MB on macOS and 2.5 MB on iOS, launches at once, and scrolls at native speed. Windows, Linux, and Android run a Rust build that follows the Swift app, with the CSV core checked against it by golden tests.',
+		tags: ['Swift 6', 'AppKit + SwiftUI', 'Rust on Windows, Linux, Android', 'No Electron']
 	}
 ];
 
@@ -108,48 +109,43 @@ export const platforms = [
 	{
 		name: 'macOS',
 		requirement: 'macOS 14 or later',
-		status: 'Available',
-		tone: 'active',
-		note: '1.0 on the Mac App Store. Pure Swift.'
+		source: 'Mac App Store',
+		note: 'Pure Swift. Signed and sandboxed by the App Store.'
 	},
 	{
 		name: 'iOS and iPadOS',
 		requirement: 'iOS 17 or later',
-		status: 'Available',
-		tone: 'active',
-		note: '1.0 on the App Store. Same CSV core, touch-first editor.'
+		source: 'App Store',
+		note: 'Same CSV core, touch-first editor. One listing with the Mac.'
 	},
 	{
 		name: 'Windows',
-		requirement: 'Rust port in progress',
-		status: 'In development',
-		tone: 'development',
-		note: 'In development in Rust. No date yet.'
+		requirement: 'Windows 10 or 11, x64 or ARM64',
+		source: 'GitHub Releases',
+		note: 'Zip with tabtool.exe. Unsigned, no installer.'
 	},
 	{
 		name: 'Linux',
-		requirement: 'Rust port in progress',
-		status: 'In development',
-		tone: 'development',
-		note: 'In development in Rust. No date yet.'
+		requirement: 'glibc 2.35+, x86_64 or aarch64',
+		source: 'GitHub Releases',
+		note: 'Tar.gz with the tabtool binary. Needs X11 or Wayland.'
 	},
 	{
 		name: 'Android',
-		requirement: 'Rust port in progress',
-		status: 'In development',
-		tone: 'development',
-		note: 'In development in Rust. No date yet.'
+		requirement: 'Android 8.0 or later',
+		source: 'GitHub Releases',
+		note: 'Signed APK for arm64 and x86_64 devices. Not on Google Play yet.'
 	}
 ];
 
 export const faqs = [
 	{
 		q: 'Is TabTool free?',
-		a: 'Yes. TabTool is free on the App Store for macOS and iOS, and the source code is MIT-licensed, so you can read it, build it, and change it at no cost.'
+		a: 'Yes. TabTool is free on the App Store for macOS and iOS and free on GitHub Releases for Windows, Linux, and Android. The source code is MIT-licensed, so you can read it, build it, and change it at no cost.'
 	},
 	{
 		q: 'Where can I download it?',
-		a: 'TabTool 1.0 is on the App Store for macOS 14+ and iOS 17+. One listing covers the Mac, iPhone, and iPad. You can also build it from the source on GitHub.'
+		a: 'macOS 14+ and iOS 17+: the App Store, where one listing covers the Mac, iPhone, and iPad. Windows, Linux, and Android: the Releases page of the GitHub repository, as a zip, a tar.gz, or an APK. You can also build any of them from the source.'
 	},
 	{
 		q: 'How large a file can it open?',
@@ -157,7 +153,7 @@ export const faqs = [
 	},
 	{
 		q: 'Does TabTool upload my data?',
-		a: 'No. The app is sandboxed and has no network entitlement. There is no analytics, no crash reporting SDK, and no account. Saving writes to the file you opened, and export writes a new file you choose.'
+		a: 'No. The Apple apps are sandboxed and have no network entitlement; the Windows, Linux, and Android builds contain no network code, and the Android app does not request Internet access. There is no analytics, no crash reporting SDK, and no account. Saving writes to the file you opened, and export writes a new file you choose.'
 	},
 	{
 		q: 'Which formats and encodings does it support?',
@@ -173,7 +169,7 @@ export const faqs = [
 	},
 	{
 		q: 'What about Windows, Linux, and Android?',
-		a: 'Windows, Linux, and Android are in development in Rust. Each platform needs its own editor UI, file handling, and tests, so no dates are promised until a build exists; follow the repository for announcements.'
+		a: 'They are available from GitHub Releases. All three are written in Rust: Windows and Linux ship as archives for x64 and ARM, Android as a signed APK. They follow the Swift app, and golden tests check their CSV core against it. The Windows and Linux archives are not code-signed, so Windows SmartScreen may warn on first launch; each release lists SHA-256 checksums to verify the download.'
 	},
 	{
 		q: 'Is the iOS app a companion or a full editor?',

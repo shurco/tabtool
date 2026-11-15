@@ -8,7 +8,7 @@
 			<div class="foot__brand">
 				<p class="eyebrow">TabTool</p>
 				<p class="foot__claim">
-					A native CSV editor for macOS and iOS. Open the file, fix the cell, write it back.
+					An open-source CSV editor for macOS, iOS, Windows, Linux, and Android. Open the file, fix the cell, write it back.
 				</p>
 				<a class="foot__star" href={site.github} rel="noopener">Star the repository →</a>
 			</div>
@@ -45,9 +45,11 @@
 		<div class="foot__word" aria-hidden="true">TabTool</div>
 
 		<div class="foot__bottom">
-			<p class="mono">© 2026 TabTool · MIT · Built with Swift, SvelteKit, and no telemetry.</p>
+			<p class="mono">© 2026 TabTool · MIT · Built with Swift, Rust, SvelteKit, and no telemetry.</p>
 			<p class="mono">
 				<a href={site.github} rel="noopener">GitHub</a>
+				<span aria-hidden="true"> / </span>
+				<a href={site.releases} rel="noopener">Releases</a>
 				<span aria-hidden="true"> / </span>
 				<a href="/feedback/">Feedback</a>
 				<span aria-hidden="true"> / </span>

@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { platforms } from '#lib/content';
+	import { site } from '#lib/site';
 </script>
 
 <ul class="roadmap">
 	{#each platforms as platform (platform.name)}
-		<li class="roadmap__row" class:is-development={platform.tone === 'development'}>
+		<li class="roadmap__row">
 			<span class="roadmap__name">{platform.name}</span>
 			<span class="roadmap__req mono">{platform.requirement}</span>
 			<span class="roadmap__status mono">
-				<span class="roadmap__dot" aria-hidden="true"></span>{platform.status}
+				<span class="roadmap__dot" aria-hidden="true"></span>{platform.source}
 			</span>
 			<span class="roadmap__note">{platform.note}</span>
 		</li>
@@ -16,8 +17,9 @@
 </ul>
 
 <p class="roadmap__footnote">
-	macOS and iOS are on the App Store. Windows, Linux, and Android are in development in Rust, not promised. No dates until a build exists. The
-	repository is the source of truth.
+	macOS and iOS install from the App Store. Windows, Linux, and Android builds are attached to each
+	release on <a href={site.releases} rel="noopener">GitHub Releases</a>, with a SHA256SUMS file to
+	verify the download. Release notes live there too.
 </p>
 
 <style>
@@ -59,10 +61,6 @@
 		height: 7px;
 		border-radius: 50%;
 		background: var(--accent);
-	}
-
-	.is-development .roadmap__dot {
-		background: var(--warn);
 	}
 
 	.roadmap__note {

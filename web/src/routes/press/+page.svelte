@@ -4,24 +4,25 @@
 	import StoreBadges from '#lib/components/StoreBadges.svelte';
 	import { site } from '#lib/site';
 
-	const title = 'Press kit — TabTool, a native CSV editor for macOS and iOS';
+	const title = 'Press kit — TabTool, an open-source CSV editor for every platform';
 	const description =
-		'Boilerplate, fast facts, screenshots, the app icon, and contact details for writing about TabTool, a free open-source CSV editor for macOS and iOS, with Windows, Linux, and Android ports in development in Rust.';
+		'Boilerplate, fast facts, screenshots, the app icon, and contact details for writing about TabTool, a free open-source CSV editor for macOS, iOS, Windows, Linux, and Android.';
 
 	const facts = [
 		['Name', 'TabTool'],
-		['What it is', 'A native CSV, TSV, and plain-text editor for macOS and iOS'],
-		['Price', 'Free on the App Store'],
+		['What it is', 'A CSV, TSV, and plain-text editor for macOS, iOS, Windows, Linux, and Android'],
+		['Price', 'Free on the App Store and GitHub Releases'],
 		['License', 'MIT, source on GitHub'],
-		['Platforms', 'macOS 14+, iOS 17+ (iPhone and iPad)'],
-		['Roadmap', 'Windows, Linux, and Android ports in development in Rust; no dates yet'],
+		['Platforms', 'macOS 14+, iOS 17+ (iPhone and iPad), Windows 10+, Linux, Android 8.0+'],
+		['Code', 'Swift on macOS and iOS; Rust on Windows, Linux, and Android'],
 		['Largest tested file', '5 GiB, 77.7 million rows, indexed in 2.7 seconds in the release app'],
 		['Memory after indexing', 'About 91 MB'],
 		['Export', 'CSV, TSV, JSON, and XML'],
-		['Privacy', 'Sandboxed, no network entitlement, no analytics, no account'],
+		['Privacy', 'No network access, no analytics, no account'],
 		['Languages', '11 interface languages'],
 		['Developer', 'Dmitry Shurco'],
-		['App Store', 'https://apps.apple.com/app/tabtool-csv-editor/id6827919069']
+		['App Store', site.appStore.ios],
+		['GitHub Releases', site.releases]
 	];
 </script>
 
@@ -47,14 +48,15 @@
 		<div>
 			<p class="eyebrow">Boilerplate</p>
 			<p class="prose">
-				TabTool is a free, open-source CSV editor for macOS 14+ and iOS 17+. Windows, Linux, and
-				Android ports are in development in Rust, with no dates yet. It opens CSV, TSV,
+				TabTool is a free, open-source CSV editor for macOS 14+ and iOS 17+, written in Swift and
+				distributed on the App Store, and for Windows, Linux, and Android, written in Rust and
+				distributed on GitHub Releases. It opens CSV, TSV,
 				and plain text files, detects the encoding, separator, quote style, decimal mark, and
 				header row from the bytes, and lets you edit cells, rows, and columns, then save the file or
 				export it to CSV, TSV, JSON, or XML. Large files are
 				memory-mapped and indexed in the background: a tested 5 GiB file with 77.7 million rows
-				was fully indexed 2.7 seconds after opening in the release app. The app is sandboxed with no network
-				entitlement, no analytics, and no account.
+				was fully indexed 2.7 seconds after opening in the Mac release app. The app has no network
+				access, no analytics, and no account.
 			</p>
 		</div>
 		<div>

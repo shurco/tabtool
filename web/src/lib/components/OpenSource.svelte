@@ -21,7 +21,7 @@
 			<p class="eyebrow oss__eyebrow">Open source</p>
 			<h2>MIT, all of it.</h2>
 			<p class="oss__lede">
-				The CSV core, the SwiftUI shell, the AppKit grid, the iOS grid, and the tests are in one
+				The Swift apps, the Rust apps for Windows, Linux, and Android, and every test are in one
 				repository. No license server, no telemetry, no open-core asterisk.
 			</p>
 			<div class="oss__actions">

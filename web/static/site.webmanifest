@@ -1,7 +1,7 @@
 {
 	"name": "TabTool",
 	"short_name": "TabTool",
-	"description": "A native CSV editor for macOS and iOS.",
+	"description": "An open-source CSV editor for macOS, iOS, Windows, Linux, and Android.",
 	"start_url": "/",
 	"display": "standalone",
 	"background_color": "#f6f5f1",

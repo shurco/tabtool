@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { site } from '#lib/site';
 	import { appStoreURL, trackStoreClick } from '#lib/track';
 
 	const storageKey = 'tabtool-download-bar-dismissed';
 	let visible = $state(false);
+	let android = $state(false);
 
 	const hiddenHere = $derived(page.url.pathname === '/privacy/' || page.url.pathname === '/terms/');
 
@@ -14,6 +16,7 @@
 		} catch {
 			// Private browsing can block storage; the bar still works.
 		}
+		android = /Android/i.test(navigator.userAgent);
 		const media = window.matchMedia('(max-width: 760px)');
 		const update = () => {
 			visible = media.matches;
@@ -37,15 +40,19 @@
 	<aside class="download-bar" aria-label="Download TabTool">
 		<div class="download-bar__copy">
 			<strong>TabTool</strong>
-			<span>Free CSV editor for iPhone, iPad, and Mac</span>
+			<span>{android ? 'Free CSV editor for Android' : 'Free CSV editor for iPhone, iPad, and Mac'}</span>
 		</div>
-		<a
-			class="download-bar__cta"
-			href={appStoreURL('ios')}
-			onclick={() => trackStoreClick('ios', 'header-bar')}
-		>
-			Download free
-		</a>
+		{#if android}
+			<a class="download-bar__cta" href={site.releases} rel="noopener">Download APK</a>
+		{:else}
+			<a
+				class="download-bar__cta"
+				href={appStoreURL('ios')}
+				onclick={() => trackStoreClick('ios', 'header-bar')}
+			>
+				Download free
+			</a>
+		{/if}
 		<button class="download-bar__close" type="button" onclick={dismiss} aria-label="Dismiss">
 			×
 		</button>
