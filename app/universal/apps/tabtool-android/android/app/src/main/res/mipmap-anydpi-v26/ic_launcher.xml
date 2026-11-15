@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Apple icon insets its frame by 18.6% of the tile. The adaptive
+     foreground repeats that inset so a circular or squircle launcher mask
+     keeps the frame instead of cutting its corners. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground>
+        <inset
+            android:drawable="@mipmap/ic_launcher_foreground"
+            android:inset="18.6%" />
+    </foreground>
+</adaptive-icon>

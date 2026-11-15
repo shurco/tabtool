@@ -7,6 +7,7 @@
 
 mod bench;
 mod i18n;
+mod version;
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -166,6 +167,21 @@ fn main() -> ExitCode {
                 return ExitCode::from(2);
             }
         },
+        "version" => match arguments.next().as_deref() {
+            None => version::print(),
+            Some("bump") => {
+                let kind = arguments.next().unwrap_or_else(|| "build".to_owned());
+                if arguments.next().is_some() {
+                    usage();
+                    return ExitCode::from(2);
+                }
+                version::run_bump(&kind)
+            }
+            _ => {
+                usage();
+                return ExitCode::from(2);
+            }
+        },
         "bench-large" => {
             let size = arguments.next();
             if arguments.next().is_some() {
@@ -192,5 +208,6 @@ fn main() -> ExitCode {
 fn usage() {
     eprintln!("usage: xtask golden [--check]");
     eprintln!("       xtask i18n [--check]");
+    eprintln!("       xtask version [bump [build|patch|minor|major]]");
     eprintln!("       xtask bench-large [GiB]");
 }

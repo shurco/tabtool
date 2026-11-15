@@ -19,6 +19,7 @@ app/universal/
 ├── Cargo.toml                 # workspace, resolver 3, edition 2024
 ├── Cargo.lock                 # committed
 ├── rust-toolchain.toml        # pinned Rust 1.99.1
+├── version.json               # Android versionName and versionCode
 ├── crates/
 │   ├── tabtool-core/          # pure CSV engine
 │   ├── tabtool-large/         # mmap, scanner/index, sniffer, source, saver
@@ -886,6 +887,36 @@ cargo ndk -t arm64-v8a -t x86_64 -o app/src/main/jniLibs build -p tabtool-androi
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n app.shurco.tabtool/.MainActivity
 ```
+
+`cargo ndk` writes the two `libmain.so` files into the gitignored
+`app/src/main/jniLibs` before Gradle packages them; `cargo ndk ... build
+--release` plus `./gradlew assembleRelease bundleRelease` produces the release
+APK and AAB.
+
+### Packaging
+
+- **Version.** `version.json` holds `{"name": "1.0.0", "build": "1"}`, read by
+  `app/build.gradle.kts` as `versionName` and `versionCode`.
+  `cargo run -p xtask -- version` prints it and `cargo run -p xtask -- version
+  bump [build|patch|minor|major]` moves it with the same rules as
+  `scripts/lib/version`: the build number always increases and the other kinds
+  also move the semantic version.
+- **Icons.** `scripts/android-icons` renders the five legacy mipmaps and the
+  adaptive foreground from the Apple 1024 px icon, and writes the adaptive icon
+  XML and its background color. The resources are committed; rerun the script
+  on macOS after the Apple icon changes.
+- **Signing.** Debug builds use the Android debug keystore. Release signing
+  reads `TABTOOL_ANDROID_KEYSTORE`, `TABTOOL_ANDROID_KEYSTORE_PASSWORD`,
+  `TABTOOL_ANDROID_KEY_ALIAS` and `TABTOOL_ANDROID_KEY_PASSWORD`; when they are
+  absent the release build is debug-signed and Gradle says so. No key material
+  is committed.
+- **CI.** The `android` job in `.github/workflows/universal.yml` installs
+  cargo-ndk and the NDK, builds both ABIs, checks the debug APK's version, ABIs
+  and permissions, and builds the signed release only when the signing secrets
+  exist. It runs no emulator.
+
+The full install, signing, icon and artifact-inspection instructions are in
+[docs/android.md](../../../docs/android.md).
 
 The Plan 1 feasibility run passed all seven checks on the `Medium_Phone_API_36.1` AVD
 (Android 16, arm64, `-gpu host`): Latin, Cyrillic and Chinese text entry with
