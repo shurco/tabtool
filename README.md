@@ -165,7 +165,7 @@ cd app/apple/TabToolKit && swift test
 ./scripts/test --ui
 ```
 
-`./scripts/test` runs the core package and the macOS app unit tests. `./scripts/app test ios` runs the iOS unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 254 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 320 app unit tests, 19 UI tests, and 196 iOS unit tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
+`./scripts/test` runs the core package and the macOS app unit tests. `./scripts/app test ios` runs the iOS unit tests. `./scripts/test --ui` adds the XCUITest smoke suite; it needs the macOS automation permission for the test runner (or run it from Xcode). Current coverage is 272 core Swift Testing tests plus the opt-in large file benchmark and 10 performance tests, 328 app unit tests, 19 UI tests, and 225 iOS unit tests. `./scripts/bench-large [GiB]` runs the large file benchmark (see Performance). Details are in [docs/building.md](docs/building.md).
 
 ## Performance
 

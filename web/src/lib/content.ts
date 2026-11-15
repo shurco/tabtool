@@ -42,8 +42,8 @@ export const features: Feature[] = [
 	{
 		index: '05',
 		title: 'Save in the format you actually need',
-		body: 'Write the file back, or export with another delimiter, encoding, quote style, decimal mark, and header setting. CSV, TSV, and plain text, in both directions.',
-		tags: ['CSV', 'TSV', 'TXT']
+		body: 'Write the file back, or export with another delimiter, encoding, quote style, decimal mark, and header setting. CSV, TSV, and plain text, in both directions, plus export to JSON and XML with column names as keys.',
+		tags: ['CSV', 'TSV', 'TXT', 'JSON', 'XML']
 	},
 	{
 		index: '06',
@@ -161,7 +161,7 @@ export const faqs = [
 	},
 	{
 		q: 'Which formats and encodings does it support?',
-		a: 'CSV, TSV, and plain text with automatic detection of encoding, separator, quotes, escape character, decimal mark, and header row. Encodings include UTF-8/16/32, MacRoman, Windows Latin 1 and 2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, and Japanese. XLSX, ODS, JSON, and database formats are not supported.'
+		a: 'CSV, TSV, and plain text with automatic detection of encoding, separator, quotes, escape character, decimal mark, and header row. Encodings include UTF-8/16/32, MacRoman, Windows Latin 1 and 2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, and Japanese. Export also writes JSON and XML. Opening XLSX, ODS, JSON, and database files is not supported.'
 	},
 	{
 		q: 'Does it have formulas, styles, or charts?',

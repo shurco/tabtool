@@ -4,7 +4,7 @@ This document describes what is needed to publish TabTool in the App Store. It d
 
 ## What the app does
 
-TabTool is a simple CSV editor for macOS, iPhone, and iPad. It opens CSV/TSV/text files, detects the format, shows a table, lets the user edit cells/rows/columns, and save or export the file in the selected encoding and with the selected delimiter. There are no formulas, macros, network, accounts, or purchases. The iOS app uses the same display name and bundle ID.
+TabTool is a simple CSV editor for macOS, iPhone, and iPad. It opens CSV/TSV/text files, detects the format, shows a table, lets the user edit cells/rows/columns, and save or export the file in the selected encoding and with the selected delimiter, or export it as JSON or XML. There are no formulas, macros, network, accounts, or purchases. The iOS app uses the same display name and bundle ID.
 
 ## Sandbox and file access
 
@@ -93,7 +93,7 @@ Choose a unique name and icon. The required MIT copyright and permission notice 
 
 Paste this into App Store Connect > App Review Information > Notes (answers Guideline 2.1 "Information Needed"). Also attach a screen recording from a physical iPhone/iPad on the latest iOS: launch the app, create a new document, edit cells, add/delete a row and a column, sort, filter, Format sheet, export, Settings > About. There is no login, account deletion, user-generated content sharing, or paid content to show.
 
-> 1. Purpose and audience. TabTool is a simple, local CSV/TSV/text table editor for iPhone and iPad (also on Mac). It solves the problem of opening and fixing delimited text files whose encoding, delimiter, or quoting is unknown or wrong: the app detects them automatically, shows a grid, lets the user edit cells, rows and columns, and saves or exports the file with a chosen delimiter and encoding. Audience: people who work with CSV exports (analysts, developers, accountants, data hobbyists). No formulas, macros, or charts.
+> 1. Purpose and audience. TabTool is a simple, local CSV/TSV/text table editor for iPhone and iPad (also on Mac). It solves the problem of opening and fixing delimited text files whose encoding, delimiter, or quoting is unknown or wrong: the app detects them automatically, shows a grid, lets the user edit cells, rows and columns, and saves or exports the file with a chosen delimiter and encoding, or exports it as JSON or XML. Audience: people who work with CSV exports (analysts, developers, accountants, data hobbyists). No formulas, macros, or charts.
 >
 > 2. How to use. No account or login is needed. Open the app, tap "+" > "New Document" (or "Import" to pick a file from Files). Tap a cell to select it, tap again to edit. Use the toolbar for Undo/Redo, Filters, Export, and the overflow menu for Format, Settings, About. Files are saved automatically in the app's Documents folder. A sample file is not required, but any small .csv with a header row, commas, and quoted fields works; the format is detected on open.
 >

@@ -10,7 +10,7 @@ export function GET() {
 
 TabTool opens CSV, TSV, and plain text files, detects the encoding,
 separator, quote style, decimal mark, and header row from the bytes, shows
-an editable grid, and writes the file back. It is not a spreadsheet: there
+an editable grid, and writes the file back or exports it to JSON or XML. It is not a spreadsheet: there
 are no formulas, styles, charts, or pivot tables.
 
 ## Links
@@ -32,12 +32,12 @@ are no formulas, styles, charts, or pivot tables.
 - Benchmark file: 5 GiB, 68.2 million rows, 8 columns; full index 1.97 seconds, 43 MiB.
 - Release app: 5 GiB, 77.7 million rows; full index 2.7 seconds, about 91 MB.
 - Save with one edit: 6.3 seconds for the 5 GiB file, streamed with progress and cancel.
-- Formats: CSV, TSV, plain text.
+- Formats: CSV, TSV, plain text. Export also writes JSON (array of objects) and XML.
 - Encodings: UTF-8/16/32, MacRoman, Windows Latin 1 and 2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, Japanese.
 - Interface languages: English, French, Spanish, German, Italian, Polish, Belarusian, Ukrainian, Simplified Chinese, Japanese, Korean.
 - Offline: every feature works without a connection.
 - Privacy: sandboxed, no network entitlement, no analytics, no third-party SDKs, no account. App Privacy label: Data Not Collected.
-- Not supported: XLSX, ODS, JSON, database files, formulas, charts, pivot tables.
+- Not supported: opening XLSX, ODS, JSON, or database files; formulas, charts, pivot tables.
 
 ## When TabTool is the right tool
 
@@ -51,7 +51,7 @@ are no formulas, styles, charts, or pivot tables.
 - You need SQL joins across several CSV files: TableTool by TablePlus has that.
 - You need Windows or Linux: TabTool is Apple-only today; the ports are planned.
 
-Last updated: 2026-11-08
+Last updated: 2026-11-15
 `;
 
 	return new Response(body, {

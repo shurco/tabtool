@@ -149,13 +149,14 @@ A format change must not silently lose unsaved edits. Operations are predictable
 | Copy | Numeric cells get the decimal separator of the current locale; everything else as is | Current table | — |
 | Paste | TSV is parsed; cells that are numeric by the locale are converted from the locale mark to the document mark; otherwise text as is | Clipboard | Yes, one operation |
 | Save | Writes the current table and headers with the current configuration; no additional conversions | Current table | — |
-| Export | A copy of the table is converted from the document mark to the export mark; the header is written per the export setting; the document is not changed | Current table | — |
+| Export | A copy of the table is converted from the document mark to the export mark; CSV writes the header per the export setting, JSON/XML always use field names; the document is not changed | Current table | — |
 | New document | Parsing settings re-read nothing; decimal/header transform the typed table; separator/quote/encoding affect writing | Current table | Yes |
 
 Header rules:
 - "Header" in the document format is semantics: whether the table has a header.
 - "Header" in export is output only: if enabled, we write the document's headers; if the document has no header — the generated names A, B, C…; if disabled — we do not write it.
 - Save always follows the document semantics; the export toggle does not change the document.
+- JSON/XML export ignores the header toggle: keys come from the document headers or the generated names, made unique with `_2`, `_3`… (see `docs/csv-format.md`).
 
 Decimal mark conversion is only a textual replacement in cells that pass the numeric predicate by the source mark. Leading/trailing zeros, `+`, exponent, and other formatting are preserved; `Decimal` is not used. The writer receives ready-made strings and an explicit header, so its signature does not depend on source/destination marks.
 
@@ -438,6 +439,7 @@ The iOS target compiles `Shared` and `app/apple/iOS`. It does not compile the Ap
   - format changes: decimal mark conversion, header toggle, transactional re-read (success/failure), undo snapshot, no mutation on failure;
   - save/autosave gates: unencodable text → `.needsAttention`/throw, ambiguous no-quote → `/throw`, no partial write; export confirmation path;
   - export/paste matrix: decimal conversion document↔export, locale↔document paste, header export toggle with/without document headers;
+  - JSON/XML writers: key order, escaping, XML name sanitizing, duplicate names, round-trip through `JSONSerialization`/`XMLParser`;
   - paste: TSV, CRLF, empty rows, more columns than exist, reordered columns;
   - table invariants: add/delete/move row/column, column reorder;
   - empty file/new doc defaults;
