@@ -3,13 +3,13 @@
 //!
 //! The screen never loads document content. Opening a row only returns the
 //! path; the app owns the editor and the navigation that pushes it. The
-//! library depends on the platform through the neutral [`DocumentFiles`],
-//! [`LibraryErrors`] and [`FileMetadata`] seams, so `tabtool-ui` stays free of
-//! `tabtool-platform`.
+//! library depends on the platform through the neutral [`DocumentFiles`]
+//! seam, so `tabtool-ui` stays free of `tabtool-platform`.
 
 use std::collections::BTreeSet;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::time::SystemTime;
 
 use egui::Rect;
@@ -97,33 +97,6 @@ pub struct DocumentMetadata {
     pub modified: SystemTime,
 }
 
-/// The file metadata the library reads.
-pub trait FileMetadata {
-    /// Reads the metadata for `path`, or reports that it is gone.
-    fn metadata(&self, path: &Path) -> io::Result<DocumentMetadata>;
-}
-
-/// The live file system's metadata.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SystemMetadata;
-
-impl FileMetadata for SystemMetadata {
-    fn metadata(&self, path: &Path) -> io::Result<DocumentMetadata> {
-        let metadata = std::fs::metadata(path)?;
-        if !metadata.is_file() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("{} is not a regular file", path.display()),
-            ));
-        }
-        Ok(DocumentMetadata {
-            size: metadata.len(),
-            // A file system without a modification date sorts as oldest.
-            modified: metadata.modified().unwrap_or(std::time::UNIX_EPOCH),
-        })
-    }
-}
-
 /// What a platform export picker did.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ExportOutcome {
@@ -135,11 +108,11 @@ pub enum ExportOutcome {
     Failed,
 }
 
-/// The app's private document store and import picker.
+/// The app's private document store, pickers, queued failures and file
+/// metadata.
 ///
-/// This mirrors the platform's `DocumentFiles` trait. The app adapts its
-/// platform value to this seam, which keeps the UI crate independent of the
-/// platform crate.
+/// The app implements this seam over its platform, which keeps the UI crate
+/// independent of the platform crate.
 pub trait DocumentFiles {
     /// The app's private documents directory.
     fn documents_dir(&self) -> PathBuf;
@@ -162,7 +135,7 @@ pub trait DocumentFiles {
     ///
     /// The result is one-shot: `None` means the picker is still open, the
     /// user cancelled, or the copy failed. Failures are reported separately
-    /// through [`LibraryErrors`].
+    /// through [`DocumentFiles::take_error`].
     fn import_from_picker(&self) -> Option<PathBuf>;
 
     /// Whether a picker started earlier is still open.
@@ -193,6 +166,32 @@ pub trait DocumentFiles {
 
     /// Renames a document.
     fn rename(&self, from: &Path, to: &Path) -> io::Result<()>;
+
+    /// Takes the platform's next queued failure, so the library can show a
+    /// localized banner after an asynchronous import.
+    ///
+    /// A platform that reports failures directly answers `None`.
+    fn take_error(&self) -> Option<LibraryError> {
+        None
+    }
+
+    /// Reads the metadata for `path`, or reports that it is gone.
+    ///
+    /// The default reads the live file system.
+    fn metadata(&self, path: &Path) -> io::Result<DocumentMetadata> {
+        let metadata = std::fs::metadata(path)?;
+        if !metadata.is_file() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("{} is not a regular file", path.display()),
+            ));
+        }
+        Ok(DocumentMetadata {
+            size: metadata.len(),
+            // A file system without a modification date sorts as oldest.
+            modified: metadata.modified().unwrap_or(std::time::UNIX_EPOCH),
+        })
+    }
 }
 
 /// A platform failure the library can show as a localized banner.
@@ -214,72 +213,9 @@ impl LibraryError {
     }
 }
 
-/// The platform's queued failures, so the library can show a localized
-/// banner after an asynchronous import.
-pub trait LibraryErrors {
-    /// Takes the next failure, if any.
-    fn take_error(&self) -> Option<LibraryError>;
-}
-
-impl<T: DocumentFiles + ?Sized> DocumentFiles for &T {
-    fn documents_dir(&self) -> PathBuf {
-        (**self).documents_dir()
-    }
-
-    fn list_documents(&self) -> Vec<PathBuf> {
-        (**self).list_documents()
-    }
-
-    fn existing_names(&self) -> Vec<String> {
-        (**self).existing_names()
-    }
-
-    fn create_document(&self, name: &str, data: &[u8]) -> io::Result<PathBuf> {
-        (**self).create_document(name, data)
-    }
-
-    fn import_from_picker(&self) -> Option<PathBuf> {
-        (**self).import_from_picker()
-    }
-
-    fn import_in_progress(&self) -> bool {
-        (**self).import_in_progress()
-    }
-
-    fn export_copy(&self, source: &Path, suggested_name: &str) -> ExportOutcome {
-        (**self).export_copy(source, suggested_name)
-    }
-
-    fn export_in_progress(&self) -> bool {
-        (**self).export_in_progress()
-    }
-
-    fn delete(&self, path: &Path) -> io::Result<()> {
-        (**self).delete(path)
-    }
-
-    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
-        (**self).rename(from, to)
-    }
-}
-
-impl<T: LibraryErrors + ?Sized> LibraryErrors for &T {
-    fn take_error(&self) -> Option<LibraryError> {
-        (**self).take_error()
-    }
-}
-
-impl<T: FileMetadata + ?Sized> FileMetadata for &T {
-    fn metadata(&self, path: &Path) -> io::Result<DocumentMetadata> {
-        (**self).metadata(path)
-    }
-}
-
 /// The screen state: documents, sort order and the pending prompt.
-pub struct LibraryView<'a> {
-    files: Box<dyn DocumentFiles + 'a>,
-    errors: Box<dyn LibraryErrors + 'a>,
-    metadata: Box<dyn FileMetadata + 'a>,
+pub struct LibraryView {
+    files: Rc<dyn DocumentFiles>,
     new_document: CsvConfiguration,
     locale: Locale,
     clock: LibraryClock,
@@ -295,26 +231,21 @@ pub struct LibraryView<'a> {
     notice: Option<LibraryError>,
 }
 
-impl<'a> LibraryView<'a> {
+impl LibraryView {
     /// A library over `files`, formatting sizes and dates for `locale` and
     /// `clock`.
     ///
-    /// The seams are owned, so an app can hold the view across frames while
-    /// its platform services live in a shared handle. References also work,
-    /// through the blanket implementations below.
+    /// The seam is a shared handle, so an app can hold the view across frames
+    /// while its platform services live in the same handle.
     pub fn new(
-        files: impl DocumentFiles + 'a,
-        errors: impl LibraryErrors + 'a,
-        metadata: impl FileMetadata + 'a,
+        files: Rc<dyn DocumentFiles>,
         locale: Locale,
         clock: LibraryClock,
         metrics: MobileMetrics,
         language: Language,
     ) -> Self {
         Self {
-            files: Box::new(files),
-            errors: Box::new(errors),
-            metadata: Box::new(metadata),
+            files,
             new_document: CsvConfiguration::default(),
             locale,
             clock,
@@ -354,7 +285,7 @@ impl<'a> LibraryView<'a> {
             if !is_library_file(&path) {
                 continue;
             }
-            let Ok(metadata) = self.metadata.metadata(&path) else {
+            let Ok(metadata) = self.files.metadata(&path) else {
                 continue;
             };
             let Some(name) = path
@@ -391,7 +322,7 @@ impl<'a> LibraryView<'a> {
     /// Asks the platform for a file and imports it under the picked name.
     ///
     /// `None` covers an open picker, a cancel and a failed copy; a failed
-    /// copy is reported through [`LibraryErrors`]. A picked file the library
+    /// copy is reported through [`DocumentFiles::take_error`]. A picked file the library
     /// cannot show is deleted and reported. While an asynchronous picker is
     /// open, [`LibraryView::show`] keeps polling and reports the imported
     /// document once it arrives.

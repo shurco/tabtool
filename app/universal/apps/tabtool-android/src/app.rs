@@ -8,7 +8,6 @@ mod actions;
 mod poll;
 mod render;
 
-use std::io;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Instant;
@@ -22,10 +21,10 @@ use tabtool_settings::Settings;
 use tabtool_ui::about::AboutAction;
 use tabtool_ui::grid::{Clipboard as GridClipboard, GridAppearance, GridState};
 use tabtool_ui::mobile::{
-    CopyResult, DocumentMetadata, ExportOutcome, ExportSheet, FiltersSheet, FormatSheet,
-    LibraryClock, LibraryError, LibraryResponse, LibraryView, MobileEditor, MobileEditorResponse,
-    MobileEditorState, MobileMetrics, NavStack, OverflowItem, SaveCopy, Screen, SheetKind,
-    SheetStyle, about_sheet, saved_copy_message, settings_sheet,
+    CopyResult, DocumentFiles, ExportOutcome, ExportSheet, FiltersSheet, FormatSheet, LibraryClock,
+    LibraryResponse, LibraryView, MobileEditor, MobileEditorResponse, MobileEditorState,
+    MobileMetrics, NavStack, OverflowItem, SaveCopy, Screen, SheetKind, SheetStyle, about_sheet,
+    saved_copy_message, settings_sheet,
 };
 use tabtool_ui::theme::current;
 use tabtool_ui::widgets::{AlertAction, BannerKind, ButtonKind, banner, modal};
@@ -42,35 +41,7 @@ pub const LICENSE: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../
 
 /// Everything the app needs from the platform except the live text and
 /// clipboard seams, which are separate because the editor holds both at once.
-pub trait Host {
-    /// The app's private documents directory.
-    fn documents_dir(&self) -> PathBuf;
-    /// The supported documents in the private directory.
-    fn list_documents(&self) -> Vec<PathBuf>;
-    /// Every file name in the private directory, including hidden staging.
-    fn existing_names(&self) -> Vec<String>;
-    /// Creates a document without replacing an existing file.
-    fn create_document(&self, name: &str, data: &[u8]) -> io::Result<PathBuf>;
-    /// Asks the user to pick a file and copies it into the private directory.
-    fn import_from_picker(&self) -> Option<PathBuf>;
-    /// Whether an import picker started earlier is still open.
-    fn import_in_progress(&self) -> bool {
-        false
-    }
-    /// Copies `source` to a location the user chooses.
-    fn export_copy(&self, source: &Path, suggested_name: &str) -> ExportOutcome;
-    /// Whether an export picker started earlier is still open.
-    fn export_in_progress(&self) -> bool {
-        false
-    }
-    /// Deletes a private document.
-    fn delete(&self, path: &Path) -> io::Result<()>;
-    /// Renames a private document.
-    fn rename(&self, from: &Path, to: &Path) -> io::Result<()>;
-    /// Takes the next platform failure.
-    fn take_error(&self) -> Option<LibraryError>;
-    /// Reads a document's metadata.
-    fn metadata(&self, path: &Path) -> io::Result<DocumentMetadata>;
+pub trait Host: DocumentFiles {
     /// `[left, top, right, bottom]` safe-area insets in points.
     fn safe_area(&self) -> [f32; 4];
     /// The soft-keyboard height in points, or zero.
@@ -260,7 +231,6 @@ struct LibraryKey {
 /// The Android application.
 pub struct AndroidApp {
     host: Rc<dyn Host>,
-    files: library::AppFiles,
     text_input: Box<dyn tabtool_ui::mobile::TouchTextInput>,
     clipboard: Box<dyn GridClipboard>,
     settings: Settings,
@@ -271,7 +241,7 @@ pub struct AndroidApp {
     decimal_separator: String,
     clock: LibraryClock,
     nav: NavStack,
-    library: LibraryView<'static>,
+    library: LibraryView,
     library_key: LibraryKey,
     editor: Option<Editor>,
     notice: Option<Notice>,
@@ -318,7 +288,6 @@ impl AndroidApp {
             log::info!("removed {removed} abandoned import staging files");
         }
         let mut app = Self {
-            files: library::AppFiles::new(Rc::clone(&host)),
             host,
             text_input,
             clipboard,

@@ -341,14 +341,13 @@ impl AndroidApp {
     }
 
     fn start_save_copy(&mut self) {
-        let files = library::AppFiles::new(Rc::clone(&self.host));
         let language = self.language;
         let mut result = None;
         if let Some(editor) = self.editor.as_mut() {
             if !matches!(editor.document.large_status(), LargeStatus::Ready) {
                 return;
             }
-            editor.save_copy.start(&editor.document, &files);
+            editor.save_copy.start(&editor.document, &*self.host);
             result = editor.save_copy.take_result();
         }
         self.apply_copy_result(result, language);

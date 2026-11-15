@@ -15,7 +15,7 @@ use tabtool_platform::android::{AndroidPlatform, IntentImport};
 use tabtool_platform::{Clipboard, OpenUrl, SystemInfo, TextInput, TextInputRequest};
 use tabtool_ui::grid::Clipboard as GridClipboard;
 use tabtool_ui::mobile::{
-    DocumentMetadata, ExportOutcome, LibraryClock, LibraryError, TouchTextInput,
+    DocumentFiles, ExportOutcome, LibraryClock, LibraryError, TouchTextInput,
     TouchTextInputOutcome, TouchTextInputRequest,
 };
 
@@ -52,7 +52,7 @@ pub fn background_save_acknowledged() -> bool {
     BACKGROUND_SAVE_FINISHED.load(Ordering::Acquire)
 }
 
-impl Host for AndroidHost {
+impl DocumentFiles for AndroidHost {
     fn documents_dir(&self) -> PathBuf {
         AndroidPlatform.documents_dir()
     }
@@ -121,21 +121,9 @@ impl Host for AndroidHost {
             .take_error()
             .map(|error| LibraryError::new(error.message_key, error.detail))
     }
+}
 
-    fn metadata(&self, path: &Path) -> io::Result<DocumentMetadata> {
-        let metadata = std::fs::metadata(path)?;
-        if !metadata.is_file() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("{} is not a regular file", path.display()),
-            ));
-        }
-        Ok(DocumentMetadata {
-            size: metadata.len(),
-            modified: metadata.modified().unwrap_or(std::time::UNIX_EPOCH),
-        })
-    }
-
+impl Host for AndroidHost {
     fn safe_area(&self) -> [f32; 4] {
         AndroidPlatform.safe_area()
     }

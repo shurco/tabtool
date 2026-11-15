@@ -13,7 +13,7 @@ use crate::mobile::{
 use crate::theme::current;
 use crate::widgets::{AlertAction, BannerKind, ButtonKind, banner, modal};
 
-impl LibraryView<'_> {
+impl LibraryView {
     /// Shows the library and reports what the app should do next.
     pub fn show(&mut self, ui: &mut Ui, text_input: &mut dyn TouchTextInput) -> LibraryResponse {
         if !self.loaded {
@@ -279,7 +279,7 @@ impl LibraryView<'_> {
 
     fn poll_error(&mut self) {
         if self.notice.is_none() {
-            self.notice = self.errors.take_error();
+            self.notice = self.files.take_error();
         }
     }
 

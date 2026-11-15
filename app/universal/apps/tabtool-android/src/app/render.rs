@@ -199,7 +199,7 @@ impl AndroidApp {
                     Some(editor) => match editor.export.as_mut() {
                         Some(export) => {
                             export
-                                .show(ui, style, &editor.document, &self.files)
+                                .show(ui, style, &editor.document, &*self.host)
                                 .close_requested
                         }
                         None => true,

@@ -4,7 +4,7 @@
 //! navigation stack, a touch toolbar, the fold-aware contextual action bar,
 //! sheets, list rows, the documents library and the editor accessory. They
 //! depend on the platform only through [`TouchTextInput`] and the library's
-//! file seams, so `tabtool-ui` stays neutral.
+//! [`DocumentFiles`] seam, so `tabtool-ui` stays neutral.
 
 mod accessory;
 mod action_bar;
@@ -30,9 +30,9 @@ pub use action_bar::{
 pub use editor::{MobileEditor, MobileEditorResponse};
 pub use editor_state::{MobileEdit, MobileEditTarget, MobileEditorState};
 pub use library::{
-    DocumentEntry, DocumentFiles, DocumentMetadata, ExportOutcome, FileMetadata, LibraryClock,
-    LibraryError, LibraryErrors, LibraryResponse, LibrarySort, LibraryView, SystemMetadata,
-    available_name, format_modified, format_size, new_document_name,
+    DocumentEntry, DocumentFiles, DocumentMetadata, ExportOutcome, LibraryClock, LibraryError,
+    LibraryResponse, LibrarySort, LibraryView, available_name, format_modified, format_size,
+    new_document_name,
 };
 pub use list::{ListRow, ListRowResponse};
 pub use metrics::{

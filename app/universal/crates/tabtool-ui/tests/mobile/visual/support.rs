@@ -17,8 +17,7 @@ use tabtool_ui::Theme;
 use tabtool_ui::UiHarness;
 use tabtool_ui::mobile::{
     DocumentFiles, ExportOutcome, ExportSheet, FiltersSheet, FoldRegion, FormatSheet, LibraryClock,
-    LibraryError, LibraryErrors, LibraryView, MobileMetrics, SheetStyle, about_sheet,
-    settings_sheet,
+    LibraryError, LibraryView, MobileMetrics, SheetStyle, about_sheet, settings_sheet,
 };
 
 use crate::support::{FakeTouchInput, en_locale};
@@ -43,10 +42,12 @@ pub fn sheet_style(metrics: MobileMetrics) -> SheetStyle {
     SheetStyle::new(metrics, Language::En)
 }
 
-/// A documents folder the library can list.
+/// A documents folder the library can list, with the platform failure the
+/// library waits for.
 #[derive(Clone)]
 pub struct VisualFiles {
     directory: Rc<PathBuf>,
+    pending: Rc<RefCell<Option<LibraryError>>>,
 }
 
 impl VisualFiles {
@@ -54,7 +55,13 @@ impl VisualFiles {
     pub fn new(directory: impl Into<PathBuf>) -> Self {
         Self {
             directory: Rc::new(directory.into()),
+            pending: Rc::default(),
         }
+    }
+
+    /// Queues `error` for the next library frame.
+    pub fn push(&self, error: LibraryError) {
+        self.pending.borrow_mut().replace(error);
     }
 
     /// Writes a fixture document and pins its modification time.
@@ -130,22 +137,7 @@ impl DocumentFiles for VisualFiles {
     fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
         std::fs::rename(from, to)
     }
-}
 
-/// The platform failures the library waits for.
-#[derive(Clone, Default)]
-pub struct VisualErrors {
-    pending: Rc<RefCell<Option<LibraryError>>>,
-}
-
-impl VisualErrors {
-    /// Queues `error` for the next library frame.
-    pub fn push(&self, error: LibraryError) {
-        self.pending.borrow_mut().replace(error);
-    }
-}
-
-impl LibraryErrors for VisualErrors {
     fn take_error(&self) -> Option<LibraryError> {
         self.pending.borrow_mut().take()
     }
@@ -157,12 +149,9 @@ pub fn library_harness(
     size: [f32; 2],
     metrics: MobileMetrics,
     files: VisualFiles,
-    errors: VisualErrors,
 ) -> UiHarness<'static> {
     let mut view = LibraryView::new(
-        files,
-        errors,
-        tabtool_ui::mobile::SystemMetadata,
+        Rc::new(files),
         en_locale(),
         LibraryClock::default(),
         metrics,

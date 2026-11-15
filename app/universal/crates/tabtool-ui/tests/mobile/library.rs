@@ -13,9 +13,9 @@ use tabtool_ui::Theme;
 use tabtool_ui::UiHarness;
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::mobile::{
-    DocumentFiles, ExportOutcome, LibraryClock, LibraryError, LibraryErrors, LibraryResponse,
-    LibrarySort, LibraryView, MobileMetrics, SystemMetadata, TouchTextInputOutcome, available_name,
-    format_modified, format_size, new_document_name,
+    DocumentFiles, ExportOutcome, LibraryClock, LibraryError, LibraryResponse, LibrarySort,
+    LibraryView, MobileMetrics, TouchTextInputOutcome, available_name, format_modified,
+    format_size, new_document_name,
 };
 use tempfile::TempDir;
 
@@ -35,7 +35,8 @@ fn fr_locale() -> Locale {
     Locale::try_from_str("fr-FR").expect("fr-FR is a valid locale")
 }
 
-/// A documents folder on disk with a one-shot import picker.
+/// A documents folder on disk with a one-shot import picker and one queued
+/// platform failure.
 struct TestFiles {
     directory: PathBuf,
     picker: RefCell<Option<PathBuf>>,
@@ -44,17 +45,18 @@ struct TestFiles {
     create_calls: Cell<usize>,
     fail_delete: Cell<bool>,
     fail_rename: Cell<bool>,
+    pending_error: RefCell<Option<LibraryError>>,
 }
 
 impl TestFiles {
-    fn new() -> (TempDir, Self) {
+    fn new() -> (TempDir, Rc<Self>) {
         let directory = TempDir::new().expect("a temporary documents folder");
         let path = directory.path().to_path_buf();
         (directory, Self::at(path))
     }
 
-    fn at(directory: PathBuf) -> Self {
-        Self {
+    fn at(directory: PathBuf) -> Rc<Self> {
+        Rc::new(Self {
             directory,
             picker: RefCell::new(None),
             extra: RefCell::new(Vec::new()),
@@ -62,7 +64,8 @@ impl TestFiles {
             create_calls: Cell::new(0),
             fail_delete: Cell::new(false),
             fail_rename: Cell::new(false),
-        }
+            pending_error: RefCell::new(None),
+        })
     }
 
     fn write(&self, name: &str, contents: &str) -> PathBuf {
@@ -139,6 +142,10 @@ impl DocumentFiles for TestFiles {
         }
         std::fs::rename(from, to)
     }
+
+    fn take_error(&self) -> Option<LibraryError> {
+        self.pending_error.borrow_mut().take()
+    }
 }
 
 fn supported(path: &Path) -> bool {
@@ -151,30 +158,13 @@ fn supported(path: &Path) -> bool {
         })
 }
 
-#[derive(Default)]
-struct TestErrors {
-    pending: RefCell<Option<LibraryError>>,
+fn library(files: &Rc<TestFiles>) -> LibraryView {
+    library_with_clock(files, LibraryClock::default())
 }
 
-impl LibraryErrors for TestErrors {
-    fn take_error(&self) -> Option<LibraryError> {
-        self.pending.borrow_mut().take()
-    }
-}
-
-fn library<'a>(files: &'a TestFiles, errors: &'a TestErrors) -> LibraryView<'a> {
-    library_with_clock(files, errors, LibraryClock::default())
-}
-
-fn library_with_clock<'a>(
-    files: &'a TestFiles,
-    errors: &'a TestErrors,
-    clock: LibraryClock,
-) -> LibraryView<'a> {
+fn library_with_clock(files: &Rc<TestFiles>, clock: LibraryClock) -> LibraryView {
     LibraryView::new(
-        files,
-        errors,
-        SystemMetadata,
+        files.clone(),
         en_locale(),
         clock,
         MobileMetrics::phone(),
@@ -182,7 +172,7 @@ fn library_with_clock<'a>(
     )
 }
 
-fn names(view: &LibraryView<'_>) -> Vec<String> {
+fn names(view: &LibraryView) -> Vec<String> {
     view.documents()
         .iter()
         .map(|document| document.name().to_owned())
@@ -261,8 +251,7 @@ fn lists_only_supported_files_newest_first() {
     files.write("new.tsv", "a\tb\n");
     files.write("notes.md", "not a table\n");
     set_modified(&old, 100);
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     view.refresh();
 
@@ -277,8 +266,7 @@ fn documents_with_the_same_date_sort_by_name() {
     let alpha = files.write("alpha.csv", "a\n");
     set_modified(&beta, 500);
     set_modified(&alpha, 500);
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     view.refresh();
 
@@ -293,8 +281,7 @@ fn a_listed_file_that_is_gone_is_skipped() {
         .extra
         .borrow_mut()
         .push(files.documents_dir().join("gone.csv"));
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     view.refresh();
 
@@ -306,8 +293,7 @@ fn hidden_files_are_not_listed() {
     let (_directory, files) = TestFiles::new();
     files.write(".notes.csv", "a\n");
     files.write("notes.csv", "a\n");
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     view.refresh();
 
@@ -319,8 +305,7 @@ fn sizes_and_dates_come_from_the_file_metadata() {
     let (_directory, files) = TestFiles::new();
     let path = files.write("notes.csv", "a,b\n1,2\n");
     set_modified(&path, 1_700_000_000);
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     view.refresh();
 
@@ -392,8 +377,7 @@ fn dates_use_the_platform_clock() {
 #[test]
 fn creates_a_blank_document_and_lists_it() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     let path = view.create_document().expect("the document is created");
 
@@ -413,14 +397,13 @@ fn creates_a_blank_document_and_lists_it() {
 #[test]
 fn creates_use_the_configured_new_document_format() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
     let configuration = CsvConfiguration {
         column_separator: "\t".to_owned(),
         quote_character: String::new(),
         escape_character: String::new(),
         ..CsvConfiguration::default()
     };
-    let mut view = library(&files, &errors).new_document_configuration(configuration);
+    let mut view = library(&files).new_document_configuration(configuration);
 
     let path = view.create_document().expect("the document is created");
 
@@ -433,8 +416,7 @@ fn creates_use_the_configured_new_document_format() {
 #[test]
 fn a_second_new_document_counts_up() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     view.create_document().expect("the first document");
     let second = view.create_document().expect("the second document");
@@ -447,8 +429,7 @@ fn a_second_new_document_counts_up() {
 fn a_new_document_avoids_an_existing_name_in_any_case() {
     let (_directory, files) = TestFiles::new();
     files.write("UNTITLED.CSV", "a\n");
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     let path = view.create_document().expect("the document is created");
 
@@ -462,8 +443,7 @@ fn imports_under_the_picked_name() {
     let source = source_directory.path().join("import-notes.csv");
     std::fs::write(&source, "x,y\n").expect("the import source is written");
     *files.picker.borrow_mut() = Some(source);
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     let imported = view.import_document().expect("the document is imported");
 
@@ -478,8 +458,7 @@ fn imports_under_the_picked_name() {
 #[test]
 fn a_cancelled_import_returns_nothing() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     assert_eq!(view.import_document(), None);
 }
@@ -491,8 +470,7 @@ fn an_unsupported_import_is_removed_and_reported() {
     let source = source_directory.path().join("notes.md");
     std::fs::write(&source, "# notes\n").expect("the import source is written");
     *files.picker.borrow_mut() = Some(source);
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     assert_eq!(view.import_document(), None);
     assert!(!files.documents_dir().join("notes.md").exists());
@@ -505,8 +483,7 @@ fn a_hidden_import_is_removed_and_reported() {
     let source = source_directory.path().join(".notes.csv");
     std::fs::write(&source, "a\n").expect("the import source is written");
     *files.picker.borrow_mut() = Some(source);
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     assert_eq!(view.import_document(), None);
     assert!(!files.documents_dir().join(".notes.csv").exists());
@@ -515,8 +492,7 @@ fn a_hidden_import_is_removed_and_reported() {
 #[test]
 fn renames_and_deletes() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     let path = view.create_document().expect("the document is created");
 
     let renamed = view
@@ -536,8 +512,7 @@ fn renames_and_deletes() {
 fn renaming_without_an_extension_keeps_the_documents_extension() {
     let (_directory, files) = TestFiles::new();
     let path = files.write("notes.tsv", "a\tb\n");
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     view.refresh();
 
     let renamed = view
@@ -553,8 +528,7 @@ fn renaming_without_an_extension_keeps_the_documents_extension() {
 fn renaming_with_an_extension_keeps_the_proposed_name() {
     let (_directory, files) = TestFiles::new();
     let path = files.write("notes.tsv", "a\tb\n");
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     view.refresh();
 
     let renamed = view
@@ -567,8 +541,7 @@ fn renaming_with_an_extension_keeps_the_proposed_name() {
 #[test]
 fn renaming_to_a_taken_name_gets_a_unique_name() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     let first = view.create_document().expect("the first document");
     let second = view.create_document().expect("the second document");
 
@@ -585,8 +558,7 @@ fn renaming_to_a_taken_name_gets_a_unique_name() {
 #[test]
 fn renaming_to_the_same_name_changes_nothing() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     let path = view.create_document().expect("the document is created");
 
     let renamed = view
@@ -600,8 +572,7 @@ fn renaming_to_the_same_name_changes_nothing() {
 #[test]
 fn renaming_to_an_unsupported_extension_is_refused() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     let path = view.create_document().expect("the document is created");
 
     let error = view
@@ -616,8 +587,7 @@ fn renaming_to_an_unsupported_extension_is_refused() {
 #[test]
 fn a_rename_cannot_escape_the_documents_folder() {
     let (directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     let path = view.create_document().expect("the document is created");
 
     for proposed in [
@@ -653,8 +623,7 @@ fn a_rename_cannot_escape_the_documents_folder() {
 fn a_case_only_rename_keeps_the_same_file() {
     let (_directory, files) = TestFiles::new();
     let path = files.write("Notes.csv", "a\n");
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     view.refresh();
 
     let renamed = view
@@ -669,8 +638,7 @@ fn a_case_only_rename_keeps_the_same_file() {
 #[test]
 fn a_blank_rename_changes_nothing() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     let path = view.create_document().expect("the document is created");
 
     let renamed = view
@@ -687,8 +655,7 @@ fn a_failed_create_is_reported() {
     let blocked = directory.path().join("blocked");
     std::fs::write(&blocked, "not a directory").expect("the blocker is written");
     let files = TestFiles::at(blocked);
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
 
     let error = view
         .create_document()
@@ -700,8 +667,7 @@ fn a_failed_create_is_reported() {
 #[test]
 fn a_failed_delete_is_reported_and_keeps_the_document() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     let path = view.create_document().expect("the document is created");
     files.fail_delete.set(true);
 
@@ -717,8 +683,7 @@ fn a_failed_delete_is_reported_and_keeps_the_document() {
 #[test]
 fn a_failed_rename_is_reported_and_keeps_the_document() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    let mut view = library(&files, &errors);
+    let mut view = library(&files);
     let path = view.create_document().expect("the document is created");
     files.fail_rename.set(true);
 
@@ -736,23 +701,21 @@ fn a_failed_rename_is_reported_and_keeps_the_document() {
 #[derive(Default)]
 struct Outcome(Rc<RefCell<LibraryResponse>>);
 
-fn harness_library<'a>(
-    files: &'a TestFiles,
-    errors: &'a TestErrors,
+fn harness_library(
+    files: &Rc<TestFiles>,
     outcome: &Outcome,
     input: &FakeTouchInput,
-) -> UiHarness<'a> {
-    harness_library_with_clock(files, errors, outcome, input, LibraryClock::default())
+) -> UiHarness<'static> {
+    harness_library_with_clock(files, outcome, input, LibraryClock::default())
 }
 
-fn harness_library_with_clock<'a>(
-    files: &'a TestFiles,
-    errors: &'a TestErrors,
+fn harness_library_with_clock(
+    files: &Rc<TestFiles>,
     outcome: &Outcome,
     input: &FakeTouchInput,
     clock: LibraryClock,
-) -> UiHarness<'a> {
-    let mut view = library_with_clock(files, errors, clock);
+) -> UiHarness<'static> {
+    let mut view = library_with_clock(files, clock);
     let mut input = input.clone();
     let outcome = outcome.0.clone();
     UiHarness::new(Theme::desktop_light(), [360.0, 800.0], move |ui| {
@@ -769,9 +732,8 @@ fn harness_library_with_clock<'a>(
 #[test]
 fn the_empty_library_explains_how_to_start() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     assert!(harness.query_by_label(tr(EN, "No Documents")).is_some());
@@ -785,9 +747,8 @@ fn the_empty_library_explains_how_to_start() {
 #[test]
 fn the_plus_menu_creates_a_document_and_reports_it() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     harness.get_by_label(tr(EN, "Add Document")).click();
@@ -809,9 +770,8 @@ fn the_plus_menu_creates_a_document_and_reports_it() {
 #[test]
 fn the_plus_menu_offers_new_import_and_settings() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     harness.get_by_label(tr(EN, "Add Document")).click();
@@ -834,9 +794,8 @@ fn the_plus_menu_imports_the_picked_document() {
     let source = source_directory.path().join("from-picker.csv");
     std::fs::write(&source, "x,y\n").expect("the import source is written");
     *files.picker.borrow_mut() = Some(source);
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     harness.get_by_label(tr(EN, "Add Document")).click();
@@ -856,9 +815,8 @@ fn an_async_picker_reports_the_import_when_it_finishes() {
     std::fs::write(&source, "x,y\n").expect("the import source is written");
     *files.picker.borrow_mut() = Some(source);
     files.in_progress.set(true);
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     harness.get_by_label(tr(EN, "Add Document")).click();
@@ -889,9 +847,8 @@ fn an_unsupported_import_shows_a_localized_banner() {
     let source = source_directory.path().join("notes.md");
     std::fs::write(&source, "# notes\n").expect("the import source is written");
     *files.picker.borrow_mut() = Some(source);
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     harness.get_by_label(tr(EN, "Add Document")).click();
@@ -910,9 +867,8 @@ fn an_unsupported_import_shows_a_localized_banner() {
 #[test]
 fn the_gear_opens_settings() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     harness.get_by_label(tr(EN, "Settings")).click();
@@ -924,9 +880,8 @@ fn the_gear_opens_settings() {
 #[test]
 fn the_overflow_opens_about() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     harness.get_by_label(tr(EN, "More")).click();
@@ -941,9 +896,8 @@ fn the_overflow_opens_about() {
 fn a_row_tap_returns_the_document_path() {
     let (_directory, files) = TestFiles::new();
     files.write("Budget.csv", "a,b\n");
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     harness.get_by_label("Budget").click();
@@ -959,9 +913,8 @@ fn a_row_tap_returns_the_document_path() {
 fn swiping_a_row_asks_before_deleting() {
     let (_directory, files) = TestFiles::new();
     files.write("Notes.csv", "a\n");
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     let rect = harness.get_by_label("Notes").rect();
@@ -990,9 +943,8 @@ fn swiping_a_row_asks_before_deleting() {
 fn cancelling_the_delete_confirmation_keeps_the_document() {
     let (_directory, files) = TestFiles::new();
     files.write("Notes.csv", "a\n");
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     let rect = harness.get_by_label("Notes").rect();
@@ -1017,10 +969,9 @@ fn cancelling_the_delete_confirmation_keeps_the_document() {
 fn the_context_menu_renames_through_the_native_editor() {
     let (_directory, files) = TestFiles::new();
     files.write("Notes.csv", "a\n");
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
     let input = FakeTouchInput::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &input);
+    let mut harness = harness_library(&files, &outcome, &input);
     harness.run();
 
     harness.get_by_label("Notes").click_secondary();
@@ -1042,10 +993,9 @@ fn the_context_menu_renames_through_the_native_editor() {
 fn cancelling_the_native_editor_keeps_the_name() {
     let (_directory, files) = TestFiles::new();
     files.write("Notes.csv", "a\n");
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
     let input = FakeTouchInput::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &input);
+    let mut harness = harness_library(&files, &outcome, &input);
     harness.run();
 
     harness.get_by_label("Notes").click_secondary();
@@ -1061,13 +1011,12 @@ fn cancelling_the_native_editor_keeps_the_name() {
 #[test]
 fn a_platform_error_shows_a_localized_banner_and_dismisses() {
     let (_directory, files) = TestFiles::new();
-    let errors = TestErrors::default();
-    errors.pending.replace(Some(LibraryError::new(
+    files.pending_error.replace(Some(LibraryError::new(
         "The file could not be saved",
         "the disk is full",
     )));
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     assert!(
@@ -1091,9 +1040,8 @@ fn the_library_subtitle_uses_the_locale_for_size_and_date() {
     let (_directory, files) = TestFiles::new();
     let path = files.write("notes.csv", "a,b\n1,2\n");
     set_modified(&path, 1_700_000_000);
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
-    let mut harness = harness_library(&files, &errors, &outcome, &FakeTouchInput::default());
+    let mut harness = harness_library(&files, &outcome, &FakeTouchInput::default());
     harness.run();
 
     // 8 bytes and a 14 November 2023 timestamp: the English short form is
@@ -1109,11 +1057,9 @@ fn the_row_uses_the_platform_clock() {
     let (_directory, files) = TestFiles::new();
     let path = files.write("notes.csv", "a,b\n1,2\n");
     set_modified(&path, 1_700_000_000);
-    let errors = TestErrors::default();
     let outcome = Outcome::default();
     let mut harness = harness_library_with_clock(
         &files,
-        &errors,
         &outcome,
         &FakeTouchInput::default(),
         LibraryClock::new(-480, true),

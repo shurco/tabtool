@@ -22,7 +22,7 @@ use tabtool_platform::CopyOutcome;
 use tabtool_settings::Settings;
 use tabtool_ui::grid::Clipboard as GridClipboard;
 use tabtool_ui::mobile::{
-    DocumentMetadata, ExportOutcome, LibraryClock, LibraryError, MobileEditorResponse,
+    DocumentFiles, ExportOutcome, LibraryClock, LibraryError, MobileEditorResponse,
     MobileToolbarResponse, OverflowItem, Screen, SheetKind, TouchTextInput, TouchTextInputOutcome,
     TouchTextInputRequest,
 };
@@ -96,7 +96,7 @@ impl Fake {
     }
 }
 
-impl Host for Fake {
+impl DocumentFiles for Fake {
     fn documents_dir(&self) -> PathBuf {
         self.directory.clone()
     }
@@ -161,15 +161,9 @@ impl Host for Fake {
     fn take_error(&self) -> Option<LibraryError> {
         self.errors.borrow_mut().pop_front()
     }
+}
 
-    fn metadata(&self, path: &Path) -> io::Result<DocumentMetadata> {
-        let metadata = std::fs::metadata(path)?;
-        Ok(DocumentMetadata {
-            size: metadata.len(),
-            modified: metadata.modified().unwrap_or(std::time::UNIX_EPOCH),
-        })
-    }
-
+impl Host for Fake {
     fn safe_area(&self) -> [f32; 4] {
         self.safe_area
     }

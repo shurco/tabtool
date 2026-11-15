@@ -54,7 +54,6 @@ impl AndroidApp {
         let mut failed = false;
         let mut copy_result = None;
         let mut after_save = None;
-        let files = library::AppFiles::new(Rc::clone(&self.host));
         let language = self.language;
         let prompt_open = self.prompt.is_some();
 
@@ -71,7 +70,7 @@ impl AndroidApp {
                 failed = true;
             }
 
-            editor.save_copy.poll(&files);
+            editor.save_copy.poll(&*self.host);
             copy_result = editor.save_copy.take_result();
 
             if matches!(editor.document.large_status(), LargeStatus::Saving(_)) {

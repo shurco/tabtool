@@ -7,7 +7,7 @@ use tabtool_ui::harness::SnapshotResults;
 use tabtool_ui::mobile::{LibraryError, MobileMetrics};
 use tempfile::TempDir;
 
-use super::support::{FOLD_OUTER, PHONE, TABLET, VisualErrors, VisualFiles, library_harness};
+use super::support::{FOLD_OUTER, PHONE, TABLET, VisualFiles, library_harness};
 
 fn populated(directory: &TempDir) -> VisualFiles {
     let files = VisualFiles::new(directory.path());
@@ -28,15 +28,8 @@ fn render(mut harness: UiHarness<'static>, name: &str, results: &mut SnapshotRes
 pub fn empty_phone(results: &mut SnapshotResults) {
     let directory = TempDir::new().expect("a temporary documents folder");
     let files = VisualFiles::new(directory.path());
-    let errors = VisualErrors::default();
     render(
-        library_harness(
-            Theme::desktop_light(),
-            PHONE,
-            MobileMetrics::phone(),
-            files,
-            errors,
-        ),
+        library_harness(Theme::desktop_light(), PHONE, MobileMetrics::phone(), files),
         "mobile-library-empty-phone",
         results,
     );
@@ -45,14 +38,12 @@ pub fn empty_phone(results: &mut SnapshotResults) {
 pub fn empty_tablet(results: &mut SnapshotResults) {
     let directory = TempDir::new().expect("a temporary documents folder");
     let files = VisualFiles::new(directory.path());
-    let errors = VisualErrors::default();
     render(
         library_harness(
             Theme::desktop_light(),
             TABLET,
             MobileMetrics::tablet(),
             files,
-            errors,
         ),
         "mobile-library-empty-tablet",
         results,
@@ -62,15 +53,8 @@ pub fn empty_tablet(results: &mut SnapshotResults) {
 pub fn list_phone(results: &mut SnapshotResults) {
     let directory = TempDir::new().expect("a temporary documents folder");
     let files = populated(&directory);
-    let errors = VisualErrors::default();
     render(
-        library_harness(
-            Theme::desktop_light(),
-            PHONE,
-            MobileMetrics::phone(),
-            files,
-            errors,
-        ),
+        library_harness(Theme::desktop_light(), PHONE, MobileMetrics::phone(), files),
         "mobile-library-list-phone",
         results,
     );
@@ -79,14 +63,12 @@ pub fn list_phone(results: &mut SnapshotResults) {
 pub fn list_tablet(results: &mut SnapshotResults) {
     let directory = TempDir::new().expect("a temporary documents folder");
     let files = populated(&directory);
-    let errors = VisualErrors::default();
     render(
         library_harness(
             Theme::desktop_light(),
             TABLET,
             MobileMetrics::tablet(),
             files,
-            errors,
         ),
         "mobile-library-list-tablet",
         results,
@@ -96,14 +78,12 @@ pub fn list_tablet(results: &mut SnapshotResults) {
 pub fn list_folded_outer(results: &mut SnapshotResults) {
     let directory = TempDir::new().expect("a temporary documents folder");
     let files = populated(&directory);
-    let errors = VisualErrors::default();
     render(
         library_harness(
             Theme::desktop_light(),
             FOLD_OUTER,
             MobileMetrics::phone(),
             files,
-            errors,
         ),
         "mobile-library-list-fold-outer",
         results,
@@ -113,16 +93,9 @@ pub fn list_folded_outer(results: &mut SnapshotResults) {
 pub fn read_error(results: &mut SnapshotResults) {
     let directory = TempDir::new().expect("a temporary documents folder");
     let files = VisualFiles::new(directory.path());
-    let errors = VisualErrors::default();
-    errors.push(LibraryError::new(ERROR_OPEN, "permission denied"));
+    files.push(LibraryError::new(ERROR_OPEN, "permission denied"));
     render(
-        library_harness(
-            Theme::desktop_light(),
-            PHONE,
-            MobileMetrics::phone(),
-            files,
-            errors,
-        ),
+        library_harness(Theme::desktop_light(), PHONE, MobileMetrics::phone(), files),
         "mobile-library-read-error-phone",
         results,
     );
