@@ -56,7 +56,7 @@ jobs:
       - name: Install the NDK
         run: |
           if [ ! -d "$ANDROID_NDK_HOME" ]; then
-            yes | sdkmanager --install "ndk;28.2.13676358" >/dev/null
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358" >/dev/null
           fi
       - name: Install cargo-ndk
         run: |
