@@ -237,11 +237,65 @@ pub trait LibraryErrors {
     fn take_error(&self) -> Option<LibraryError>;
 }
 
+impl<T: DocumentFiles + ?Sized> DocumentFiles for &T {
+    fn documents_dir(&self) -> PathBuf {
+        (**self).documents_dir()
+    }
+
+    fn list_documents(&self) -> Vec<PathBuf> {
+        (**self).list_documents()
+    }
+
+    fn existing_names(&self) -> Vec<String> {
+        (**self).existing_names()
+    }
+
+    fn create_document(&self, name: &str, data: &[u8]) -> io::Result<PathBuf> {
+        (**self).create_document(name, data)
+    }
+
+    fn import_from_picker(&self) -> Option<PathBuf> {
+        (**self).import_from_picker()
+    }
+
+    fn import_in_progress(&self) -> bool {
+        (**self).import_in_progress()
+    }
+
+    fn export_copy(&self, source: &Path, suggested_name: &str) -> ExportOutcome {
+        (**self).export_copy(source, suggested_name)
+    }
+
+    fn export_in_progress(&self) -> bool {
+        (**self).export_in_progress()
+    }
+
+    fn delete(&self, path: &Path) -> io::Result<()> {
+        (**self).delete(path)
+    }
+
+    fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
+        (**self).rename(from, to)
+    }
+}
+
+impl<T: LibraryErrors + ?Sized> LibraryErrors for &T {
+    fn take_error(&self) -> Option<LibraryError> {
+        (**self).take_error()
+    }
+}
+
+impl<T: FileMetadata + ?Sized> FileMetadata for &T {
+    fn metadata(&self, path: &Path) -> io::Result<DocumentMetadata> {
+        (**self).metadata(path)
+    }
+}
+
 /// The screen state: documents, sort order and the pending prompt.
 pub struct LibraryView<'a> {
-    files: &'a dyn DocumentFiles,
-    errors: &'a dyn LibraryErrors,
-    metadata: &'a dyn FileMetadata,
+    files: Box<dyn DocumentFiles + 'a>,
+    errors: Box<dyn LibraryErrors + 'a>,
+    metadata: Box<dyn FileMetadata + 'a>,
     new_document: CsvConfiguration,
     locale: Locale,
     clock: LibraryClock,
@@ -260,19 +314,23 @@ pub struct LibraryView<'a> {
 impl<'a> LibraryView<'a> {
     /// A library over `files`, formatting sizes and dates for `locale` and
     /// `clock`.
+    ///
+    /// The seams are owned, so an app can hold the view across frames while
+    /// its platform services live in a shared handle. References also work,
+    /// through the blanket implementations below.
     pub fn new(
-        files: &'a dyn DocumentFiles,
-        errors: &'a dyn LibraryErrors,
-        metadata: &'a dyn FileMetadata,
+        files: impl DocumentFiles + 'a,
+        errors: impl LibraryErrors + 'a,
+        metadata: impl FileMetadata + 'a,
         locale: Locale,
         clock: LibraryClock,
         metrics: MobileMetrics,
         language: Language,
     ) -> Self {
         Self {
-            files,
-            errors,
-            metadata,
+            files: Box::new(files),
+            errors: Box::new(errors),
+            metadata: Box::new(metadata),
             new_document: CsvConfiguration::default(),
             locale,
             clock,

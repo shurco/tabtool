@@ -7,6 +7,7 @@
 
 #![forbid(unsafe_code)]
 
+mod autosave;
 mod clipboard;
 mod document;
 mod edit;
@@ -27,6 +28,7 @@ mod storage;
 mod types;
 mod undo;
 
+pub use autosave::{AUTOSAVE_DELAY, Autosave, AutosaveOutcome};
 pub use document::Document;
 pub use filter_model::RowFilterModel;
 pub use format::ParsedTable;

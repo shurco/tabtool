@@ -22,8 +22,8 @@ use log::{error, info};
 use crate::bridge_result::{BridgeResult, parse_result};
 use crate::locale::{SystemInfo, decimal_separator, normalize_tag};
 use crate::services::{
-    BackHandler, Clipboard, DocumentFiles, ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Insets, OpenUrl,
-    PlatformError, PlatformErrors, Share,
+    BackHandler, Clipboard, CopyOutcome, DocumentFiles, ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE,
+    Insets, OpenUrl, PlatformError, PlatformErrors, Share,
 };
 use crate::text_input::{EditorSessions, TextInput, TextInputOutcome, TextInputRequest};
 
@@ -38,6 +38,25 @@ static BRIDGE: OnceLock<Option<Bridge>> = OnceLock::new();
 static DOCUMENTS_DIR: OnceLock<PathBuf> = OnceLock::new();
 static SESSIONS: EditorSessions = EditorSessions::new();
 static ERRORS: Mutex<VecDeque<PlatformError>> = Mutex::new(VecDeque::new());
+static EXPORT_OUTCOMES: Mutex<VecDeque<CopyOutcome>> = Mutex::new(VecDeque::new());
+
+/// A document another app asked TabTool to open.
+///
+/// `Staged` names the copied file inside the app's private documents
+/// directory and the original display name. The app picks a collision-free
+/// final name before it opens the copy.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum IntentImport {
+    /// The content was copied and waits to be adopted.
+    Staged {
+        /// The file name inside the documents directory.
+        file_name: String,
+        /// The display name reported by the sending app.
+        display_name: String,
+    },
+    /// The copy failed; the string is the diagnostic detail.
+    Failed(String),
+}
 
 /// The Android platform services.
 #[derive(Clone, Copy, Debug, Default)]
@@ -57,6 +76,76 @@ impl AndroidPlatform {
     /// Closes the activity when the app's navigation stack cannot take back.
     pub fn finish_activity(self) {
         call_void("finishActivity", "()V", &[]);
+    }
+
+    /// Whether an import picker started earlier is still open.
+    #[must_use]
+    pub fn import_pending(self) -> bool {
+        call_bool("isImportPending")
+    }
+
+    /// Whether an export picker or copy started earlier is still running.
+    #[must_use]
+    pub fn export_pending(self) -> bool {
+        call_bool("isExportPending")
+    }
+
+    /// Takes the outcome of the last completed export.
+    ///
+    /// [`DocumentFiles::export_copy`] answers with `bool` when the operation
+    /// finishes; this keeps the typed result so an async cancel is not shown
+    /// as a failure. Pending calls push nothing.
+    #[must_use]
+    pub fn take_export_outcome(self) -> Option<CopyOutcome> {
+        EXPORT_OUTCOMES
+            .lock()
+            .map(|mut outcomes| outcomes.pop_front())
+            .unwrap_or_else(|poisoned| poisoned.into_inner().pop_front())
+    }
+
+    /// The app's data directory: settings and process-death state live here.
+    #[must_use]
+    pub fn files_dir(self) -> Option<PathBuf> {
+        call_string("filesDir", "()Ljava/lang/String;", &[]).map(PathBuf::from)
+    }
+
+    /// The device's UTC offset in minutes and whether it uses a 12-hour clock.
+    #[must_use]
+    pub fn clock(self) -> Option<(i32, bool)> {
+        let values = call_int_array("clock")?;
+        let offset = *values.first()?;
+        let twelve_hour = values.get(1).is_some_and(|value| *value != 0);
+        Some((offset, twelve_hour))
+    }
+
+    /// Takes one transition to the background.
+    #[must_use]
+    pub fn take_background_event(self) -> bool {
+        call_bool("takeBackgroundEvent")
+    }
+
+    /// Takes one document another app asked TabTool to open.
+    ///
+    /// The first call after the copy completes reports the staged file; later
+    /// calls report `None` until another intent arrives.
+    #[must_use]
+    pub fn take_intent_import(self) -> Option<IntentImport> {
+        let raw = call_string("takeIntentImport", "()Ljava/lang/String;", &[])?;
+        match parse_result(&raw) {
+            BridgeResult::Ok(Some(value)) => match value.split_once('\n') {
+                Some((file_name, display_name)) if !file_name.is_empty() => {
+                    Some(IntentImport::Staged {
+                        file_name: file_name.to_owned(),
+                        display_name: display_name.to_owned(),
+                    })
+                }
+                _ => Some(IntentImport::Failed(format!(
+                    "the intent result is malformed: {value}"
+                ))),
+            },
+            BridgeResult::Ok(None) | BridgeResult::Cancelled => None,
+            BridgeResult::Failed(message) => Some(IntentImport::Failed(message)),
+        }
     }
 }
 
@@ -181,9 +270,16 @@ impl DocumentFiles for AndroidPlatform {
             return false;
         };
         match parse_result(&raw) {
-            BridgeResult::Ok(_) => true,
-            BridgeResult::Cancelled => false,
+            BridgeResult::Ok(_) => {
+                record_export_outcome(CopyOutcome::Copied);
+                true
+            }
+            BridgeResult::Cancelled => {
+                record_export_outcome(CopyOutcome::Cancelled);
+                false
+            }
             BridgeResult::Failed(message) => {
+                record_export_outcome(CopyOutcome::Failed);
                 record_error(ERROR_SAVE, format!("export: {message}"));
                 false
             }
@@ -309,6 +405,18 @@ fn record_error(message_key: &'static str, detail: String) {
         let _ = errors.pop_front();
     }
     errors.push_back(PlatformError::new(message_key, detail));
+}
+
+/// Remembers the typed outcome of a finished export.
+fn record_export_outcome(outcome: CopyOutcome) {
+    let mut outcomes = match EXPORT_OUTCOMES.lock() {
+        Ok(outcomes) => outcomes,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+    if outcomes.len() >= 4 {
+        let _ = outcomes.pop_front();
+    }
+    outcomes.push_back(outcome);
 }
 
 // --- JNI plumbing -----------------------------------------------------------
@@ -564,24 +672,4 @@ pub extern "system" fn Java_app_shurco_tabtool_TabToolBridge_nativeTextCancelled
     _this: JObject<'_>,
 ) {
     SESSIONS.finish(TextInputOutcome::Cancelled);
-}
-
-// --- Spike self-test --------------------------------------------------------
-
-/// Spike-only self-test: proves the Rust bridge clears JNI exceptions.
-///
-/// Removed together with the spike UI in Plan 5 Task 6.
-#[doc(hidden)]
-pub fn throw_test_security_exception() -> bool {
-    let Some(bridge) = bridge() else {
-        return false;
-    };
-    let Ok(mut env) = bridge.vm.attach_current_thread() else {
-        return false;
-    };
-
-    match env.call_static_method(&bridge.class, "throwSecurityException", "()V", &[]) {
-        Ok(_) => false,
-        Err(error) => log_jni_error(&mut env, "throwSecurityException", &error),
-    }
 }

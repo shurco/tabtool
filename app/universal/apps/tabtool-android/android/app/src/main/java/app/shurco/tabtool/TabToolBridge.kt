@@ -15,6 +15,7 @@ import androidx.core.view.WindowInsetsCompat
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.TimeZone
 import java.util.concurrent.Executors
 import kotlin.math.roundToInt
 
@@ -35,6 +36,7 @@ object TabToolBridge {
     private const val ERROR = "ERROR:"
     private const val COPY_BUFFER = 64 * 1024
     private const val MAX_FILE_NAME = 120
+    private const val INTENT_STAGING_PREFIX = ".incoming-"
     private val tableExtensions = setOf("csv", "tsv", "txt", "tab", "dat")
 
     private val lock = Any()
@@ -73,6 +75,17 @@ object TabToolBridge {
     @Volatile
     private var pendingBack = false
 
+    @Volatile
+    private var backgroundPending = false
+
+    @Volatile
+    private var intentAwaitingDrain = false
+
+    @Volatile
+    private var intentResult: String? = null
+
+    private var intentSequence = 0
+
     fun attach(activity: Activity) {
         this.activity = activity
     }
@@ -89,9 +102,100 @@ object TabToolBridge {
             exportResult = null
             exportSource = null
             pendingBack = false
+            backgroundPending = false
+            intentAwaitingDrain = false
+            intentResult = null
         }
         activity = null
     }
+
+    /** Records a transition; the native app polls [takeBackgroundEvent]. */
+    fun updateForeground(foreground: Boolean) {
+        if (!foreground) {
+            backgroundPending = true
+            nativeSaveOnBackground()
+        }
+    }
+
+    @JvmStatic
+    fun takeBackgroundEvent(): Boolean {
+        val pending = backgroundPending
+        backgroundPending = false
+        return pending
+    }
+
+    /**
+     * Queues one document another app wants TabTool to open.
+     *
+     * The stream is copied into a hidden staging file in the private documents
+     * directory; the native app picks the final name and opens it. Only
+     * `ACTION_VIEW` and `ACTION_SEND` with a stream are accepted.
+     */
+    fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+        val action = intent.action
+        if (action != Intent.ACTION_VIEW && action != Intent.ACTION_SEND) return
+        val uri =
+            if (action == Intent.ACTION_SEND) {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+            } else {
+                intent.data
+            }
+        if (uri == null) {
+            finishIntent(failure("No file was shared"))
+            return
+        }
+        val activity = activity ?: return
+        copyExecutor.execute {
+            try {
+                val staged = stageIntent(activity, uri, intent.type)
+                if (staged == null) {
+                    finishIntent(failure("The file type is not supported"))
+                } else {
+                    val (file, displayName) = staged
+                    finishIntent(ok("${file.name}\n$displayName"))
+                }
+            } catch (error: IOException) {
+                finishIntent(failure(error.message ?: "The document could not be copied"))
+            } catch (error: SecurityException) {
+                finishIntent(failure(error.message ?: "Access to the document was denied"))
+            }
+        }
+    }
+
+    /** Returns `OK:<staging file name>\n<display name>` once a copy finishes. */
+    @JvmStatic
+    fun takeIntentImport(): String? {
+        synchronized(lock) {
+            if (!intentAwaitingDrain) {
+                return null
+            }
+            intentAwaitingDrain = false
+            val result = intentResult
+            intentResult = null
+            return result
+        }
+    }
+
+    /** The app's private data directory, for settings and process-death state. */
+    @JvmStatic
+    fun filesDir(): String? = activity?.filesDir?.absolutePath
+
+    /** The device's UTC offset in minutes and 0 for a 24-hour clock. */
+    @JvmStatic
+    fun clock(): IntArray {
+        val activity = activity ?: return intArrayOf(0, 0)
+        val offset = TimeZone.getDefault().getOffset(System.currentTimeMillis()) / 60_000
+        val twelveHour = if (android.text.format.DateFormat.is24HourFormat(activity)) 0 else 1
+        return intArrayOf(offset, twelveHour)
+    }
+
+    @JvmStatic
+    fun isImportPending(): Boolean = importPending
+
+    @JvmStatic
+    fun isExportPending(): Boolean = exportPending
 
     fun updateInsets(insets: WindowInsetsCompat) {
         val density = activity?.resources?.displayMetrics?.density?.takeIf { it > 0f } ?: return
@@ -409,17 +513,76 @@ object TabToolBridge {
     /** Called by the native editor when the user cancels or it cannot open. */
     external fun nativeTextCancelled()
 
-    /** Spike-only self-test: proves the Rust bridge clears JNI exceptions. */
-    @JvmStatic
-    fun throwSecurityException() {
-        throw SecurityException("TabTool JNI exception test")
-    }
+    /** Wakes the egui pass after a callback that must be observed promptly. */
+    external fun nativeWake()
+
+    /** Flushes the pending edit before the activity pauses. */
+    external fun nativeSaveOnBackground(): Boolean
 
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         when (requestCode) {
             REQUEST_IMPORT -> onImportResult(resultCode, data?.data)
             REQUEST_EXPORT -> onExportResult(resultCode, data?.data)
         }
+    }
+
+    /**
+     * Copies an intent stream into a hidden staging file.
+     *
+     * Returns the staged file and the display name, or `null` when neither the
+     * name nor the MIME type names a supported table file.
+     */
+    private fun stageIntent(activity: Activity, uri: Uri, mime: String?): Pair<File, String>? {
+        val original = displayName(activity, uri) ?: uri.lastPathSegment?.substringAfterLast('/')
+        val extension = intentExtension(mime, original) ?: return null
+        val base = safeName(original ?: "Imported.$extension") ?: "Imported.$extension"
+        val dot = base.lastIndexOf('.')
+        val stem = if (dot > 0) base.substring(0, dot) else base
+        val displayName =
+            if (base.substringAfterLast('.', "").lowercase() in tableExtensions) {
+                base
+            } else {
+                "$stem.$extension"
+            }
+        intentSequence += 1
+        val destination =
+            uniqueDestination(
+                documentsDir(activity),
+                "$INTENT_STAGING_PREFIX${intentSequence}.$extension",
+            )
+        val partial = File(destination.parentFile, "${destination.name}.part")
+        try {
+            activity.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(partial).use { output -> input.copyTo(output, COPY_BUFFER) }
+            } ?: throw IOException("The shared document cannot be opened")
+            if (!partial.renameTo(destination)) {
+                throw IOException("The shared document could not be copied")
+            }
+            return destination to displayName
+        } finally {
+            partial.delete()
+        }
+    }
+
+    private fun intentExtension(mime: String?, displayName: String?): String? {
+        val named = displayName?.let { safeName(it) }?.substringAfterLast('.', "")?.lowercase()
+        if (named != null && named in tableExtensions) {
+            return named
+        }
+        return when (mime?.lowercase()) {
+            "text/csv", "text/comma-separated-values", "application/csv" -> "csv"
+            "text/tab-separated-values" -> "tsv"
+            "text/plain" -> "txt"
+            else -> null
+        }
+    }
+
+    private fun finishIntent(result: String) {
+        synchronized(lock) {
+            intentResult = result
+            intentAwaitingDrain = true
+        }
+        nativeWake()
     }
 
     private fun onImportResult(resultCode: Int, uri: Uri?) {
@@ -569,6 +732,7 @@ object TabToolBridge {
             importPending = false
             importAwaitingDrain = true
         }
+        nativeWake()
     }
 
     private fun finishExport(result: String) {
@@ -578,5 +742,6 @@ object TabToolBridge {
             exportAwaitingDrain = true
             exportSource = null
         }
+        nativeWake()
     }
 }

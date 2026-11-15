@@ -177,7 +177,7 @@ fn library_with_clock<'a>(
     LibraryView::new(
         files,
         errors,
-        &SystemMetadata,
+        SystemMetadata,
         en_locale(),
         clock,
         MobileMetrics::phone(),

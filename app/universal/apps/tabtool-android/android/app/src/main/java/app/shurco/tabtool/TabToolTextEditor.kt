@@ -92,6 +92,7 @@ class TabToolTextEditor(context: Context) : AppCompatEditText(context) {
         } else {
             TabToolBridge.nativeTextCancelled()
         }
+        TabToolBridge.nativeWake()
         hideAndRemove()
     }
 

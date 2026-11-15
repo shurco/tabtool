@@ -263,6 +263,32 @@ fn a_failed_save_restores_the_edits_and_undo() {
 }
 
 #[test]
+fn a_finished_job_is_visible_without_joining_it() {
+    let fixture = Fixture::new();
+    let path = fixture.csv(300);
+    let mut document = open_without_header(&path);
+    document.set_large_cell("X", 2, 1).expect("edit the cell");
+    let destination = fixture.directory().join("missing").join("copy.csv");
+
+    document
+        .start_large_save(Some(&destination))
+        .expect("start the failing save");
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while !document.large_save_finished() {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the failed save did not finish"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(2));
+    }
+    assert!(document.large_save_finished());
+    assert!(matches!(document.large_status(), LargeStatus::Saving(_)));
+    document
+        .wait_for_large_save()
+        .expect_err("the missing parent must fail the save");
+}
+
+#[test]
 fn job_wait_reports_the_adopted_source_before_the_document_applies_it() {
     let fixture = Fixture::new();
     let path = fixture.csv(300);

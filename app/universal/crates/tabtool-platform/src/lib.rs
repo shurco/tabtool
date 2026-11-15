@@ -19,8 +19,8 @@ pub use locale::{SystemInfo, decimal_separator};
 #[cfg(not(target_os = "android"))]
 pub use locale::{SystemLocale, system_locale};
 pub use services::{
-    BackHandler, Clipboard, DocumentFiles, Insets, OpenUrl, PlatformError, PlatformErrors, Share,
-    TABLE_EXTENSIONS,
+    BackHandler, Clipboard, CopyOutcome, DocumentFiles, Insets, OpenUrl, PlatformError,
+    PlatformErrors, Share, TABLE_EXTENSIONS,
 };
 pub use settings::{
     DEFAULT_ROW_HEIGHT, LARGE_FILE_THRESHOLDS_MIB, MOBILE_DEFAULT_ROW_HEIGHT, MOBILE_ROW_HEIGHTS,

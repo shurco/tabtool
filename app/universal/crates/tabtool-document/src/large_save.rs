@@ -89,6 +89,19 @@ impl LargeSaveJob {
         self.shared.cancel.store(true, Ordering::Release);
     }
 
+    /// Whether the worker has finished, without joining it.
+    ///
+    /// A caller that polls progress needs this to notice an early failure: the
+    /// progress value can stay below 1.0 when the writer cannot start.
+    #[must_use]
+    pub fn is_finished(&self) -> bool {
+        let inner = lock(&self.shared.inner);
+        inner
+            .handle
+            .as_ref()
+            .is_some_and(std::thread::JoinHandle::is_finished)
+    }
+
     /// Waits for the worker and reports how it ended.
     ///
     /// Every handle receives the same cached outcome, including the original
@@ -237,6 +250,16 @@ impl Document {
             | LargeStatus::Ready
             | LargeStatus::Stale { .. } => None,
         }
+    }
+
+    /// Whether the running large save has stopped, without joining it.
+    ///
+    /// This reports an early failure too, where the progress never reaches 1.0.
+    #[must_use]
+    pub fn large_save_finished(&self) -> bool {
+        self.large_save
+            .as_ref()
+            .is_some_and(LargeSaveJob::is_finished)
     }
 
     /// Saves a large document and applies the outcome before returning.

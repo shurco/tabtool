@@ -148,6 +148,20 @@ pub trait DocumentFiles {
     fn rename(&self, from: &Path, to: &Path) -> std::io::Result<()>;
 }
 
+/// What an asynchronous export picker did.
+///
+/// The neutral [`DocumentFiles`] methods answer with `bool`; Android also
+/// keeps the typed outcome so the UI can distinguish a cancel from a failure.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CopyOutcome {
+    /// The copy was written.
+    Copied,
+    /// The user dismissed the picker.
+    Cancelled,
+    /// The copy failed; the cause is reported through [`PlatformErrors`].
+    Failed,
+}
+
 /// Window insets in points.
 pub trait Insets {
     /// `[left, top, right, bottom]` safe-area insets.

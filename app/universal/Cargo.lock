@@ -3601,8 +3601,12 @@ dependencies = [
  "ndk-context",
  "serde_json",
  "tabtool-core",
+ "tabtool-document",
  "tabtool-i18n",
  "tabtool-platform",
+ "tabtool-settings",
+ "tabtool-ui",
+ "tempfile",
  "winit",
 ]
 

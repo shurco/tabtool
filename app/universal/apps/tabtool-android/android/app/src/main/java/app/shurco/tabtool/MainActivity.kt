@@ -19,7 +19,24 @@ class MainActivity : GameActivity() {
         super.onCreate(savedInstanceState)
         TabToolBridge.attach(this)
         onBackPressedDispatcher.addCallback(this, editorBackCallback)
+        TabToolBridge.handleIntent(intent)
         window.decorView.post { window.decorView.requestApplyInsets() }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        TabToolBridge.handleIntent(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        TabToolBridge.updateForeground(true)
+    }
+
+    override fun onPause() {
+        TabToolBridge.updateForeground(false)
+        super.onPause()
     }
 
     override fun onApplyWindowInsets(view: View, insets: WindowInsetsCompat): WindowInsetsCompat {
