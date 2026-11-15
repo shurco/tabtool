@@ -36,11 +36,8 @@ pub fn parse_locale(tag: &str) -> Locale {
 /// Locales outside the two CSV decimal marks, or an unparsable tag, keep the
 /// dot, which is the default new document format.
 pub fn decimal_separator(locale: &str) -> String {
-    let tag = locale.replace('_', "-");
-    let Ok(locale) = Locale::try_from_str(&tag) else {
-        return ".".to_string();
-    };
-    let Ok(formatter) = DecimalFormatter::try_new(locale.into(), Default::default()) else {
+    let Ok(formatter) = DecimalFormatter::try_new(parse_locale(locale).into(), Default::default())
+    else {
         return ".".to_string();
     };
     let mut number = Decimal::from(15);

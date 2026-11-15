@@ -10,6 +10,12 @@ fn the_decimal_separator_comes_from_the_locale() {
 }
 
 #[test]
+fn a_posix_tag_keeps_its_decimal_separator() {
+    assert_eq!(decimal_separator("de_DE.UTF-8"), ",");
+    assert_eq!(decimal_separator("fr_FR@euro"), ",");
+}
+
+#[test]
 fn an_unknown_locale_keeps_the_dot() {
     assert_eq!(decimal_separator("not a locale"), ".");
     assert_eq!(decimal_separator(""), ".");
