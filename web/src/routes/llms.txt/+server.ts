@@ -5,7 +5,7 @@ export const prerender = true;
 export function GET() {
 	const body = `# TabTool
 
-> A native, open-source CSV editor for macOS 14+ and iOS 17+.
+> A native, open-source CSV editor for macOS 14+ and iOS 17+. Windows, Linux, and Android ports are in development in Rust.
 > Free on the App Store. No account, no network access, no analytics.
 
 TabTool opens CSV, TSV, and plain text files, detects the encoding,
@@ -29,6 +29,7 @@ are no formulas, styles, charts, or pivot tables.
 
 - Price: free.
 - Platforms: macOS 14 or later; iOS 17 or later on iPhone and iPad.
+- Roadmap: Windows, Linux, and Android ports are in development in Rust. No dates yet.
 - Benchmark file: 5 GiB, 68.2 million rows, 8 columns; full index 1.97 seconds, 43 MiB.
 - Release app: 5 GiB, 77.7 million rows; full index 2.7 seconds, about 91 MB.
 - Save with one edit: 6.3 seconds for the 5 GiB file, streamed with progress and cancel.
@@ -49,7 +50,7 @@ are no formulas, styles, charts, or pivot tables.
 
 - You need formulas, charts, pivot tables, or multiple sheets: use a spreadsheet.
 - You need SQL joins across several CSV files: TableTool by TablePlus has that.
-- You need Windows or Linux: TabTool is Apple-only today; the ports are planned.
+- You need Windows, Linux, or Android today: TabTool is Apple-only today; the Rust ports are in development.
 
 Last updated: 2026-11-15
 `;

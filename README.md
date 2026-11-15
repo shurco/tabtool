@@ -4,7 +4,7 @@
 
 # TabTool
 
-A modern, independent CSV editor for macOS and iOS in Swift. The app opens CSV/TSV/text files, detects the format automatically, lets you edit the table, and saves/exports data in the selected encoding and with the selected delimiter.
+A modern, independent CSV editor. The macOS and iOS apps are written in Swift. Windows, Linux, and Android ports are in development in Rust. The app opens CSV/TSV/text files, detects the format automatically, lets you edit the table, and saves/exports data in the selected encoding and with the selected delimiter.
 
 TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. One listing (universal purchase) covers the Mac, iPhone, and iPad. The bundle ID is `app.shurco.tabtool`.
 
@@ -19,6 +19,10 @@ TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. One listing (uni
 If TabTool saves you time, a rating on the App Store helps other people find it:
 <https://apps.apple.com/app/id6827919069?action=write-review>. It takes a minute,
 and it is the signal the store uses to show the app to more people.
+
+## Roadmap
+
+The macOS and iOS apps are available now. Windows, Linux, and Android are a Rust port in development. No dates are promised until a build exists; the repository is the source of truth for progress.
 
 ## Screenshots
 

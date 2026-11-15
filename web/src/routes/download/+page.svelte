@@ -8,7 +8,7 @@
 
 	const title = 'Download TabTool — free CSV editor for macOS and iOS';
 	const description =
-		'TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. Windows, Linux, and Android are planned. Download it, or build it from source.';
+		'TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+. Windows, Linux, and Android ports are in development in Rust. Download it, or build it from source.';
 
 	const jsonLd = [
 		{
@@ -78,8 +78,8 @@
 		<SectionHeader
 			index="PL"
 			kicker="Platforms"
-			title="What exists, what is planned."
-			lede="Windows, Linux, and Android are planned. No dates are promised until a build exists."
+			title="What exists, what is in development."
+			lede="Windows, Linux, and Android are in development in Rust. No dates are promised until a build exists."
 		/>
 		<Roadmap />
 	</div>

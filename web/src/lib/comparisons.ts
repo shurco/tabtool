@@ -110,7 +110,8 @@ export const comparisons: Comparison[] = [
 			'Maintained code: Swift 6, strict concurrency, 272 core tests and 328 app unit tests in the repository.',
 			'Documented large-file mode with a 5 GiB benchmark and a streamed save path.',
 			'Sorting, iOS filters, drag-and-drop reordering, and an iPhone editor.',
-			'Format detection with an override bar for every detected value.'
+			'Format detection with an override bar for every detected value.',
+			'Windows, Linux, and Android ports are in development in Rust.'
 		],
 		verdict:
 			'If you need a free Mac CSV viewer today and never touch huge files, the original TableTool still works. If you want an editor that is maintained, handles multi-gigabyte files, and runs on iPhone, TabTool is the successor in spirit.',

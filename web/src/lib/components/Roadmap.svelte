@@ -4,7 +4,7 @@
 
 <ul class="roadmap">
 	{#each platforms as platform (platform.name)}
-		<li class="roadmap__row" class:is-planned={platform.tone === 'planned'}>
+		<li class="roadmap__row" class:is-development={platform.tone === 'development'}>
 			<span class="roadmap__name">{platform.name}</span>
 			<span class="roadmap__req mono">{platform.requirement}</span>
 			<span class="roadmap__status mono">
@@ -16,8 +16,8 @@
 </ul>
 
 <p class="roadmap__footnote">
-	macOS and iOS are on the App Store. Other platforms are planned, not promised. No dates until a build exists. The repository is the source of
-	truth.
+	macOS and iOS are on the App Store. Windows, Linux, and Android are in development in Rust, not promised. No dates until a build exists. The
+	repository is the source of truth.
 </p>
 
 <style>
@@ -61,7 +61,7 @@
 		background: var(--accent);
 	}
 
-	.is-planned .roadmap__dot {
+	.is-development .roadmap__dot {
 		background: var(--warn);
 	}
 

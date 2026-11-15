@@ -66,8 +66,8 @@ export const features: Feature[] = [
 		index: '09',
 		wide: true,
 		title: 'Native code, not a browser in a window',
-		body: 'macOS and iOS are pure Swift: a SwiftUI shell, an AppKit grid on the Mac, no Electron and no bundled web runtime. The release build is 2.7 MB on macOS and 2.5 MB on iOS, launches at once, and scrolls at native speed. The Windows and Linux ports are planned in Rust.',
-		tags: ['Swift 6', 'AppKit + SwiftUI', 'No Electron', 'Rust ports planned']
+		body: 'macOS and iOS are pure Swift: a SwiftUI shell, an AppKit grid on the Mac, no Electron and no bundled web runtime. The release build is 2.7 MB on macOS and 2.5 MB on iOS, launches at once, and scrolls at native speed. Windows, Linux, and Android ports are in development in Rust.',
+		tags: ['Swift 6', 'AppKit + SwiftUI', 'No Electron', 'Rust ports in development']
 	}
 ];
 
@@ -121,24 +121,24 @@ export const platforms = [
 	},
 	{
 		name: 'Windows',
-		requirement: 'Not started',
-		status: 'Planned',
-		tone: 'planned',
-		note: 'Planned in Rust. No date yet.'
+		requirement: 'Rust port in progress',
+		status: 'In development',
+		tone: 'development',
+		note: 'In development in Rust. No date yet.'
 	},
 	{
 		name: 'Linux',
-		requirement: 'Not started',
-		status: 'Planned',
-		tone: 'planned',
-		note: 'Planned in Rust. No date yet.'
+		requirement: 'Rust port in progress',
+		status: 'In development',
+		tone: 'development',
+		note: 'In development in Rust. No date yet.'
 	},
 	{
 		name: 'Android',
-		requirement: 'Not started',
-		status: 'Planned',
-		tone: 'planned',
-		note: 'Language not chosen yet. No date.'
+		requirement: 'Rust port in progress',
+		status: 'In development',
+		tone: 'development',
+		note: 'In development in Rust. No date yet.'
 	}
 ];
 
@@ -173,7 +173,7 @@ export const faqs = [
 	},
 	{
 		q: 'What about Windows, Linux, and Android?',
-		a: 'Windows and Linux will be written in Rust. Android is planned with no language chosen yet. Each platform needs its own editor UI, file handling, and tests, so no dates are promised until a build exists; follow the repository for announcements.'
+		a: 'Windows, Linux, and Android are in development in Rust. Each platform needs its own editor UI, file handling, and tests, so no dates are promised until a build exists; follow the repository for announcements.'
 	},
 	{
 		q: 'Is the iOS app a companion or a full editor?',
