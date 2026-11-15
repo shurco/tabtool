@@ -1,7 +1,8 @@
 //! `xtask version`: reads and bumps `app/universal/version.json`.
 //!
-//! The file holds exactly the Android version, `{"name": "1.0.0", "build":
-//! "1"}`, and Gradle reads it for `versionName` and `versionCode`. Bumping
+//! The file holds the Rust apps' version, `{"name": "1.0.0", "build": "1"}`:
+//! Gradle reads it for `versionName` and `versionCode`, and `tabtool-core`
+//! exposes `name` as `tabtool_core::VERSION`. Bumping
 //! follows `scripts/lib/version`: the build number always increases, and
 //! patch, minor and major also move the semantic version.
 

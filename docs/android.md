@@ -211,7 +211,8 @@ PASS/FAIL/NOT VERIFIED evidence, is in
 
 ## Version
 
-The Android version lives in `app/universal/version.json`, apart from the Apple
+The Android version lives in `app/universal/version.json` (the same `name` is
+the desktop version, see [release.md](release.md)), apart from the Apple
 store version in `app/apple/version.json` because the two stores version
 independently:
 
@@ -375,8 +376,9 @@ whatever mask the launcher uses.
 
 ## CI
 
-`.github/workflows/universal.yml` has an `android` job that runs on every push
-and pull request touching `app/universal`:
+`.github/workflows/android.yml` is a reusable workflow. `universal.yml` calls it
+on every push and pull request touching `app/universal`, and `release.yml`
+calls it for tags and manual builds ([release.md](release.md)):
 
 - JDK 17, Rust 1.99.1 with both Android targets, and the NDK 28.2.13676358,
   installed only when the runner does not already have it;
@@ -394,7 +396,8 @@ The release APK and AAB are built only when the repository has the signing
 secrets. They are named `TABTOOL_ANDROID_KEYSTORE_BASE64` (the keystore,
 base64-encoded, because a secret cannot hold a file), plus
 `TABTOOL_ANDROID_KEYSTORE_PASSWORD`, `TABTOOL_ANDROID_KEY_ALIAS` and
-`TABTOOL_ANDROID_KEY_PASSWORD`. The job fails when the base64 keystore is set
+`TABTOOL_ANDROID_KEY_PASSWORD`. A tag build (`require-signing: true`) fails
+without them. The job also fails when the base64 keystore is set
 but any of the other three is empty, so a half-configured release cannot fall
 back to the debug key. It decodes the keystore into `$RUNNER_TEMP`, points
 `TABTOOL_ANDROID_KEYSTORE` at it, builds both artifacts, runs
@@ -408,4 +411,5 @@ the debug APK; no emulator runs in CI.
 The app is one activity with no background services, no network permission and
 no store metadata in this repository. `minSdk` 26 excludes Android 7.x and
 older, and the x86_64 library exists for emulators only. Nothing here uploads a
-signed AAB to Google Play: the CI job stops at the artifacts.
+signed AAB to Google Play: a tag attaches the signed APK and AAB to the GitHub
+Release, and the upload to Play stays manual.

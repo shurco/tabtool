@@ -141,6 +141,9 @@ Apple implementation.
 Build and test from `app/universal` with Rust 1.99.1 (`cargo test --workspace`,
 `cargo run -p tabtool-desktop -- --smoke`); the [universal
 docs](app/universal/docs/universal.md) cover the toolchain, goldens and Android host.
+A `v*` tag builds Windows and Linux (x86_64 and aarch64) and Android and publishes a
+GitHub Release; Actions > Release > Run workflow builds selected platforms on demand
+([release docs](docs/release.md)).
 
 ## Build
 
@@ -220,6 +223,7 @@ Known limits: an accessibility client (VoiceOver, automation tools) reading the 
 - [CSV format and editor behavior](docs/csv-format.md)
 - [Desktop UI parity, snapshots and manual checks](docs/desktop-ui.md)
 - [Android build, signing and release](docs/android.md)
+- [Rust app releases: tags, manual builds and files](docs/release.md)
 
 The local working spec/plan and execution log live in `.superpowers/sdd/` and are not part of git.
 
