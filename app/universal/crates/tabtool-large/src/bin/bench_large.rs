@@ -25,12 +25,10 @@ use std::time::{Duration, Instant};
 use tabtool_large::{
     CellKey, CellOverlay, LargeCSVSource, LargeFile, LargeFileIndexer, MappedFile, sniff, write,
 };
-use tabtool_testdata::{LargeOptions, generate_large_csv};
+use tabtool_testdata::{LargeOptions, SplitMix64, generate_large_csv};
 
 use cli::{ensure_free_space, requested_gib, target_bytes};
-use measure::{
-    SplitMix64, compact_rows, footprint, gib, mib, millions, milliseconds, peak_footprint, seconds,
-};
+use measure::{compact_rows, footprint, gib, mib, millions, milliseconds, peak_footprint, seconds};
 
 const COLUMNS: usize = 8;
 const MULTILINE_EVERY: usize = 1_000;

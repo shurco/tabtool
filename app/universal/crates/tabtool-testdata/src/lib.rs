@@ -2,7 +2,9 @@
 
 mod generators;
 
-pub use generators::{LargeFixture, LargeOptions, generate_large_csv, make_benchmark_csv};
+pub use generators::{
+    LargeFixture, LargeOptions, SplitMix64, generate_large_csv, make_benchmark_csv,
+};
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;

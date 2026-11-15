@@ -319,30 +319,13 @@ pub fn row_ranges(bytes: &[u8], configuration: &CsvConfiguration) -> Vec<Range<u
 
 #[cfg(test)]
 mod tests {
+    use tabtool_testdata::SplitMix64;
+
     use super::{bit_range, byte_mask};
-
-    /// A local SplitMix64 stream so the mask test needs no dependency.
-    struct SplitMix64Probe {
-        state: u64,
-    }
-
-    impl SplitMix64Probe {
-        fn new(seed: u64) -> Self {
-            Self { state: seed }
-        }
-
-        fn next(&mut self) -> u64 {
-            self.state = self.state.wrapping_add(0x9E37_79B9_7F4A_7C15);
-            let mut value = self.state;
-            value = (value ^ (value >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-            value = (value ^ (value >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-            value ^ (value >> 31)
-        }
-    }
 
     #[test]
     fn byte_mask_matches_naive_classification() {
-        let mut generator = SplitMix64Probe::new(0x5EED_1234);
+        let mut generator = SplitMix64::new(0x5EED_1234);
         let targets = [0u8, 1, 9, 10, 13, 34, 44, 127, 128, 255];
         for _ in 0..10_000 {
             let word = generator.next();

@@ -28,7 +28,10 @@ use tabtool_ui::mobile::{
 use tabtool_ui::{Theme, UiHarness};
 use tempfile::TempDir;
 
-use crate::support::{FakeTouchInput, multiline_document, small_document};
+use crate::support::{
+    FakeTouchInput, en_locale, file_document, header_configuration, multiline_document,
+    small_document,
+};
 
 const EN: Language = Language::En;
 
@@ -510,43 +513,9 @@ fn the_accessory_reports_previous_next_and_done() {
     assert_eq!(*choice.borrow(), Some(AccessoryAction::Done));
 }
 
-#[derive(Default)]
-struct FakeTextInput {
-    request: Option<TouchTextInputRequest>,
-    pending: Option<TouchTextInputOutcome>,
-}
-
-impl TouchTextInput for FakeTextInput {
-    fn open(&mut self, request: TouchTextInputRequest) {
-        self.pending = None;
-        self.request = Some(request);
-    }
-
-    fn close(&mut self) {
-        self.request = None;
-        self.pending = None;
-    }
-
-    fn commit(&mut self) {
-        self.pending = None;
-    }
-
-    fn move_to(&mut self, _rect: egui::Rect) {
-        // The sheets never move an open text session.
-    }
-
-    fn poll(&mut self) -> Option<TouchTextInputOutcome> {
-        self.pending.take()
-    }
-
-    fn is_active(&self) -> bool {
-        self.request.is_some()
-    }
-}
-
 #[test]
 fn the_touch_text_input_seam_opens_over_the_control_rect() {
-    let mut input = FakeTextInput::default();
+    let mut input = FakeTouchInput::default();
     let rect = Rect::from_min_max(pos2(40.0, 100.0), pos2(200.0, 144.0));
 
     input.open(TouchTextInputRequest {
@@ -555,12 +524,9 @@ fn the_touch_text_input_seam_opens_over_the_control_rect() {
         multiline: false,
     });
     assert!(input.is_active());
-    assert_eq!(
-        input.request.as_ref().map(|request| request.rect),
-        Some(rect)
-    );
+    assert_eq!(input.request().map(|request| request.rect), Some(rect));
 
-    input.pending = Some(TouchTextInputOutcome::Committed("Bob".to_owned()));
+    input.finish(TouchTextInputOutcome::Committed("Bob".to_owned()));
     assert_eq!(
         input.poll(),
         Some(TouchTextInputOutcome::Committed("Bob".to_owned()))
@@ -622,32 +588,6 @@ fn the_mobile_primitives_stay_platform_neutral() {
 
 fn sheet_style() -> SheetStyle {
     SheetStyle::new(phone(), EN)
-}
-
-fn en_locale() -> tabtool_core::Locale {
-    tabtool_core::Locale::try_from_str("en-US").expect("en-US is a valid locale")
-}
-
-fn header_configuration() -> CsvConfiguration {
-    CsvConfiguration {
-        first_row_as_header: true,
-        ..CsvConfiguration::default()
-    }
-}
-
-fn file_document(
-    directory: &TempDir,
-    name: &str,
-    bytes: &[u8],
-    configuration: CsvConfiguration,
-) -> Document {
-    let path = directory.path().join(name);
-    std::fs::write(&path, bytes).expect("the fixture file is written");
-    let mut document = Document::new(configuration.clone());
-    document
-        .load_from_bytes(bytes, Some(&path), Some(configuration), false)
-        .expect("the fixture parses");
-    document
 }
 
 struct FormatFixture {
@@ -1146,7 +1086,7 @@ fn detect_is_disabled_without_a_file_path() {
 fn a_dirty_parsing_change_asks_before_discarding_edits() {
     let directory = TempDir::new().expect("a temporary directory");
     let mut document = file_document(
-        &directory,
+        directory.path(),
         "notes.csv",
         b"Name,Amount\nAlice,1.5\nBob,2\n",
         header_configuration(),
@@ -1186,7 +1126,7 @@ fn a_failed_reparse_keeps_the_table_and_reports_format_not_applied() {
         ..CsvConfiguration::default()
     };
     let document = file_document(
-        &directory,
+        directory.path(),
         "legacy.csv",
         b"Name,Amount\nAlice,\xFF\n",
         configuration,
@@ -1211,7 +1151,7 @@ fn a_failed_reparse_keeps_the_table_and_reports_format_not_applied() {
 fn detect_reads_the_file_and_applies_the_detected_format() {
     let directory = TempDir::new().expect("a temporary directory");
     let document = file_document(
-        &directory,
+        directory.path(),
         "detected.csv",
         b"Name;Amount\nAlice;1\n",
         header_configuration(),
@@ -1721,7 +1661,7 @@ fn an_ambiguous_export_asks_before_writing() {
 fn an_unencodable_export_is_refused() {
     let directory = TempDir::new().expect("a temporary directory");
     let document = file_document(
-        &directory,
+        directory.path(),
         "cyrillic.csv",
         "Name,Note\nAlice,Привет\n".as_bytes(),
         header_configuration(),

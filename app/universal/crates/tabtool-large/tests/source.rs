@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use support::{TempDirectory, generate_large_csv};
+use support::{TempDirectory, large_csv};
 use tabtool_core::{CsvConfiguration, CsvError, CsvParser, CsvTable, Encoding, RowSource};
 #[cfg(unix)]
 use tabtool_large::replace_file;
@@ -84,16 +84,7 @@ fn generated_path(
     seed: u64,
 ) -> (PathBuf, usize) {
     let path = directory.path().join("big.csv");
-    let (rows, _) = generate_large_csv(
-        &path,
-        target_bytes,
-        columns,
-        quoted,
-        multiline_every,
-        false,
-        false,
-        seed,
-    );
+    let rows = large_csv(&path, target_bytes, columns, quoted, multiline_every, seed);
     (path, rows)
 }
 

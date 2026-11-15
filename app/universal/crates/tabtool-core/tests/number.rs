@@ -9,26 +9,9 @@
 
 use regex::Regex;
 use tabtool_core::{is_numeric, localized};
-
-/// The Apple suite's seeded generator, reproduced bit for bit so the random
-/// inputs are the same.
-struct SeededGenerator {
-    state: u64,
-}
-
-impl SeededGenerator {
-    fn new(seed: u64) -> Self {
-        Self { state: seed }
-    }
-
-    fn next(&mut self) -> u64 {
-        self.state = self.state.wrapping_add(0x9E37_79B9_7F4A_7C15);
-        let mut value = self.state;
-        value = (value ^ (value >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        value = (value ^ (value >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-        value ^ (value >> 31)
-    }
-}
+// The Apple suite's seeded generator, reproduced bit for bit so the random
+// inputs are the same.
+use tabtool_testdata::SplitMix64;
 
 /// The Apple pattern, compiled independently of the implementation.
 fn reference_regex(decimal_mark: &str) -> Regex {
@@ -107,7 +90,7 @@ fn numeric_agrees_with_reference_regex_on_random_ascii_text() {
     let alphabet: Vec<char> = "0123456789.,+-eE \t\n\r\u{0B}\u{0C}x".chars().collect();
     let marks = [".", ","];
     let references = marks.map(reference_regex);
-    let mut generator = SeededGenerator::new(11);
+    let mut generator = SplitMix64::new(11);
     for _ in 0..50_000 {
         let length = (generator.next() % 8) as usize;
         let text: String = (0..length)

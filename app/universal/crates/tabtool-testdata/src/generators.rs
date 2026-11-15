@@ -44,21 +44,30 @@ pub struct LargeFixture {
 }
 
 /// SplitMix64, matching `SeededGenerator` in `TestSupport.swift`.
-struct SplitMix64 {
+///
+/// The bit stream matches Swift, but [`SplitMix64::below`] reduces with modulo
+/// while Swift's `randomElement`/`Int.random` use rejection sampling.
+pub struct SplitMix64 {
     state: u64,
 }
 
 impl SplitMix64 {
-    fn new(seed: u64) -> Self {
+    pub fn new(seed: u64) -> Self {
         Self { state: seed }
     }
 
-    fn next(&mut self) -> u64 {
+    #[allow(clippy::should_implement_trait)] // Infinite stream; `Option` adds nothing.
+    pub fn next(&mut self) -> u64 {
         self.state = self.state.wrapping_add(0x9E37_79B9_7F4A_7C15);
         let mut value = self.state;
         value = (value ^ (value >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
         value = (value ^ (value >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
         value ^ (value >> 31)
+    }
+
+    /// A value below `bound`, which must be greater than zero.
+    pub fn below(&mut self, bound: usize) -> usize {
+        (self.next() % bound as u64) as usize
     }
 }
 

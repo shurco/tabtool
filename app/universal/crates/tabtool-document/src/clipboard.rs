@@ -8,7 +8,7 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use tabtool_core::{CsvError, Locale, convert_decimal_mark, make_tsv, parse_tsv};
+use tabtool_core::{CsvError, convert_decimal_mark, make_tsv, parse_tsv};
 use tabtool_large::LargeFile;
 
 use crate::Document;
@@ -20,16 +20,15 @@ impl Document {
     /// rows, as tab-separated text. Returns `None` when nothing is selected.
     ///
     /// Numeric cells use `decimal_separator`; text is copied as is, with tabs
-    /// and line breaks inside cells flattened. The locale is accepted for API
-    /// parity with the callers that also sort; the separator is supplied
+    /// and line breaks inside cells flattened. The separator is supplied
     /// explicitly because the document layer has no locale decimal data.
     /// A column selection copies only the visible rows (the applied filter's
     /// snapshot, or every row without a filter), never hidden rows.
-    pub fn copy_selection(&self, locale: &Locale, decimal_separator: &str) -> Option<String> {
+    pub fn copy_selection(&self, decimal_separator: &str) -> Option<String> {
         let source = self.row_source()?;
 
         if !self.selection.rows.is_empty() {
-            return self.copy_rows(&self.selection.rows, locale, decimal_separator);
+            return self.copy_rows(&self.selection.rows, decimal_separator);
         }
         if self.selection.columns.is_empty() {
             return None;
@@ -76,12 +75,7 @@ impl Document {
     /// returns `None` (and raises [`DocumentNotice::CopyLimitExceeded`]) when
     /// the copy would exceed [`LargeFile::MAX_COPY_CELLS`]; an in-memory
     /// document has no such limit.
-    pub fn copy_rows(
-        &self,
-        rows: &BTreeSet<usize>,
-        _locale: &Locale,
-        decimal_separator: &str,
-    ) -> Option<String> {
+    pub fn copy_rows(&self, rows: &BTreeSet<usize>, decimal_separator: &str) -> Option<String> {
         let source = self.row_source()?;
         let row_count = source.row_count();
         let column_count = source.column_count();

@@ -19,6 +19,9 @@ tabtool-core = { path = "../tabtool-core" }
 tabtool-testdata = { path = "../tabtool-testdata", optional = true }
 tempfile = "3"
 
+[dev-dependencies]
+tabtool-testdata = { path = "../tabtool-testdata" }
+
 [[bin]]
 name = "bench-large"
 path = "src/bin/bench_large.rs"

@@ -73,10 +73,7 @@ fn copying_rows_uses_all_columns_in_visual_order() {
     let mut document = loaded("a,b\nc,d\n");
     select_rows(&mut document, [0]);
 
-    assert_eq!(
-        document.copy_selection(&locale("en-US"), "."),
-        Some("a\tb".to_string())
-    );
+    assert_eq!(document.copy_selection("."), Some("a\tb".to_string()));
 }
 
 #[test]
@@ -84,10 +81,7 @@ fn copying_columns_uses_all_rows() {
     let mut document = loaded("a,b\nc,d\n");
     select_columns(&mut document, [1]);
 
-    assert_eq!(
-        document.copy_selection(&locale("en-US"), "."),
-        Some("b\nd".to_string())
-    );
+    assert_eq!(document.copy_selection("."), Some("b\nd".to_string()));
 }
 
 #[test]
@@ -96,10 +90,7 @@ fn copy_selection_uses_visual_column_order() {
     document.move_columns(&BTreeSet::from([1]), 0);
     select_rows(&mut document, [0]);
 
-    assert_eq!(
-        document.copy_selection(&locale("en-US"), "."),
-        Some("b\ta".to_string())
-    );
+    assert_eq!(document.copy_selection("."), Some("b\ta".to_string()));
 }
 
 #[test]
@@ -110,10 +101,7 @@ fn rows_win_over_selected_columns() {
         columns: BTreeSet::from([1]),
     };
 
-    assert_eq!(
-        document.copy_selection(&locale("en-US"), "."),
-        Some("a\tb".to_string())
-    );
+    assert_eq!(document.copy_selection("."), Some("a\tb".to_string()));
 }
 
 #[test]
@@ -121,7 +109,7 @@ fn copy_rows_copies_the_requested_rows() {
     let document = loaded("r0,v0,q0\nr1,v1,q 1\nr2,v2,q 2\n");
 
     assert_eq!(
-        document.copy_rows(&BTreeSet::from([1, 2]), &locale("en-US"), "."),
+        document.copy_rows(&BTreeSet::from([1, 2]), "."),
         Some("r1\tv1\tq 1\nr2\tv2\tq 2".to_string())
     );
 }
@@ -130,7 +118,7 @@ fn copy_rows_copies_the_requested_rows() {
 fn copy_without_a_selection_copies_nothing() {
     let document = loaded("a,b\nc,d\n");
 
-    assert_eq!(document.copy_selection(&locale("en-US"), "."), None);
+    assert_eq!(document.copy_selection("."), None);
 }
 
 #[test]
@@ -138,16 +126,13 @@ fn copy_ignores_out_of_range_indexes() {
     let mut document = loaded("a,b\nc,d\n");
 
     select_rows(&mut document, [9]);
-    assert_eq!(document.copy_selection(&locale("en-US"), "."), None);
+    assert_eq!(document.copy_selection("."), None);
 
     select_columns(&mut document, [1, 9]);
-    assert_eq!(
-        document.copy_selection(&locale("en-US"), "."),
-        Some("b\nd".to_string())
-    );
+    assert_eq!(document.copy_selection("."), Some("b\nd".to_string()));
 
     select_columns(&mut document, [9]);
-    assert_eq!(document.copy_selection(&locale("en-US"), "."), None);
+    assert_eq!(document.copy_selection("."), None);
 }
 
 #[test]
@@ -163,7 +148,7 @@ fn copy_flattens_tabs_and_line_breaks_and_localizes_numbers() {
     select_rows(&mut document, [0, 1]);
 
     assert_eq!(
-        document.copy_selection(&locale("en-US"), "."),
+        document.copy_selection("."),
         Some("1.5\ta b c\n2.5\ty".to_string())
     );
 }
@@ -173,27 +158,23 @@ fn copy_uses_the_supplied_decimal_separator() {
     let mut document = loaded("1.5,2\n");
     select_rows(&mut document, [0]);
 
-    assert_eq!(
-        document.copy_selection(&locale("de-DE"), ","),
-        Some("1,5\t2".to_string())
-    );
+    assert_eq!(document.copy_selection(","), Some("1,5\t2".to_string()));
 }
 
 #[test]
 fn an_in_memory_copy_has_no_cell_limit() {
     let mut document = wide_document(1_000, 1_001);
-    let en = locale("en-US");
 
     select_columns(&mut document, 0..1_000);
     let copied = document
-        .copy_selection(&en, ".")
+        .copy_selection(".")
         .expect("in-memory columns are not capped");
     assert_eq!(copied.len(), 1_999_999);
     assert_eq!(document.notice(), None);
 
     select_rows(&mut document, 0..1_000);
     assert!(
-        document.copy_selection(&en, ".").is_some(),
+        document.copy_selection(".").is_some(),
         "in-memory rows are not capped"
     );
     assert_eq!(document.notice(), None);
@@ -205,7 +186,7 @@ fn in_memory_row_copy_is_not_capped() {
     let rows: BTreeSet<usize> = (0..1_000).collect();
 
     assert!(
-        document.copy_rows(&rows, &locale("en-US"), ".").is_some(),
+        document.copy_rows(&rows, ".").is_some(),
         "in-memory rows are not capped"
     );
     assert_eq!(document.notice(), None);

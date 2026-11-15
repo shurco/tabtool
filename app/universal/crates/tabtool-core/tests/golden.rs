@@ -472,7 +472,7 @@ fn check_sort(locale_name: &str, document: &Value, locale: &Locale) {
 }
 
 /// Rebuilds every filter case and compares the matching rows.
-fn check_filters(locale_name: &str, document: &Value, locale: &Locale) {
+fn check_filters(locale_name: &str, document: &Value) {
     let cases = document["filters"]
         .as_array()
         .expect("filter cases are an array");
@@ -505,7 +505,7 @@ fn check_filters(locale_name: &str, document: &Value, locale: &Locale) {
                 }
             })
             .collect();
-        let matching = RowFilter { criteria }.matching_rows(&table, ".", locale);
+        let matching = RowFilter { criteria }.matching_rows(&table, ".");
         let expected: Vec<usize> = case["matching"]
             .as_array()
             .expect("matching is an array")
@@ -684,7 +684,7 @@ fn rust_matches_every_swift_golden() {
 
         check_fixtures(locale_name, &document);
         check_sort(locale_name, &document, &locale);
-        check_filters(locale_name, &document, &locale);
+        check_filters(locale_name, &document);
         check_clipboard(locale_name, &document);
         check_export(locale_name, &document);
         check_encoding_oracle(locale_name, &document);

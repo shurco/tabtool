@@ -14,20 +14,12 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use tabtool_core::{
-    ColumnId, CriterionId, CsvTable, FilterCriterion, FilterOperator, Locale, RowFilter, RowSource,
+    ColumnId, CriterionId, CsvTable, FilterCriterion, FilterOperator, RowFilter, RowSource,
 };
 
 use crate::Document;
 
 static NEXT_CRITERION_ID: AtomicU64 = AtomicU64::new(1);
-
-/// Locale used to evaluate criteria.
-///
-/// Foundation's case-insensitive text matching is locale independent, so a
-/// fixed locale keeps the document layer free of platform locale state.
-fn filter_locale() -> Locale {
-    "en-US".parse().expect("en-US is a valid locale")
-}
 
 /// One draft filter row with its own identity.
 fn new_criterion() -> FilterCriterion {
@@ -197,13 +189,12 @@ impl RowFilterModel {
     /// is active, so an empty bar never reports a filtered view.
     fn evaluate(&mut self, filter: RowFilter, source: &dyn RowSource, decimal_mark: &str) {
         self.known_column_ids = source.column_ids();
-        let locale = filter_locale();
         if !filter.is_active(source, decimal_mark) {
             self.applied = None;
             self.visible_rows = None;
             return;
         }
-        self.visible_rows = Some(filter.matching_rows(source, decimal_mark, &locale));
+        self.visible_rows = Some(filter.matching_rows(source, decimal_mark));
         self.applied = Some(filter);
     }
 }

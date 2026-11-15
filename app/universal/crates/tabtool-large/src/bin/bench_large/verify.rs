@@ -11,7 +11,7 @@ use std::time::Duration;
 use tabtool_core::CsvConfiguration;
 use tabtool_large::{CellKey, CellOverlay, LargeCSVSource, LargeFileIndexer, MappedFile};
 
-use crate::measure::SplitMix64;
+use tabtool_testdata::SplitMix64;
 
 const COMPARE_CHUNK_BYTES: usize = 4 << 20;
 const INDEX_STEP_BYTES: usize = 8 << 20;

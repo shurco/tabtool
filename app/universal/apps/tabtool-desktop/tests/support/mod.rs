@@ -3,101 +3,14 @@
 #![allow(dead_code)]
 
 use std::collections::VecDeque;
-use std::io;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use tabtool_core::CsvConfiguration;
-use tabtool_document::{Document, Storage};
 use tabtool_platform::FileDialogs;
 
-/// In-memory [`Storage`] that counts writes and can fail them.
-pub struct MemoryStorage {
-    bytes: Mutex<Vec<u8>>,
-    reads: AtomicUsize,
-    writes: AtomicUsize,
-    fail_writes: AtomicBool,
-}
-
-impl MemoryStorage {
-    /// A storage holding `bytes`.
-    pub fn new(bytes: &[u8]) -> Self {
-        Self {
-            bytes: Mutex::new(bytes.to_vec()),
-            reads: AtomicUsize::new(0),
-            writes: AtomicUsize::new(0),
-            fail_writes: AtomicBool::new(false),
-        }
-    }
-
-    /// The bytes most recently read or written.
-    pub fn bytes(&self) -> Vec<u8> {
-        self.bytes.lock().expect("unpoisoned storage").clone()
-    }
-
-    /// How many writes reached the storage.
-    pub fn writes(&self) -> usize {
-        self.writes.load(Ordering::SeqCst)
-    }
-
-    /// Makes every write fail.
-    pub fn fail_writes(&self) {
-        self.fail_writes.store(true, Ordering::SeqCst);
-    }
-}
-
-impl Storage for MemoryStorage {
-    fn read(&self, _path: &Path) -> io::Result<Vec<u8>> {
-        self.reads.fetch_add(1, Ordering::SeqCst);
-        Ok(self.bytes())
-    }
-
-    fn write_atomic(&self, _path: &Path, data: &[u8]) -> io::Result<()> {
-        self.writes.fetch_add(1, Ordering::SeqCst);
-        if self.fail_writes.load(Ordering::SeqCst) {
-            return Err(io::Error::other("the disk is full"));
-        }
-        *self.bytes.lock().expect("unpoisoned storage") = data.to_vec();
-        Ok(())
-    }
-}
-
-/// A ready document loaded from `/virtual/document.csv`.
-pub fn loaded(storage: &MemoryStorage, configuration: CsvConfiguration) -> Document {
-    let mut document = Document::new(configuration.clone());
-    document
-        .load_from_path(
-            Path::new("/virtual/document.csv"),
-            storage,
-            Some(configuration),
-            false,
-        )
-        .expect("load the fixture");
-    document
-}
-
-/// Opens `path` through the large-file path and waits until its index is ready.
-pub fn large_ready(path: &Path) -> Document {
-    let mut document = Document::new(CsvConfiguration::default());
-    document
-        .open_large(path, None, false, 0)
-        .expect("open the large fixture");
-    if let Some(state) = document.large_state() {
-        state.indexer.wait();
-    }
-    document.poll_large_indexing();
-    document
-}
-
-/// A ready untitled document.
-pub fn untitled(configuration: CsvConfiguration) -> Document {
-    let mut document = Document::new(configuration.clone());
-    document
-        .new_document(configuration)
-        .expect("create a new document");
-    document
-}
+#[allow(unused_imports)] // Each test crate re-exports a different subset.
+pub use tabtool_document::test_support::{MemoryStorage, large_ready, loaded, untitled};
 
 /// A scripted file dialog source: one open result and one save path per call.
 pub struct FakeDialogs {

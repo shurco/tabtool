@@ -277,7 +277,7 @@ fn a_failed_reparse_reports_format_not_applied_and_keeps_the_table() {
     let before =
         fixture.with_document(|document| document.row_source().expect("source").row_count());
 
-    fixture.storage().fail_reads();
+    fixture.storage().fail_reads(true);
     fixture
         .get_by_role_and_label(Role::ComboBox, "Separator")
         .click();

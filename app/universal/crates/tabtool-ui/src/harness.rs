@@ -13,6 +13,7 @@ use egui_kittest::Harness;
 pub use egui_kittest::SnapshotResults;
 pub use egui_kittest::kittest;
 
+use crate::grid::Clipboard;
 use crate::{Theme, apply_theme, install_fonts};
 
 /// Whether image snapshot rendering is enabled for this machine.
@@ -96,5 +97,17 @@ impl<'a> Deref for UiHarness<'a> {
 impl DerefMut for UiHarness<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.harness
+    }
+}
+
+/// A clipboard that never holds text, for views whose tests never paste.
+#[derive(Default)]
+pub struct TestClipboard;
+
+impl Clipboard for TestClipboard {
+    fn copy(&mut self, _text: &str) {}
+
+    fn paste(&mut self) -> Option<String> {
+        None
     }
 }

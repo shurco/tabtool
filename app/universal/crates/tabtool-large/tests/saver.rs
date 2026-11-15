@@ -12,12 +12,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use support::{SplitMix64, TempDirectory};
+use support::TempDirectory;
 use tabtool_core::{CsvConfiguration, CsvError, CsvTable, CsvWriter, Encoding};
 use tabtool_large::{
     CellKey, CellOverlay, LargeCSVSource, LargeFileIndexer, LargeFileSaveError, LargeFileSaver,
     LargeSaveSnapshot, MappedFile, PreparedSave, save, volume_capacity, write,
 };
+use tabtool_testdata::SplitMix64;
 
 const STEP_BYTES: usize = 4096;
 /// One tebibyte; ample for every fixture here.

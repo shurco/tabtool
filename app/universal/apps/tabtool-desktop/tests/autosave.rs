@@ -187,7 +187,7 @@ fn a_failed_storage_write_keeps_the_edit_and_reports_the_failure() {
     let start = Instant::now();
 
     document.set_cell(0, 0, "edited");
-    storage.fail_writes();
+    storage.fail_writes(true);
 
     assert!(matches!(
         autosave.tick(start, &mut document, &storage),

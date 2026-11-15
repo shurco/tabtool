@@ -6,11 +6,12 @@ mod support;
 use std::ops::Range;
 
 use support::{
-    SplitMix64, expect_index_matches_parser, expect_ranges_match_rows, fixed_corpus, make_input,
-    scan_index, scan_with,
+    expect_index_matches_parser, expect_ranges_match_rows, fixed_corpus, make_input, scan_index,
+    scan_with,
 };
 use tabtool_core::CsvConfiguration;
 use tabtool_large::{RowIndex, RowScanner, ScanMode, row_ranges};
+use tabtool_testdata::SplitMix64;
 
 const EDGE_CASES: &[&str] = &[
     "",

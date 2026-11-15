@@ -6,7 +6,6 @@
 
 use std::cmp::Ordering;
 
-use icu_locale_core::Locale;
 use regex::{Regex, RegexBuilder};
 use unicode_normalization::UnicodeNormalization;
 
@@ -109,15 +108,10 @@ impl RowFilter {
     /// Ascending indexes of the rows of `source` that satisfy every active
     /// criterion; all rows when none is active.
     ///
-    /// `decimal_mark` controls numeric parsing, like sorting does. `locale` is
-    /// accepted for parity with sorting; Foundation's case-insensitive text
-    /// matching is locale-independent, so it does not change the result today.
-    pub fn matching_rows(
-        &self,
-        source: &dyn RowSource,
-        decimal_mark: &str,
-        _locale: &Locale,
-    ) -> Vec<usize> {
+    /// `decimal_mark` controls numeric parsing, like sorting does. Foundation's
+    /// case-insensitive text matching is locale-independent, so no locale is
+    /// needed.
+    pub fn matching_rows(&self, source: &dyn RowSource, decimal_mark: &str) -> Vec<usize> {
         let matchers = self.active_matchers(source, decimal_mark);
         (0..source.row_count())
             .filter(|&row| {

@@ -7,11 +7,11 @@ use tabtool_ui::harness::SnapshotResults;
 use tabtool_ui::mobile::MobileMetrics;
 use tempfile::TempDir;
 
-use crate::support::small_document;
+use crate::support::{file_document, header_configuration, small_document};
 
 use super::support::{
-    FOLD_INNER, PHONE, TABLET, VisualFiles, about_harness, export_harness, file_document,
-    filters_harness, format_harness, settings_harness,
+    FOLD_INNER, PHONE, TABLET, VisualFiles, about_harness, export_harness, filters_harness,
+    format_harness, settings_harness,
 };
 
 fn render(mut harness: UiHarness<'static>, name: &str, results: &mut SnapshotResults) {
@@ -26,6 +26,7 @@ fn format_document(directory: &TempDir) -> tabtool_document::Document {
         directory.path(),
         "Budget.csv",
         b"Name,Amount\nAlice,1\nBob,2\nCarol,3\n",
+        header_configuration(),
     )
 }
 

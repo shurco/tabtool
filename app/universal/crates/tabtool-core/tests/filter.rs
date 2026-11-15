@@ -1,14 +1,10 @@
 //! Ports of the Apple `RowFilterTests` suite, plus the Review Focus cases for
 //! skipped criteria, invalid regexes, emptiness and numeric comparison.
 
-use tabtool_core::{CsvTable, FilterCriterion, FilterOperator, Locale, RowFilter};
+use tabtool_core::{CsvTable, FilterCriterion, FilterOperator, RowFilter};
 
 const NAMES: [&str; 6] = ["Alice", "bob", "Carol", "alice smith", "", "Dave"];
 const VALUES: [&str; 6] = ["10", "9", "2.5", "abc", "", "10.0"];
-
-fn locale() -> Locale {
-    "en-US".parse().expect("test locale is valid")
-}
 
 fn make_table() -> CsvTable {
     let rows = NAMES
@@ -44,7 +40,7 @@ fn single_with_mark(
     let filter = RowFilter {
         criteria: vec![criterion],
     };
-    filter.matching_rows(table, decimal_mark, &locale())
+    filter.matching_rows(table, decimal_mark)
 }
 
 /// Rows of [`make_table`] matched by one criterion on `column`.
@@ -252,10 +248,7 @@ fn disabled_criterion_is_ignored() {
     let filter = RowFilter {
         criteria: vec![criterion],
     };
-    assert_eq!(
-        filter.matching_rows(&table, ".", &locale()).len(),
-        NAMES.len()
-    );
+    assert_eq!(filter.matching_rows(&table, ".").len(), NAMES.len());
 }
 
 #[test]
@@ -267,10 +260,7 @@ fn criteria_combine_with_and() {
             criterion(Some(table.columns[1].id), FilterOperator::LessThan, "10"),
         ],
     };
-    assert_eq!(
-        filter.matching_rows(&table, ".", &locale()),
-        Vec::<usize>::new()
-    );
+    assert_eq!(filter.matching_rows(&table, "."), Vec::<usize>::new());
 
     let loose = RowFilter {
         criteria: vec![
@@ -283,7 +273,7 @@ fn criteria_combine_with_and() {
         ],
     };
     // "abc" is not numeric, so it compares as text and sorts after "10".
-    assert_eq!(loose.matching_rows(&table, ".", &locale()), vec![0, 3]);
+    assert_eq!(loose.matching_rows(&table, "."), vec![0, 3]);
 }
 
 #[test]
@@ -295,16 +285,13 @@ fn missing_or_unknown_column_is_ignored() {
             criterion(Some(u64::MAX), FilterOperator::Equals, "x"),
         ],
     };
-    assert_eq!(
-        filter.matching_rows(&table, ".", &locale()).len(),
-        NAMES.len()
-    );
+    assert_eq!(filter.matching_rows(&table, ".").len(), NAMES.len());
 }
 
 #[test]
 fn no_active_criteria_returns_all_rows_in_order() {
     assert_eq!(
-        RowFilter { criteria: vec![] }.matching_rows(&make_table(), ".", &locale()),
+        RowFilter { criteria: vec![] }.matching_rows(&make_table(), "."),
         (0..NAMES.len()).collect::<Vec<_>>()
     );
 }
@@ -316,7 +303,7 @@ fn empty_table_yields_no_rows() {
     let filter = RowFilter {
         criteria: vec![criterion],
     };
-    assert!(filter.matching_rows(&table, ".", &locale()).is_empty());
+    assert!(filter.matching_rows(&table, ".").is_empty());
 }
 
 #[test]
@@ -377,7 +364,7 @@ fn empty_regex_is_valid_but_never_active() {
     };
     assert!(!filter.is_active(&table, "."));
     assert_eq!(
-        filter.matching_rows(&table, ".", &locale()),
+        filter.matching_rows(&table, "."),
         (0..NAMES.len()).collect::<Vec<_>>()
     );
 }

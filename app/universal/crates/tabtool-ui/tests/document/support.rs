@@ -3,86 +3,19 @@
 #![allow(dead_code)]
 
 use core::cell::{Cell, RefCell};
-use std::io;
 use std::path::Path;
 use std::rc::Rc;
 
 use tabtool_core::{CsvConfiguration, Locale};
-use tabtool_document::{Document, Storage};
+use tabtool_document::Document;
 use tabtool_ui::document::{DocumentAction, DocumentUiState, DocumentView};
-use tabtool_ui::grid::{Clipboard, GridState};
+use tabtool_ui::grid::GridState;
+use tabtool_ui::harness::TestClipboard;
 use tabtool_ui::harness::kittest::{NodeT, Queryable};
 use tabtool_ui::{Theme, UiHarness};
 
-/// An in-memory [`Storage`] that records reads and can fail them.
-pub struct MemoryStorage {
-    bytes: RefCell<Vec<u8>>,
-    fail_reads: Cell<bool>,
-}
-
-impl MemoryStorage {
-    /// A storage holding `bytes`.
-    pub fn new(bytes: &[u8]) -> Self {
-        Self {
-            bytes: RefCell::new(bytes.to_vec()),
-            fail_reads: Cell::new(false),
-        }
-    }
-
-    /// Makes every read fail.
-    pub fn fail_reads(&self) {
-        self.fail_reads.set(true);
-    }
-}
-
-impl Storage for MemoryStorage {
-    fn read(&self, _path: &Path) -> io::Result<Vec<u8>> {
-        if self.fail_reads.get() {
-            return Err(io::Error::other("the file is unavailable"));
-        }
-        Ok(self.bytes.borrow().clone())
-    }
-
-    fn write_atomic(&self, _path: &Path, data: &[u8]) -> io::Result<()> {
-        *self.bytes.borrow_mut() = data.to_vec();
-        Ok(())
-    }
-}
-
-/// A clipboard that holds no text; the chrome tests never paste.
-#[derive(Default)]
-pub struct TestClipboard;
-
-impl Clipboard for TestClipboard {
-    fn copy(&mut self, _text: &str) {}
-
-    fn paste(&mut self) -> Option<String> {
-        None
-    }
-}
-
-/// A document loaded from `/virtual/document.csv` with `configuration`.
-pub fn loaded(storage: &MemoryStorage, configuration: CsvConfiguration) -> Document {
-    let mut document = Document::new(configuration.clone());
-    document
-        .load_from_path(
-            Path::new("/virtual/document.csv"),
-            storage,
-            Some(configuration),
-            false,
-        )
-        .expect("load the fixture");
-    document
-}
-
-/// A ready document with no file path.
-pub fn untitled(configuration: CsvConfiguration) -> Document {
-    let mut document = Document::new(configuration.clone());
-    document
-        .new_document(configuration)
-        .expect("create a new document");
-    document
-}
+#[allow(unused_imports)] // Each test crate re-exports a different subset.
+pub use tabtool_document::test_support::{MemoryStorage, large_ready, loaded, untitled};
 
 /// A document whose initial read failed with `bytes` but whose storage holds
 /// valid text, so Detect Automatically can recover it.
@@ -96,19 +29,6 @@ pub fn read_failed(_storage: &MemoryStorage, configuration: CsvConfiguration) ->
             false,
         )
         .expect_err("the invalid bytes fail to decode");
-    document
-}
-
-/// Opens `path` through the large-file path and waits for its index.
-pub fn large_ready(path: &Path) -> Document {
-    let mut document = Document::new(CsvConfiguration::default());
-    document
-        .open_large(path, None, false, 0)
-        .expect("open the large fixture");
-    if let Some(state) = document.large_state() {
-        state.indexer.wait();
-    }
-    document.poll_large_indexing();
     document
 }
 

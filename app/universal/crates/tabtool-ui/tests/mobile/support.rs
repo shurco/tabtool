@@ -8,7 +8,8 @@ use egui::accesskit::Role;
 use tabtool_core::{CsvConfiguration, Locale};
 use tabtool_document::Document;
 use tabtool_i18n::Language;
-use tabtool_ui::grid::{Clipboard, GridAppearance, GridSelection, GridState};
+use tabtool_ui::grid::{GridAppearance, GridSelection, GridState};
+use tabtool_ui::harness::TestClipboard;
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::mobile::{
     FoldRegion, MobileEditTarget, MobileEditor, MobileEditorResponse, MobileEditorState,
@@ -17,12 +18,34 @@ use tabtool_ui::mobile::{
 use tabtool_ui::{Theme, UiHarness};
 use tempfile::TempDir;
 
+/// The English test locale.
+pub fn en_locale() -> Locale {
+    Locale::try_from_str("en-US").expect("en-US is a valid locale")
+}
+
 /// The fixture configuration: the first row names the columns.
-fn header_configuration() -> CsvConfiguration {
+pub fn header_configuration() -> CsvConfiguration {
     CsvConfiguration {
         first_row_as_header: true,
         ..CsvConfiguration::default()
     }
+}
+
+/// A document backed by `directory/name`, so Detect Automatically stays
+/// enabled.
+pub fn file_document(
+    directory: &Path,
+    name: &str,
+    bytes: &[u8],
+    configuration: CsvConfiguration,
+) -> Document {
+    let path = directory.join(name);
+    std::fs::write(&path, bytes).expect("the fixture file is written");
+    let mut document = Document::new(configuration.clone());
+    document
+        .load_from_bytes(bytes, Some(&path), Some(configuration), false)
+        .expect("the fixture parses");
+    document
 }
 
 /// A document with a header and `rows` data rows named `Row 0` onwards.
@@ -88,18 +111,6 @@ pub fn open_large(path: &Path) -> Document {
     }
     document.poll_large_indexing();
     document
-}
-
-/// A clipboard that holds no text; the editor tests never paste.
-#[derive(Default)]
-pub struct TestClipboard;
-
-impl Clipboard for TestClipboard {
-    fn copy(&mut self, _text: &str) {}
-
-    fn paste(&mut self) -> Option<String> {
-        None
-    }
 }
 
 #[derive(Default)]
@@ -223,7 +234,7 @@ impl EditorFixture {
         let response = Rc::new(RefCell::new(MobileEditorResponse::default()));
         let keyboard = Rc::new(Cell::new(0.0));
         let fold = Rc::new(Cell::new(None));
-        let locale = Locale::try_from_str("en-US").expect("en-US is a valid locale");
+        let locale = en_locale();
 
         let ui_document = Rc::clone(&document);
         let ui_state = Rc::clone(&state);

@@ -11,7 +11,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use tabtool_core::{CsvConfiguration, CsvError, Encoding, Locale};
+use tabtool_core::{CsvConfiguration, CsvError, Encoding};
 use tabtool_document::{
     Document, DocumentError, DocumentNotice, DocumentPhase, GridSelection, LargeStatus,
     RevertDecision, StdStorage, UndoAction, plan_revert,
@@ -99,10 +99,6 @@ fn source(document: &Document) -> Arc<tabtool_large::LargeCSVSource> {
 
 fn rows(indexes: impl IntoIterator<Item = usize>) -> BTreeSet<usize> {
     indexes.into_iter().collect()
-}
-
-fn locale() -> Locale {
-    "en-US".parse().expect("test locale is valid")
 }
 
 #[test]
@@ -292,7 +288,7 @@ fn the_generic_copy_also_reads_the_large_source() {
     };
 
     assert_eq!(
-        document.copy_selection(&locale(), "."),
+        document.copy_selection("."),
         Some("r1\tv1\tq 1\nr2\tv2\tq 2".to_string())
     );
 }

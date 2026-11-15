@@ -75,7 +75,7 @@ pub fn apply_action(
         GridAction::RemoveSort => document.remove_sort(),
         GridAction::RenameColumn { column, name } => document.rename_column(column, &name),
         GridAction::Copy => {
-            if let Some(text) = document.copy_selection(locale, decimal_separator) {
+            if let Some(text) = document.copy_selection(decimal_separator) {
                 clipboard.copy(&text);
             }
         }

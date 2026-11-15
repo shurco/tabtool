@@ -11,37 +11,11 @@
 //! editor), and the two `objectWillChange` republish cases (the Rust document
 //! has no Combine publisher). Their observable state changes are covered here.
 
-use std::cell::RefCell;
 use std::collections::BTreeSet;
-use std::io;
-use std::path::Path;
 
 use tabtool_core::{CsvConfiguration, FilterCriterion, FilterOperator, Locale, SortDirection};
-use tabtool_document::{Document, GridSelection, Storage, UndoAction};
-
-/// In-memory storage that serves the file a revert re-reads.
-struct MemoryStorage {
-    bytes: RefCell<Vec<u8>>,
-}
-
-impl MemoryStorage {
-    fn new(bytes: &[u8]) -> Self {
-        Self {
-            bytes: RefCell::new(bytes.to_vec()),
-        }
-    }
-}
-
-impl Storage for MemoryStorage {
-    fn read(&self, _path: &Path) -> io::Result<Vec<u8>> {
-        Ok(self.bytes.borrow().clone())
-    }
-
-    fn write_atomic(&self, _path: &Path, data: &[u8]) -> io::Result<()> {
-        self.bytes.replace(data.to_vec());
-        Ok(())
-    }
-}
+use tabtool_document::test_support::{self, MemoryStorage};
+use tabtool_document::{Document, GridSelection, UndoAction};
 
 fn locale(id: &str) -> Locale {
     id.parse().expect("test locale is valid")
@@ -52,20 +26,6 @@ fn loaded(csv: &str) -> Document {
     let mut document = Document::new(configuration.clone());
     document
         .load_from_bytes(csv.as_bytes(), None, Some(configuration), false)
-        .expect("load the fixture");
-    document
-}
-
-fn loaded_from_storage(storage: &MemoryStorage) -> Document {
-    let configuration = CsvConfiguration::default();
-    let mut document = Document::new(configuration.clone());
-    document
-        .load_from_path(
-            Path::new("/virtual/filter.csv"),
-            storage,
-            Some(configuration),
-            false,
-        )
         .expect("load the fixture");
     document
 }
@@ -226,7 +186,7 @@ fn undo_of_row_deletion_keeps_visible_rows_in_range() {
 #[test]
 fn revert_to_saved_reevaluates_the_filter() {
     let storage = MemoryStorage::new(b"a\nb\na\n");
-    let mut document = loaded_from_storage(&storage);
+    let mut document = test_support::loaded(&storage, CsvConfiguration::default());
     document.set_cell(1, 0, "a");
     apply_filter(&mut document, "a", 0);
     assert_eq!(document.row_filter().visible_rows, Some(vec![0, 1, 2]));
@@ -353,10 +313,7 @@ fn column_copy_covers_only_visible_rows() {
     apply_filter(&mut document, "a", 0);
     select_columns(&mut document, [1]);
 
-    assert_eq!(
-        document.copy_selection(&locale("en-US"), "."),
-        Some("1\n3".to_owned())
-    );
+    assert_eq!(document.copy_selection("."), Some("1\n3".to_owned()));
 }
 
 #[test]
@@ -365,10 +322,7 @@ fn row_copy_stays_selection_based_while_filtering() {
     select_rows(&mut document, [0]);
     apply_filter(&mut document, "a", 0);
 
-    assert_eq!(
-        document.copy_selection(&locale("en-US"), "."),
-        Some("a\t1".to_owned())
-    );
+    assert_eq!(document.copy_selection("."), Some("a\t1".to_owned()));
 }
 
 #[test]
@@ -396,7 +350,7 @@ fn column_copy_limit_counts_only_visible_rows() {
     select_columns(&mut document, 0..1_000);
 
     let copied = document
-        .copy_selection(&locale("en-US"), ".")
+        .copy_selection(".")
         .expect("one million visible cells is allowed");
     assert_eq!(copied.len(), 1_999_999);
 }

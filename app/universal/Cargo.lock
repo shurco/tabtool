@@ -3644,6 +3644,7 @@ name = "tabtool-document"
 version = "0.1.0"
 dependencies = [
  "tabtool-core",
+ "tabtool-document",
  "tabtool-large",
  "tempfile",
 ]

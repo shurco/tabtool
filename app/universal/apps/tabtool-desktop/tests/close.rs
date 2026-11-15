@@ -145,7 +145,7 @@ fn cancelling_the_untitled_save_panel_cancels_the_close() {
 #[test]
 fn a_failed_save_keeps_the_window_open() {
     let storage = Arc::new(MemoryStorage::new(b"a,b\n1,2\n"));
-    storage.fail_writes();
+    storage.fail_writes(true);
     let dialogs = FakeDialogs::cancelled();
     let window = window(dirty_document(&storage), "Untitled", &storage, &dialogs);
     let ctx = Context::default();

@@ -20,4 +20,6 @@ tabtool-ui = { path = "../../crates/tabtool-ui", default-features = false }
 [dev-dependencies]
 # The kittest harness is a test-only feature of `tabtool-ui`.
 tabtool-ui = { path = "../../crates/tabtool-ui", features = ["test-support"] }
+# Shared document test doubles.
+tabtool-document = { path = "../../crates/tabtool-document", features = ["test-support"] }
 tempfile = "3"

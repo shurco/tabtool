@@ -14,16 +14,14 @@ use tabtool_ui::UiHarness;
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::mobile::{
     DocumentFiles, ExportOutcome, LibraryClock, LibraryError, LibraryErrors, LibraryResponse,
-    LibrarySort, LibraryView, MobileMetrics, SystemMetadata, TouchTextInput, TouchTextInputOutcome,
-    TouchTextInputRequest, available_name, format_modified, format_size, new_document_name,
+    LibrarySort, LibraryView, MobileMetrics, SystemMetadata, TouchTextInputOutcome, available_name,
+    format_modified, format_size, new_document_name,
 };
 use tempfile::TempDir;
 
-const EN: Language = Language::En;
+use crate::support::{FakeTouchInput, en_locale};
 
-fn en_locale() -> Locale {
-    Locale::try_from_str("en-US").expect("en-US is a valid locale")
-}
+const EN: Language = Language::En;
 
 fn de_locale() -> Locale {
     Locale::try_from_str("de-DE").expect("de-DE is a valid locale")
@@ -735,54 +733,6 @@ fn a_failed_rename_is_reported_and_keeps_the_document() {
 
 // -- Screen ---------------------------------------------------------------
 
-#[derive(Clone, Default)]
-struct FakeTouchInput {
-    request: Rc<RefCell<Option<TouchTextInputRequest>>>,
-    pending: Rc<RefCell<Option<TouchTextInputOutcome>>>,
-    active: Rc<Cell<bool>>,
-}
-
-impl TouchTextInput for FakeTouchInput {
-    fn open(&mut self, request: TouchTextInputRequest) {
-        self.request.replace(Some(request));
-        self.active.set(true);
-    }
-
-    fn close(&mut self) {
-        self.active.set(false);
-    }
-
-    fn commit(&mut self) {
-        // The library never commits a text session.
-    }
-
-    fn move_to(&mut self, rect: egui::Rect) {
-        let text = self
-            .request
-            .borrow()
-            .as_ref()
-            .map(|request| request.text.clone())
-            .unwrap_or_default();
-        self.request.replace(Some(TouchTextInputRequest {
-            rect,
-            text,
-            multiline: false,
-        }));
-    }
-
-    fn poll(&mut self) -> Option<TouchTextInputOutcome> {
-        let outcome = self.pending.borrow_mut().take();
-        if outcome.is_some() {
-            self.active.set(false);
-        }
-        outcome
-    }
-
-    fn is_active(&self) -> bool {
-        self.active.get()
-    }
-}
-
 #[derive(Default)]
 struct Outcome(Rc<RefCell<LibraryResponse>>);
 
@@ -1078,12 +1028,10 @@ fn the_context_menu_renames_through_the_native_editor() {
     harness.get_by_label(tr(EN, "Rename")).click();
     harness.run();
 
-    let request = input.request.borrow().clone().expect("the editor opens");
+    let request = input.request().expect("the editor opens");
     assert_eq!(request.text, "Notes.csv");
     assert!(!request.multiline);
-    input
-        .pending
-        .replace(Some(TouchTextInputOutcome::Committed("Budget".to_owned())));
+    input.finish(TouchTextInputOutcome::Committed("Budget".to_owned()));
     harness.run();
 
     assert!(files.documents_dir().join("Budget.csv").is_file());
@@ -1104,9 +1052,7 @@ fn cancelling_the_native_editor_keeps_the_name() {
     harness.run();
     harness.get_by_label(tr(EN, "Rename")).click();
     harness.run();
-    input
-        .pending
-        .replace(Some(TouchTextInputOutcome::Cancelled));
+    input.finish(TouchTextInputOutcome::Cancelled);
     harness.run();
 
     assert!(files.documents_dir().join("Notes.csv").is_file());

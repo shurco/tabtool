@@ -2,64 +2,9 @@
 //! revert invariants: one undo action, the current configuration, and an
 //! untouched file.
 
-use std::cell::{Cell, RefCell};
-use std::io;
-use std::path::Path;
-
 use tabtool_core::{CsvConfiguration, CsvError};
-use tabtool_document::{Document, DocumentError, RevertDecision, Storage, UndoAction, plan_revert};
-
-/// In-memory storage that counts reads and writes and can serve edited bytes.
-struct MemoryStorage {
-    bytes: RefCell<Vec<u8>>,
-    reads: Cell<usize>,
-    writes: Cell<usize>,
-    fail_reads: Cell<bool>,
-}
-
-impl MemoryStorage {
-    fn new(bytes: &[u8]) -> Self {
-        Self {
-            bytes: RefCell::new(bytes.to_vec()),
-            reads: Cell::new(0),
-            writes: Cell::new(0),
-            fail_reads: Cell::new(false),
-        }
-    }
-
-    fn set_bytes(&self, bytes: &[u8]) {
-        self.bytes.replace(bytes.to_vec());
-    }
-}
-
-impl Storage for MemoryStorage {
-    fn read(&self, _path: &Path) -> io::Result<Vec<u8>> {
-        self.reads.set(self.reads.get() + 1);
-        if self.fail_reads.get() {
-            return Err(io::Error::other("the file is unavailable"));
-        }
-        Ok(self.bytes.borrow().clone())
-    }
-
-    fn write_atomic(&self, _path: &Path, data: &[u8]) -> io::Result<()> {
-        self.writes.set(self.writes.get() + 1);
-        self.bytes.replace(data.to_vec());
-        Ok(())
-    }
-}
-
-fn loaded(storage: &MemoryStorage, configuration: CsvConfiguration) -> Document {
-    let mut document = Document::new(configuration.clone());
-    document
-        .load_from_path(
-            Path::new("/virtual/document.csv"),
-            storage,
-            Some(configuration),
-            false,
-        )
-        .expect("load the fixture");
-    document
-}
+use tabtool_document::test_support::{MemoryStorage, loaded};
+use tabtool_document::{Document, DocumentError, RevertDecision, UndoAction, plan_revert};
 
 #[test]
 fn clean_document_reverts_without_confirmation() {
@@ -71,8 +16,8 @@ fn clean_document_reverts_without_confirmation() {
     document.revert_to_saved(&storage).expect("revert the file");
 
     assert_eq!(document.table().expect("table").cell(0, 0), "a");
-    assert_eq!(storage.reads.get(), 2);
-    assert_eq!(storage.writes.get(), 0);
+    assert_eq!(storage.reads(), 2);
+    assert_eq!(storage.writes(), 0);
     assert!(!document.is_dirty());
 }
 
@@ -144,8 +89,8 @@ fn revert_leaves_the_file_untouched() {
 
     document.revert_to_saved(&storage).expect("revert the file");
 
-    assert_eq!(storage.writes.get(), 0);
-    assert_eq!(&*storage.bytes.borrow(), b"a\n");
+    assert_eq!(storage.writes(), 0);
+    assert_eq!(storage.bytes(), b"a\n");
 }
 
 #[test]
@@ -167,7 +112,7 @@ fn a_read_failure_keeps_the_previous_state_and_records_no_undo() {
     let storage = MemoryStorage::new(b"a\n");
     let mut document = loaded(&storage, CsvConfiguration::default());
     let revision = document.revision();
-    storage.fail_reads.set(true);
+    storage.fail_reads(true);
 
     let error = document
         .revert_to_saved(&storage)

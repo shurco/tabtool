@@ -25,6 +25,9 @@ mod saving;
 mod snapshot;
 mod sort;
 mod storage;
+#[cfg(feature = "test-support")]
+#[doc(hidden)]
+pub mod test_support;
 mod types;
 mod undo;
 

@@ -2,43 +2,13 @@
 
 #![allow(dead_code)] // Each test crate uses a different subset of these helpers.
 
-use std::fs::File;
-use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
 use tabtool_core::{CsvConfiguration, CsvParser};
 use tabtool_large::{LargeFileIndexer, MappedFile, RowIndex, RowScanner, ScanMode, row_ranges};
-
-/// SplitMix64, matching `SeededGenerator` in `TestSupport.swift`.
-///
-/// The bit stream matches Swift, but [`SplitMix64::below`] reduces with modulo
-/// while Swift's `randomElement`/`Int.random` use rejection sampling. The
-/// generated corpus is deterministic but not byte-identical to Swift's fuzz
-/// corpus; [`fixed_corpus`] anchors the boundary coverage independently of the
-/// generator.
-pub struct SplitMix64 {
-    state: u64,
-}
-
-impl SplitMix64 {
-    pub fn new(seed: u64) -> Self {
-        Self { state: seed }
-    }
-
-    pub fn next(&mut self) -> u64 {
-        self.state = self.state.wrapping_add(0x9E37_79B9_7F4A_7C15);
-        let mut value = self.state;
-        value = (value ^ (value >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        value = (value ^ (value >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-        value ^ (value >> 31)
-    }
-
-    pub fn below(&mut self, bound: usize) -> usize {
-        (self.next() % bound as u64) as usize
-    }
-}
+use tabtool_testdata::{LargeOptions, SplitMix64, generate_large_csv};
 
 /// Scans `bytes` in chunks cut at the given increasing offsets and returns the
 /// final index. The last chunk is scanned with `final_chunk`.
@@ -165,6 +135,11 @@ pub fn expect_ranges_match_rows(bytes: &[u8], configuration: &CsvConfiguration) 
 
 /// Random CSV bytes with mixed terminators, quoting and multibyte text.
 /// Ported from `RowScannerFuzz.makeInput`.
+///
+/// [`SplitMix64::below`] reduces with modulo, so the generated corpus is
+/// deterministic but not byte-identical to Swift's fuzz corpus;
+/// [`fixed_corpus`] anchors the boundary coverage independently of the
+/// generator.
 pub fn make_input(seed: u64, rows: usize) -> Vec<u8> {
     const PLAIN: &[&str] = &["a", "bb", "", "é", "日本", "12.5", "x y"];
     const SPECIAL: &[&str] = &[",", "\n", "\r\n", "\r", "\"", "\"\"", "q,\n\"z"];
@@ -193,74 +168,6 @@ pub fn make_input(seed: u64, rows: usize) -> Vec<u8> {
     text.into_bytes()
 }
 
-/// Writes a deterministic CSV of at least `target_bytes` to `path` and returns
-/// the number of rows (header included) and bytes written.
-///
-/// Ported from `generateLargeCSV` in `LargeFileTestSupport.swift`: even columns
-/// hold numbers, odd columns hold text (quoted when `quoted`), and every
-/// `multiline_every`-th row gets a quoted field with an embedded LF, separator
-/// and doubled quotes. Rows end with CRLF when `crlf`, else LF; `bom` starts
-/// the file with a UTF-8 byte order mark.
-#[allow(clippy::too_many_arguments)] // Mirror the Swift fixture's parameters.
-pub fn generate_large_csv(
-    path: &Path,
-    target_bytes: usize,
-    columns: usize,
-    quoted: bool,
-    multiline_every: Option<usize>,
-    crlf: bool,
-    bom: bool,
-    seed: u64,
-) -> (usize, usize) {
-    assert!(columns > 0, "the generator needs a column");
-    let mut writer = BufWriter::new(File::create(path).expect("fixture file is created"));
-    let mut generator = SplitMix64::new(seed);
-    let terminator = if crlf { "\r\n" } else { "\n" };
-    let mut written = 0;
-
-    if bom {
-        writer
-            .write_all(&[0xEF, 0xBB, 0xBF])
-            .expect("BOM is written");
-        written += 3;
-    }
-    let header = (0..columns)
-        .map(|column| format!("col{column}"))
-        .collect::<Vec<_>>()
-        .join(",");
-    writer
-        .write_all(format!("{header}{terminator}").as_bytes())
-        .expect("header is written");
-    written += header.len() + terminator.len();
-    let mut rows = 1;
-    while written < target_bytes {
-        let mut line = String::new();
-        for column in 0..columns {
-            if column > 0 {
-                line.push(',');
-            }
-            let value = generator.next();
-            if multiline_every.is_some_and(|every| rows % every == 0)
-                && column == 1.min(columns - 1)
-            {
-                line.push_str(&format!("\"line one\nline, \"\"two\"\" {rows}\""));
-            } else if column % 2 == 0 {
-                line.push_str(&format!("{}.{column}", value % 1_000_000));
-            } else if quoted {
-                line.push_str(&format!("\"text{}\"", value % 5000));
-            } else {
-                line.push_str(&format!("text{}", value % 5000));
-            }
-        }
-        line.push_str(terminator);
-        written += line.len();
-        writer.write_all(line.as_bytes()).expect("row is written");
-        rows += 1;
-    }
-    writer.flush().expect("fixture file flushes");
-    (rows, written)
-}
-
 /// A mapped large CSV fixture kept alive for the test, with the generator's
 /// row count. Matches `Fixture` in `LargeFileIndexerTests.swift`.
 pub struct LargeCsvFixture {
@@ -279,7 +186,7 @@ impl LargeCsvFixture {
     pub fn with_target(target_bytes: usize) -> Self {
         let directory = tempfile::tempdir().expect("fixture directory is created");
         let path = directory.path().join("big.csv");
-        let (rows, _) = generate_large_csv(&path, target_bytes, 5, true, Some(7), false, false, 3);
+        let rows = large_csv(&path, target_bytes, 5, true, Some(7), 3);
         let file = Arc::new(MappedFile::open(&path).expect("fixture file opens"));
         Self {
             _directory: directory,
@@ -292,6 +199,30 @@ impl LargeCsvFixture {
     pub fn path(&self) -> PathBuf {
         self._directory.path().join("big.csv")
     }
+}
+
+/// Writes the `tabtool_testdata` large CSV (LF rows, no BOM) to `path` and
+/// returns its row count, header included.
+pub fn large_csv(
+    path: &Path,
+    target_bytes: usize,
+    columns: usize,
+    quoted: bool,
+    multiline_every: Option<usize>,
+    seed: u64,
+) -> usize {
+    let fixture = generate_large_csv(&LargeOptions {
+        path: path.to_path_buf(),
+        bytes: target_bytes as u64,
+        columns,
+        multiline_every,
+        crlf: false,
+        bom: false,
+        quoted,
+        seed,
+    })
+    .expect("fixture file is written");
+    usize::try_from(fixture.rows).expect("row count fits usize")
 }
 
 /// A scratch directory removed when the value goes away.

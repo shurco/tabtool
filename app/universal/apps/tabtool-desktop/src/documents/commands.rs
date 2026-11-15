@@ -147,10 +147,7 @@ impl WindowState {
     }
 
     fn copy_selection(&self, ctx: &Context) {
-        if let Some(text) = self
-            .document
-            .copy_selection(&self.locale, &self.decimal_separator)
-        {
+        if let Some(text) = self.document.copy_selection(&self.decimal_separator) {
             ctx.copy_text(text);
         }
     }

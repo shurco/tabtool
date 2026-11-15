@@ -10,7 +10,6 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::UNIX_EPOCH;
 
-use tabtool_core::{CsvConfiguration, Locale};
 use tabtool_document::{Document, StdStorage};
 use tabtool_i18n::Language;
 use tabtool_settings::Settings;
@@ -18,9 +17,11 @@ use tabtool_ui::Theme;
 use tabtool_ui::UiHarness;
 use tabtool_ui::mobile::{
     DocumentFiles, ExportOutcome, ExportSheet, FiltersSheet, FoldRegion, FormatSheet, LibraryClock,
-    LibraryError, LibraryErrors, LibraryView, MobileMetrics, SheetStyle, TouchTextInput,
-    TouchTextInputOutcome, TouchTextInputRequest, about_sheet, settings_sheet,
+    LibraryError, LibraryErrors, LibraryView, MobileMetrics, SheetStyle, about_sheet,
+    settings_sheet,
 };
+
+use crate::support::{FakeTouchInput, en_locale};
 
 /// The phone viewport the app targets.
 pub const PHONE: [f32; 2] = [360.0, 800.0];
@@ -36,19 +37,6 @@ pub const FOLD_INNER: [f32; 2] = [841.0, 701.0];
 
 /// The active vertical hinge of [`FOLD_INNER`], in screen points.
 pub const HINGE: FoldRegion = FoldRegion::new(420.5, 32.0, 44.0);
-
-/// The English test locale.
-pub fn en_locale() -> Locale {
-    Locale::try_from_str("en-US").expect("en-US is a valid locale")
-}
-
-/// The first row names the columns.
-pub fn header_configuration() -> CsvConfiguration {
-    CsvConfiguration {
-        first_row_as_header: true,
-        ..CsvConfiguration::default()
-    }
-}
 
 /// A sheet style at `metrics` in English.
 pub fn sheet_style(metrics: MobileMetrics) -> SheetStyle {
@@ -163,46 +151,6 @@ impl LibraryErrors for VisualErrors {
     }
 }
 
-/// The native editor fake; the visual snapshots never type into it.
-#[derive(Clone, Default)]
-pub struct FakeInput {
-    request: Rc<RefCell<Option<TouchTextInputRequest>>>,
-    pending: Rc<RefCell<Option<TouchTextInputOutcome>>>,
-}
-
-impl TouchTextInput for FakeInput {
-    fn open(&mut self, request: TouchTextInputRequest) {
-        self.request.borrow_mut().replace(request);
-    }
-
-    fn close(&mut self) {
-        self.request.borrow_mut().take();
-    }
-
-    fn commit(&mut self) {
-        let request = self.request.borrow_mut().take();
-        if let Some(request) = request {
-            self.pending
-                .borrow_mut()
-                .replace(TouchTextInputOutcome::Committed(request.text));
-        }
-    }
-
-    fn move_to(&mut self, rect: egui::Rect) {
-        if let Some(request) = self.request.borrow_mut().as_mut() {
-            request.rect = rect;
-        }
-    }
-
-    fn poll(&mut self) -> Option<TouchTextInputOutcome> {
-        self.pending.borrow_mut().take()
-    }
-
-    fn is_active(&self) -> bool {
-        self.request.borrow().is_some()
-    }
-}
-
 /// A library harness with an empty or populated documents folder.
 pub fn library_harness(
     theme: Theme,
@@ -220,22 +168,10 @@ pub fn library_harness(
         metrics,
         Language::En,
     );
-    let mut input = FakeInput::default();
+    let mut input = FakeTouchInput::default();
     UiHarness::new(theme, size, move |ui| {
         let _ = view.show(ui, &mut input);
     })
-}
-
-/// A document backed by `path` so Detect Automatically stays enabled.
-pub fn file_document(directory: &Path, name: &str, bytes: &[u8]) -> Document {
-    let path = directory.join(name);
-    std::fs::write(&path, bytes).expect("the fixture is written");
-    let configuration = header_configuration();
-    let mut document = Document::new(configuration.clone());
-    document
-        .load_from_bytes(bytes, Some(&path), Some(configuration), false)
-        .expect("the fixture parses");
-    document
 }
 
 /// The Format sheet over `document`.
@@ -267,7 +203,7 @@ pub fn filters_harness(
     let sheet = Rc::new(RefCell::new(FiltersSheet::new()));
     let locale = en_locale();
     let style = sheet_style(metrics);
-    let mut input = FakeInput::default();
+    let mut input = FakeTouchInput::default();
     UiHarness::new(theme, size, move |ui| {
         let mut document = document.borrow_mut();
         let _ = sheet

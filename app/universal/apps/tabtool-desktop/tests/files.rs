@@ -402,7 +402,7 @@ fn a_failed_save_as_keeps_the_document_dirty_and_untitled() {
     let workflow = workflow(&dialogs, shared, Settings::default(), None);
     let mut document = workflow.new_document();
     document.set_cell(0, 0, "edited");
-    storage.fail_writes();
+    storage.fail_writes(true);
 
     let outcome = workflow.save_as(&mut document, "Report");
 
@@ -652,7 +652,7 @@ fn a_failed_export_write_keeps_the_document_unchanged() {
     let session = workflow
         .export_session(&document)
         .expect("an export session");
-    storage.fail_writes();
+    storage.fail_writes(true);
     let before = cell(&document, 0, 0);
 
     let outcome = workflow.export(&session, false);
@@ -766,7 +766,7 @@ fn replace_with_a_failed_save_does_not_open_the_new_file() {
     document.set_cell(0, 0, "edited");
     let dialogs = FakeDialogs::cancelled();
     let mut workflow = workflow(&dialogs, shared, Settings::default(), None);
-    storage.fail_writes();
+    storage.fail_writes(true);
 
     let outcome = workflow.replace_with(
         &mut document,

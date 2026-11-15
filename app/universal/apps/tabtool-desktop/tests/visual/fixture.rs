@@ -8,24 +8,13 @@ use tabtool_document::{Document, DocumentError};
 use tabtool_i18n::Language;
 use tabtool_ui::UiHarness;
 use tabtool_ui::document::{DocumentUiState, DocumentView};
-use tabtool_ui::grid::{Clipboard, GridAppearance, GridState};
-use tabtool_ui::harness::SnapshotResults;
+use tabtool_ui::grid::{GridAppearance, GridState};
+use tabtool_ui::harness::{SnapshotResults, TestClipboard};
 
 use crate::support::{MemoryStorage, loaded};
 
 /// The CSV used by the grid and chrome snapshots.
 pub const CSV: &[u8] = b"name,amount,note\nApple,1.5,Fruit\nBanana,0.5,Fruit\nCarrot,2,Veg\n";
-
-/// A clipboard that never holds text; the snapshots never paste.
-struct TestClipboard;
-
-impl Clipboard for TestClipboard {
-    fn copy(&mut self, _text: &str) {}
-
-    fn paste(&mut self) -> Option<String> {
-        None
-    }
-}
 
 /// A document chrome rendered by the deterministic harness.
 pub struct DocumentFixture {

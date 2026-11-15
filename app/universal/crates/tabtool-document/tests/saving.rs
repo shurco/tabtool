@@ -3,66 +3,11 @@
 //! `CSVDocumentSaving.swift`, plus the atomic-write and revision invariants of
 //! the Rust save path.
 
-use std::cell::{Cell, RefCell};
-use std::io;
 use std::path::Path;
 
 use tabtool_core::{CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, Encoding};
-use tabtool_document::{Document, DocumentError, DocumentPhase, ParsedTable, StdStorage, Storage};
-
-/// In-memory [`Storage`] that records reads and writes and can refuse either.
-struct MemoryStorage {
-    bytes: RefCell<Vec<u8>>,
-    writes: Cell<usize>,
-    fail_reads: Cell<bool>,
-    fail_writes: Cell<bool>,
-}
-
-impl MemoryStorage {
-    fn new(bytes: &[u8]) -> Self {
-        Self {
-            bytes: RefCell::new(bytes.to_vec()),
-            writes: Cell::new(0),
-            fail_reads: Cell::new(false),
-            fail_writes: Cell::new(false),
-        }
-    }
-
-    fn bytes(&self) -> Vec<u8> {
-        self.bytes.borrow().clone()
-    }
-}
-
-impl Storage for MemoryStorage {
-    fn read(&self, _path: &Path) -> io::Result<Vec<u8>> {
-        if self.fail_reads.get() {
-            return Err(io::Error::other("the file is unavailable"));
-        }
-        Ok(self.bytes())
-    }
-
-    fn write_atomic(&self, _path: &Path, data: &[u8]) -> io::Result<()> {
-        self.writes.set(self.writes.get() + 1);
-        if self.fail_writes.get() {
-            return Err(io::Error::other("the disk is full"));
-        }
-        self.bytes.replace(data.to_vec());
-        Ok(())
-    }
-}
-
-fn loaded(storage: &MemoryStorage, configuration: CsvConfiguration) -> Document {
-    let mut document = Document::new(configuration.clone());
-    document
-        .load_from_path(
-            Path::new("/virtual/document.csv"),
-            storage,
-            Some(configuration),
-            false,
-        )
-        .expect("load the fixture");
-    document
-}
+use tabtool_document::test_support::{MemoryStorage, loaded};
+use tabtool_document::{Document, DocumentError, DocumentPhase, ParsedTable, StdStorage};
 
 fn loaded_bytes(csv: &[u8], configuration: CsvConfiguration) -> Document {
     let mut document = Document::new(configuration.clone());
@@ -125,7 +70,7 @@ fn save_writes_the_encoded_snapshot_and_marks_the_revision_saved() {
 
     document.save(&storage).expect("save the document");
 
-    assert_eq!(storage.writes.get(), 1);
+    assert_eq!(storage.writes(), 1);
     assert_eq!(storage.bytes(), expected);
     assert_eq!(
         document.revision(),
@@ -144,7 +89,7 @@ fn saving_a_clean_document_rewrites_the_file() {
     document.save(&storage).expect("the first save");
     document.save(&storage).expect("the second save");
 
-    assert_eq!(storage.writes.get(), 2);
+    assert_eq!(storage.writes(), 2);
     assert_eq!(
         storage.bytes(),
         document.encoded_data().expect("encoded data")
@@ -171,7 +116,7 @@ fn save_without_a_path_is_not_ready() {
 
     assert!(!document.can_save());
     assert_eq!(document.save(&storage), Err(DocumentError::NotReady));
-    assert_eq!(storage.writes.get(), 0);
+    assert_eq!(storage.writes(), 0);
     assert!(document.is_dirty());
 }
 
@@ -198,7 +143,7 @@ fn a_save_as_failure_keeps_the_previous_path_and_dirty_state() {
     let mut document = loaded(&storage, CsvConfiguration::default());
     let original = document.file_path().map(Path::to_path_buf);
     document.set_cell(1, 0, "x");
-    storage.fail_writes.set(true);
+    storage.fail_writes(true);
 
     assert!(document.is_dirty());
     assert_eq!(
@@ -220,17 +165,17 @@ fn a_failed_save_keeps_the_previous_file_and_the_document_dirty() {
     let mut document = loaded(&storage, CsvConfiguration::default());
     document.set_cell(0, 0, "edited");
     let revision = document.revision();
-    storage.fail_writes.set(true);
+    storage.fail_writes(true);
 
     assert_eq!(document.save(&storage), Err(DocumentError::CannotWriteFile));
 
-    assert_eq!(storage.writes.get(), 1);
+    assert_eq!(storage.writes(), 1);
     assert_eq!(storage.bytes(), b"a,b\n1,2\n");
     assert_eq!(document.revision(), revision);
     assert!(document.is_dirty());
 
     // A later attempt with a working target saves the same edits.
-    storage.fail_writes.set(false);
+    storage.fail_writes(false);
     document.save(&storage).expect("retry the save");
     assert!(!document.is_dirty());
 }
@@ -262,7 +207,7 @@ fn a_loading_document_cannot_save() {
         document.save_as(Path::new("/virtual/document.csv"), &storage),
         Err(DocumentError::NotReady)
     );
-    assert_eq!(storage.writes.get(), 0);
+    assert_eq!(storage.writes(), 0);
 }
 
 #[test]
@@ -288,13 +233,13 @@ fn a_read_failed_document_cannot_save() {
         document.save_as(Path::new("/virtual/new.csv"), &storage),
         Err(DocumentError::NotReady)
     );
-    assert_eq!(storage.writes.get(), 0);
+    assert_eq!(storage.writes(), 0);
 }
 
 #[test]
 fn an_unreadable_file_document_cannot_save() {
     let storage = MemoryStorage::new(b"");
-    storage.fail_reads.set(true);
+    storage.fail_reads(true);
     let mut document = Document::new(CsvConfiguration::default());
     assert_eq!(
         document.load_from_path(
@@ -309,7 +254,7 @@ fn an_unreadable_file_document_cannot_save() {
 
     assert!(!document.can_save());
     assert_eq!(document.save(&storage), Err(DocumentError::NotReady));
-    assert_eq!(storage.writes.get(), 0);
+    assert_eq!(storage.writes(), 0);
 }
 
 #[test]
@@ -328,7 +273,7 @@ fn unencodable_text_blocks_save_with_the_typed_error() {
         document.save(&storage),
         Err(DocumentError::Csv(CsvError::UnencodableText))
     );
-    assert_eq!(storage.writes.get(), 0);
+    assert_eq!(storage.writes(), 0);
     assert!(document.is_dirty());
 }
 
@@ -355,7 +300,7 @@ fn ambiguous_no_quote_output_blocks_save_with_the_typed_error() {
         document.save_as(Path::new("/virtual/new.csv"), &storage),
         Err(DocumentError::Csv(CsvError::AmbiguousOutput))
     );
-    assert_eq!(storage.writes.get(), 0);
+    assert_eq!(storage.writes(), 0);
 }
 
 #[test]
@@ -478,7 +423,7 @@ fn save_is_refused_while_a_reread_is_in_flight() {
         document.save_as(Path::new("/virtual/new.csv"), &storage),
         Err(DocumentError::RequiresConfirmation)
     );
-    assert_eq!(storage.writes.get(), 0);
+    assert_eq!(storage.writes(), 0);
 
     // Complete the public begin/apply/end cycle the UI uses.
     let configuration = CsvConfiguration::default();
@@ -492,7 +437,7 @@ fn save_is_refused_while_a_reread_is_in_flight() {
 
     assert!(document.can_save());
     document.save(&storage).expect("save after the re-read");
-    assert_eq!(storage.writes.get(), 1);
+    assert_eq!(storage.writes(), 1);
 }
 
 #[test]
