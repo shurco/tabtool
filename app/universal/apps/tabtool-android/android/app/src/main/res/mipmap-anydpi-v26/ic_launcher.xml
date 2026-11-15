@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The Apple icon insets its frame by 18.6% of the tile. The adaptive
-     foreground repeats that inset so a circular or squircle launcher mask
-     keeps the frame instead of cutting its corners. -->
+<!-- The glyph covers the middle 63% of the Apple artwork. The artwork is drawn
+     at 66 dp of the 108 dp canvas, so the glyph is about 42 dp and its
+     circumscribed circle (59 dp) stays inside the 66 dp adaptive safe zone and
+     a circular or squircle mask never cuts the frame. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
     <foreground>
         <inset
             android:drawable="@mipmap/ic_launcher_foreground"
-            android:inset="18.6%" />
+            android:inset="19.4%" />
     </foreground>
 </adaptive-icon>

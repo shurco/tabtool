@@ -136,28 +136,30 @@ jobs:
           if ! cargo ndk --version 2>/dev/null | grep -q "cargo-ndk 4.1.2"; then
             cargo install cargo-ndk --version 4.1.2 --locked
           fi
+      - name: Check the release signing secrets
+        run: |
+          if [ -z "$TABTOOL_ANDROID_KEYSTORE_BASE64" ]; then
+            echo "No release signing secrets: the release build is skipped." >&2
+            exit 0
+          fi
+          for name in TABTOOL_ANDROID_KEYSTORE_PASSWORD TABTOOL_ANDROID_KEY_ALIAS TABTOOL_ANDROID_KEY_PASSWORD; do
+            if [ -z "$(printenv "$name")" ]; then
+              echo "TABTOOL_ANDROID_KEYSTORE_BASE64 is set but $name is empty." >&2
+              echo "Set all four signing secrets, or none to skip the release build." >&2
+              exit 1
+            fi
+          done
       - name: Build the native libraries
         working-directory: app/universal/apps/tabtool-android/android
-        run: cargo ndk -t arm64-v8a -t x86_64 -o app/src/main/jniLibs build -p tabtool-android
+        run: |
+          rm -rf app/src/main/jniLibs
+          cargo ndk -t arm64-v8a -t x86_64 -o app/src/main/jniLibs build -p tabtool-android
       - name: Build the debug APK
         working-directory: app/universal/apps/tabtool-android/android
         run: ./gradlew --no-daemon assembleDebug
       - name: Verify the debug APK
-        working-directory: app/universal/apps/tabtool-android/android
-        run: |
-          AAPT2="$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)"
-          "$AAPT2" dump badging app/build/outputs/apk/debug/app-debug.apk > "$RUNNER_TEMP/badging.txt"
-          python3 - "$RUNNER_TEMP/badging.txt" ../../../version.json <<'PY'
-          import json, sys
-
-          badging = open(sys.argv[1]).read()
-          version = json.load(open(sys.argv[2]))
-          expected = f"versionCode='{version['build']}' versionName='{version['name']}'"
-          assert expected in badging, f"the APK version is not {expected}"
-          assert "native-code: 'arm64-v8a' 'x86_64'" in badging, "an ABI is missing"
-          assert "android.permission.INTERNET" not in badging, "the app must not request the network"
-          print("debug APK: version, ABIs and permissions are correct")
-          PY
+        working-directory: .
+        run: scripts/android-verify app/universal/apps/tabtool-android/android/app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         with:
           name: tabtool-android-debug
@@ -171,8 +173,18 @@ jobs:
         if: ${{ env.TABTOOL_ANDROID_KEYSTORE_BASE64 != '' }}
         working-directory: app/universal/apps/tabtool-android/android
         run: |
+          rm -rf app/src/main/jniLibs
           cargo ndk -t arm64-v8a -t x86_64 -o app/src/main/jniLibs build --release -p tabtool-android
           ./gradlew --no-daemon assembleRelease bundleRelease
+      - name: Verify the release artifacts
+        if: ${{ env.TABTOOL_ANDROID_KEYSTORE_BASE64 != '' }}
+        working-directory: .
+        run: |
+          scripts/android-verify --release app/universal/apps/tabtool-android/android/app/build/outputs/apk/release/app-release.apk
+          unzip -l app/universal/apps/tabtool-android/android/app/build/outputs/bundle/release/app-release.aab \
+            | grep -q base/lib/arm64-v8a/libmain.so
+          unzip -l app/universal/apps/tabtool-android/android/app/build/outputs/bundle/release/app-release.aab \
+            | grep -q base/lib/x86_64/libmain.so
       - name: Upload the release artifacts
         if: ${{ env.TABTOOL_ANDROID_KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v4

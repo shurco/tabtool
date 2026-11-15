@@ -37,26 +37,48 @@ export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/28.2.13676358"
 
 cd app/universal/apps/tabtool-android/android
 
-# Native libraries first: Gradle packages whatever is in jniLibs.
+# Native libraries first: Gradle packages whatever is in jniLibs. cargo ndk
+# only copies an artifact newer than the file already there, so remove the
+# directory when switching variant.
+rm -rf app/src/main/jniLibs
 cargo ndk -t arm64-v8a -t x86_64 -o app/src/main/jniLibs build -p tabtool-android          # debug
-cargo ndk -t arm64-v8a -t x86_64 -o app/src/main/jniLibs build --release -p tabtool-android # release
-
 ./gradlew assembleDebug           # app/build/outputs/apk/debug/app-debug.apk
+
+rm -rf app/src/main/jniLibs
+cargo ndk -t arm64-v8a -t x86_64 -o app/src/main/jniLibs build --release -p tabtool-android # release
 ./gradlew assembleRelease         # app/build/outputs/apk/release/app-release.apk
 ./gradlew bundleRelease           # app/build/outputs/bundle/release/app-release.aab
 ```
 
 `app/src/main/jniLibs` and every APK and AAB are gitignored: the libraries are
 built, never committed. Gradle packages the `libmain.so` that `cargo ndk`
-wrote, so a Gradle-only build on a clean checkout produces an APK that installs
-and then fails to load `GameActivity`; run `cargo ndk` first. The directory
-holds whichever variant ran last, so rerun `cargo ndk` with or without
-`--release` to match the APK you are packaging: a debug build after a release
-`cargo ndk` ships release libraries.
+wrote, and the `verifyNativeLibraries` task that every build depends on fails
+when a library is missing, older than the newest Rust source, or not
+byte-identical to the `target/<triple>/<profile>/libmain.so` cargo built for the
+requested variant. The byte check matters because `cargo ndk` prints "Copying
+libraries" even when it leaves the other variant's copy in place.
 
-R8 and resource shrinking are off for the release build. Both build types leave
-the native libraries uncompressed in the APK (the Android Gradle Plugin
-default), so they are loaded in place instead of being copied at install time.
+One `jniLibs` directory cannot serve both variants, so pair the `cargo ndk` run
+with the matching Gradle task: `cargo ndk … build` with `assembleDebug`, or
+`cargo ndk … build --release` with `assembleRelease bundleRelease`. `cargo ndk`
+only copies an artifact that is newer than the file already in
+`src/main/jniLibs`, so remove the directory first when you switch variant.
+`./gradlew assemble` and `./gradlew build` package both variants from that one
+directory and therefore fail with an explanation instead of shipping the wrong
+libraries.
+
+### Packaging
+
+- R8 and resource shrinking are off for the release build.
+- `packaging { jniLibs { useLegacyPackaging = false } }` states the Android
+  Gradle Plugin default: the native libraries are stored uncompressed in the
+  APK, the merged manifest carries `android:extractNativeLibs="false"`, and
+  the app loads `libmain.so` from the APK in place instead of extracting it at
+  install time. `scripts/android-verify` checks the stored entries and the
+  `zipalign -c -P 16` page alignment, which Android 15 devices with 16 KB pages
+  need.
+- Both ABIs are unpacked from the same `jniLibs` directory, so one `cargo ndk`
+  run produces both the APK and the AAB contents.
 
 ## Install and run
 
@@ -129,9 +151,11 @@ lives. It writes:
 - `mipmap-*/ic_launcher_foreground.png` — 108, 162, 216, 324 and 432 px, the
   adaptive foreground;
 - `mipmap-anydpi-v26/ic_launcher.xml` — the adaptive icon: an
-  `@color/ic_launcher_background` layer and the foreground inset by 18.6%, the
-  frame inset of the Apple artwork, so a circular or squircle launcher mask
-  keeps the frame instead of cutting its corners;
+  `@color/ic_launcher_background` layer and the foreground inset by 19.4% per
+  side. The artwork is then 66 dp of the 108 dp canvas, so the glyph (63% of
+  the artwork) is about 42 dp and its circumscribed circle (59 dp) stays inside
+  the 66 dp adaptive safe zone: a circular or squircle mask never cuts the
+  frame;
 - `values/ic_launcher_background.xml` — `#121310`, the background of the Apple
   artwork.
 
@@ -177,15 +201,36 @@ must never be uploaded. Key material is never committed: `.gitignore` excludes
 
 ## Verifying an artifact
 
+`scripts/android-verify` checks the packaging contract and exits non-zero on
+the first violation. It needs `ANDROID_HOME` (or `ANDROID_SDK_ROOT`), python3
+and `JAVA_HOME` for the signature check; it uses the newest installed
+build-tools:
+
 ```sh
-AAPT2="$ANDROID_HOME/build-tools/36.1.0/aapt2"
+cd <repository root>
+scripts/android-verify app/universal/apps/tabtool-android/android/app/build/outputs/apk/debug/app-debug.apk
+scripts/android-verify --release app/universal/apps/tabtool-android/android/app/build/outputs/apk/release/app-release.apk
+```
+
+It always checks the version against `app/universal/version.json`, both native
+ABIs, the absence of the `INTERNET` permission, the stored native entries and
+the `zipalign -c -P 16` page alignment. `--release` additionally requires a
+verifying signature that is not `CN=Android Debug`, so a release build that
+fell back to the debug keystore fails instead of passing.
+
+The individual commands, with the same newest-build-tools lookup:
+
+```sh
+AAPT2="$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)"
+APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
+ZIPALIGN="$(ls -d "$ANDROID_HOME"/build-tools/*/zipalign | sort -V | tail -1)"
 
 "$AAPT2" dump badging app/build/outputs/apk/release/app-release.apk | \
   grep -E "^package|sdkVersion|native-code|launchable-activity"
 "$AAPT2" dump permissions app/build/outputs/apk/release/app-release.apk
-unzip -l app/build/outputs/apk/release/app-release.apk | grep '^ *[0-9]*.*lib/'
-"$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --print-certs \
-  app/build/outputs/apk/release/app-release.apk
+unzip -v app/build/outputs/apk/release/app-release.apk | grep 'lib/'
+"$ZIPALIGN" -c -P 16 -v 4 app/build/outputs/apk/release/app-release.apk
+"$APKSIGNER" verify --print-certs app/build/outputs/apk/release/app-release.apk
 ```
 
 What a correct release artifact shows:
@@ -194,14 +239,15 @@ What a correct release artifact shows:
   values in `app/universal/version.json`;
 - `minSdkVersion:'26'` and `targetSdkVersion:'36'`;
 - `native-code: 'arm64-v8a' 'x86_64'`, with `lib/arm64-v8a/libmain.so` and
-  `lib/x86_64/libmain.so` inside the APK;
+  `lib/x86_64/libmain.so` inside the APK, both `Stored` (uncompressed) and
+  `(OK)` in `zipalign -c -P 16`;
 - no `uses-permission: name='android.permission.INTERNET'`;
 - the four intent filters on `MainActivity` (launcher, `VIEW` for CSV and TSV
   MIME types, `VIEW` for `file://` table extensions, `SEND`), all exported
   because they are the entry points, and `FileProvider` with
   `exported="false"`;
-- `apksigner verify` reporting the release certificate, or `CN=Android Debug`
-  when the build fell back to the debug keystore.
+- `apksigner verify` reporting the release certificate; `CN=Android Debug`
+  means the build fell back to the debug keystore and is not a release.
 
 The AAB carries the same libraries under `base/lib/<abi>/libmain.so`. The
 launcher icon is verified once by installing the APK and looking at the app
@@ -215,18 +261,26 @@ and pull request touching `app/universal`:
 
 - JDK 17, Rust 1.99.1 with both Android targets, and the NDK 28.2.13676358,
   installed only when the runner does not already have it;
-- `cargo-ndk` 4.1.2 from crates.io, cached in `~/.cargo/bin` with the Cargo
-  registry, `app/universal/target` and the Gradle cache;
-- `cargo ndk` for both ABIs, `./gradlew assembleDebug`, and a check of the
-  built APK's version, ABIs and permissions;
+- the Cargo registry, `~/.cargo/bin` and `app/universal/target` cached by
+  `actions/cache`, and the Gradle user home and build cache by
+  `gradle/actions/setup-gradle`;
+- `cargo-ndk` 4.1.2 from crates.io, reinstalled when the cached binary is not
+  that version;
+- `cargo ndk` for both ABIs, `./gradlew assembleDebug`, then
+  `scripts/android-verify` on the debug APK (version, ABIs, no network, stored
+  libraries, 16 KB alignment);
 - the debug APK is uploaded as the `tabtool-android-debug` artifact.
 
 The release APK and AAB are built only when the repository has the signing
 secrets. They are named `TABTOOL_ANDROID_KEYSTORE_BASE64` (the keystore,
 base64-encoded, because a secret cannot hold a file), plus
 `TABTOOL_ANDROID_KEYSTORE_PASSWORD`, `TABTOOL_ANDROID_KEY_ALIAS` and
-`TABTOOL_ANDROID_KEY_PASSWORD`. The job decodes the keystore into
-`$RUNNER_TEMP`, points `TABTOOL_ANDROID_KEYSTORE` at it, and uploads
+`TABTOOL_ANDROID_KEY_PASSWORD`. The job fails when the base64 keystore is set
+but any of the other three is empty, so a half-configured release cannot fall
+back to the debug key. It decodes the keystore into `$RUNNER_TEMP`, points
+`TABTOOL_ANDROID_KEYSTORE` at it, builds both artifacts, runs
+`scripts/android-verify --release` on the APK and checks both
+`base/lib/<abi>/libmain.so` entries in the AAB before uploading
 `tabtool-android-release`. Without the secrets the job still builds and checks
 the debug APK; no emulator runs in CI.
 

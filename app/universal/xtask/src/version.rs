@@ -173,16 +173,33 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    /// A fresh directory per test, so the several tests can run in parallel.
-    fn temporary_directory() -> PathBuf {
-        static NEXT: AtomicU32 = AtomicU32::new(0);
-        let directory = std::env::temp_dir().join(format!(
-            "tabtool-version-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir_all(&directory).expect("the temporary directory");
-        directory
+    /// A fresh directory per test that removes itself, so the tests run in
+    /// parallel and leave nothing behind.
+    struct TemporaryDirectory {
+        path: PathBuf,
+    }
+
+    impl TemporaryDirectory {
+        fn new() -> Self {
+            static NEXT: AtomicU32 = AtomicU32::new(0);
+            let path = std::env::temp_dir().join(format!(
+                "tabtool-version-{}-{}",
+                std::process::id(),
+                NEXT.fetch_add(1, Ordering::Relaxed)
+            ));
+            fs::create_dir_all(&path).expect("the temporary directory");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TemporaryDirectory {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
     }
 
     const SAMPLE: &str = r#"{
@@ -198,7 +215,8 @@ mod tests {
 
     #[test]
     fn a_build_bump_raises_only_the_build_number() {
-        let mut version = load(&write_sample(&temporary_directory())).expect("a valid version");
+        let directory = TemporaryDirectory::new();
+        let mut version = load(&write_sample(directory.path())).expect("a valid version");
         version.bump("build").expect("a valid kind");
         assert_eq!(version.name(), "1.0.0");
         assert_eq!(version.build, 2);
@@ -206,7 +224,8 @@ mod tests {
 
     #[test]
     fn patch_minor_and_major_bumps_move_the_name_and_the_build() {
-        let mut version = load(&write_sample(&temporary_directory())).expect("a valid version");
+        let directory = TemporaryDirectory::new();
+        let mut version = load(&write_sample(directory.path())).expect("a valid version");
         version.bump("patch").expect("a valid kind");
         assert_eq!(version.render(), "1.0.1 (2)");
         version.bump("minor").expect("a valid kind");
@@ -217,13 +236,15 @@ mod tests {
 
     #[test]
     fn an_unknown_bump_kind_is_rejected() {
-        let mut version = load(&write_sample(&temporary_directory())).expect("a valid version");
+        let directory = TemporaryDirectory::new();
+        let mut version = load(&write_sample(directory.path())).expect("a valid version");
         assert!(version.bump("nope").is_err());
         assert_eq!(version.render(), "1.0.0 (1)");
     }
 
     #[test]
     fn malformed_names_and_builds_are_rejected() {
+        let directory = TemporaryDirectory::new();
         for (name, build) in [
             ("1.0", "1"),
             ("1.2.3.4", "1"),
@@ -235,7 +256,7 @@ mod tests {
             ("1.2.3", "1.5"),
             ("1.2.3", ""),
         ] {
-            let path = temporary_directory().join("version.json");
+            let path = directory.path().join("version.json");
             fs::write(
                 &path,
                 format!("{{\"name\": \"{name}\", \"build\": \"{build}\"}}"),
@@ -250,14 +271,14 @@ mod tests {
 
     #[test]
     fn a_missing_file_cannot_be_read() {
-        let path = temporary_directory().join("version.json");
-        assert!(load(&path).is_err());
+        let directory = TemporaryDirectory::new();
+        assert!(load(&directory.path().join("version.json")).is_err());
     }
 
     #[test]
     fn storing_writes_the_two_fields_and_leaves_no_temporary() {
-        let directory = temporary_directory();
-        let path = write_sample(&directory);
+        let directory = TemporaryDirectory::new();
+        let path = write_sample(directory.path());
         let mut version = load(&path).expect("a valid version");
         version.bump("patch").expect("a valid kind");
         store(&path, &version).expect("a written version");
@@ -267,7 +288,7 @@ mod tests {
             fs::read_to_string(&path).expect("the written file"),
             "{\n  \"name\": \"1.0.1\",\n  \"build\": \"2\"\n}\n"
         );
-        let names: Vec<String> = fs::read_dir(&directory)
+        let names: Vec<String> = fs::read_dir(directory.path())
             .expect("the directory")
             .map(|entry| {
                 entry

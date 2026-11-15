@@ -1,4 +1,5 @@
 import groovy.json.JsonSlurper
+import java.nio.file.Files
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -41,13 +42,88 @@ val hasReleaseSigning = listOf(
     releaseKeyPassword,
 ).all { !it.isNullOrBlank() }
 
-val buildsRelease = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+val buildsRelease = gradle.startParameter.taskNames.any { requested ->
+    val task = requested.substringAfterLast(':')
+    // `build` and `assemble` package the release variant too.
+    task.contains("Release", ignoreCase = true) || task == "build" || task == "assemble"
+}
 if (!hasReleaseSigning && buildsRelease) {
     logger.warn(
         "TabTool: release signing is not configured. Set TABTOOL_ANDROID_KEYSTORE, " +
             "TABTOOL_ANDROID_KEYSTORE_PASSWORD, TABTOOL_ANDROID_KEY_ALIAS and " +
             "TABTOOL_ANDROID_KEY_PASSWORD to sign a real release; this build is debug-signed.",
     )
+}
+
+// cargo ndk writes src/main/jniLibs and Gradle only packages what it finds
+// there. It reports "Copying libraries" even when it leaves an earlier
+// variant's copy in place, and one directory cannot serve both variants, so a
+// silent mismatch would ship release libraries in a debug APK or the reverse.
+// The check compares the bytes and fails instead of packaging the wrong ones.
+val universalDirectory = rootProject.layout.projectDirectory.dir("../../..")
+val rustSources = files(
+    universalDirectory.dir("crates")
+        .asFileTree.matching { include("**/src/**/*.rs", "**/Cargo.toml") },
+    universalDirectory.dir("apps/tabtool-android/src").asFileTree.matching { include("**/*.rs") },
+    universalDirectory.file("apps/tabtool-android/Cargo.toml"),
+    universalDirectory.file("Cargo.toml"),
+    universalDirectory.file("Cargo.lock"),
+)
+val abiTriples = mapOf("arm64-v8a" to "aarch64-linux-android", "x86_64" to "x86_64-linux-android")
+
+/** The variants the requested tasks package; an aggregate asks for both. */
+fun requestedProfiles(): Pair<Boolean, Boolean> {
+    val tasks = gradle.startParameter.taskNames.map { it.substringAfterLast(':') }
+    val aggregate = tasks.any { it == "assemble" || it == "build" }
+    val debug = aggregate || tasks.any { it.contains("debug", ignoreCase = true) }
+    val release = aggregate || tasks.any { it.contains("release", ignoreCase = true) }
+    return debug to release
+}
+
+val verifyNativeLibraries by tasks.registering {
+    description = "Checks that src/main/jniLibs holds the libraries cargo built for the requested variant."
+    val libraries = abiTriples.keys.associateWith {
+        layout.projectDirectory.file("src/main/jniLibs/$it/libmain.so").asFile
+    }
+    val sources = rustSources.files.filter { it.isFile }
+    val (wantsDebug, wantsRelease) = requestedProfiles()
+    doLast {
+        check(!(wantsDebug && wantsRelease)) {
+            "One src/main/jniLibs directory cannot serve both variants. Run " +
+                "./gradlew assembleDebug or ./gradlew assembleRelease after cargo ndk."
+        }
+        val profile = when {
+            wantsRelease -> "release"
+            wantsDebug -> "debug"
+            // A task that packages nothing (for example `lint`) does not need
+            // the byte check.
+            else -> null
+        }
+        val cargoCommand = if (profile == "release") "cargo ndk --release" else "cargo ndk"
+        val newestSource = sources.maxOfOrNull { it.lastModified() } ?: 0L
+        libraries.forEach { (abi, packaged) ->
+            check(packaged.isFile) {
+                "Missing ${packaged.path}. Run $cargoCommand before Gradle (docs/android.md)."
+            }
+            check(packaged.lastModified() >= newestSource) {
+                "${packaged.path} is older than the newest Rust source; run $cargoCommand again."
+            }
+            if (profile == null) {
+                return@forEach
+            }
+            val built = universalDirectory.file("target/${abiTriples.getValue(abi)}/$profile/libmain.so")
+            check(built.asFile.isFile) {
+                "No ${built.asFile.path}. Run $cargoCommand before Gradle (docs/android.md)."
+            }
+            check(Files.mismatch(packaged.toPath(), built.asFile.toPath()) == -1L) {
+                "${packaged.path} is not the $profile library cargo built; run $cargoCommand again."
+            }
+        }
+    }
+}
+
+tasks.named("preBuild") {
+    dependsOn(verifyNativeLibraries)
 }
 
 android {
@@ -92,6 +168,16 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    // The native libraries ship uncompressed and page-aligned and load from the
+    // APK in place, so GameActivity never extracts them at install time. This is
+    // the Android Gradle Plugin default; stating it keeps a future change
+    // deliberate, and `scripts/android-verify` checks the result.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 
     buildFeatures {

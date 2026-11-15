@@ -891,7 +891,9 @@ adb shell am start -n app.shurco.tabtool/.MainActivity
 `cargo ndk` writes the two `libmain.so` files into the gitignored
 `app/src/main/jniLibs` before Gradle packages them; `cargo ndk ... build
 --release` plus `./gradlew assembleRelease bundleRelease` produces the release
-APK and AAB.
+APK and AAB. The `verifyNativeLibraries` task, which every build depends on,
+fails when a library is missing, older than the newest Rust source, or built
+for the other variant, so pair each `cargo ndk` run with its own Gradle task.
 
 ### Packaging
 
@@ -910,10 +912,14 @@ APK and AAB.
   `TABTOOL_ANDROID_KEY_ALIAS` and `TABTOOL_ANDROID_KEY_PASSWORD`; when they are
   absent the release build is debug-signed and Gradle says so. No key material
   is committed.
-- **CI.** The `android` job in `.github/workflows/universal.yml` installs
-  cargo-ndk and the NDK, builds both ABIs, checks the debug APK's version, ABIs
-  and permissions, and builds the signed release only when the signing secrets
-  exist. It runs no emulator.
+- **Packaging and CI.** `packaging { jniLibs { useLegacyPackaging = false } }`
+  keeps the libraries uncompressed and 16 KB page-aligned, and
+  `scripts/android-verify [--release] APK` checks the version, ABIs, missing
+  network permission, alignment and (for `--release`) that the APK is not
+  debug-signed. The `android` job in `.github/workflows/universal.yml` installs
+  cargo-ndk and the NDK, builds both ABIs, verifies the debug APK, and builds
+  and verifies the signed release only when all four signing secrets exist. It
+  runs no emulator.
 
 The full install, signing, icon and artifact-inspection instructions are in
 [docs/android.md](../../../docs/android.md).
