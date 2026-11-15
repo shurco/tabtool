@@ -253,7 +253,7 @@ impl PreparedSave {
     /// before the parent sync, so a failed sync is reported to the error stream
     /// and does not fail the save; the written bytes are already in place.
     pub fn install(self) -> Result<(), LargeFileSaveError> {
-        self.install_with_directory_sync(sync_directory)
+        self.install_with_directory_sync(platform::sync_directory)
     }
 
     /// Replaces `target` and syncs its parent with `sync`.
@@ -342,18 +342,6 @@ fn copy_permissions(source: &Path, target: &Path) -> io::Result<()> {
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(error) => Err(error),
     }
-}
-
-/// Flushes a directory entry change (a rename) to disk.
-#[cfg(unix)]
-fn sync_directory(path: &Path) -> io::Result<()> {
-    File::open(path)?.sync_all()
-}
-
-/// Directory syncs are a Unix durability step; other platforms have none.
-#[cfg(not(unix))]
-fn sync_directory(_path: &Path) -> io::Result<()> {
-    Ok(())
 }
 
 fn ensure_ready(snapshot: &LargeSaveSnapshot) -> Result<(), LargeFileSaveError> {

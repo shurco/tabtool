@@ -1,7 +1,9 @@
 //! The edited cells of a large file, kept apart from its bytes.
 
 use std::collections::HashMap;
-use std::sync::{Mutex, MutexGuard};
+use std::sync::Mutex;
+
+use crate::lock;
 
 /// A cell address in the file: the physical row (header row included) and
 /// column.
@@ -63,10 +65,4 @@ impl CellOverlay {
     pub fn remove_all(&self) {
         lock(&self.cells).clear();
     }
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }

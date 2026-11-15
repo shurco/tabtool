@@ -8,7 +8,7 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
 
-use tabtool_large::replace_file;
+use tabtool_large::{replace_file, sync_directory};
 
 /// Prefix of the temporary file a [`Storage::write_atomic`] leaves in the
 /// target directory while the new bytes are being written.
@@ -80,18 +80,6 @@ impl Storage for StdStorage {
         }
         Ok(())
     }
-}
-
-/// Flushes a directory entry change (a rename) to disk.
-#[cfg(unix)]
-fn sync_directory(path: &Path) -> io::Result<()> {
-    fs::File::open(path)?.sync_all()
-}
-
-/// Directory syncs are a Unix durability step; other platforms have none.
-#[cfg(not(unix))]
-fn sync_directory(_path: &Path) -> io::Result<()> {
-    Ok(())
 }
 
 /// Moves `temporary` onto `target`, replacing an existing file atomically.

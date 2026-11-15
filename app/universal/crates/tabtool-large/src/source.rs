@@ -1,19 +1,19 @@
 //! A [`RowSource`] over a memory-mapped file.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 
 use tabtool_core::{
     ColumnId, CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, Encoding, RowSource, issue,
     new_column_id,
 };
 
-use crate::LargeFile;
 use crate::block::LargeBlock;
 use crate::index::RowIndex;
 use crate::indexer::LargeFileIndexer;
 use crate::mapped::{MappedFile, Staleness};
 use crate::overlay::{CellKey, CellOverlay};
+use crate::{LargeFile, lock};
 
 const CACHE_CAPACITY: usize = 64;
 const UTF8_BOM: [u8; 3] = [0xEF, 0xBB, 0xBF];
@@ -409,10 +409,4 @@ impl RowSource for LargeCSVSource {
     fn cell(&self, row: usize, column: usize) -> String {
         LargeCSVSource::cell(self, row, column)
     }
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }

@@ -3,13 +3,14 @@
 use std::any::Any;
 use std::panic::{self, AssertUnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use tabtool_core::CsvConfiguration;
 
 use crate::index::RowIndex;
+use crate::lock;
 use crate::mapped::MappedFile;
 use crate::scanner::RowScanner;
 
@@ -298,12 +299,6 @@ impl LargeFileIndexer {
             }
         }
     }
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// The message of a panic payload, for propagation through [`LargeFileIndexer::wait`].

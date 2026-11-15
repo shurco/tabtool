@@ -90,6 +90,18 @@ pub fn replace_file(_target: &Path, _replacement: &Path) -> io::Result<()> {
     ))
 }
 
+/// Flushes a directory entry change (a rename) to disk.
+#[cfg(unix)]
+pub fn sync_directory(path: &Path) -> io::Result<()> {
+    File::open(path)?.sync_all()
+}
+
+/// Directory syncs are a Unix durability step; other platforms have none.
+#[cfg(not(unix))]
+pub fn sync_directory(_path: &Path) -> io::Result<()> {
+    Ok(())
+}
+
 /// Free bytes available to the current user on the volume holding `path`.
 pub fn available_space(path: &Path) -> io::Result<u64> {
     fs2::available_space(path)

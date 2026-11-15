@@ -16,11 +16,11 @@ use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
 
 use tabtool_large::{
-    LargeCSVSource, LargeFileIndexer, LargeFileSaveError, MappedFile, PreparedSave,
+    LargeCSVSource, LargeFileIndexer, LargeFileSaveError, MappedFile, PreparedSave, lock,
 };
 
 use crate::Document;
@@ -453,12 +453,6 @@ fn cached_outcome(shared: &Arc<Shared>) -> LargeSaveJobOutcome {
         .cached
         .clone()
         .expect("the waiter was notified with a cached outcome")
-}
-
-fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 #[cfg(test)]
