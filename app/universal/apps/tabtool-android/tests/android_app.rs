@@ -975,19 +975,18 @@ fn native_text_rects_are_shifted_by_the_content_origin() {
 
 #[test]
 fn the_export_outcome_distinguishes_pending_cancel_and_failure() {
-    assert_eq!(export_outcome(true, false, None), ExportOutcome::Copied);
-    assert_eq!(export_outcome(false, true, None), ExportOutcome::Cancelled);
-    assert_eq!(export_outcome(false, false, None), ExportOutcome::Failed);
+    assert_eq!(export_outcome(None, true), ExportOutcome::Cancelled);
+    assert_eq!(export_outcome(None, false), ExportOutcome::Failed);
     assert_eq!(
-        export_outcome(false, false, Some(CopyOutcome::Cancelled)),
+        export_outcome(Some(CopyOutcome::Cancelled), false),
         ExportOutcome::Cancelled
     );
     assert_eq!(
-        export_outcome(false, false, Some(CopyOutcome::Failed)),
+        export_outcome(Some(CopyOutcome::Failed), false),
         ExportOutcome::Failed
     );
     assert_eq!(
-        export_outcome(false, false, Some(CopyOutcome::Copied)),
+        export_outcome(Some(CopyOutcome::Copied), false),
         ExportOutcome::Copied
     );
 }

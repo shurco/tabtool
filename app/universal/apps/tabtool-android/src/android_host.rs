@@ -12,10 +12,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use tabtool_platform::android::{AndroidPlatform, IntentImport};
-use tabtool_platform::{
-    BackHandler, Clipboard, DocumentFiles, Insets, OpenUrl, PlatformErrors, Share, SystemInfo,
-    TextInput, TextInputRequest,
-};
+use tabtool_platform::{Clipboard, OpenUrl, SystemInfo, TextInput, TextInputRequest};
 use tabtool_ui::grid::Clipboard as GridClipboard;
 use tabtool_ui::mobile::{
     DocumentMetadata, ExportOutcome, LibraryClock, LibraryError, TouchTextInput,
@@ -57,11 +54,11 @@ pub fn background_save_acknowledged() -> bool {
 
 impl Host for AndroidHost {
     fn documents_dir(&self) -> PathBuf {
-        DocumentFiles::documents_dir(&AndroidPlatform)
+        AndroidPlatform.documents_dir()
     }
 
     fn list_documents(&self) -> Vec<PathBuf> {
-        DocumentFiles::list_documents(&AndroidPlatform)
+        AndroidPlatform.list_documents()
     }
 
     fn existing_names(&self) -> Vec<String> {
@@ -93,7 +90,7 @@ impl Host for AndroidHost {
     }
 
     fn import_from_picker(&self) -> Option<PathBuf> {
-        DocumentFiles::import_from_picker(&AndroidPlatform)
+        AndroidPlatform.import_from_picker()
     }
 
     fn import_in_progress(&self) -> bool {
@@ -101,11 +98,9 @@ impl Host for AndroidHost {
     }
 
     fn export_copy(&self, source: &Path, suggested_name: &str) -> ExportOutcome {
-        let copied = DocumentFiles::export_copy(&AndroidPlatform, source, suggested_name);
         crate::app::export_outcome(
-            copied,
+            AndroidPlatform.export_copy(source, suggested_name),
             AndroidPlatform.export_pending(),
-            AndroidPlatform.take_export_outcome(),
         )
     }
 
@@ -114,15 +109,16 @@ impl Host for AndroidHost {
     }
 
     fn delete(&self, path: &Path) -> io::Result<()> {
-        DocumentFiles::delete(&AndroidPlatform, path)
+        AndroidPlatform.delete(path)
     }
 
     fn rename(&self, from: &Path, to: &Path) -> io::Result<()> {
-        DocumentFiles::rename(&AndroidPlatform, from, to)
+        AndroidPlatform.rename(from, to)
     }
 
     fn take_error(&self) -> Option<LibraryError> {
-        PlatformErrors::take_error(&AndroidPlatform)
+        AndroidPlatform
+            .take_error()
             .map(|error| LibraryError::new(error.message_key, error.detail))
     }
 
@@ -141,19 +137,19 @@ impl Host for AndroidHost {
     }
 
     fn safe_area(&self) -> [f32; 4] {
-        Insets::safe_area(&AndroidPlatform)
+        AndroidPlatform.safe_area()
     }
 
     fn keyboard_height(&self) -> f32 {
-        Insets::keyboard_height(&AndroidPlatform)
+        AndroidPlatform.keyboard_height()
     }
 
     fn take_back(&self) -> bool {
-        BackHandler::take_back(&AndroidPlatform)
+        AndroidPlatform.take_back()
     }
 
     fn share(&self, path: &Path) {
-        Share::share(&AndroidPlatform, path);
+        AndroidPlatform.share(path);
     }
 
     fn finish_activity(&self) {
@@ -258,7 +254,7 @@ impl TouchTextInput for AndroidTextInput {
 
 impl AndroidTextInput {
     fn safe_area(&self) -> [f32; 4] {
-        Insets::safe_area(&AndroidPlatform)
+        AndroidPlatform.safe_area()
     }
 
     fn open_at(&self, rect: eframe::egui::Rect, text: String, multiline: bool) {

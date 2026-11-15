@@ -18,9 +18,6 @@ pub use desktop::{DesktopPlatform, FileDialogs};
 #[cfg(not(target_os = "android"))]
 pub use locale::system_locale;
 pub use locale::{SystemInfo, decimal_separator, prefers_chinese_encoding};
-pub use services::{
-    BackHandler, Clipboard, CopyOutcome, DocumentFiles, Insets, OpenUrl, PlatformError,
-    PlatformErrors, Share,
-};
+pub use services::{Clipboard, CopyOutcome, OpenUrl, PlatformError};
 pub use settings::{load_settings, save_settings, settings_path};
 pub use text_input::{TextInput, TextInputOutcome, TextInputRequest};

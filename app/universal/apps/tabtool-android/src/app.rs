@@ -408,18 +408,16 @@ pub fn text_input_rect(rect: eframe::egui::Rect, safe_area: [f32; 4]) -> [f32; 4
 /// Maps the platform's copy result onto the UI's export outcome.
 ///
 /// A pending picker is reported as [`ExportOutcome::Cancelled`] so the sheet
-/// keeps waiting; a finished `false` without a typed outcome is a failure.
+/// keeps waiting; a finished call without a typed outcome is a failure.
 pub fn export_outcome(
-    copied: bool,
-    pending: bool,
     outcome: Option<tabtool_platform::CopyOutcome>,
+    pending: bool,
 ) -> ExportOutcome {
     match outcome {
         Some(tabtool_platform::CopyOutcome::Copied) => ExportOutcome::Copied,
         Some(tabtool_platform::CopyOutcome::Cancelled) => ExportOutcome::Cancelled,
         Some(tabtool_platform::CopyOutcome::Failed) => ExportOutcome::Failed,
         None if pending => ExportOutcome::Cancelled,
-        None if copied => ExportOutcome::Copied,
         None => ExportOutcome::Failed,
     }
 }
