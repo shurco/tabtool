@@ -9,7 +9,8 @@ use std::sync::Arc;
 use tabtool_desktop::about_window;
 use tabtool_desktop::app::DesktopApp;
 use tabtool_desktop::platform::SharedStorage;
-use tabtool_platform::{DesktopPlatform, Settings};
+use tabtool_platform::DesktopPlatform;
+use tabtool_settings::Settings;
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::{Theme, UiHarness};
 

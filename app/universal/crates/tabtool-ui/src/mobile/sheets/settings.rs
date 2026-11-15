@@ -197,7 +197,7 @@ pub fn settings_sheet(
                 tr(language, "Default"),
                 tr(language, "Comfortable"),
             ];
-            let current = crate::mobile::row_height(settings.grid_row_height);
+            let current = tabtool_settings::valid_mobile_row_height(settings.grid_row_height);
             let selected = MOBILE_ROW_HEIGHTS
                 .iter()
                 .position(|height| *height == current)

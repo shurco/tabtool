@@ -22,9 +22,5 @@ pub use services::{
     BackHandler, Clipboard, CopyOutcome, DocumentFiles, Insets, OpenUrl, PlatformError,
     PlatformErrors, Share, TABLE_EXTENSIONS,
 };
-pub use settings::{
-    DEFAULT_ROW_HEIGHT, LARGE_FILE_THRESHOLDS_MIB, MOBILE_DEFAULT_ROW_HEIGHT, MOBILE_ROW_HEIGHTS,
-    QuoteStyle, RECENT_DOCUMENTS_LIMIT, ROW_HEIGHTS, Settings, VALID_ROW_HEIGHTS, keys,
-    load_settings, save_settings, settings_path, valid_mobile_row_height, valid_row_height,
-};
+pub use settings::{load_settings, save_settings, settings_path};
 pub use text_input::{TextInput, TextInputOutcome, TextInputRequest};

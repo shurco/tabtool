@@ -73,12 +73,8 @@ impl AndroidApp {
         if self.nav.sheet() == Some(sheet) {
             return;
         }
-        let needs_document = matches!(
-            sheet,
-            SheetKind::Format | SheetKind::Filters | SheetKind::Export
-        );
         let Some(editor) = self.editor.as_mut() else {
-            if needs_document {
+            if !lifecycle::library_sheet(sheet) {
                 return;
             }
             self.nav.open_sheet(sheet);
@@ -108,19 +104,19 @@ impl AndroidApp {
             self.notice = Some(Notice::Error(ERROR_GENERIC));
             return;
         }
-        if editor.document.is_dirty() {
-            if editor.document.is_large_mode() || !editor.document.can_save() {
-                self.prompt = Some(SavePrompt {
-                    action: AfterSaveAction::Share,
-                    name: editor.title.clone(),
-                });
-                return;
-            }
-            if let Err(error) = editor.document.save(&StdStorage) {
-                log::error!("could not save before sharing: {error:?}");
-                self.notice = Some(Notice::Error(ERROR_SAVE));
-                return;
-            }
+        if lifecycle::close_needs_prompt(&editor.document) {
+            self.prompt = Some(SavePrompt {
+                action: AfterSaveAction::Share,
+                name: editor.title.clone(),
+            });
+            return;
+        }
+        if editor.document.is_dirty()
+            && let Err(error) = editor.document.save(&StdStorage)
+        {
+            log::error!("could not save before sharing: {error:?}");
+            self.notice = Some(Notice::Error(ERROR_SAVE));
+            return;
         }
         self.share_current_document();
     }

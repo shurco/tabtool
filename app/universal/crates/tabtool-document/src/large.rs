@@ -165,7 +165,7 @@ impl Document {
         let Some(path) = self.file_path().map(Path::to_path_buf) else {
             return Err(DocumentError::NotReady);
         };
-        if !force && self.has_unsaved_changes() {
+        if !force && self.is_dirty() {
             return Err(DocumentError::RequiresConfirmation);
         }
         if !self.begin_reread() {

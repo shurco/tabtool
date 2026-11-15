@@ -26,7 +26,6 @@ tabtool-ui = { path = "../../crates/tabtool-ui" }
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.15"
 jni = "0.21"
-ndk-context = "0.1"
 winit = { version = "0.30.13", default-features = false, features = ["rwh_06", "android-game-activity"] }
 
 [dev-dependencies]

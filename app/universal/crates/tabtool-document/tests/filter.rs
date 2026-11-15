@@ -298,7 +298,7 @@ fn row_structure_is_locked_only_while_filtering() {
     assert!(!document.can_move_selected_rows(1));
 
     document.add_row_below_selection();
-    document.paste_tsv("x", &locale("en-US"), ".");
+    document.paste_tsv("x", ".");
     assert_eq!(document.table().expect("table").row_count(), 3);
     assert_eq!(
         document.table().expect("table").cell(0, 0),

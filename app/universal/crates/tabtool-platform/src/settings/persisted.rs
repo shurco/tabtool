@@ -5,9 +5,11 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value};
 use tabtool_i18n::Language;
+use tabtool_settings::{
+    LARGE_FILE_THRESHOLDS_MIB, QuoteStyle, RECENT_DOCUMENTS_LIMIT, Settings, keys, valid_row_height,
+};
 
 use super::encoding::{encoding_from_foundation_id, foundation_encoding_id};
-use super::{LARGE_FILE_THRESHOLDS_MIB, RECENT_DOCUMENTS_LIMIT, Settings, keys, valid_row_height};
 
 /// Reads the settings at `path`, falling back per value to the defaults.
 pub(crate) fn load(path: &Path) -> Settings {
@@ -69,7 +71,7 @@ fn from_map(map: &Map<String, Value>) -> Settings {
             .filter(|value| matches!(value.as_str(), "," | ";" | "\t" | "|"))
             .unwrap_or(defaults.new_document_separator),
         new_document_quote_style: string_value(map, keys::NEW_DOCUMENT_QUOTE_STYLE)
-            .and_then(|value| super::QuoteStyle::from_persisted(&value))
+            .and_then(|value| QuoteStyle::from_persisted(&value))
             .unwrap_or(defaults.new_document_quote_style),
         new_document_decimal_mark: string_value(map, keys::NEW_DOCUMENT_DECIMAL_MARK)
             .filter(|value| matches!(value.as_str(), "." | ","))

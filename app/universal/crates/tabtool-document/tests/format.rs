@@ -143,7 +143,7 @@ fn dirty_reparse_requires_confirmation() {
     let (_directory, path) = temp_file(b"a,b\nc,d\n");
     let mut document = loaded_from_path(&path, CsvConfiguration::default());
     document.set_cell(0, 0, "x");
-    assert!(document.has_unsaved_changes());
+    assert!(document.is_dirty());
 
     let error = document
         .apply_parsing_configuration(
@@ -184,7 +184,7 @@ fn forced_reparse_replaces_table_and_undoes() {
     assert_eq!(table.cell(0, 0), "a,b");
     assert_eq!(document.configuration().column_separator, ";");
     assert!(!document.is_dirty());
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
     assert_eq!(document.undo_action(), Some(UndoAction::ChangeFormat));
 
     assert!(document.undo());
@@ -258,7 +258,7 @@ fn untitled_configuration_change_cannot_reread_and_keeps_the_table() {
     assert!(Arc::ptr_eq(document.table().expect("table"), &table));
     assert_eq!(document.configuration().column_separator, ";");
     assert_eq!(document.undo_action(), Some(UndoAction::ChangeFormat));
-    assert!(document.has_unsaved_changes());
+    assert!(document.is_dirty());
 
     assert!(document.undo());
     assert_eq!(document.configuration().column_separator, ",");
@@ -491,19 +491,19 @@ fn a_candidate_at_the_current_revision_applies_with_one_undo() {
 #[test]
 fn has_unsaved_changes_marks_untitled_documents_and_tracks_revisions() {
     let mut untitled = Document::new(CsvConfiguration::default());
-    assert!(untitled.has_unsaved_changes());
+    assert!(untitled.is_dirty());
     untitled
         .new_document(CsvConfiguration::default())
         .expect("replace with a new document");
-    assert!(untitled.has_unsaved_changes());
+    assert!(untitled.is_dirty());
 
     let (_directory, path) = temp_file(b"a\n");
     let mut document = loaded_from_path(&path, CsvConfiguration::default());
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
     document.set_cell(0, 0, "x");
-    assert!(document.has_unsaved_changes());
+    assert!(document.is_dirty());
     document
         .apply_parsing_configuration(CsvConfiguration::default(), true, &StdStorage)
         .expect("re-read the disk content");
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
 }

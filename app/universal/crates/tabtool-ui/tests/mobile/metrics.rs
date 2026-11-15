@@ -2,9 +2,10 @@
 
 use egui::{Rect, pos2};
 use tabtool_i18n::{Language, tr_in};
+use tabtool_settings::valid_mobile_row_height;
 use tabtool_ui::mobile::{
     Insets, MOBILE_BODY_TEXT, MOBILE_DEFAULT_ROW_HEIGHT, MOBILE_MIN_TOUCH_TARGET,
-    MOBILE_ROW_HEIGHTS, MobileMetrics, row_height,
+    MOBILE_ROW_HEIGHTS, MobileMetrics,
 };
 
 fn available() -> Rect {
@@ -61,16 +62,16 @@ fn the_row_heights_are_the_three_mobile_options() {
     assert_eq!(MOBILE_ROW_HEIGHTS, [32.0, 44.0, 56.0]);
     assert_eq!(MOBILE_DEFAULT_ROW_HEIGHT, 44.0);
 
-    assert_eq!(row_height(32.0), 32.0);
-    assert_eq!(row_height(44.0), 44.0);
-    assert_eq!(row_height(56.0), 56.0);
+    assert_eq!(valid_mobile_row_height(32.0), 32.0);
+    assert_eq!(valid_mobile_row_height(44.0), 44.0);
+    assert_eq!(valid_mobile_row_height(56.0), 56.0);
 }
 
 #[test]
 fn an_unknown_stored_row_height_falls_back_to_the_default() {
     for stored in [20.0, 24.0, 0.0, -1.0, 40.0, f32::NAN, f32::INFINITY] {
         assert_eq!(
-            row_height(stored),
+            valid_mobile_row_height(stored),
             MOBILE_DEFAULT_ROW_HEIGHT,
             "stored height {stored} must fall back"
         );

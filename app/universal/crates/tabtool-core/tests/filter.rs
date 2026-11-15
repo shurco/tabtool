@@ -323,10 +323,9 @@ fn empty_table_yields_no_rows() {
 fn is_active_needs_at_least_one_usable_criterion() {
     let table = make_table();
     let id = table.columns[0].id;
-    let active =
-        |criteria: Vec<FilterCriterion>| RowFilter { criteria }.is_active(&table, ".", &locale());
+    let active = |criteria: Vec<FilterCriterion>| RowFilter { criteria }.is_active(&table, ".");
 
-    assert!(!RowFilter { criteria: vec![] }.is_active(&table, ".", &locale()));
+    assert!(!RowFilter { criteria: vec![] }.is_active(&table, "."));
     assert!(!active(vec![criterion(
         Some(id),
         FilterOperator::Contains,
@@ -376,7 +375,7 @@ fn empty_regex_is_valid_but_never_active() {
     let filter = RowFilter {
         criteria: vec![criterion],
     };
-    assert!(!filter.is_active(&table, ".", &locale()));
+    assert!(!filter.is_active(&table, "."));
     assert_eq!(
         filter.matching_rows(&table, ".", &locale()),
         (0..NAMES.len()).collect::<Vec<_>>()

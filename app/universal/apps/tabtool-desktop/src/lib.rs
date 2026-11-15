@@ -5,7 +5,6 @@
 
 pub mod about_window;
 pub mod app;
-pub mod autosave;
 pub mod documents;
 pub mod files;
 pub mod menu;

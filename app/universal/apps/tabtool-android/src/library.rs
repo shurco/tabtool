@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 use tabtool_core::Locale;
 use tabtool_i18n::{Language, language_from_system};
-use tabtool_platform::Settings;
+use tabtool_settings::Settings;
 use tabtool_ui::mobile::{
     DocumentFiles, DocumentMetadata, ExportOutcome, FileMetadata, LibraryClock, LibraryError,
     LibraryErrors, LibraryView, MobileMetrics,

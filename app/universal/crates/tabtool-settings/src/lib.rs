@@ -175,12 +175,6 @@ impl Settings {
             DEFAULT_ROW_HEIGHT
         }
     }
-
-    /// The grid row height for the mobile layout, or the mobile default when
-    /// the stored value is not one the mobile settings offer.
-    pub fn mobile_row_height(&self) -> f32 {
-        valid_mobile_row_height(self.grid_row_height)
-    }
 }
 
 /// Returns `value` when either platform offers it, otherwise the desktop

@@ -34,7 +34,7 @@ fn window(
             platform: DesktopPlatform,
             dialogs: shared_dialogs,
             storage: shared_storage,
-            settings: tabtool_platform::Settings::default(),
+            settings: tabtool_settings::Settings::default(),
             prefers_chinese: false,
         },
     )

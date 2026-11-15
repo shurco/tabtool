@@ -38,7 +38,7 @@ pub fn plan_revert(document: &Document) -> RevertDecision {
     {
         return RevertDecision::Unavailable;
     }
-    if document.has_unsaved_changes() {
+    if document.is_dirty() {
         RevertDecision::NeedsConfirmation
     } else {
         RevertDecision::Revert

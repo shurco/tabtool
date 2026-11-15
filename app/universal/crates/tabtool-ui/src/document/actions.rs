@@ -115,9 +115,8 @@ pub(crate) fn request_format_configuration(
             FormatApplyOutcome::Applied
         }
         _ => {
-            let needs_confirmation = document.file_path().is_some()
-                && document.has_content()
-                && document.has_unsaved_changes();
+            let needs_confirmation =
+                document.file_path().is_some() && document.has_content() && document.is_dirty();
             if needs_confirmation {
                 return FormatApplyOutcome::NeedsConfirmation(configuration);
             }

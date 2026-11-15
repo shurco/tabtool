@@ -14,7 +14,8 @@ use tabtool_desktop::app::DesktopApp;
 use tabtool_desktop::documents::{CloseChoice, DocumentWindow, WindowServices};
 use tabtool_desktop::platform::{SharedDialogs, SharedStorage};
 use tabtool_i18n::Language;
-use tabtool_platform::{DesktopPlatform, Settings};
+use tabtool_platform::DesktopPlatform;
+use tabtool_settings::Settings;
 use tabtool_ui::harness::kittest::{NodeT, Queryable};
 use tabtool_ui::{Theme, UiHarness};
 

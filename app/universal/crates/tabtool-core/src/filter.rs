@@ -129,7 +129,7 @@ impl RowFilter {
     }
 
     /// Whether at least one criterion would narrow the rows of `source`.
-    pub fn is_active(&self, source: &dyn RowSource, decimal_mark: &str, _locale: &Locale) -> bool {
+    pub fn is_active(&self, source: &dyn RowSource, decimal_mark: &str) -> bool {
         !self.active_matchers(source, decimal_mark).is_empty()
     }
 

@@ -1,7 +1,5 @@
 //! Documents, the native text-input fake and the touch editor fixture.
 
-#![allow(dead_code)]
-
 use core::cell::{Cell, RefCell};
 use std::path::Path;
 use std::rc::Rc;
@@ -111,7 +109,6 @@ struct FakeState {
     draft: Option<String>,
     placed: Option<egui::Rect>,
     commits: usize,
-    opens: usize,
 }
 
 /// A platform text editor fake the tests drive by hand.
@@ -143,11 +140,6 @@ impl FakeTouchInput {
         self.state.borrow().commits
     }
 
-    /// The number of editor sessions the view opened.
-    pub fn opens(&self) -> usize {
-        self.state.borrow().opens
-    }
-
     /// The rectangle the native editor currently covers, in screen points.
     pub fn placed_rect(&self) -> Option<egui::Rect> {
         self.state.borrow().placed
@@ -160,7 +152,6 @@ impl TouchTextInput for FakeTouchInput {
         state.placed = Some(request.rect);
         state.request = Some(request);
         state.pending = None;
-        state.opens += 1;
     }
 
     fn close(&mut self) {
@@ -214,8 +205,6 @@ pub struct EditorFixture {
     pub keyboard: Rc<Cell<f32>>,
     /// The active fold, in screen points.
     pub fold: Rc<Cell<Option<FoldRegion>>>,
-    /// The metrics the editor lays out with.
-    pub metrics: MobileMetrics,
     _directory: Option<TempDir>,
 }
 
@@ -283,7 +272,6 @@ impl EditorFixture {
             response,
             keyboard,
             fold,
-            metrics,
             _directory: None,
         }
     }
@@ -355,15 +343,6 @@ impl EditorFixture {
             .editing
             .as_ref()
             .map(|editing| editing.target)
-    }
-
-    /// The text the native editor opened with.
-    pub fn edit_text(&self) -> Option<String> {
-        self.editor
-            .borrow()
-            .editing
-            .as_ref()
-            .map(|editing| editing.text.clone())
     }
 
     /// Takes the responses collected since the last call.

@@ -17,7 +17,8 @@ use std::time::Instant;
 use egui::{Context, Ui};
 use tabtool_document::Document;
 use tabtool_i18n::Language;
-use tabtool_platform::{DesktopPlatform, Settings, SystemInfo, settings_path};
+use tabtool_platform::{DesktopPlatform, SystemInfo, settings_path};
+use tabtool_settings::Settings;
 
 use crate::about_window::AboutAction;
 use crate::documents::DocumentWindow;

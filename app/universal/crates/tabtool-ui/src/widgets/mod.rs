@@ -15,7 +15,7 @@ mod toggle;
 mod toolbar;
 
 pub use banner::{BannerKind, BannerResponse, banner};
-pub use button::{ButtonKind, PushButton, primary_button, push_button};
+pub use button::{ButtonKind, PushButton, primary_button};
 pub use list_row::list_row;
 pub use menu::{Menu, MenuItem, menu_bar};
 pub use modal::{AlertAction, modal};

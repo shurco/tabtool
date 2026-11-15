@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use egui::{Context, Ui, Vec2, ViewportBuilder, ViewportCommand, ViewportId};
 use tabtool_i18n::{Language, tr};
-use tabtool_platform::Settings;
+use tabtool_settings::Settings;
 use tabtool_ui::settings::{SettingsForm, show};
 
 /// The deferred Settings viewport and its shared form state.

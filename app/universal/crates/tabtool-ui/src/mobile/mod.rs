@@ -38,7 +38,7 @@ pub use library::{
 pub use list::{ListRow, ListRowResponse};
 pub use metrics::{
     Insets, MOBILE_BODY_TEXT, MOBILE_DEFAULT_ROW_HEIGHT, MOBILE_MIN_TOUCH_TARGET,
-    MOBILE_ROW_HEIGHTS, MOBILE_TABLET_SHEET_WIDTH, MobileMetrics, row_height,
+    MOBILE_ROW_HEIGHTS, MOBILE_TABLET_SHEET_WIDTH, MobileMetrics,
 };
 pub use nav::{BackOutcome, DocumentId, MISSING_DOCUMENT_NOTICE, NavStack, Screen, SheetKind};
 pub use sheet::{SheetOptions, SheetResponse, sheet};

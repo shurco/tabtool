@@ -23,8 +23,3 @@ pub fn column_name(index: usize) -> String {
     name.reverse();
     String::from_utf8(name).expect("column names are ASCII")
 }
-
-/// Returns the name for a signed column index, or `None` when it is negative.
-pub fn column_name_checked(index: isize) -> Option<String> {
-    usize::try_from(index).ok().map(column_name)
-}

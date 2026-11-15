@@ -161,11 +161,6 @@ impl<'a> PushButton<'a> {
     }
 }
 
-/// A bordered push button.
-pub fn push_button(ui: &mut Ui, label: &str, kind: ButtonKind) -> Response {
-    PushButton::new(label, kind).show(ui)
-}
-
 /// The default action button.
 pub fn primary_button(ui: &mut Ui, label: &str) -> Response {
     PushButton::new(label, ButtonKind::Prominent).show(ui)

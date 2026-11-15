@@ -12,7 +12,8 @@ use tabtool_desktop::documents::{
     CloseDecision, CloseSave, DOCUMENT_MIN_INNER_SIZE, close_decision,
 };
 use tabtool_desktop::platform::{SharedStorage, interface_language, resolve_language};
-use tabtool_platform::{DesktopPlatform, Settings};
+use tabtool_platform::DesktopPlatform;
+use tabtool_settings::Settings;
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::{Theme, UiHarness};
 

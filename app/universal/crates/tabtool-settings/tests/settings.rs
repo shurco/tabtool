@@ -88,7 +88,6 @@ fn thresholds_are_mebibytes_and_row_heights_fall_back() {
         ..Settings::default()
     };
     assert_eq!(mobile.row_height(), 24.0);
-    assert_eq!(mobile.mobile_row_height(), 56.0);
 }
 
 #[test]

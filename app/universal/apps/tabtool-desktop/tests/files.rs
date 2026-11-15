@@ -11,7 +11,8 @@ use tabtool_desktop::files::{
 };
 use tabtool_desktop::platform::{SharedDialogs, SharedStorage};
 use tabtool_document::{Document, DocumentError, DocumentPhase, StdStorage};
-use tabtool_platform::{Settings, load_settings};
+use tabtool_platform::load_settings;
+use tabtool_settings::Settings;
 
 use support::{FakeDialogs, MemoryStorage};
 

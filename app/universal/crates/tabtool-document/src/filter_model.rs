@@ -198,7 +198,7 @@ impl RowFilterModel {
     fn evaluate(&mut self, filter: RowFilter, source: &dyn RowSource, decimal_mark: &str) {
         self.known_column_ids = source.column_ids();
         let locale = filter_locale();
-        if !filter.is_active(source, decimal_mark, &locale) {
+        if !filter.is_active(source, decimal_mark) {
             self.applied = None;
             self.visible_rows = None;
             return;

@@ -97,7 +97,7 @@ fn untitled_documents_are_dirty_until_save_as() {
 
     assert_eq!(document.file_path(), Some(path.as_path()));
     assert!(!document.is_dirty());
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
     assert!(document.can_save());
 }
 
@@ -111,7 +111,7 @@ fn a_file_backed_document_starts_clean_and_becomes_dirty_after_an_edit() {
     document.set_cell(1, 1, "42");
 
     assert!(document.is_dirty());
-    assert!(document.has_unsaved_changes());
+    assert!(document.is_dirty());
 }
 
 #[test]

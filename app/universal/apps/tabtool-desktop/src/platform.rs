@@ -5,7 +5,8 @@ use std::sync::Arc;
 use tabtool_core::Locale;
 use tabtool_document::{StdStorage, Storage};
 use tabtool_i18n::{Language, language_from_system};
-use tabtool_platform::{DesktopPlatform, FileDialogs, Settings, SystemInfo};
+use tabtool_platform::{DesktopPlatform, FileDialogs, SystemInfo};
+use tabtool_settings::Settings;
 
 /// The storage every document window shares.
 ///
@@ -73,7 +74,7 @@ pub fn decimal_separator(platform: &DesktopPlatform) -> String {
 #[cfg(test)]
 mod tests {
     use tabtool_i18n::Language;
-    use tabtool_platform::Settings;
+    use tabtool_settings::Settings;
 
     use super::{interface_language_for, prefers_chinese_encoding};
 

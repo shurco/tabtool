@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use tabtool_platform::Settings;
+use tabtool_settings::Settings;
 
 use crate::platform::{SharedDialogs, SharedStorage};
 

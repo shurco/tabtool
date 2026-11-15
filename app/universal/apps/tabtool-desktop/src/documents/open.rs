@@ -2,11 +2,10 @@
 
 use std::path::{Path, PathBuf};
 
-use tabtool_document::LargeStatus;
+use tabtool_document::{Autosave, LargeStatus};
 use tabtool_ui::document::DocumentUiState;
 use tabtool_ui::grid::GridState;
 
-use crate::autosave::Autosave;
 use crate::documents::{CloseChoice, DocumentWindow, WindowRequest, WindowState};
 use crate::files::{OpenedDocument, ReplaceOutcome, UnsavedChoice, is_table_file};
 

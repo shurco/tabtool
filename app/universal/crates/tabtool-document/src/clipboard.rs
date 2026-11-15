@@ -196,7 +196,7 @@ impl Document {
     /// Extra fields add columns on the right. Numeric cells are converted from
     /// `decimal_separator` to the document decimal mark. The inserted rows
     /// become the selection and the whole paste is one undo operation.
-    pub fn paste_tsv(&mut self, text: &str, _locale: &Locale, decimal_separator: &str) {
+    pub fn paste_tsv(&mut self, text: &str, decimal_separator: &str) {
         if !self.can_edit_content() || !self.can_edit_row_structure() {
             return;
         }

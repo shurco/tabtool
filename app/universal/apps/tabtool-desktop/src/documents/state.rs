@@ -2,13 +2,13 @@
 
 use egui::ViewportId;
 use tabtool_core::Locale;
-use tabtool_document::{Document, DocumentError};
+use tabtool_document::{Autosave, Document, DocumentError};
 use tabtool_i18n::Language;
-use tabtool_platform::{DesktopPlatform, Settings};
+use tabtool_platform::DesktopPlatform;
+use tabtool_settings::Settings;
 use tabtool_ui::document::{DocumentUiState, apply_grid_action};
 use tabtool_ui::grid::{Clipboard, GridAction, GridAppearance, GridState};
 
-use crate::autosave::Autosave;
 use crate::files::FilePolicy;
 use crate::menu::MenuAction;
 use crate::platform::{SharedDialogs, SharedStorage};

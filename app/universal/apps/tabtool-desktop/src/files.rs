@@ -24,7 +24,8 @@ use std::time::{Duration, Instant};
 
 use tabtool_document::{Document, DocumentPhase};
 pub use tabtool_platform::TABLE_EXTENSIONS;
-use tabtool_platform::{RECENT_DOCUMENTS_LIMIT, Settings, save_settings};
+use tabtool_platform::save_settings;
+use tabtool_settings::{RECENT_DOCUMENTS_LIMIT, Settings};
 
 use crate::platform::{SharedDialogs, SharedStorage};
 

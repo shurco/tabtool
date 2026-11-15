@@ -7,7 +7,7 @@
 
 use std::collections::BTreeSet;
 
-use tabtool_core::{ColumnId, CsvColumn, CsvTable, RowSource, column_name, column_name_checked};
+use tabtool_core::{ColumnId, CsvColumn, CsvTable, RowSource, column_name};
 
 fn rows(values: &[&[&str]]) -> Vec<Vec<String>> {
     values
@@ -360,12 +360,6 @@ fn column_names_follow_the_spreadsheet_sequence() {
     for (index, expected) in cases {
         assert_eq!(column_name(index), expected, "{index}");
     }
-}
-
-#[test]
-fn negative_column_index_has_no_name() {
-    assert_eq!(column_name_checked(-1), None);
-    assert_eq!(column_name_checked(0), Some("A".to_owned()));
 }
 
 #[test]

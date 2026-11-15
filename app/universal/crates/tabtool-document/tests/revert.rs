@@ -73,7 +73,7 @@ fn clean_document_reverts_without_confirmation() {
     assert_eq!(document.table().expect("table").cell(0, 0), "a");
     assert_eq!(storage.reads.get(), 2);
     assert_eq!(storage.writes.get(), 0);
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
 }
 
 #[test]
@@ -92,12 +92,12 @@ fn dirty_revert_can_be_cancelled_or_confirmed() {
         .expect("revert after confirmation");
 
     assert_eq!(document.table().expect("table").cell(0, 0), "a");
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
     assert_eq!(document.undo_action(), Some(UndoAction::RevertToSaved));
 
     assert!(document.undo());
     assert_eq!(document.table().expect("table").cell(0, 0), "edited");
-    assert!(document.has_unsaved_changes());
+    assert!(document.is_dirty());
 }
 
 #[test]

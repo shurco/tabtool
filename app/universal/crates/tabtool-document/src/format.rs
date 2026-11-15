@@ -234,14 +234,6 @@ impl Document {
         );
     }
 
-    /// Whether the content differs from the saved content.
-    ///
-    /// An untitled document always has unsaved changes: there is no file that
-    /// could hold its content.
-    pub fn has_unsaved_changes(&self) -> bool {
-        self.is_dirty()
-    }
-
     /// Marks a re-read in flight and returns `false` when one is already
     /// running. Only one re-read may replace the document at a time.
     pub fn begin_reread(&mut self) -> bool {
@@ -290,7 +282,7 @@ impl Document {
         force: bool,
         storage: &dyn Storage,
     ) -> Result<(), DocumentError> {
-        if !force && self.table.is_some() && self.has_unsaved_changes() {
+        if !force && self.table.is_some() && self.is_dirty() {
             return Err(DocumentError::RequiresConfirmation);
         }
         let Some(path) = self.file_path().map(PathBuf::from) else {

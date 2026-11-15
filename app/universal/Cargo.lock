@@ -3598,7 +3598,6 @@ dependencies = [
  "eframe",
  "jni 0.21.1",
  "log",
- "ndk-context",
  "serde_json",
  "tabtool-core",
  "tabtool-document",
@@ -3635,6 +3634,7 @@ dependencies = [
  "tabtool-document",
  "tabtool-i18n",
  "tabtool-platform",
+ "tabtool-settings",
  "tabtool-ui",
  "tempfile",
 ]

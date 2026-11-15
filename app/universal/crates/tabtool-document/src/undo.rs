@@ -146,11 +146,6 @@ impl Document {
         self.undo_entries.last().map(UndoEntry::action)
     }
 
-    /// The action the next redo would repeat, if any.
-    pub fn redo_action(&self) -> Option<UndoAction> {
-        self.redo_entries.last().map(UndoEntry::action)
-    }
-
     /// Undoes the most recent action.
     ///
     /// Returns `false` when the history is empty, no content is loaded, or the

@@ -340,7 +340,7 @@ fn structural_commands_are_inert_in_large_mode() {
     document.move_selected_columns(1);
     document.rename_column(0, "changed");
     document.sort_rows(0, tabtool_core::SortDirection::Ascending, &locale);
-    document.paste_tsv("x\ty", &locale, ".");
+    document.paste_tsv("x\ty", ".");
     document.set_decimal_mark(",");
 
     assert_eq!(document.revision(), revision);
@@ -451,7 +451,7 @@ fn reload_reopens_the_file_and_keeps_the_overlay() {
     assert_eq!(document.large_status(), LargeStatus::Ready);
     assert_eq!(document.row_source().expect("source").row_count(), 31);
     assert_eq!(cell(&document, 2, 1), "X");
-    assert!(document.has_unsaved_changes());
+    assert!(document.is_dirty());
     assert_eq!(
         document.selection().rows,
         std::collections::BTreeSet::from([2])
@@ -470,7 +470,7 @@ fn reload_reopens_the_file_and_keeps_the_overlay() {
     // the same file row.
     assert!(document.undo());
     assert_eq!(cell(&document, 2, 1), "v2");
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
 }
 
 #[test]

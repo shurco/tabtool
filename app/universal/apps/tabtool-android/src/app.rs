@@ -17,7 +17,8 @@ use eframe::egui::{Frame, Panel, Ui, UiBuilder};
 use tabtool_core::Locale;
 use tabtool_document::{Document, DocumentError, LargeStatus, StdStorage};
 use tabtool_i18n::{Language, language_from_system, tr};
-use tabtool_platform::{Settings, decimal_separator, load_settings, save_settings};
+use tabtool_platform::{decimal_separator, load_settings, save_settings};
+use tabtool_settings::Settings;
 use tabtool_ui::about::AboutAction;
 use tabtool_ui::grid::{Clipboard as GridClipboard, GridAppearance, GridState};
 use tabtool_ui::mobile::{

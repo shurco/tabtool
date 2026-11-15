@@ -16,8 +16,6 @@ use crate::nav::{NavSnapshot, sheet_from_name, sheet_name};
 
 /// The JSON key of the open document.
 const DOCUMENT_KEY: &str = "document";
-/// The JSON key of the top sheet, kept for older state files.
-const SHEET_KEY: &str = "sheet";
 /// The JSON key of the full sheet stack.
 const SHEETS_KEY: &str = "sheets";
 /// The JSON version, so a future format can migrate rather than misread.
@@ -39,19 +37,17 @@ pub fn load_state(path: Option<&Path>) -> NavSnapshot {
     if object.get(VERSION_KEY).and_then(Value::as_u64) != Some(VERSION) {
         return NavSnapshot::default();
     }
-    let sheets = match object.get(SHEETS_KEY).and_then(Value::as_array) {
-        Some(sheets) => sheets
-            .iter()
-            .filter_map(Value::as_str)
-            .filter_map(sheet_from_name)
-            .collect(),
-        None => object
-            .get(SHEET_KEY)
-            .and_then(Value::as_str)
-            .and_then(sheet_from_name)
-            .into_iter()
-            .collect(),
-    };
+    let sheets = object
+        .get(SHEETS_KEY)
+        .and_then(Value::as_array)
+        .map(|sheets| {
+            sheets
+                .iter()
+                .filter_map(Value::as_str)
+                .filter_map(sheet_from_name)
+                .collect()
+        })
+        .unwrap_or_default();
     NavSnapshot {
         document: object
             .get(DOCUMENT_KEY)
@@ -73,9 +69,6 @@ pub fn save_state(path: Option<&Path>, snapshot: &NavSnapshot) -> io::Result<()>
             DOCUMENT_KEY.to_owned(),
             Value::from(document.to_string_lossy().into_owned()),
         );
-    }
-    if let Some(sheet) = snapshot.sheets.last() {
-        object.insert(SHEET_KEY.to_owned(), Value::from(sheet_name(*sheet)));
     }
     let sheets: Vec<Value> = snapshot
         .sheets

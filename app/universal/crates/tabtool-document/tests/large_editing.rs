@@ -116,17 +116,17 @@ fn edit_registers_undo_and_redo() {
     assert_eq!(large.cell(2, 1), "X");
     assert_eq!(large.overlay.count(), 1);
     assert_eq!(document.undo_action(), Some(UndoAction::EditCell));
-    assert!(document.has_unsaved_changes());
+    assert!(document.is_dirty());
 
     assert!(document.undo());
     assert_eq!(large.cell(2, 1), "v2");
     assert_eq!(large.overlay.count(), 0);
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
 
     assert!(document.redo());
     assert_eq!(large.cell(2, 1), "X");
     assert_eq!(large.overlay.count(), 1);
-    assert!(document.has_unsaved_changes());
+    assert!(document.is_dirty());
 }
 
 #[test]
@@ -148,13 +148,13 @@ fn edit_back_to_original_is_clean() {
     let mut document = open_without_header(&fixture.csv(30));
 
     document.set_large_cell("X", 0, 0).expect("edit the cell");
-    assert!(document.has_unsaved_changes());
+    assert!(document.is_dirty());
 
     document
         .set_large_cell("r0", 0, 0)
         .expect("restore the cell");
 
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
     assert!(!document.is_dirty());
     assert!(
         document
@@ -198,7 +198,7 @@ fn revert_drops_the_overlay_and_undo() {
     let fixture = Fixture::new();
     let mut document = open_without_header(&fixture.csv(30));
     document.set_large_cell("X", 1, 1).expect("edit the cell");
-    assert!(document.has_unsaved_changes());
+    assert!(document.is_dirty());
 
     document.revert_large_edits();
 
@@ -212,7 +212,7 @@ fn revert_drops_the_overlay_and_undo() {
     );
     assert_eq!(cell(&document, 1, 1), "v1");
     assert!(!document.can_undo());
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
 }
 
 #[test]
@@ -231,7 +231,7 @@ fn header_toggle_changes_row_mapping_and_is_undoable() {
     );
     assert_eq!(document.undo_action(), Some(UndoAction::ToggleHeader));
     // The header mapping is view state: it is undoable but not an unsaved edit.
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
 
     assert!(document.undo());
     assert!(!document.configuration().first_row_as_header);
@@ -520,7 +520,7 @@ fn reopen_drops_the_overlay_and_undo() {
     );
     assert_eq!(cell(&document, 1, 1), "v1");
     assert!(!document.can_undo());
-    assert!(!document.has_unsaved_changes());
+    assert!(!document.is_dirty());
     assert_eq!(document.large_status(), LargeStatus::Ready);
 }
 

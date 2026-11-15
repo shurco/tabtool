@@ -220,7 +220,7 @@ fn paste_inserts_rows_adds_columns_and_converts_decimal() {
     let mut document = loaded_with("a,b\n", configuration);
     select_rows(&mut document, [0]);
 
-    document.paste_tsv("1.5\t2\t3", &locale("en-US"), ".");
+    document.paste_tsv("1.5\t2\t3", ".");
 
     let table = document.table().expect("table");
     assert_eq!(table.row_count(), 2);
@@ -235,7 +235,7 @@ fn paste_is_one_undo_step() {
     let mut document = loaded("a,b\n");
     select_rows(&mut document, [0]);
 
-    document.paste_tsv("1\t2\t3", &locale("en-US"), ".");
+    document.paste_tsv("1\t2\t3", ".");
 
     assert_eq!(document.undo_action(), Some(UndoAction::PasteData));
     assert!(document.undo());
@@ -257,7 +257,7 @@ fn paste_is_one_undo_step() {
 fn paste_appends_when_no_row_is_selected() {
     let mut document = loaded("a\nb\n");
 
-    document.paste_tsv("x\ty", &locale("en-US"), ".");
+    document.paste_tsv("x\ty", ".");
 
     let table = document.table().expect("table");
     assert_eq!(table.row_count(), 3);
@@ -272,7 +272,7 @@ fn paste_inserts_after_the_last_selected_row() {
     let mut document = loaded("a\nb\nc\nd\n");
     select_rows(&mut document, [0, 2]);
 
-    document.paste_tsv("x", &locale("en-US"), ".");
+    document.paste_tsv("x", ".");
 
     let column: Vec<String> = document.table().expect("table").columns[0].cells.clone();
     assert_eq!(column, vec!["a", "b", "c", "x", "d"]);
@@ -283,7 +283,7 @@ fn paste_inserts_after_the_last_selected_row() {
 fn paste_keeps_an_empty_string_as_one_empty_row() {
     let mut document = loaded("a,b\n");
 
-    document.paste_tsv("", &locale("en-US"), ".");
+    document.paste_tsv("", ".");
 
     let table = document.table().expect("table");
     assert_eq!(table.row_count(), 2);
@@ -296,7 +296,7 @@ fn paste_keeps_an_empty_string_as_one_empty_row() {
 fn paste_preserves_empty_fields_and_missing_trailing_cells() {
     let mut document = loaded("x\n");
 
-    document.paste_tsv("a\t\tc\nb", &locale("en-US"), ".");
+    document.paste_tsv("a\t\tc\nb", ".");
 
     let table = document.table().expect("table");
     assert_eq!(table.row_count(), 3);
@@ -313,7 +313,7 @@ fn paste_preserves_empty_fields_and_missing_trailing_cells() {
 fn paste_does_not_trim_or_interpret_quotes() {
     let mut document = loaded("x\n");
 
-    document.paste_tsv(" a \t\"b", &locale("en-US"), ".");
+    document.paste_tsv(" a \t\"b", ".");
 
     let table = document.table().expect("table");
     assert_eq!(table.cell(1, 0), " a ");
@@ -328,7 +328,7 @@ fn paste_converts_only_numeric_cells_from_the_locale_mark() {
     };
     let mut document = loaded_with("a\n", configuration);
 
-    document.paste_tsv("1.5\thello\t1,5", &locale("en-US"), ".");
+    document.paste_tsv("1.5\thello\t1,5", ".");
 
     let table = document.table().expect("table");
     assert_eq!(table.cell(1, 0), "1,5");
@@ -340,7 +340,7 @@ fn paste_converts_only_numeric_cells_from_the_locale_mark() {
 fn paste_adds_columns_on_the_right_in_header_mode() {
     let mut document = loaded_with_header("A,B\n1,2\n");
 
-    document.paste_tsv("x\ty\tz", &locale("en-US"), ".");
+    document.paste_tsv("x\ty\tz", ".");
 
     let table = document.table().expect("table");
     assert_eq!(table.row_count(), 2);
@@ -358,13 +358,13 @@ fn paste_is_blocked_while_a_reread_is_in_progress() {
     let revision = document.revision();
 
     assert!(document.begin_reread());
-    document.paste_tsv("x", &locale("en-US"), ".");
+    document.paste_tsv("x", ".");
     assert_eq!(document.revision(), revision);
     assert_eq!(document.table().expect("table").row_count(), 1);
     assert!(!document.can_undo());
     document.end_reread();
 
-    document.paste_tsv("x", &locale("en-US"), ".");
+    document.paste_tsv("x", ".");
     assert_eq!(document.table().expect("table").row_count(), 2);
 }
 
@@ -373,7 +373,7 @@ fn paste_clears_the_active_sort() {
     let mut document = loaded("b\na\n");
     document.sort_rows(0, SortDirection::Ascending, &locale("en-US"));
 
-    document.paste_tsv("x", &locale("en-US"), ".");
+    document.paste_tsv("x", ".");
 
     assert_eq!(document.active_sort(), None);
 }
@@ -383,7 +383,7 @@ fn paste_without_a_loaded_document_is_a_no_op() {
     let mut document = Document::new(CsvConfiguration::default());
     let revision = document.revision();
 
-    document.paste_tsv("x", &locale("en-US"), ".");
+    document.paste_tsv("x", ".");
 
     assert_eq!(document.revision(), revision);
     assert!(!document.can_undo());

@@ -8,8 +8,7 @@ mod support;
 use std::time::{Duration, Instant};
 
 use tabtool_core::{CsvConfiguration, CsvError};
-use tabtool_desktop::autosave::{AUTOSAVE_DELAY, Autosave, AutosaveOutcome};
-use tabtool_document::DocumentError;
+use tabtool_document::{AUTOSAVE_DELAY, Autosave, AutosaveOutcome, DocumentError};
 
 use support::MemoryStorage;
 

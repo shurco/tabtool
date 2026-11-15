@@ -14,6 +14,7 @@ tabtool-core = { path = "../../crates/tabtool-core" }
 tabtool-document = { path = "../../crates/tabtool-document" }
 tabtool-i18n = { path = "../../crates/tabtool-i18n" }
 tabtool-platform = { path = "../../crates/tabtool-platform" }
+tabtool-settings = { path = "../../crates/tabtool-settings" }
 tabtool-ui = { path = "../../crates/tabtool-ui", default-features = false }
 
 [dev-dependencies]

@@ -155,7 +155,7 @@ impl MobileMetrics {
 
     /// Use the stored row height, falling back to the default when unknown.
     pub fn with_row_height(mut self, stored: f32) -> Self {
-        self.row_height = row_height(stored);
+        self.row_height = tabtool_settings::valid_mobile_row_height(stored);
         self
     }
 
@@ -191,9 +191,4 @@ impl MobileMetrics {
     pub fn sheet_max_height(&self, available_height: f32, keyboard_height: f32) -> f32 {
         (available_height - self.safe_area.top - self.bottom_inset(keyboard_height)).max(0.0)
     }
-}
-
-/// The mobile row height for a stored setting, or the default when unknown.
-pub fn row_height(stored: f32) -> f32 {
-    tabtool_settings::valid_mobile_row_height(stored)
 }

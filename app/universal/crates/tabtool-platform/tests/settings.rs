@@ -4,9 +4,10 @@ use std::path::{Path, PathBuf};
 use serde_json::json;
 use tabtool_core::{CsvConfiguration, Encoding};
 use tabtool_i18n::Language;
-use tabtool_platform::{
+use tabtool_platform::{load_settings, save_settings, settings_path};
+use tabtool_settings::{
     LARGE_FILE_THRESHOLDS_MIB, MOBILE_ROW_HEIGHTS, QuoteStyle, RECENT_DOCUMENTS_LIMIT, ROW_HEIGHTS,
-    Settings, keys, load_settings, save_settings, settings_path,
+    Settings, keys,
 };
 use tempfile::TempDir;
 

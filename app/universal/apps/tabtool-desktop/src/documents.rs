@@ -19,12 +19,11 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use egui::{Context, Ui, ViewportId};
-use tabtool_document::{Document, DocumentError};
+use tabtool_document::{Autosave, Document, DocumentError};
 use tabtool_i18n::Language;
 use tabtool_ui::document::{DocumentUiState, sync_selection_to_grid};
 use tabtool_ui::grid::GridState;
 
-use crate::autosave::Autosave;
 use crate::files::FilePolicy;
 use crate::menu::MenuAction;
 use crate::platform::{decimal_separator, system_locale};
@@ -184,15 +183,15 @@ impl DocumentWindow {
         }
 
         let outcome = if state.autosave_paused() {
-            crate::autosave::AutosaveOutcome::Idle
+            tabtool_document::AutosaveOutcome::Idle
         } else {
             state
                 .autosave
                 .tick(now, &mut state.document, &*state.file_ops.storage)
         };
         match outcome {
-            crate::autosave::AutosaveOutcome::Saved => state.issue = None,
-            crate::autosave::AutosaveOutcome::Blocked(error) => state.issue = Some(error),
+            tabtool_document::AutosaveOutcome::Saved => state.issue = None,
+            tabtool_document::AutosaveOutcome::Blocked(error) => state.issue = Some(error),
             _ => {}
         }
 
@@ -294,7 +293,8 @@ mod tests {
     use tabtool_core::CsvConfiguration;
     use tabtool_document::{Document, StdStorage};
     use tabtool_i18n::Language;
-    use tabtool_platform::{DesktopPlatform, FileDialogs, Settings};
+    use tabtool_platform::{DesktopPlatform, FileDialogs};
+    use tabtool_settings::Settings;
 
     use super::{DocumentWindow, WindowServices};
 

@@ -83,7 +83,7 @@ pub fn apply_action(
             let Some(text) = clipboard.paste() else {
                 return Ok(ActionOutcome::NeedsPasteText);
             };
-            document.paste_tsv(&text, locale, decimal_separator);
+            document.paste_tsv(&text, decimal_separator);
         }
         GridAction::SelectAll => {
             if !document.can_select_all() {

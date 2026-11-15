@@ -18,7 +18,8 @@ use main::app::{
 };
 use main::intents::{IntentEvent, StagedIntent};
 use tabtool_document::AUTOSAVE_DELAY;
-use tabtool_platform::{CopyOutcome, Settings};
+use tabtool_platform::CopyOutcome;
+use tabtool_settings::Settings;
 use tabtool_ui::grid::Clipboard as GridClipboard;
 use tabtool_ui::mobile::{
     DocumentMetadata, ExportOutcome, LibraryClock, LibraryError, MobileEditorResponse,

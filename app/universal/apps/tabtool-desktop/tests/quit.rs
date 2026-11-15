@@ -10,11 +10,12 @@ use std::time::Instant;
 use egui::{ViewportEvent, ViewportId};
 use tabtool_core::CsvConfiguration;
 use tabtool_desktop::app::{DesktopApp, QuitResponse};
-use tabtool_desktop::autosave::AUTOSAVE_DELAY;
 use tabtool_desktop::documents::{DocumentWindow, WindowServices};
 use tabtool_desktop::platform::{SharedDialogs, SharedStorage};
+use tabtool_document::AUTOSAVE_DELAY;
 use tabtool_i18n::Language;
-use tabtool_platform::{DesktopPlatform, Settings};
+use tabtool_platform::DesktopPlatform;
+use tabtool_settings::Settings;
 use tabtool_ui::harness::kittest::Queryable;
 use tabtool_ui::{Theme, UiHarness};
 

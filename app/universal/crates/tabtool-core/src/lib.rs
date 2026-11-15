@@ -21,7 +21,7 @@ mod write_validation;
 mod writer;
 
 pub use clipboard::{make_tsv, parse_tsv};
-pub use column_name::{column_name, column_name_checked};
+pub use column_name::column_name;
 pub use configuration::CsvConfiguration;
 pub use decimal::convert_decimal_mark;
 pub use detector::CsvFormatDetector;
