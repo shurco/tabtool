@@ -4,8 +4,8 @@ The marketing site for [TabTool](../README.md), built with SvelteKit and prerend
 
 ## What is here
 
-- `/` — overview: hero, measured numbers, features, demo video, real screenshots, open-source ask, platform roadmap, comparison index, FAQ.
-- `/download/` — App Store links per platform, requirements, and build-from-source instructions.
+- `/` — overview: hero, measured numbers, features, demo video, real screenshots, open-source ask, platforms, comparison index, FAQ.
+- `/download/` — App Store links for macOS and iOS, GitHub Releases links for Windows, Linux, and Android, requirements, and build-from-source instructions.
 - `/vs/` and `/vs/<slug>/` — five comparison pages: TableTool (TablePlus), the original open-source TableTool, Modern CSV, CSViewer, Tablecruncher.
 - `/faq/` — the full FAQ, also emitted as `FAQPage` structured data.
 - `/press/` — press kit: boilerplate, fast facts, asset links, and contact.
@@ -63,8 +63,8 @@ Three placeholders must be replaced:
 
 Everything else (comparison facts, FAQ, legal text, screenshots) lives in `src/lib/`:
 
-- `site.ts` — name, description, links (GitHub, App Store `appStore.mac`/`appStore.ios`), navigation.
-- `content.ts` — stats, features, screenshots, platforms, FAQ.
+- `site.ts` — name, description, links (GitHub, GitHub Releases `releases`, App Store `appStore.mac`/`appStore.ios`), navigation.
+- `content.ts` — stats, features, screenshots, platforms (requirement and download source), FAQ.
 - `comparisons.ts` — one object per comparison page.
 
 ## App Store badges
@@ -76,7 +76,7 @@ Everything else (comparison facts, FAQ, legal text, screenshots) lives in `src/l
 
 - Google Analytics 4 (`G-G8JX3V6FNB`) is loaded via `gtag.js` in `src/app.html`. The privacy page discloses it; keep both in sync.
 - Every App Store link goes through `appStoreURL()` in `src/lib/track.ts` and fires GA4 `app_store_click` with `platform` (`mac`/`ios`) and `placement` (`hero`, `cta`, `download`, `header-bar`, `compare`, `about`). The link also carries Apple's `pt`, `ct`, and `mt` campaign parameters.
-- The sticky mobile download bar is dismissible; the choice is stored in `sessionStorage` for the session.
+- The sticky mobile download bar is dismissible; the choice is stored in `sessionStorage` for the session. On Android it links to GitHub Releases instead of the App Store and fires no store event.
 
 ## SEO
 

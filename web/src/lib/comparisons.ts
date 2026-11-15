@@ -23,6 +23,8 @@ export type Comparison = {
 	sources: { label: string; url: string }[];
 };
 
+const platforms = 'macOS 14+, iOS 17+, Windows 10+, Linux, Android 8.0+';
+
 export const comparisons: Comparison[] = [
 	{
 		slug: 'tabletool',
@@ -34,7 +36,7 @@ export const comparisons: Comparison[] = [
 		platforms: 'macOS 10.13 or later',
 		metaTitle: 'TabTool vs TableTool (TablePlus): CSV editors compared',
 		metaDescription:
-			'TableTool by TablePlus is a paid CSV client with SQL joins. TabTool is an MIT-licensed macOS and iOS editor. Compare price, features, privacy, and large files.',
+			'TableTool by TablePlus is a paid CSV client with SQL joins. TabTool is an MIT-licensed editor for Apple, Windows, Linux, and Android. Compare price, features, privacy, and large files.',
 		summary:
 			'A paid, polished CSV browser with SQL queries. TabTool is an open-source editor with an iPhone app and a documented large-file mode.',
 		intro: [
@@ -43,9 +45,9 @@ export const comparisons: Comparison[] = [
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT, source available', them: 'Closed source' },
-			{ label: 'Price', tabtool: 'Free on the App Store', them: '$29 for 2 Macs, 1 year of updates' },
-			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'macOS 10.13+' },
-			{ label: 'iPhone and iPad app', tabtool: 'Yes, same CSV core', them: 'No' },
+			{ label: 'Price', tabtool: 'Free', them: '$29 for 2 Macs, 1 year of updates' },
+			{ label: 'Platforms', tabtool: platforms, them: 'macOS 10.13+' },
+			{ label: 'Phone and tablet apps', tabtool: 'iPhone, iPad, Android', them: 'No' },
 			{ label: 'SQL across CSV files', tabtool: 'No', them: 'Yes' },
 			{ label: 'Large-file mode', tabtool: 'Memory-mapped index; 5 GiB tested in 2.7 s', them: 'Vendor claims “a GB CSV within a few seconds”' },
 			{ label: 'Editing', tabtool: 'Cells, rows, columns, undo/redo', them: 'Offered; the product is positioned as a CSV browser' },
@@ -91,13 +93,13 @@ export const comparisons: Comparison[] = [
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT', them: 'MIT' },
-			{ label: 'Price', tabtool: 'Free on the App Store', them: 'Free' },
-			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'macOS 10.8+' },
+			{ label: 'Price', tabtool: 'Free', them: 'Free' },
+			{ label: 'Platforms', tabtool: platforms, them: 'macOS 10.8+' },
 			{ label: 'Last release', tabtool: '1.0, November 2026', them: '1.2.1, July 2017' },
 			{ label: 'Last commit', tabtool: 'Active', them: 'April 2020' },
 			{ label: 'Large-file mode', tabtool: 'Memory-mapped, background index, streamed save', them: 'Not documented' },
 			{ label: 'Filters and sorting', tabtool: 'Sort on both platforms, filters on iOS', them: 'Not documented' },
-			{ label: 'iPhone and iPad app', tabtool: 'Yes', them: 'No' },
+			{ label: 'Phone and tablet apps', tabtool: 'iPhone, iPad, Android', them: 'No' },
 			{ label: 'Binary size', tabtool: '2.7 MB on the Mac App Store', them: '837.8 KB on the App Store' },
 			{ label: 'Privacy', tabtool: 'No network entitlement, no analytics', them: 'No account or network features listed' }
 		],
@@ -111,7 +113,7 @@ export const comparisons: Comparison[] = [
 			'Documented large-file mode with a 5 GiB benchmark and a streamed save path.',
 			'Sorting, iOS filters, drag-and-drop reordering, and an iPhone editor.',
 			'Format detection with an override bar for every detected value.',
-			'Windows, Linux, and Android ports are in development in Rust.'
+			'Windows, Linux, and Android builds in Rust, on GitHub Releases.'
 		],
 		verdict:
 			'If you need a free Mac CSV viewer today and never touch huge files, the original TableTool still works. If you want an editor that is maintained, handles multi-gigabyte files, and runs on iPhone, TabTool is the successor in spirit.',
@@ -130,18 +132,18 @@ export const comparisons: Comparison[] = [
 		platforms: 'Windows, macOS, Linux',
 		metaTitle: 'TabTool vs Modern CSV: features, platforms, price',
 		metaDescription:
-			'Modern CSV is a cross-platform workbench with pivot tables and statistics. TabTool is an open-source Mac and iOS editor. Compare features, price, and platforms.',
+			'Modern CSV is a cross-platform workbench with pivot tables and statistics. TabTool is an open-source editor for Apple, Windows, Linux, and Android. Compare features, price, and platforms.',
 		summary:
-			'A cross-platform CSV workbench with analysis tools. TabTool is a narrower Mac and iOS editor, and open source.',
+			'A cross-platform CSV workbench with analysis tools. TabTool is a narrower editor, open source, and also runs on phones.',
 		intro: [
 			'Modern CSV is the broadest tool in this comparison: Windows, macOS, and Linux, with a free tier and paid Personal and Business licenses. Its feature list goes beyond editing into pivot tables, column statistics, deduplication, regex find and replace, and JSON/XML conversion.',
-			'TabTool does almost none of that. It opens delimited text, lets you edit it, and writes it back in the format you choose, or exports it to JSON or XML. The trade is scope for depth: a native Apple app, a documented large-file mode, and an MIT-licensed codebase without a paid tier.'
+			'TabTool does almost none of that. It opens delimited text, lets you edit it, and writes it back in the format you choose, or exports it to JSON or XML. The trade is scope for depth: native Swift apps for Apple, Rust builds for Windows, Linux, and Android, a documented large-file mode, and an MIT-licensed codebase without a paid tier.'
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT', them: 'Closed source' },
-			{ label: 'Price', tabtool: 'Free on the App Store', them: 'Free tier; $39/$59 one-time' },
-			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'Windows, macOS, Linux' },
-			{ label: 'iPhone and iPad app', tabtool: 'Yes', them: 'No' },
+			{ label: 'Price', tabtool: 'Free', them: 'Free tier; $39/$59 one-time' },
+			{ label: 'Platforms', tabtool: platforms, them: 'Windows, macOS, Linux' },
+			{ label: 'Phone and tablet apps', tabtool: 'iPhone, iPad, Android', them: 'No' },
 			{ label: 'Pivot tables and statistics', tabtool: 'No', them: 'Yes' },
 			{ label: 'JSON/XML import and export', tabtool: 'Export only', them: 'Yes' },
 			{ label: 'Large files', tabtool: '5 GiB tested, 2.7 s index, ~91 MB RAM', them: 'Read-only mode; vendor claims a small footprint' },
@@ -152,17 +154,17 @@ export const comparisons: Comparison[] = [
 		stronger: [
 			'Analysis: pivot tables, column statistics, unique values, and histograms.',
 			'More interchange formats, including JSON and XML import, plus PDF printing.',
-			'Three desktop operating systems, with a free tier to evaluate.',
+			'A longer desktop release history on Windows and Linux; TabTool’s Rust builds are new.',
 			'Business licensing and a lifetime license model.'
 		],
 		different: [
 			'MIT license, with the CSV core and both editors in the repository.',
-			'A native SwiftUI and AppKit app, plus an iPhone and iPad editor.',
+			'A native SwiftUI and AppKit app on Apple, plus editors for iPhone, iPad, and Android.',
 			'A published large-file benchmark with memory figures, not only a claim.',
 			'No account, no license key, and no network code in the app.'
 		],
 		verdict:
-			'Modern CSV is the better pick if you need analysis, JSON/XML import, or Linux and Windows. TabTool is the better pick if you want a small, open, native Apple editor that handles very large delimited files and also runs on iPhone.',
+			'Modern CSV is the better pick if you need analysis or JSON/XML import. TabTool is the better pick if you want a small, open editor that handles very large delimited files and also runs on iPhone, iPad, and Android.',
 		sources: [
 			{ label: 'Modern CSV', url: 'https://www.moderncsv.com' },
 			{ label: 'Modern CSV pricing', url: 'https://www.moderncsv.com/buy/' }
@@ -176,22 +178,22 @@ export const comparisons: Comparison[] = [
 		license: 'Closed source, free',
 		price: 'Free, including commercial use',
 		platforms: 'Windows (64-bit) only',
-		metaTitle: 'TabTool vs CSViewer: Mac editing vs Windows profiling',
+		metaTitle: 'TabTool vs CSViewer: CSV editing vs profiling',
 		metaDescription:
-			'CSViewer is a free Windows-only CSV viewer with column profiling. TabTool is an open-source macOS and iOS CSV editor. Compare platforms, editing, and large files.',
+			'CSViewer is a free Windows-only CSV viewer with column profiling. TabTool is an open-source CSV editor for Windows, Apple, Linux, and Android. Compare platforms, editing, and large files.',
 		summary:
-			'A free Windows-only CSV viewer built for profiling. TabTool is a Mac and iOS editor, and open source.',
+			'A free Windows-only CSV viewer built for profiling. TabTool is an editor, open source, on Windows and four other platforms.',
 		intro: [
 			'CSViewer is free, including for commercial use, and built for looking at data rather than changing it. It loads millions of rows, profiles every column, and draws charts and crosstabs. It runs on 64-bit Windows only; the vendor’s site confirms there is no Mac version.',
-			'That makes the comparison simple. If your data lives on Windows and you need a free profiler, CSViewer is a strong fit. If you need to edit cells on a Mac or an iPhone, it is the wrong tool, and TabTool is built for exactly that.'
+			'That makes the comparison simple. If you need a free profiler on Windows, CSViewer is a strong fit. If you need to edit cells, on Windows or on a Mac, phone, or Linux machine, it is the wrong tool, and TabTool is built for exactly that.'
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT', them: 'Closed source' },
-			{ label: 'Price', tabtool: 'Free on the App Store', them: 'Free, including commercial use' },
-			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'Windows 64-bit only' },
+			{ label: 'Price', tabtool: 'Free', them: 'Free, including commercial use' },
+			{ label: 'Platforms', tabtool: platforms, them: 'Windows 64-bit only' },
 			{ label: 'Cell editing', tabtool: 'Yes, with undo', them: 'Positioned as a viewer; editing is not listed' },
 			{ label: 'Column profiling', tabtool: 'No', them: 'Nulls, uniques, min/max, aggregates, charts' },
-			{ label: 'iPhone and iPad app', tabtool: 'Yes', them: 'No' },
+			{ label: 'Phone and tablet apps', tabtool: 'iPhone, iPad, Android', them: 'No' },
 			{ label: 'Large files', tabtool: '5 GiB tested in 2.7 s', them: 'Millions of rows in a viewer' },
 			{ label: 'Source code', tabtool: 'MIT, public', them: 'Closed' },
 			{ label: 'Telemetry', tabtool: 'None', them: 'None advertised; works air-gapped' }
@@ -202,13 +204,13 @@ export const comparisons: Comparison[] = [
 			'Saved views and multi-file collections for repeat analysis.'
 		],
 		different: [
-			'Runs on macOS and iOS, not Windows.',
+			'Runs on Windows, and also on macOS, iOS, Linux, and Android.',
 			'Edits cells, rows, and columns, and writes the file back.',
 			'Open source under MIT, so the format handling can be audited.',
 			'Designed around opening one large file quickly rather than profiling many.'
 		],
 		verdict:
-			'CSViewer and TabTool barely compete: different operating systems, different jobs. Use CSViewer to profile data on Windows. Use TabTool to edit a CSV on a Mac or iPhone.',
+			'CSViewer and TabTool barely compete: they do different jobs. Use CSViewer to profile data on Windows. Use TabTool to edit a CSV on Windows, a Mac, a phone, or Linux.',
 		sources: [
 			{ label: 'CSViewer', url: 'https://csviewer.com' }
 		]
@@ -223,37 +225,37 @@ export const comparisons: Comparison[] = [
 		platforms: 'macOS 10.15+, Windows, Linux (beta)',
 		metaTitle: 'TabTool vs Tablecruncher: two open-source CSV editors',
 		metaDescription:
-			'Tablecruncher is a GPL-3.0-or-later CSV editor with JavaScript macros on macOS, Windows, and Linux. TabTool is MIT-licensed with a native iOS app. Compare performance and scope.',
+			'Tablecruncher is a GPL-3.0-or-later CSV editor with JavaScript macros on macOS, Windows, and Linux. TabTool is MIT-licensed and also runs on iOS and Android. Compare performance and scope.',
 		summary:
-			'An open-source CSV editor with JavaScript macros and three desktop platforms. TabTool is MIT-licensed and Apple-only, for now.',
+			'An open-source CSV editor with JavaScript macros and three desktop platforms. TabTool is MIT-licensed and runs on the same three plus iOS and Android.',
 		intro: [
 			'Tablecruncher became free and open source in April 2025. It is GPL-3.0-or-later, written in C++ with FLTK, and runs on macOS, Windows, and Linux (beta). It opens files over 2 GB, offers JavaScript macros, regex find and replace, and JSON export, and its own FAQ admits the interface will never win a design prize.',
-			'TabTool is the other open-source option: MIT rather than GPL, Swift rather than C++, native AppKit and SwiftUI rather than FLTK, and macOS plus iOS. Both projects care about large files, which makes this the most direct comparison on the site.'
+			'TabTool is the other open-source option: MIT rather than GPL, native Swift with AppKit and SwiftUI on Apple and Rust on Windows, Linux, and Android rather than C++ with FLTK, and phone apps on both iOS and Android. Both projects care about large files, which makes this the most direct comparison on the site.'
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT', them: 'GPL-3.0-or-later' },
-			{ label: 'Price', tabtool: 'Free on the App Store', them: 'Free' },
-			{ label: 'Platforms', tabtool: 'macOS 14+, iOS 17+', them: 'macOS 10.15+, Windows, Linux beta' },
-			{ label: 'Language and UI', tabtool: 'Swift, SwiftUI + AppKit', them: 'C++17, FLTK' },
-			{ label: 'iPhone and iPad app', tabtool: 'Yes', them: 'No' },
+			{ label: 'Price', tabtool: 'Free', them: 'Free' },
+			{ label: 'Platforms', tabtool: platforms, them: 'macOS 10.15+, Windows, Linux beta' },
+			{ label: 'Language and UI', tabtool: 'Swift, SwiftUI + AppKit; Rust on Windows, Linux, Android', them: 'C++17, FLTK' },
+			{ label: 'Phone and tablet apps', tabtool: 'iPhone, iPad, Android', them: 'No' },
 			{ label: 'Large files', tabtool: '5 GiB tested, 2.7 s index, ~91 MB RAM', them: 'Over 2 GB and 15M+ rows; 100 MB in under 5 s (vendor)' },
 			{ label: 'Macros', tabtool: 'No', them: 'JavaScript' },
 			{ label: 'JSON export', tabtool: 'Yes, plus XML', them: 'Yes' },
 			{ label: 'License for forks', tabtool: 'Permissive; keep the notice', them: 'Copyleft; derivative work stays GPL' }
 		],
 		stronger: [
-			'Windows and Linux builds, including a beta for Linux.',
+			'A longer desktop release history on Windows and Linux; TabTool’s Rust builds are new.',
 			'JavaScript macros and regex find and replace.',
 			'GPL community and an existing multi-year release history.'
 		],
 		different: [
 			'MIT license: easier to embed, relicense, or ship inside another product.',
-			'Native Apple UI and an iOS editor that share one CSV core.',
+			'Native Apple UI, plus iOS and Android editors that follow the same CSV behavior.',
 			'A measured 5 GiB run with memory and save timings published in the README.',
 			'A narrower scope: no macros, no scripting runtime, fewer moving parts.'
 		],
 		verdict:
-			'For a free editor with macros on Windows or Linux, Tablecruncher is the practical choice. For an Apple-native editor with an iPhone app and an MIT license, TabTool is the closer fit. Both are honest open-source alternatives to the paid tools.',
+			'For a free editor with macros, Tablecruncher is the practical choice. For an MIT-licensed editor that also runs on iPhone and Android, with a native Apple app, TabTool is the closer fit. Both are honest open-source alternatives to the paid tools.',
 		sources: [
 			{ label: 'Tablecruncher', url: 'https://tablecruncher.com' },
 			{ label: 'Tablecruncher on GitHub', url: 'https://github.com/Tablecruncher/tablecruncher' }

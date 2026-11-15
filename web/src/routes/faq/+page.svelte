@@ -42,7 +42,7 @@
 			index="FAQ"
 			kicker="Straight answers"
 			title="The questions that decide whether you try it."
-			lede="If something is missing, open an issue on GitHub. The answers here match the current development build, not a future roadmap."
+			lede="If something is missing, open an issue on GitHub. The answers here match the current release."
 		/>
 	</div>
 </section>

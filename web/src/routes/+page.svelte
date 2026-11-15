@@ -22,22 +22,22 @@
 			name: 'TabTool',
 			applicationCategory: 'UtilitiesApplication',
 			applicationSubCategory: 'CSV editor',
-			operatingSystem: 'macOS 14+, iOS 17+',
+			operatingSystem: 'macOS 14+, iOS 17+, Windows 10+, Linux, Android 8.0+',
 			description: site.description,
 			url: `${site.url}/`,
 			license: 'https://opensource.org/license/mit',
-			downloadUrl: site.appStore.ios,
+			downloadUrl: `${site.url}/download/`,
 			installUrl: site.appStore.ios,
 			softwareVersion: '1.0.0',
 			fileFormat: ['text/csv', 'text/tab-separated-values', 'text/plain'],
 			screenshot: `${site.url}/img/app-grid.webp`,
-			sameAs: [site.github, site.appStore.ios],
+			sameAs: [site.github, site.appStore.ios, site.releases],
 			offers: {
 				'@type': 'Offer',
 				price: '0',
 				priceCurrency: 'USD',
 				url: site.appStore.ios,
-				description: 'Free on the App Store for macOS and iOS; source code under the MIT license'
+				description: 'Free on the App Store for macOS and iOS and on GitHub Releases for Windows, Linux, and Android; source code under the MIT license'
 			},
 			author: { '@type': 'Organization', name: 'TabTool contributors', url: site.github }
 		},
@@ -66,13 +66,16 @@
 <section class="hero">
 	<div class="shell hero__inner">
 		<div class="hero__copy">
-			<p class="eyebrow">Native Swift · macOS + iOS · MIT</p>
+			<p class="eyebrow">macOS · iOS · Windows · Linux · Android · MIT</p>
 			<h1>A CSV editor that doesn’t <em>flinch</em>.</h1>
 			<p class="lede hero__lede">
-				Open a 5 GiB file, fix a cell, write it back. TabTool indexes 77.7 million rows in 2.7
-				seconds, keeps them in about 90 MB of memory, and never sends your data anywhere.
+				Open a 5 GiB file, fix a cell, write it back. On a Mac, TabTool indexes 77.7 million rows in
+				2.7 seconds, keeps them in about 90 MB of memory, and never sends your data anywhere.
 			</p>
 			<StoreBadges placement="hero" />
+			<p class="hero__other mono">
+				Windows, Linux, Android → <a href={site.releases} rel="noopener">GitHub Releases</a>
+			</p>
 			<div class="hero__actions">
 				<a
 					class="btn btn--primary"
@@ -84,7 +87,7 @@
 				<a class="btn btn--ghost" href={site.github} rel="noopener">Star on GitHub</a>
 				<a class="btn btn--ghost" href="#performance">Watch it run</a>
 			</div>
-			<p class="hero__micro mono">Free · under 3 MB · no account · no tracking</p>
+			<p class="hero__micro mono">Free · no account · no tracking · offline</p>
 		</div>
 
 		<figure class="hero__shot">
@@ -171,9 +174,9 @@
 	<div class="shell">
 		<SectionHeader
 			index="06"
-			kicker="Roadmap"
-			title="macOS and iOS now. The rest is in development."
-			lede="TabTool 1.0 is a Mac and iPhone app. Windows, Linux, and Android are in development in Rust, with no dates attached until real builds exist."
+			kicker="Platforms"
+			title="One editor, five platforms."
+			lede="TabTool 1.0 runs on the Mac, iPhone, and iPad from the App Store, and on Windows, Linux, and Android from GitHub Releases."
 		/>
 		<Roadmap />
 	</div>
@@ -240,6 +243,11 @@
 		flex-wrap: wrap;
 		gap: 10px;
 		margin-top: 16px;
+	}
+
+	.hero__other {
+		margin-top: 14px;
+		color: var(--ink-soft);
 	}
 
 	.hero__micro {

@@ -7,10 +7,10 @@
 <section class="cta">
 	<div class="shell cta__inner">
 		<p class="eyebrow">Status</p>
-		<h2>TabTool 1.0 is out.<br />Free on the App Store.</h2>
+		<h2>TabTool 1.0 is out.<br />Free on five platforms.</h2>
 		<p class="lede cta__lede">
-			One download for macOS 14+ and iOS 17+. Windows, Linux, and Android are in development in
-			Rust. Follow the repository for release notes and progress.
+			macOS 14+ and iOS 17+ from the App Store. Windows, Linux, and Android from GitHub Releases,
+			with release notes for every version.
 		</p>
 		<StoreBadges placement="cta" />
 		<div class="cta__actions">
@@ -21,8 +21,9 @@
 			>
 				Download free <span class="btn__arrow" aria-hidden="true">↗</span>
 			</a>
+			<a class="btn btn--ghost" href={site.releases} rel="noopener">Windows, Linux, Android</a>
 			<a class="btn btn--ghost" href={site.github} rel="noopener">Star on GitHub</a>
-			<a class="btn btn--ghost" href="/download/">Platforms and status</a>
+			<a class="btn btn--ghost" href="/download/">All downloads</a>
 		</div>
 	</div>
 </section>

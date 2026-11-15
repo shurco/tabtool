@@ -13,7 +13,7 @@
 	<div class="shell">
 		<p class="eyebrow">Legal</p>
 		<h1 class="legal__title">Privacy Policy</h1>
-		<p class="legal__updated">Effective 29 October 2026 · Last updated 29 October 2026</p>
+		<p class="legal__updated">Effective 29 October 2026 · Last updated 15 November 2026</p>
 	</div>
 </section>
 
@@ -81,16 +81,18 @@
 			<h2>3. The TabTool application</h2>
 			<h3>Your files</h3>
 			<p>
-				TabTool opens documents you choose and writes them back to the same place. The app is
-				sandboxed and has no network entitlement. No file, path, column name, or cell value is
-				transmitted anywhere.
+				TabTool opens documents you choose and writes them back to the same place. The macOS and
+				iOS apps are sandboxed and have no network entitlement. The Windows, Linux, and Android
+				apps contain no network code, and the Android app does not request Internet access. No
+				file, path, column name, or cell value is transmitted anywhere.
 			</p>
 
 			<h3>Settings</h3>
 			<p>
 				Preferences such as language, row height, default format, and the large-file threshold are
-				stored locally in the app’s own preferences container. They are not synced and are removed
-				when you delete the app.
+				stored locally in the app’s own preferences container. They are not synced. On macOS, iOS,
+				and Android they are removed when you delete the app; on Windows and Linux the settings
+				file stays in your user configuration folder until you delete it.
 			</p>
 
 			<h3>Diagnostics</h3>
@@ -103,8 +105,10 @@
 			<h3>Distribution and purchases</h3>
 			<p>
 				If you install TabTool from the App Store, Apple processes the download and any purchase
-				under its own privacy policy. The project does not receive your name, email address, or
-				payment details. Direct downloads from the repository involve no account and no telemetry.
+				under its own privacy policy. The Windows, Linux, and Android builds are downloaded from
+				GitHub Releases, where GitHub's privacy statement applies. The project does not receive
+				your name, email address, or payment details. Direct downloads from the repository involve
+				no account and no telemetry.
 			</p>
 
 			<h2>4. Children</h2>

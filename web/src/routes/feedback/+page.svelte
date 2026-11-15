@@ -34,7 +34,7 @@
 
 			<h2>What to include</h2>
 			<ul>
-				<li>macOS or iOS version and the TabTool version;</li>
+				<li>operating system and version (macOS, iOS, Windows, Linux, or Android) and the TabTool version;</li>
 				<li>what you were doing and what you expected instead;</li>
 				<li>file size, delimiter, and encoding if a CSV is involved.</li>
 			</ul>
