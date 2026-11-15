@@ -2,23 +2,23 @@
 
 use tabtool_core::TABLE_EXTENSIONS;
 
-const BRIDGE: &str = include_str!(
-    "../../../apps/tabtool-android/android/app/src/main/java/app/shurco/tabtool/TabToolBridge.kt"
+const DOCUMENT_FILES: &str = include_str!(
+    "../../../apps/tabtool-android/android/app/src/main/java/app/shurco/tabtool/DocumentFiles.kt"
 );
-const MARKER: &str = "private val tableExtensions = setOf(";
+const MARKER: &str = "val tableExtensions = setOf(";
 
 /// The extension literals in the Kotlin `tableExtensions` set.
 fn kotlin_extensions() -> Vec<String> {
-    let start = BRIDGE
+    let start = DOCUMENT_FILES
         .find(MARKER)
-        .expect("TabToolBridge.kt declares tableExtensions")
+        .expect("DocumentFiles.kt declares tableExtensions")
         + MARKER.len();
     let end = start
-        + BRIDGE[start..]
+        + DOCUMENT_FILES[start..]
             .find(')')
             .expect("tableExtensions is a closed setOf call");
 
-    BRIDGE[start..end]
+    DOCUMENT_FILES[start..end]
         .split(',')
         .map(|item| item.trim().trim_matches('"'))
         .filter(|item| !item.is_empty())

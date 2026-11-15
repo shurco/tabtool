@@ -866,9 +866,10 @@ goldens by hand. See `testdata/golden/README.md` for details.
 
 `apps/tabtool-android` is a `cdylib` plus a Gradle project. Its
 `MainActivity : GameActivity` hosts eframe and handles Back; `TabToolBridge.kt`
-exposes clipboard, SAF open, insets and a native text editor through JNI. It
-does not expose a system language list or a Back callback to Rust; Back lives
-in `MainActivity`.
+is the JNI facade Rust calls (clipboard, SAF open and export, sharing, insets,
+system languages, the Back queue and a native text editor). The work behind it
+lives in `DocumentPicker.kt`, `IntentImports.kt`, `DocumentFiles.kt`,
+`TextEditorHost.kt` and `SystemActions.kt`.
 
 The decisive Plan 1 finding: winit 0.30.13 drops GameActivity's `TextEvent`,
 so an egui `TextEdit` never receives soft-keyboard text. The app therefore
