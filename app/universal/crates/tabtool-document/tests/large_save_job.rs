@@ -263,29 +263,33 @@ fn a_failed_save_restores_the_edits_and_undo() {
 }
 
 #[test]
-fn a_finished_job_is_visible_without_joining_it() {
+fn a_save_that_fails_before_writing_is_reported_instead_of_pending() {
     let fixture = Fixture::new();
     let path = fixture.csv(300);
     let mut document = open_without_header(&path);
     document.set_large_cell("X", 2, 1).expect("edit the cell");
+    // The missing parent makes the writer fail before any progress.
     let destination = fixture.directory().join("missing").join("copy.csv");
-
     document
         .start_large_save(Some(&destination))
         .expect("start the failing save");
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    while !document.large_save_finished() {
+
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let result = loop {
+        if let Some(result) = document.try_finish_large_save() {
+            break result;
+        }
         assert!(
-            std::time::Instant::now() < deadline,
-            "the failed save did not finish"
+            Instant::now() < deadline,
+            "the failed save is still pending"
         );
-        std::thread::sleep(std::time::Duration::from_millis(2));
-    }
-    assert!(document.large_save_finished());
-    assert!(matches!(document.large_status(), LargeStatus::Saving(_)));
-    document
-        .wait_for_large_save()
-        .expect_err("the missing parent must fail the save");
+        std::thread::sleep(Duration::from_millis(2));
+    };
+
+    assert!(matches!(result, Err(LargeFileSaveError::Io(_))));
+    assert_eq!(document.large_status(), LargeStatus::Ready);
+    assert_eq!(document.file_path(), Some(path.as_path()));
+    assert!(document.is_dirty());
 }
 
 #[test]

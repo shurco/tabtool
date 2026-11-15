@@ -114,14 +114,23 @@ impl Document {
         }
     }
 
-    /// Whether the running large save has stopped, without joining it.
+    /// Applies the save's outcome once the file is written or the worker has
+    /// stopped.
     ///
-    /// This reports an early failure too, where the progress never reaches 1.0.
-    #[must_use]
-    pub fn large_save_finished(&self) -> bool {
-        self.large_save
+    /// Returns `None` while the worker is still writing. Once the progress
+    /// reaches 1.0, or the worker stops early (a failure that never reaches
+    /// 1.0), the outcome is applied as in [`Document::wait_for_large_save`];
+    /// after full progress that join waits only for the install. With no save
+    /// in flight it returns `Some(Ok(()))`.
+    pub fn try_finish_large_save(&mut self) -> Option<Result<(), LargeFileSaveError>> {
+        if self
+            .large_save
             .as_ref()
-            .is_some_and(LargeSaveJob::is_finished)
+            .is_some_and(|job| job.progress() < 1.0 && !job.is_finished())
+        {
+            return None;
+        }
+        Some(self.wait_for_large_save())
     }
 
     /// Saves a large document and applies the outcome before returning.

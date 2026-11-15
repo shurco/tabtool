@@ -100,17 +100,9 @@ impl WindowState {
         if !self.saving {
             return None;
         }
-        if self
-            .document
-            .large_save_progress()
-            .is_some_and(|progress| progress < 1.0)
-        {
-            return None;
-        }
-
         let result = self
             .document
-            .wait_for_large_save()
+            .try_finish_large_save()?
             .map_err(DocumentError::from);
         self.saving = false;
         if let Err(error) = result {

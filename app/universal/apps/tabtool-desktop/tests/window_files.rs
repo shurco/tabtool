@@ -304,6 +304,41 @@ fn a_drop_during_a_large_save_waits_and_opens_after_it_settles() {
 }
 
 #[test]
+fn a_large_save_that_fails_before_writing_stops_the_busy_wait() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let big = write_file(directory.path(), "big.csv", b"a,b\n1,2\n3,4\n");
+    let new = write_file(directory.path(), "after-save.csv", b"a,b\n5,6\n");
+
+    let mut document = support::large_ready(&big);
+    document
+        .set_large_cell("edited", 0, 0)
+        .expect("edit the overlay");
+    // The missing parent makes the writer fail before any progress.
+    let target = directory.path().join("missing").join("copy.csv");
+    document
+        .start_large_save(Some(&target))
+        .expect("start the large save");
+    let storage: SharedStorage = Arc::new(tabtool_document::StdStorage);
+    let dialogs: SharedDialogs = FakeDialogs::cancelled();
+    let window = window(document, Settings::default(), storage, dialogs);
+    window.drop_files(vec![new]);
+    assert!(window.is_saving(), "the drop waits for the running save");
+
+    let ctx = Context::default();
+    for _ in 0..400 {
+        window.tick(Instant::now(), &ctx);
+        if !window.is_saving() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+
+    assert!(!window.is_saving(), "the failed save must not stay pending");
+    assert!(!window.is_busy(), "the failure clears the busy modal");
+    assert_eq!(window.title(), "big.csv");
+}
+
+#[test]
 fn saving_then_opening_waits_for_the_large_save_to_finish() {
     let directory = tempfile::tempdir().expect("temporary directory");
     let big = write_file(directory.path(), "big-save.csv", b"a,b\n1,2\n3,4\n");

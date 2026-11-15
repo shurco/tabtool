@@ -74,20 +74,14 @@ impl AndroidApp {
             copy_result = editor.save_copy.take_result();
 
             if matches!(editor.document.large_status(), LargeStatus::Saving(_)) {
-                let finished = editor
-                    .document
-                    .large_save_progress()
-                    .is_some_and(|progress| progress >= 1.0)
-                    || editor.document.large_save_finished();
-                if finished {
-                    match editor.document.wait_for_large_save() {
-                        Ok(()) => after_save = editor.pending_after_save.take(),
-                        Err(error) => {
-                            log::error!("large save failed: {error:?}");
-                            editor.pending_after_save = None;
-                            failed = true;
-                        }
+                match editor.document.try_finish_large_save() {
+                    Some(Ok(())) => after_save = editor.pending_after_save.take(),
+                    Some(Err(error)) => {
+                        log::error!("large save failed: {error:?}");
+                        editor.pending_after_save = None;
+                        failed = true;
                     }
+                    None => {}
                 }
             } else if let Some(action) = editor.pending_after_save.take() {
                 // A save that settled between frames still needs its join so
