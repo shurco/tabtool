@@ -1,8 +1,7 @@
-//! The five export option pickers, shared by the desktop panel and the touch
-//! sheet.
+//! The export option pickers, shared by the desktop panel and the touch sheet.
 
 use egui::Ui;
-use tabtool_core::{CsvConfiguration, Encoding};
+use tabtool_core::{CsvConfiguration, Encoding, ExportFormat};
 use tabtool_i18n::{Language, tr};
 use tabtool_settings::QuoteStyle;
 
@@ -27,6 +26,25 @@ impl PickerSize {
         height: None,
         text_size: None,
     };
+}
+
+pub(crate) fn format_picker(
+    ui: &mut Ui,
+    format: &mut ExportFormat,
+    language: Language,
+    size: PickerSize,
+) {
+    let values = ExportFormat::ALL.map(ExportFormat::name);
+    if let Some(index) = picker(
+        ui,
+        "export-format",
+        tr(language, "Format"),
+        format.name(),
+        &values,
+        size,
+    ) {
+        *format = ExportFormat::ALL[index];
+    }
 }
 
 pub(crate) fn encoding_picker(

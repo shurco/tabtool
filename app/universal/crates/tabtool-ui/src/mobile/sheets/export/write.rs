@@ -24,7 +24,12 @@ impl ExportSheet {
             });
             return;
         };
-        match export::preflight(&table, document.configuration(), &self.configuration) {
+        match export::preflight(
+            &table,
+            self.format,
+            document.configuration(),
+            &self.configuration,
+        ) {
             None => {
                 self.write_export(&table, document, files, language, false);
             }
@@ -47,6 +52,7 @@ impl ExportSheet {
     ) {
         match export::data(
             table,
+            self.format,
             document.configuration(),
             &self.configuration,
             allow_ambiguous,
@@ -65,7 +71,7 @@ impl ExportSheet {
     }
 
     fn start_copy(&mut self, data: &[u8], files: &dyn DocumentFiles, language: Language) {
-        let name = export::filename(&self.base_name, &self.configuration);
+        let name = export::filename(&self.base_name, self.format, &self.configuration);
         let base = files.documents_dir();
         clean_stale_exports(&base);
         let source = match temporary_export(&base, data, &name) {

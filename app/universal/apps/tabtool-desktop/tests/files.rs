@@ -5,7 +5,7 @@ mod support;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use tabtool_core::{CsvConfiguration, Encoding};
+use tabtool_core::{CsvConfiguration, Encoding, ExportFormat};
 use tabtool_desktop::files::{
     FileWorkflow, ReplaceOutcome, RevertOutcome, SaveOutcome, UnsavedChoice, launch_path,
 };
@@ -550,6 +550,33 @@ fn a_tab_export_suggests_tsv_and_writes_tsv() {
     assert_eq!(
         std::fs::read_to_string(&export_path).expect("the export is readable"),
         "\"a\"\t\"b\"\n\"1\"\t\"2\""
+    );
+}
+
+#[test]
+fn a_json_export_suggests_json_and_writes_an_array_of_objects() {
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let document_path = write_file(directory.path(), "Sales.csv", b"a,b\n1,2\n");
+    let export_path = directory.path().join("Sales-export.json");
+    let dialogs = FakeDialogs::scripted([Some(export_path.clone())]);
+    let mut workflow = workflow(&dialogs, std_storage(), Settings::default(), None);
+    let document = workflow.open_path(&document_path).document;
+    let mut session = workflow
+        .export_session(&document)
+        .expect("an export session");
+    assert_eq!(session.export_format, ExportFormat::Csv);
+    session.export_format = ExportFormat::Json;
+
+    let outcome = workflow.export(&session, false);
+
+    assert_eq!(outcome, tabtool_desktop::files::ExportOutcome::Saved);
+    assert_eq!(
+        dialogs.saves(),
+        [("Sales-export.json".to_owned(), "json".to_owned())]
+    );
+    assert_eq!(
+        std::fs::read_to_string(&export_path).expect("the export is readable"),
+        "[\n  {\"a\": \"1\", \"b\": \"2\"}\n]\n"
     );
 }
 

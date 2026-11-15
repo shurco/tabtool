@@ -1,11 +1,42 @@
-//! CSV export with decimal-mark conversion and the export header rule.
+//! Export to CSV, JSON or XML with decimal-mark conversion and the CSV export
+//! header rule.
 
-use crate::{CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, CsvWriter, column_name, issue};
+use crate::{
+    CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, CsvWriter, column_name, issue,
+    json_writer, xml_writer,
+};
+
+/// The file format an export writes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ExportFormat {
+    /// Delimited text that follows the export configuration.
+    Csv,
+    /// A UTF-8 JSON array with one object per row; every value is a string.
+    Json,
+    /// A UTF-8 XML document with one element per row.
+    Xml,
+}
+
+impl ExportFormat {
+    /// Every format, in picker order.
+    pub const ALL: [Self; 3] = [Self::Csv, Self::Json, Self::Xml];
+
+    /// The format's display name; it is not localized.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Csv => "CSV",
+            Self::Json => "JSON",
+            Self::Xml => "XML",
+        }
+    }
+}
 
 /// The document and export formats of one export operation.
 pub struct ExportInput<'a> {
     /// The document table; export never modifies it.
     pub table: &'a CsvTable,
+    /// The file format to write.
+    pub format: ExportFormat,
     /// The format the document is stored in.
     pub document_configuration: &'a CsvConfiguration,
     /// The format to export with.
@@ -13,11 +44,15 @@ pub struct ExportInput<'a> {
 }
 
 /// Returns the first issue [`export_data`] would fail with, or `None` when the
-/// export can be written.
+/// export can be written. JSON and XML are UTF-8 and escape every value, so
+/// they never have an issue.
 ///
 /// The check runs on the converted copy because decimal-mark conversion can
 /// add or remove the separator inside numeric cells.
 pub fn export_preflight_issue(input: &ExportInput<'_>) -> Option<CsvWriteIssue> {
+    if input.format != ExportFormat::Csv {
+        return None;
+    }
     let converted = converted_table(input);
     let header = export_header(input);
     issue(&converted, header.as_deref(), input.export_configuration)
@@ -27,15 +62,25 @@ pub fn export_preflight_issue(input: &ExportInput<'_>) -> Option<CsvWriteIssue> 
 /// encoded data.
 ///
 /// Numeric cells are copied with their decimal mark changed from the document
-/// mark to the export mark; the source table is not modified. When the export
-/// configuration enables a header, the document headers are used, falling back
-/// to spreadsheet-style names (A, B, ...) for a table without headers.
-/// Quoting, encoding and ambiguity checks follow the export configuration.
+/// mark to the export mark; the source table is not modified.
+///
+/// CSV: when the export configuration enables a header, the document headers
+/// are used, falling back to spreadsheet-style names (A, B, ...) for a table
+/// without headers. Quoting, encoding and ambiguity checks follow the export
+/// configuration.
+///
+/// JSON and XML: UTF-8, keyed by the headers or the generated names, made
+/// unique with `_2`, `_3`, ...; only the export decimal mark applies.
 pub fn export_data(
     input: &ExportInput<'_>,
     allow_ambiguous_output: bool,
 ) -> Result<Vec<u8>, CsvError> {
     let converted = converted_table(input);
+    match input.format {
+        ExportFormat::Json => return Ok(json_writer::json_string(&converted).into_bytes()),
+        ExportFormat::Xml => return Ok(xml_writer::xml_string(&converted).into_bytes()),
+        ExportFormat::Csv => {}
+    }
     let header = export_header(input);
     let mut writer = CsvWriter::new(&converted, header.as_deref(), input.export_configuration);
     writer.allow_ambiguous_output = allow_ambiguous_output;

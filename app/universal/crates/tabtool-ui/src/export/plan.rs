@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use tabtool_core::{
-    CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, ExportInput, export_data,
+    CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, ExportFormat, ExportInput, export_data,
     export_preflight_issue,
 };
 
@@ -20,17 +20,19 @@ pub fn base_name(document_path: Option<&Path>) -> String {
     format!("{name}-export")
 }
 
-/// The complete suggested file name for `configuration`.
-pub fn filename(base_name: &str, configuration: &CsvConfiguration) -> String {
-    format!("{base_name}.{}", file_extension(configuration))
+/// The complete suggested file name for `format` and `configuration`.
+pub fn filename(base_name: &str, format: ExportFormat, configuration: &CsvConfiguration) -> String {
+    format!("{base_name}.{}", file_extension(format, configuration))
 }
 
-/// The extension an export writes: `tsv` for a tab, `csv` otherwise.
-pub fn file_extension(configuration: &CsvConfiguration) -> &'static str {
-    if configuration.column_separator == "\t" {
-        "tsv"
-    } else {
-        "csv"
+/// The extension an export writes: `json` or `xml` for those formats; for CSV,
+/// `tsv` for a tab separator and `csv` otherwise.
+pub fn file_extension(format: ExportFormat, configuration: &CsvConfiguration) -> &'static str {
+    match format {
+        ExportFormat::Json => "json",
+        ExportFormat::Xml => "xml",
+        ExportFormat::Csv if configuration.column_separator == "\t" => "tsv",
+        ExportFormat::Csv => "csv",
     }
 }
 
@@ -38,14 +40,16 @@ pub fn file_extension(configuration: &CsvConfiguration) -> &'static str {
 ///
 /// `None` writes without asking; [`CsvWriteIssue::AmbiguousOutput`] asks
 /// first because quotes are off; [`CsvWriteIssue::UnencodableText`] cannot be
-/// represented in the chosen encoding.
+/// represented in the chosen encoding. JSON and XML always return `None`.
 pub fn preflight(
     table: &CsvTable,
+    format: ExportFormat,
     document_configuration: &CsvConfiguration,
     export_configuration: &CsvConfiguration,
 ) -> Option<CsvWriteIssue> {
     export_preflight_issue(&ExportInput {
         table,
+        format,
         document_configuration,
         export_configuration,
     })
@@ -54,6 +58,7 @@ pub fn preflight(
 /// Serializes a converted copy of `table`; the source is never modified.
 pub fn data(
     table: &CsvTable,
+    format: ExportFormat,
     document_configuration: &CsvConfiguration,
     export_configuration: &CsvConfiguration,
     allow_ambiguous_output: bool,
@@ -61,6 +66,7 @@ pub fn data(
     export_data(
         &ExportInput {
             table,
+            format,
             document_configuration,
             export_configuration,
         },

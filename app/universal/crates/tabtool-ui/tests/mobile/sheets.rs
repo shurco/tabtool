@@ -1578,7 +1578,7 @@ fn the_export_sheet_shows_every_control_and_defaults_to_csv() {
     let mut fixture = ExportFixture::new(small_document());
     fixture.run();
 
-    for label in ["Encoding", "Separator", "Quote", "Decimal"] {
+    for label in ["Format", "Encoding", "Separator", "Quote", "Decimal"] {
         assert!(
             fixture
                 .query_by_role_and_label(Role::ComboBox, label)
@@ -1609,6 +1609,39 @@ fn the_export_sheet_shows_every_control_and_defaults_to_csv() {
         fixture.document.borrow().configuration().column_separator,
         ","
     );
+}
+
+#[test]
+fn an_xml_export_disables_csv_controls_and_writes_xml() {
+    let mut fixture = ExportFixture::new(small_document());
+    fixture.run();
+
+    fixture.choose("Format", "XML");
+    for label in ["Encoding", "Separator", "Quote"] {
+        assert!(
+            fixture
+                .get_by_role_and_label(Role::ComboBox, label)
+                .accesskit_node()
+                .is_disabled(),
+            "{label} is CSV-only"
+        );
+    }
+    assert!(
+        fixture
+            .query_by_label(tr(
+                EN,
+                "Column names become keys. The file is written in UTF-8."
+            ))
+            .is_some()
+    );
+
+    fixture.click_button(tr(EN, "Export"));
+    let calls = fixture.files.calls();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].name, "Untitled-export.xml");
+    let text = String::from_utf8(calls[0].bytes.clone()).expect("UTF-8");
+    assert!(text.starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rows>\n"));
+    assert!(text.contains("<Name>Alice</Name>"), "{text}");
 }
 
 #[test]

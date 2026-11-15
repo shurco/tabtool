@@ -5,6 +5,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use egui::{Align, Layout, Vec2};
+use tabtool_core::ExportFormat;
 use tabtool_desktop::app::DesktopApp;
 use tabtool_desktop::platform::SharedStorage;
 use tabtool_desktop::settings_window::SettingsWindow;
@@ -70,9 +71,16 @@ pub fn about_harness(theme: tabtool_ui::Theme, size: [f32; 2]) -> UiHarness<'sta
 
 /// The export options modal over the document surface.
 pub fn export_harness(theme: tabtool_ui::Theme, size: [f32; 2]) -> UiHarness<'static> {
+    let mut format = ExportFormat::Csv;
     let mut configuration = csv_configuration();
     let mut harness = UiHarness::new(theme, size, move |ui| {
-        let _ = export_panel(ui, "visual-export", &mut configuration, Language::En);
+        let _ = export_panel(
+            ui,
+            "visual-export",
+            &mut format,
+            &mut configuration,
+            Language::En,
+        );
     });
     harness.run();
     harness.remove_cursor();

@@ -14,8 +14,8 @@ use base64::engine::general_purpose::STANDARD;
 use serde_json::{Value, json};
 use tabtool_core::{
     CsvConfiguration, CsvError, CsvFormatDetector, CsvParser, CsvTable, CsvWriteIssue, CsvWriter,
-    Encoding, ExportInput, FilterCriterion, FilterOperator, Locale, RowFilter, SortDirection,
-    export_data, export_preflight_issue, make_tsv, parse_tsv, row_order_sorted_by,
+    Encoding, ExportFormat, ExportInput, FilterCriterion, FilterOperator, Locale, RowFilter,
+    SortDirection, export_data, export_preflight_issue, make_tsv, parse_tsv, row_order_sorted_by,
 };
 
 /// The `Reading/` plus `Heuristic/` fixture count.
@@ -579,6 +579,7 @@ fn check_export(locale_name: &str, document: &Value) {
         let export_configuration = configuration(&case["export"]);
         let input = ExportInput {
             table: &table,
+            format: ExportFormat::Csv,
             document_configuration: &document_configuration,
             export_configuration: &export_configuration,
         };

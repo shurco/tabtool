@@ -1,6 +1,6 @@
 //! Export sessions and their preflight, save panel and write flow.
 
-use tabtool_core::{CsvConfiguration, CsvTable, CsvWriteIssue};
+use tabtool_core::{CsvConfiguration, CsvTable, CsvWriteIssue, ExportFormat};
 use tabtool_document::{Document, DocumentError};
 use tabtool_ui::export;
 
@@ -12,7 +12,9 @@ use super::FilePolicy;
 /// the document and a later edit cannot leak into an open panel.
 #[derive(Clone, Debug)]
 pub struct ExportSession {
-    /// The candidate format shown in the panel.
+    /// The candidate file format shown in the panel.
+    pub export_format: ExportFormat,
+    /// The candidate CSV format shown in the panel.
     pub export_configuration: CsvConfiguration,
     /// The visible table at the time the panel opened.
     pub table: CsvTable,
@@ -25,12 +27,16 @@ pub struct ExportSession {
 impl ExportSession {
     /// The complete file name for the current candidate.
     pub fn suggested_name(&self) -> String {
-        export::filename(&self.base_name, &self.export_configuration)
+        export::filename(
+            &self.base_name,
+            self.export_format,
+            &self.export_configuration,
+        )
     }
 
     /// The extension the current candidate writes.
     pub fn file_extension(&self) -> &'static str {
-        export::file_extension(&self.export_configuration)
+        export::file_extension(self.export_format, &self.export_configuration)
     }
 }
 
@@ -58,6 +64,7 @@ impl FilePolicy {
         let table = document.visible_table()?;
         let configuration = document.configuration().clone();
         Some(ExportSession {
+            export_format: ExportFormat::Csv,
             export_configuration: configuration.clone(),
             table,
             document_configuration: configuration,
@@ -69,6 +76,7 @@ impl FilePolicy {
     pub(crate) fn export(&self, session: &ExportSession, allow_ambiguous: bool) -> ExportOutcome {
         match export::preflight(
             &session.table,
+            session.export_format,
             &session.document_configuration,
             &session.export_configuration,
         ) {
@@ -87,6 +95,7 @@ impl FilePolicy {
         };
         match export::data(
             &session.table,
+            session.export_format,
             &session.document_configuration,
             &session.export_configuration,
             allow_ambiguous,
