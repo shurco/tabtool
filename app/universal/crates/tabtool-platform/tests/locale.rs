@@ -1,4 +1,4 @@
-use tabtool_platform::{DesktopPlatform, SystemInfo, decimal_separator};
+use tabtool_platform::{DesktopPlatform, SystemInfo, decimal_separator, parse_locale};
 
 #[test]
 fn the_decimal_separator_comes_from_the_locale() {
@@ -28,4 +28,22 @@ fn the_system_locale_implements_the_system_info_trait() {
     let _ = DesktopPlatform.languages();
     let separator = DesktopPlatform.decimal_separator();
     assert!(separator == "." || separator == ",", "{separator}");
+}
+
+#[test]
+fn an_underscore_system_tag_parses_as_its_icu_locale() {
+    assert_eq!(parse_locale("de_DE").to_string(), "de-DE");
+    assert_eq!(parse_locale("en-US").to_string(), "en-US");
+}
+
+#[test]
+fn a_posix_tag_drops_its_encoding_and_modifier() {
+    assert_eq!(parse_locale("de_DE.UTF-8").to_string(), "de-DE");
+    assert_eq!(parse_locale("de_DE@euro").to_string(), "de-DE");
+}
+
+#[test]
+fn an_unparsable_tag_falls_back_to_english() {
+    assert_eq!(parse_locale("not a locale").to_string(), "en");
+    assert_eq!(parse_locale("").to_string(), "en");
 }

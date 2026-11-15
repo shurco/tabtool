@@ -21,13 +21,12 @@ use std::time::{Duration, Instant};
 use egui::{Context, Ui, ViewportId};
 use tabtool_document::{Autosave, Document, DocumentError};
 use tabtool_i18n::Language;
-use tabtool_platform::SystemInfo;
+use tabtool_platform::{SystemInfo, parse_locale};
 use tabtool_ui::document::{DocumentUiState, sync_selection_to_grid};
 use tabtool_ui::grid::GridState;
 
 use crate::files::FilePolicy;
 use crate::menu::MenuAction;
-use crate::platform::system_locale;
 pub use close::{CloseDecision, CloseSave, close_decision};
 pub use requests::CloseChoice;
 pub(crate) use requests::WindowRequest;
@@ -83,7 +82,7 @@ impl DocumentWindow {
             show_format_bar,
             appearance,
             has_recent: false,
-            locale: system_locale(&platform),
+            locale: parse_locale(&platform.locale()),
             decimal_separator: platform.decimal_separator(),
             requests: Vec::new(),
             app_actions: Vec::new(),

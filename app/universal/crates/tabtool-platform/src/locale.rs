@@ -21,6 +21,16 @@ pub fn system_locale() -> String {
     normalize_tag(&tag)
 }
 
+/// The ICU locale of a platform tag such as `de_DE` or `de_DE.UTF-8`, or
+/// `en` when the tag does not parse.
+///
+/// Platforms report underscore tags, which the ICU parser rejects, so the tag
+/// is normalized and its underscores become hyphens first.
+pub fn parse_locale(tag: &str) -> Locale {
+    Locale::try_from_str(&normalize_tag(tag).replace('_', "-"))
+        .unwrap_or_else(|_| Locale::try_from_str("en").expect("English is a valid ICU locale"))
+}
+
 /// The decimal separator of `locale`, `","` or `"."`.
 ///
 /// Locales outside the two CSV decimal marks, or an unparsable tag, keep the

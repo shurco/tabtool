@@ -18,7 +18,7 @@ use eframe::egui::{Frame, Panel, Ui, UiBuilder};
 use tabtool_core::Locale;
 use tabtool_document::{Document, DocumentError, LargeStatus, StdStorage};
 use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, Language, tr};
-use tabtool_platform::prefers_chinese_encoding;
+use tabtool_platform::{parse_locale, prefers_chinese_encoding};
 use tabtool_settings::Settings;
 use tabtool_ui::about::AboutAction;
 use tabtool_ui::grid::{Clipboard as GridClipboard, GridAppearance, GridState};
@@ -144,7 +144,7 @@ impl AndroidApp {
         let languages = host.languages();
         let prefers_chinese = prefers_chinese_encoding(&languages);
         let language = settings.interface_language(&languages);
-        let locale = library::parse_locale(&host.locale());
+        let locale = parse_locale(&host.locale());
         let decimal_separator = host.decimal_separator();
         let clock = host.clock();
         let metrics = metrics_for(

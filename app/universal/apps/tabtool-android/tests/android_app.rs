@@ -999,29 +999,6 @@ fn the_interface_language_follows_the_setting() {
     assert_eq!(app.language(), tabtool_i18n::Language::Fr);
 }
 
-#[test]
-fn the_system_locale_is_parsed_with_an_english_fallback() {
-    assert_eq!(
-        main::library::parse_locale("de-DE").id.language.as_str(),
-        "de"
-    );
-    assert_eq!(
-        main::library::parse_locale("en_US")
-            .id
-            .region
-            .map(|region| region.as_str().to_owned()),
-        Some("US".to_owned()),
-        "the platform reports underscore tags"
-    );
-    assert_eq!(
-        main::library::parse_locale("not a locale")
-            .id
-            .language
-            .as_str(),
-        "en"
-    );
-}
-
 // -- End-to-end scenarios -----------------------------------------------------
 //
 // These chain the per-behavior tests above into the journeys the emulator

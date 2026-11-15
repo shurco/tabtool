@@ -1,4 +1,4 @@
-//! The Android library view and its locale helpers.
+//! The Android library view.
 //!
 //! The library view holds the shared platform host as its document seam. The
 //! app keeps the view across frames to preserve an open delete prompt or
@@ -24,12 +24,4 @@ pub fn new_view(
 ) -> LibraryView {
     LibraryView::new(host, locale, clock, metrics, language)
         .new_document_configuration(settings.new_document_configuration())
-}
-
-/// The system locale, or English when the tag is not a valid ICU locale.
-pub fn parse_locale(tag: &str) -> Locale {
-    let tag = tag.replace('_', "-");
-    Locale::try_from_str(&tag)
-        .or_else(|_| Locale::try_from_str("en"))
-        .expect("English is a valid ICU locale")
 }

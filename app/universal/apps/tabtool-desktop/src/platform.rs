@@ -2,9 +2,8 @@
 
 use std::sync::Arc;
 
-use tabtool_core::Locale;
 use tabtool_document::{StdStorage, Storage};
-use tabtool_platform::{DesktopPlatform, FileDialogs, SystemInfo};
+use tabtool_platform::{DesktopPlatform, FileDialogs};
 
 /// The storage every document window shares.
 ///
@@ -26,13 +25,6 @@ pub fn standard_storage() -> SharedStorage {
 /// The real platform file dialogs.
 pub fn standard_dialogs() -> SharedDialogs {
     Arc::new(DesktopPlatform)
-}
-
-/// The system locale, or `en` when the platform reports one the ICU parser
-/// does not accept.
-pub fn system_locale(platform: &DesktopPlatform) -> Locale {
-    Locale::try_from_str(&platform.locale())
-        .unwrap_or_else(|_| Locale::try_from_str("en").expect("English is a valid ICU locale"))
 }
 
 #[cfg(test)]
