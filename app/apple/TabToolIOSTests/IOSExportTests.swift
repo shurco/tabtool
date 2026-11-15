@@ -19,6 +19,16 @@ import TabToolKit
         #expect(!FileManager.default.fileExists(atPath: directory.path))
     }
 
+    @Test func prepareWritesATemporaryJSON() throws {
+        let table = CSVTable(rows: [["apple"]], headers: ["name"])
+        let url = try ExportCoordinator.prepare(
+            table: table, format: .json, documentConfiguration: .init(),
+            configuration: .init(), baseName: "Sales-export")
+        defer { ExportCoordinator.removeTemporaryExport(url) }
+        #expect(url.pathExtension == "json")
+        #expect(try String(contentsOf: url, encoding: .utf8).contains(#""name": "apple""#))
+    }
+
     @Test func removeTemporaryExportLeavesAFileInTheSystemTemporaryDirectory() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("tabtool-export-guard-\(UUID().uuidString).csv")

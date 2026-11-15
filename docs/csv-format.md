@@ -67,6 +67,15 @@ Typed errors: `cannotDecodeData`, `malformedQuotedField`, `quoteInUnquotedField`
 - A header name may be empty (an empty header cell is valid CSV); names containing the separator, quotes, or line breaks are quoted on export like any cell.
 - Renaming is a single undo step ("Rename Column"), keeps the active sort and column identities, and renaming to the same name records nothing.
 
+## JSON and XML export
+
+- Export offers CSV, JSON, and XML. JSON and XML are always UTF-8; the encoding, separator, quote, and header controls apply to CSV only. The decimal mark is converted as for CSV.
+- Field names are the document headers, otherwise generated A, B, C…; an empty header takes its column's generated name. Repeated names get `_2`, `_3`, … (skipping names already in use).
+- JSON: an array with one object per row, keys in column order, every value a string (`"007"` stays `"007"`). An empty table is `[]`.
+- XML: `<rows>` holds one `<row>` per table row; each cell is an element named after its column. Characters not allowed in an XML name become `_`; a name starting with a digit, `-`, `.`, or `xml` gets a leading `_`. Duplicates are resolved after this cleanup.
+- XML text escapes `&`, `<`, `>`, and writes a carriage return as `&#13;` so it survives parsing. Control characters XML 1.0 cannot represent (other than tab, line feed, carriage return) are replaced with U+FFFD.
+- JSON and XML never need the no-quote confirmation and cannot fail on encoding.
+
 ## Format change and safety
 
 - Encoding, delimiter, quotes, escape, and auto-detection re-read the file from disk.

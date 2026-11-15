@@ -17,9 +17,10 @@ final class ExportCoordinator {
         let options = ExportOptions(configuration: documentConfiguration)
         let root = ExportSheet(options: options, onCancel: {
             dismissSheet()
-        }, onExport: { configuration in
+        }, onExport: { format, configuration in
             dismissSheet {
-                export(table: table, documentConfiguration: documentConfiguration,
+                export(table: table, format: format,
+                       documentConfiguration: documentConfiguration,
                        configuration: configuration, baseName: baseName)
             }
         })
@@ -32,16 +33,19 @@ final class ExportCoordinator {
     }
 
     /// Writes an export to a temporary file the document picker can copy.
-    static func prepare(table: CSVTable, documentConfiguration: CSVConfiguration,
+    static func prepare(table: CSVTable, format: ExportFormat = .csv,
+                        documentConfiguration: CSVConfiguration,
                         configuration: CSVConfiguration, baseName: String,
                         allowAmbiguousOutput: Bool = false) throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appendingPathComponent(
-            ExportPlan.filename(baseName: baseName, configuration: configuration))
+            ExportPlan.filename(baseName: baseName, format: format,
+                                configuration: configuration))
         do {
-            try ExportPlan.write(table: table, documentConfiguration: documentConfiguration,
+            try ExportPlan.write(table: table, format: format,
+                                 documentConfiguration: documentConfiguration,
                                  configuration: configuration, to: url,
                                  allowAmbiguousOutput: allowAmbiguousOutput)
         } catch {
@@ -59,12 +63,14 @@ final class ExportCoordinator {
         try? FileManager.default.removeItem(at: directory)
     }
 
-    private static func export(table: CSVTable, documentConfiguration: CSVConfiguration,
+    private static func export(table: CSVTable, format: ExportFormat,
+                               documentConfiguration: CSVConfiguration,
                                configuration: CSVConfiguration, baseName: String) {
-        switch ExportPlan.decision(table: table, documentConfiguration: documentConfiguration,
+        switch ExportPlan.decision(table: table, format: format,
+                                   documentConfiguration: documentConfiguration,
                                    exportConfiguration: configuration) {
         case .proceed:
-            write(table: table, documentConfiguration: documentConfiguration,
+            write(table: table, format: format, documentConfiguration: documentConfiguration,
                   configuration: configuration, baseName: baseName,
                   allowAmbiguousOutput: false)
         case .confirmAmbiguous:
@@ -82,18 +88,21 @@ final class ExportCoordinator {
             message: String(localized: "Quotes are off and a header or cell contains the separator or a line break. The exported file may not read back as the same table."),
             preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: String(localized: "Export Anyway"), style: .destructive) { _ in
-            write(table: table, documentConfiguration: documentConfiguration,
+            // Only CSV output can be ambiguous.
+            write(table: table, format: .csv, documentConfiguration: documentConfiguration,
                   configuration: configuration, baseName: baseName, allowAmbiguousOutput: true)
         })
         alert.addAction(UIAlertAction(title: String(localized: "Cancel"), style: .cancel))
         present(alert)
     }
 
-    private static func write(table: CSVTable, documentConfiguration: CSVConfiguration,
+    private static func write(table: CSVTable, format: ExportFormat,
+                              documentConfiguration: CSVConfiguration,
                               configuration: CSVConfiguration, baseName: String,
                               allowAmbiguousOutput: Bool) {
         do {
-            let url = try prepare(table: table, documentConfiguration: documentConfiguration,
+            let url = try prepare(table: table, format: format,
+                                  documentConfiguration: documentConfiguration,
                                   configuration: configuration, baseName: baseName,
                                   allowAmbiguousOutput: allowAmbiguousOutput)
             let picker = UIDocumentPickerViewController(forExporting: [url], asCopy: true)
@@ -169,18 +178,18 @@ private extension ExportCoordinator {
 private struct ExportSheet: View {
     @ObservedObject var options: ExportOptions
     let onCancel: () -> Void
-    let onExport: (CSVConfiguration) -> Void
+    let onExport: (ExportFormat, CSVConfiguration) -> Void
 
     var body: some View {
         NavigationStack {
-            ExportOptionsView(options: options) { _ in }
+            ExportOptionsView(options: options) {}
                 .navigationTitle("Export")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel", systemImage: "xmark", action: onCancel)
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Export", systemImage: "square.and.arrow.up") { onExport(options.configuration) }
+                        Button("Export", systemImage: "square.and.arrow.up") { onExport(options.format, options.configuration) }
                     }
                 }
         }

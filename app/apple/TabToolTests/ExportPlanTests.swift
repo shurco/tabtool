@@ -39,6 +39,39 @@ import UniformTypeIdentifiers
             == UTType.tabSeparatedText)
     }
 
+    @Test func structuredFormatsUseTheirOwnExtensionAndType() {
+        let tab = CSVConfiguration(columnSeparator: "\t")
+        #expect(ExportPlan.filename(baseName: "Sales-export", format: .json,
+                                    configuration: tab) == "Sales-export.json")
+        #expect(ExportPlan.filename(baseName: "Sales-export", format: .xml,
+                                    configuration: tab) == "Sales-export.xml")
+        #expect(ExportPlan.contentType(format: .json, for: tab) == UTType.json)
+        #expect(ExportPlan.contentType(format: .xml, for: tab) == UTType.xml)
+        #expect(ExportPlan.renaming("Sales-export.csv", format: .json,
+                                    configuration: tab) == "Sales-export.json")
+        #expect(ExportPlan.renaming("Sales-export.json", format: .csv,
+                                    configuration: tab) == "Sales-export.tsv")
+    }
+
+    /// Settings that make CSV ambiguous or unencodable do not apply to JSON
+    /// and XML, which are always UTF-8 with every value escaped.
+    @Test func structuredFormatsProceedAndWriteUTF8() throws {
+        let table = CSVTable(rows: [["ж;"]], headers: ["Name"])
+        let export = CSVConfiguration(encoding: .ascii, columnSeparator: ";",
+                                      quoteCharacter: "")
+        let url = temporaryURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        #expect(ExportPlan.decision(table: table, format: .json,
+                                    documentConfiguration: .init(),
+                                    exportConfiguration: export) == .proceed)
+        try ExportPlan.write(table: table, format: .json,
+                             documentConfiguration: .init(),
+                             configuration: export, to: url)
+        #expect(try String(contentsOf: url, encoding: .utf8)
+            == "[\n  {\"Name\": \"ж;\"}\n]\n")
+    }
+
     @Test func renamingSwapsOnlyTheExtension() {
         let tab = CSVConfiguration(columnSeparator: "\t")
         let comma = CSVConfiguration(columnSeparator: ",")
