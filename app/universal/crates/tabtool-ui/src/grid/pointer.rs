@@ -1,16 +1,20 @@
 //! Pointer input, context menus and drags for the grid.
 
+mod headers;
+
 use egui::{Context, Event, Id, Modifiers, PointerButton, Rect, Role, Sense, Ui, WidgetInfo, pos2};
 
-use super::context::{self, cell_menu, header_menu, row_menu};
-use super::drag::{column_slot_at, row_slot_at};
-use super::geometry::{GridGeometry, HEADER_HEIGHT, RESIZE_HANDLE_WIDTH};
+use super::context::{self, cell_menu, row_menu};
+use super::drag::row_slot_at;
+use super::geometry::{GridGeometry, HEADER_HEIGHT};
 use super::interaction::{ContextTap, Interaction};
 use super::options::GridOptions;
 use super::paint::{Canvas, VisibleCells};
 use super::selection::GridElement;
-use super::state::{GridState, header_for};
+use super::state::GridState;
 use super::touch::{GridTouch, TouchGesture};
+
+pub(crate) use headers::interact_headers;
 
 /// Creates the click, context-menu and drag targets for the visible cells.
 #[allow(clippy::too_many_arguments)]
@@ -108,117 +112,6 @@ pub(crate) fn interact_cells(
     }
 }
 
-/// Creates the click, resize, context-menu and drag targets for the pinned
-/// headers.
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn interact_headers(
-    ui: &mut Ui,
-    base_id: Id,
-    headers: Option<&[String]>,
-    geometry: &GridGeometry,
-    canvas: &Canvas,
-    state: &GridState,
-    options: &GridOptions,
-    interaction: &mut Interaction,
-) {
-    let clip = canvas.clip;
-    let viewport = canvas.viewport;
-    let header_clip = Rect::from_min_max(
-        pos2((clip.min.x + geometry.gutter()).min(clip.max.x), clip.min.y),
-        pos2(clip.max.x, (clip.min.y + HEADER_HEIGHT).min(clip.max.y)),
-    );
-    for column in geometry.visible_columns(viewport) {
-        let rect = geometry
-            .pinned_header_rect(column, viewport)
-            .translate(clip.min.to_vec2());
-        let interact = rect.intersect(header_clip);
-        if interact.width() <= 0.0 {
-            continue;
-        }
-        let response = ui.interact(
-            interact,
-            base_id.with(("header", column)),
-            Sense::click_and_drag(),
-        );
-        let selected = state.selection.columns.contains(&column);
-        response.widget_info(|| {
-            WidgetInfo::selected(
-                Role::ColumnHeader,
-                true,
-                selected,
-                header_for(headers, column),
-            )
-        });
-        let long_touch = options.touch
-            && response.long_touched()
-            && GridTouch::new().long_press(GridElement::ColumnHeader) == TouchGesture::ContextMenu;
-        if response.clicked() && !long_touch {
-            interaction.column(column, click_modifiers(ui.ctx()));
-        }
-        if response.secondary_clicked() || long_touch {
-            interaction.context(ContextTap {
-                element: GridElement::ColumnHeader,
-                row: 0,
-                column,
-            });
-        }
-        if response.secondary_clicked() || long_touch || response.context_menu_opened() {
-            interaction.note_menu_open();
-            let selection =
-                context::context_selection(GridElement::ColumnHeader, 0, column, &state.selection);
-            let entries = header_menu(&options.menu, column, &selection, geometry.column_count());
-            if let Some(command) = context::show(&response, &entries, options.language, long_touch)
-            {
-                interaction.menu(command);
-            }
-        }
-        if !options.touch && response.drag_started() {
-            // A press on the resize handle is a resize, not a header drag.
-            let on_handle = ui.ctx().input(|input| {
-                input
-                    .pointer
-                    .press_origin()
-                    .is_some_and(|pointer| pointer.x >= rect.right() - RESIZE_HANDLE_WIDTH)
-            });
-            if !on_handle && options.menu.structural {
-                interaction.begin_column_drag(column);
-            }
-        }
-        if (response.drag_started() || response.dragged())
-            && let Some(pointer) = ui.ctx().input(|input| input.pointer.interact_pos())
-        {
-            let content_x = canvas.viewport.min.x + pointer.x - canvas.clip.min.x;
-            interaction.column_target(column_slot_at(geometry, content_x));
-        }
-        if response.drag_stopped() {
-            let inside = ui
-                .ctx()
-                .input(|input| input.pointer.interact_pos())
-                .is_some_and(|pointer| canvas.clip.contains(pointer));
-            interaction.end_column_drag(inside);
-        }
-
-        let handle = Rect::from_min_max(
-            pos2(rect.right() - RESIZE_HANDLE_WIDTH / 2.0, rect.min.y),
-            pos2(rect.right() + RESIZE_HANDLE_WIDTH / 2.0, rect.max.y),
-        )
-        .intersect(clip);
-        if handle.width() > 0.0 {
-            let response = ui.interact(
-                handle,
-                base_id.with(("resize", column)),
-                Sense::click_and_drag(),
-            );
-            if response.hovered() {
-                ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
-            }
-            if response.dragged() {
-                interaction.resize(column, response.drag_delta().x);
-            }
-        }
-    }
-}
-
 /// Creates the click, context-menu and drag targets for the pinned row-number
 /// gutter.
 #[allow(clippy::too_many_arguments)]
@@ -307,6 +200,26 @@ pub(crate) fn interact_gutter(
             interaction.end_row_drag(inside);
         }
     }
+}
+
+pub(super) fn hovered_cell(
+    ui: &Ui,
+    clip: Rect,
+    viewport: Rect,
+    geometry: &GridGeometry,
+) -> Option<(usize, usize)> {
+    let pointer = ui.ctx().input(|input| input.pointer.hover_pos())?;
+    if !clip.contains(pointer)
+        || pointer.x < clip.min.x + geometry.gutter()
+        || pointer.y < clip.min.y + HEADER_HEIGHT
+    {
+        return None;
+    }
+    let content = pos2(
+        viewport.min.x + pointer.x - clip.min.x,
+        viewport.min.y + pointer.y - clip.min.y,
+    );
+    geometry.cell_at(content)
 }
 
 fn click_modifiers(ctx: &Context) -> Modifiers {

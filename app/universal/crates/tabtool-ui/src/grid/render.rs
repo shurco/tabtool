@@ -117,7 +117,7 @@ pub(crate) fn show(
         state.hovered = if options.touch {
             None
         } else {
-            hovered_cell(ui, clip, viewport, &geometry)
+            pointer::hovered_cell(ui, clip, viewport, &geometry)
         };
         if let Some(focus) = state.pending_scroll.take() {
             let rect = geometry
@@ -293,24 +293,4 @@ pub(crate) fn show(
     });
     state.menu_open = interaction.is_menu_open();
     actions
-}
-
-fn hovered_cell(
-    ui: &Ui,
-    clip: Rect,
-    viewport: Rect,
-    geometry: &GridGeometry,
-) -> Option<(usize, usize)> {
-    let pointer = ui.ctx().input(|input| input.pointer.hover_pos())?;
-    if !clip.contains(pointer)
-        || pointer.x < clip.min.x + geometry.gutter()
-        || pointer.y < clip.min.y + HEADER_HEIGHT
-    {
-        return None;
-    }
-    let content = pos2(
-        viewport.min.x + pointer.x - clip.min.x,
-        viewport.min.y + pointer.y - clip.min.y,
-    );
-    geometry.cell_at(content)
 }

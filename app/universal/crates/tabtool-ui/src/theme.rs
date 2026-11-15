@@ -1,9 +1,11 @@
 //! The TabTool desktop design tokens and their mapping onto egui's style.
 
-use egui::{
-    Color32, Context, CornerRadius, FontFamily, FontId, Margin, Stroke, TextStyle, Vec2, Visuals,
-    style::WidgetVisuals,
-};
+mod style;
+mod tokens;
+
+use egui::{Color32, Context};
+
+use tokens::{DARK, LIGHT, METRICS, TYPOGRAPHY};
 
 /// The light or dark appearance.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -165,97 +167,6 @@ pub struct Theme {
     pub metrics: Metrics,
 }
 
-const LIGHT: Colors = Colors {
-    accent: rgb(0x007AFF),
-    accent_pressed: rgb(0x0062CC),
-    label: rgb(0x1D1D1F),
-    secondary_label: rgb(0x6E6E73),
-    tertiary_label: rgb(0x8E8E93),
-    separator: rgb(0xE5E5E7),
-    control_background: rgb(0xFFFFFF),
-    raised_background: rgb(0xFFFFFF),
-    control_border: rgb(0xD1D1D6),
-    window_background: rgb(0xFFFFFF),
-    content_background: rgb(0xFFFFFF),
-    header_background: rgb(0xEBEBEB),
-    selection_background: rgb(0xB3D7FF),
-    hover_background: rgb(0xF2F2F2),
-    alternating_row_background: rgb(0xF7F7F9),
-    focus_ring: rgb(0x007AFF),
-    error: rgb(0xD70015),
-    warning: rgb(0xB25000),
-    success: rgb(0x248A3D),
-    banner_info_background: rgb(0xEAF3FF),
-    banner_warning_background: rgb(0xFFF4E5),
-    banner_error_background: rgb(0xFDECEA),
-};
-
-const DARK: Colors = Colors {
-    accent: rgb(0x0A84FF),
-    accent_pressed: rgb(0x409CFF),
-    label: rgb(0xFFFFFF),
-    secondary_label: rgb(0xA1A1A6),
-    tertiary_label: rgb(0x8E8E93),
-    separator: rgb(0x3A3A3C),
-    control_background: rgb(0x1C1C1E),
-    raised_background: rgb(0x48484A),
-    control_border: rgb(0x48484A),
-    window_background: rgb(0x1E1E1E),
-    content_background: rgb(0x1E1E1E),
-    header_background: rgb(0x2C2C2E),
-    selection_background: rgb(0x0A84FF),
-    hover_background: rgb(0x2C2C2E),
-    alternating_row_background: rgb(0x252527),
-    focus_ring: rgb(0x0A84FF),
-    error: rgb(0xFF453A),
-    warning: rgb(0xFF9F0A),
-    success: rgb(0x32D74B),
-    banner_info_background: rgb(0x152538),
-    banner_warning_background: rgb(0x33260F),
-    banner_error_background: rgb(0x3A1A18),
-};
-
-const TYPOGRAPHY: Typography = Typography {
-    body: 13.0,
-    caption: 11.0,
-    title: 15.0,
-    title_large: 17.0,
-};
-
-const METRICS: Metrics = Metrics {
-    control_height: 22.0,
-    control_height_large: 24.0,
-    row_height: 24.0,
-    small_corner_radius: 4,
-    corner_radius: 5,
-    large_corner_radius: 6,
-    item_spacing: 8.0,
-    window_padding: 10.0,
-    button_padding_x: 10.0,
-    button_padding_y: 3.0,
-    menu_item_height: 22.0,
-    focus_ring_width: 2.0,
-    toolbar_height: 32.0,
-    toolbar_padding_x: 10.0,
-    toolbar_padding_y: 5.0,
-    status_line_height: 22.0,
-    status_padding_x: 10.0,
-    status_padding_y: 3.0,
-    alert_padding: 16.0,
-    alert_width: 340.0,
-    sheet_padding: 16.0,
-    sheet_width: 440.0,
-    banner_padding: 10.0,
-};
-
-const fn rgb(value: u32) -> Color32 {
-    Color32::from_rgb(
-        ((value >> 16) & 0xFF) as u8,
-        ((value >> 8) & 0xFF) as u8,
-        (value & 0xFF) as u8,
-    )
-}
-
 impl Theme {
     /// The desktop tokens for an appearance.
     pub fn desktop(mode: ThemeMode) -> Self {
@@ -284,115 +195,6 @@ impl Theme {
     pub fn is_dark(self) -> bool {
         self.mode == ThemeMode::Dark
     }
-
-    /// Translate the tokens into egui's visual style.
-    pub fn visuals(self) -> Visuals {
-        let colors = self.colors;
-        let mut visuals = match self.mode {
-            ThemeMode::Light => Visuals::light(),
-            ThemeMode::Dark => Visuals::dark(),
-        };
-        let border = Stroke::new(1.0, colors.control_border);
-        let separator = Stroke::new(1.0, colors.separator);
-        let radius = CornerRadius::same(self.metrics.corner_radius);
-
-        visuals.dark_mode = self.is_dark();
-        visuals.override_text_color = Some(colors.label);
-        visuals.weak_text_color = Some(colors.secondary_label);
-        visuals.panel_fill = colors.window_background;
-        visuals.window_fill = colors.control_background;
-        visuals.window_stroke = Stroke::new(1.0, colors.separator);
-        visuals.extreme_bg_color = colors.content_background;
-        visuals.text_edit_bg_color = Some(colors.control_background);
-        visuals.faint_bg_color = colors.header_background;
-        visuals.code_bg_color = colors.header_background;
-        visuals.hyperlink_color = colors.accent;
-        visuals.warn_fg_color = colors.warning;
-        visuals.error_fg_color = colors.error;
-        visuals.selection.bg_fill = colors.selection_background;
-        visuals.selection.stroke = Stroke::new(1.0, colors.label);
-        visuals.window_corner_radius = CornerRadius::same(self.metrics.large_corner_radius);
-        visuals.menu_corner_radius = CornerRadius::same(self.metrics.large_corner_radius);
-
-        visuals.widgets.noninteractive = WidgetVisuals {
-            bg_fill: colors.window_background,
-            weak_bg_fill: colors.window_background,
-            bg_stroke: separator,
-            corner_radius: radius,
-            fg_stroke: Stroke::new(1.0, colors.label),
-            expansion: 0.0,
-        };
-        visuals.widgets.inactive = WidgetVisuals {
-            bg_fill: colors.control_background,
-            weak_bg_fill: colors.control_background,
-            bg_stroke: border,
-            corner_radius: radius,
-            fg_stroke: Stroke::new(1.0, colors.label),
-            expansion: 0.0,
-        };
-        visuals.widgets.hovered = WidgetVisuals {
-            bg_fill: colors.hover_background,
-            weak_bg_fill: colors.hover_background,
-            bg_stroke: border,
-            corner_radius: radius,
-            fg_stroke: Stroke::new(1.0, colors.label),
-            expansion: 0.0,
-        };
-        visuals.widgets.active = WidgetVisuals {
-            bg_fill: colors.hover_background,
-            weak_bg_fill: colors.hover_background,
-            bg_stroke: border,
-            corner_radius: radius,
-            fg_stroke: Stroke::new(1.0, colors.label),
-            expansion: 0.0,
-        };
-        visuals.widgets.open = WidgetVisuals {
-            bg_fill: colors.hover_background,
-            weak_bg_fill: colors.hover_background,
-            bg_stroke: Stroke::new(1.0, colors.accent),
-            corner_radius: radius,
-            fg_stroke: Stroke::new(1.0, colors.label),
-            expansion: 0.0,
-        };
-        visuals
-    }
-
-    fn apply(self, ctx: &Context) {
-        let mode = self.mode.egui();
-        let mut style = ctx.style_of(mode).as_ref().clone();
-        style.visuals = self.visuals();
-        style.spacing.item_spacing = Vec2::splat(self.metrics.item_spacing);
-        style.spacing.interact_size = Vec2::new(0.0, self.metrics.control_height);
-        style.spacing.button_padding =
-            Vec2::new(self.metrics.button_padding_x, self.metrics.button_padding_y);
-        style.spacing.window_margin = Margin::same(self.metrics.window_padding as i8);
-        style.spacing.menu_margin = Margin::same(4);
-        style.spacing.indent = 16.0;
-        style.spacing.combo_width = 120.0;
-        style.spacing.text_edit_width = 160.0;
-        style.text_styles = text_styles(self.typography);
-        ctx.set_style_of(mode, style);
-    }
-}
-
-fn text_styles(typography: Typography) -> std::collections::BTreeMap<TextStyle, FontId> {
-    let proportional = |size| FontId::new(size, FontFamily::Proportional);
-    let heading = |size| FontId::new(size, FontFamily::Name(crate::fonts::HEADING_FAMILY.into()));
-    [
-        (TextStyle::Body, proportional(typography.body)),
-        (TextStyle::Button, proportional(typography.body)),
-        (TextStyle::Small, proportional(typography.caption)),
-        (TextStyle::Heading, heading(typography.title)),
-        (
-            TextStyle::Name(WINDOW_TITLE_STYLE.into()),
-            heading(typography.title_large),
-        ),
-        (
-            TextStyle::Monospace,
-            FontId::new(typography.body, FontFamily::Monospace),
-        ),
-    ]
-    .into()
 }
 
 fn theme_id(mode: ThemeMode) -> egui::Id {
