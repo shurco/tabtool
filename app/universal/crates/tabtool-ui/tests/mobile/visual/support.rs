@@ -4,8 +4,6 @@
 //! the library, the touch editor and the five sheets. Image comparison is
 //! opt-in per machine because system fonts and the GPU rasterizer differ.
 
-#![allow(dead_code)]
-
 use core::cell::RefCell;
 use std::io;
 use std::path::{Path, PathBuf};

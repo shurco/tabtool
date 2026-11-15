@@ -137,8 +137,8 @@ or `MANAGE_EXTERNAL_STORAGE`.
 
 - Import uses `ACTION_OPEN_DOCUMENT` with `CATEGORY_OPENABLE` and `text/*`.
   Kotlin streams the chosen `content://` URI into the private documents
-  directory, deletes a copy the library cannot list, and returns the private
-  path.
+  directory, deletes the copy when its name or extension is not listable, and
+  returns the private path.
 - Export writes a converted temporary CSV, then `ACTION_CREATE_DOCUMENT` streams
   that file to the user's location. A failed or cancelled export leaves the
   working document untouched.
@@ -187,8 +187,9 @@ area and keyboard inset, and keeps the document, selection and open native edit.
 - The app has no network permission, no account, no cloud sync and no store
   metadata in this repository.
 - The fold-aware action bar is implemented and unit-tested, but the platform
-  host has no foldable AVD in CI or on this machine; hinge placement is verified
-  in `tests/mobile/fold.rs` and on a foldable device only.
+  host has no foldable AVD in CI or on this machine. Hinge placement is covered
+  by `tests/mobile/fold.rs` and the folded-size snapshots; a physical foldable
+  device is still required to confirm it.
 
 ## Verification
 

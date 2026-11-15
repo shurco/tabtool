@@ -1035,7 +1035,7 @@ fn the_system_locale_is_parsed_with_an_english_fallback() {
 // document's read-only structure and prompt on back.
 
 #[test]
-fn an_edit_survives_autosave_export_share_and_back() {
+fn an_edit_survives_autosave_the_export_sheet_share_and_back() {
     let fixture = Fixture::new();
     let path = fixture.write("Budget.csv", "Name,Amount\nAlice,1\n");
     let mut app = fixture.app();

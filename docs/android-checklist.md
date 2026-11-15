@@ -2,8 +2,8 @@
 
 The acceptance pass for the Plan 5 Android app, run on the `Medium_Phone_API_36.1`
 AVD (Android 16, arm64, 1080×2400, 420 dpi) on 2026-11-15. The build under test
-was the debug APK from `./gradlew assembleDebug` at commit `894bca0` plus the
-verification changes in this task.
+was the debug APK from the final Task 8 tree; the library, document, theme,
+rotation, process-death and back rows were re-checked after the last rebuild.
 
 Every row records what was exercised and the evidence that was observed. A
 `NOT VERIFIED` row says why it could not run here; it is not a pass.
@@ -19,11 +19,11 @@ Every row records what was exercised and the evidence that was observed. A
 | Autosave | PASS | After a small edit the file contained `"Hello"` within the 0.8 s debounce, with no explicit save. |
 | Save through Back | PASS | A dirty small document was written before the editor closed. |
 | Save a large document | PASS | A 157.7 MB CSV was edited and saved from the Back prompt; the saved file contained the edit and all fields were re-quoted. |
-| Cancel a large save | NOT OBSERVED (control PASS) | The status line showed `Saving… 53%` with Cancel on the 150 MiB file, but the save completed before the tap could cancel it. Cancellation is covered by `tabtool-document` large-save tests. |
+| Cancel a large save | NOT VERIFIED | The status line showed `Saving… 53%` with Cancel on the 150 MiB file, but the save completed before the tap could cancel it (the control passed: Cancel was visible and enabled). Cancellation is covered by `tabtool-document` large-save tests. |
 | Export through SAF | PASS | Export sheet → SAF create → `cjk-emoji 2-export.csv` in Downloads; content was `"名前","メモ"` with the CJK and emoji cells byte-for-byte. |
 | Delete | PASS | Swipe left on a row, Delete, confirmation; the row and the private file were gone. |
-| Dark appearance | PASS | `cmd uimode night yes`; the app, sheets and system bars switched to the dark token set. |
-| Light appearance | PASS | `cmd uimode night no`; the app and system bars switched back while running, status-bar icons stayed readable. |
+| Dark appearance | PASS | `cmd uimode night yes`; the app and sheets switched to the dark token set and the status and navigation bar icons became light. |
+| Light appearance | PASS | `cmd uimode night no`; the app switched back while running, and the status and navigation bar icons became dark. |
 | 11 languages | PASS | Settings → Language was switched to English, Français, Español, Deutsch, Italiano, Polski, Беларуская, Українська, 简体中文, 日本語 and 한국어; every sheet label changed immediately with no restart hint. |
 | CJK and emoji | PASS | Japanese, Simplified Chinese, Cyrillic, `😀` and `🎉` rendered from the system fonts in the grid, library and sheets. |
 | Rotate | PASS | Landscape kept the document, row selection and the action bar; portrait restored the same selection. |

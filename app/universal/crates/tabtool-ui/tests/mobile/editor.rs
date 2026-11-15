@@ -373,6 +373,14 @@ fn the_stale_banner_offers_reload() {
     fixture.run();
 
     assert!(fixture.has_label("Reload"));
+    let text = fixture
+        .get_by_label("New rows were appended. Reload to see them.")
+        .rect();
+    let reload = fixture.get_by_label("Reload").rect();
+    assert!(
+        !text.intersects(reload),
+        "the stale text {text:?} must not run under the Reload button {reload:?}"
+    );
     fixture.click("Reload");
     assert_eq!(
         fixture.take_response().large,

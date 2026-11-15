@@ -1,11 +1,13 @@
 //! Consolidated visual baselines for the Android/mobile interface.
 //!
-//! Every mobile state from Plan 5 is rendered on the phone (360×800), the
-//! tablet (800×1280) and a foldable closed (411×797) and open (841×701, with
-//! an active vertical hinge): the empty and populated library, a read error,
-//! the editor with a column header, row selection and an open native edit, the
-//! row and column action bars, the five sheets, and large indexing, saving and
-//! staleness.
+//! The inventory renders the empty and populated library, a read error, the
+//! editor with a column header, row selection and an open native edit, the row
+//! and column action bars, the five sheets and large indexing, saving and
+//! staleness on the phone (360×800). The states that change most across widths
+//! repeat on the tablet (800×1280), the folded outer display (411×797) and the
+//! open inner display (841×701 with an active vertical hinge): the library,
+//! the editor header, the column action bar and the Format, Settings and
+//! Export sheets.
 //!
 //! The images depend on the operating system's fonts and GPU rasterizer, so
 //! comparison is opt-in: set `TABTOOL_RENDER_SNAPSHOTS=1` to render and compare

@@ -394,6 +394,27 @@ fn banner_action_click_is_reported() {
 }
 
 #[test]
+fn a_phone_banner_keeps_its_action_clear_of_the_wrapped_text() {
+    let title = en("The file changed on disk. Reload to continue.");
+    let message = en("Files at or above this size open in large file mode.");
+    let mut harness = UiHarness::new(Theme::desktop_light(), [360.0, 240.0], move |ui| {
+        banner(ui, BannerKind::Warning, title, message, Some(en("Reload")));
+    });
+    harness.run();
+
+    let text = harness.get_by_label(title).rect();
+    let action = harness.get_by_label(en("Reload")).rect();
+    assert!(
+        !text.intersects(action),
+        "the wrapped text {text:?} must not run under the action {action:?}"
+    );
+    assert!(
+        action.min.x >= 0.0 && action.max.x <= 360.0,
+        "the action must stay on screen, got {action:?}"
+    );
+}
+
+#[test]
 fn list_row_click_is_reported() {
     let clicked = Rc::new(Cell::new(false));
     let state = Rc::clone(&clicked);
