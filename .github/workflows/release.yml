@@ -1,0 +1,171 @@
+name: Release
+
+# A `v*` tag builds every platform and publishes a GitHub Release; the tag must
+# match app/universal/version.json. A manual run builds the selected platforms
+# and keeps the files as run artifacts only (docs/release.md).
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      windows:
+        description: Windows x86_64 and aarch64
+        type: boolean
+        default: true
+      linux:
+        description: Linux x86_64 and aarch64
+        type: boolean
+        default: true
+      android:
+        description: Android (debug APK; signed APK and AAB when the secrets exist)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Resolves the version and the platforms to build.
+  plan:
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      desktop: ${{ steps.plan.outputs.desktop }}
+      android: ${{ steps.plan.outputs.android }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: plan
+        env:
+          WANT_WINDOWS: ${{ inputs.windows }}
+          WANT_LINUX: ${{ inputs.linux }}
+          WANT_ANDROID: ${{ inputs.android }}
+        run: |
+          name="$(jq -r .name app/universal/version.json)"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            if [ "$GITHUB_REF_NAME" != "v$name" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match app/universal/version.json (v$name)."
+              exit 1
+            fi
+            version="$name"
+            windows=true linux=true android=true
+          else
+            version="$name-${GITHUB_SHA::7}"
+            windows="$WANT_WINDOWS" linux="$WANT_LINUX" android="$WANT_ANDROID"
+          fi
+          desktop="$(jq -nc --argjson windows "$windows" --argjson linux "$linux" '[
+            ($windows | if . then
+              {platform: "windows", arch: "x86_64", os: "windows-2022", target: "x86_64-pc-windows-msvc", ext: "zip"},
+              {platform: "windows", arch: "aarch64", os: "windows-11-arm", target: "aarch64-pc-windows-msvc", ext: "zip"}
+            else empty end),
+            ($linux | if . then
+              {platform: "linux", arch: "x86_64", os: "ubuntu-22.04", target: "x86_64-unknown-linux-gnu", ext: "tar.gz"},
+              {platform: "linux", arch: "aarch64", os: "ubuntu-22.04-arm", target: "aarch64-unknown-linux-gnu", ext: "tar.gz"}
+            else empty end)
+          ]')"
+          {
+            echo "version=$version"
+            echo "desktop=$desktop"
+            echo "android=$android"
+          } >> "$GITHUB_OUTPUT"
+
+  # Windows and Linux are built natively on each architecture, so the smoke run
+  # exercises the exact binary that ships.
+  desktop:
+    needs: plan
+    if: needs.plan.outputs.desktop != '[]'
+    name: ${{ matrix.platform }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.desktop) }}
+    env:
+      ARCHIVE: tabtool-${{ needs.plan.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}
+      TARGET: ${{ matrix.target }}
+    defaults:
+      run:
+        working-directory: app/universal
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        if: runner.os == 'Linux'
+        # fontique links fontconfig through pkg-config; winit loads Wayland and
+        # xkbcommon at run time but builds against their headers.
+        run: sudo apt-get update && sudo apt-get install --yes pkg-config libfontconfig1-dev libxkbcommon-dev libwayland-dev
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          targets: ${{ matrix.target }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/universal/target
+          key: ${{ runner.os }}-${{ matrix.target }}-release-cargo-1.99.1-${{ hashFiles('app/universal/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.target }}-release-cargo-1.99.1-
+      - run: cargo build --release --locked -p tabtool-desktop --target "$TARGET"
+      - name: Smoke-run the binary
+        run: target/"$TARGET"/release/tabtool-desktop --smoke
+      - name: Package the Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory $env:ARCHIVE | Out-Null
+          Copy-Item "target/$env:TARGET/release/tabtool-desktop.exe" "$env:ARCHIVE/tabtool.exe"
+          Copy-Item ../../LICENSE $env:ARCHIVE
+          Compress-Archive -Path $env:ARCHIVE -DestinationPath "$env:ARCHIVE.zip"
+      - name: Package the Linux archive
+        if: runner.os == 'Linux'
+        run: |
+          mkdir "$ARCHIVE"
+          cp "target/$TARGET/release/tabtool-desktop" "$ARCHIVE/tabtool"
+          cp ../../LICENSE "$ARCHIVE/"
+          tar -czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE }}
+          path: app/universal/${{ env.ARCHIVE }}.${{ matrix.ext }}
+          if-no-files-found: error
+
+  android:
+    needs: plan
+    if: needs.plan.outputs.android == 'true'
+    uses: ./.github/workflows/android.yml
+    with:
+      require-signing: ${{ github.ref_type == 'tag' }}
+    secrets: inherit
+
+  release:
+    needs: [plan, desktop, android]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Collect the release files
+        run: |
+          mkdir release
+          find dist -type f -name "tabtool-$VERSION-*" -exec cp {} release/ \;
+          cp "$(find dist/tabtool-android-release -name app-release.apk)" "release/tabtool-$VERSION-android.apk"
+          cp "$(find dist/tabtool-android-release -name app-release.aab)" "release/tabtool-$VERSION-android.aab"
+          (cd release && sha256sum -- * > SHA256SUMS)
+          ls -l release
+      - name: Publish the GitHub Release
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "TabTool $VERSION" \
+            --generate-notes \
+            --verify-tag
