@@ -658,8 +658,10 @@ Apple app remains the visual source of truth; the reference screenshots are
   non-test sources of `tabtool-ui` and `tabtool-desktop` for hard-coded labels
   and unknown `tr` keys.
 - `tabtool-settings` is a platform-neutral settings model. `tabtool-platform`
-  wraps the OS services (dialogs, URLs, locale, clipboard support, settings
-  paths) behind traits so tests use fakes.
+  wraps the OS services: file dialogs, URLs and the system locale sit behind
+  traits (`FileDialogs`, `OpenUrl`, `SystemInfo`) so tests use fakes; settings
+  paths are plain functions, and the Android bridge services are inherent
+  `AndroidPlatform` methods.
 - `tabtool-ui` contains the design tokens, widgets, virtualized grid, document
   chrome, filter bar, Settings form, About content and export panel. It has no
   platform services and no `unsafe`.
