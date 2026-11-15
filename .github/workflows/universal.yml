@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install --yes libxkbcommon-dev libwayland-dev libgtk-3-dev xvfb mesa-vulkan-drivers libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install --yes libxkbcommon-dev libwayland-dev libgtk-3-dev xvfb mesa-vulkan-drivers libgl1-mesa-dri fonts-noto-cjk
       - uses: dtolnay/rust-toolchain@1.99.1
         with:
           components: rustfmt, clippy
@@ -52,7 +52,7 @@ jobs:
       - run: cargo run -p xtask -- i18n --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Run UI scenario and accessibility tests headlessly
-        run: xvfb-run -a cargo test --workspace
+        run: xvfb-run -a cargo test --workspace --no-fail-fast
       - run: cargo clippy -p tabtool-large --features bench --all-targets -- -D warnings
 
   windows:
@@ -70,7 +70,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-1.99.1-
       - name: Run UI scenario and accessibility tests
-        run: cargo test --workspace
+        run: cargo test --workspace --no-fail-fast
       - run: cargo run -p xtask -- i18n --check
       - run: cargo clippy -p tabtool-large --features bench --all-targets -- -D warnings
 
@@ -89,7 +89,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-1.99.1-
       - name: Run the cross-platform scenario and accessibility tests
-        run: cargo test --workspace
+        run: cargo test --workspace --no-fail-fast
       - run: cargo run -p xtask -- i18n --check
       - run: cargo test -p tabtool-core --test golden
       - run: cargo clippy -p tabtool-large --features bench --all-targets -- -D warnings

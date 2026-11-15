@@ -410,7 +410,9 @@ mod tests {
 
     /// The worker can report `SourceChanged` without a prior poll. Restoring
     /// the mapping then must not publish `Ready` for a file that no longer
-    /// matches; the stale banner has to appear immediately.
+    /// matches; the stale banner has to appear immediately. Unix only:
+    /// Windows refuses to truncate a file while it is mapped.
+    #[cfg(unix)]
     #[test]
     fn a_restored_source_is_checked_for_staleness_immediately() {
         let directory = tempfile::tempdir().expect("temporary directory");
