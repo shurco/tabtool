@@ -42,8 +42,8 @@ app/universal/
 
 `tabtool-core` owns the format configuration, the 18 encodings, the parser,
 the writer and write validation, the detector, the table model and reorder
-helpers, sorting, filters, clipboard helpers, export, numeric classification
-and decimal-mark conversion. It has no UI, platform, async-runtime or `unsafe`
+helpers, sorting, filters, clipboard helpers, export (CSV, JSON and XML),
+numeric classification and decimal-mark conversion. It has no UI, platform, async-runtime or `unsafe`
 code (`#![forbid(unsafe_code)]`).
 
 Plan 2 adds `tabtool-large`. Plan 3 adds `tabtool-document`. Plan 4 adds
@@ -709,6 +709,12 @@ Apple app remains the visual source of truth; the reference screenshots are
 - Open and Save As use the platform file dialogs; dropping files on a window
   opens them. Export writes a converted copy through the export panel and
   confirms an ambiguous decimal conversion.
+- Export offers CSV, JSON and XML, like the Apple apps. JSON is an array of
+  objects with every value a string; XML is `<rows>` of `<row>` elements named
+  after the columns. Both are UTF-8, keyed by the headers or generated names
+  (made unique with `_2`, `_3`, ...) and keep the decimal-mark conversion; the
+  CSV-only controls (encoding, separator, quote, header) stay visible but
+  disabled. The rules are in `docs/csv-format.md` at the repository root.
 - Settings has the four Apple tabs (General, New Document, Grid, Large Files)
   with the documented defaults and immediate application. About shows the
   version, descriptions, website, review link and the bundled MIT license.

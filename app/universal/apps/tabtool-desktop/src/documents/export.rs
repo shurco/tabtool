@@ -57,11 +57,13 @@ impl WindowState {
         match export_panel(
             ui,
             ("export-panel", self.viewport_id),
+            &mut session.export_format,
             &mut session.export_configuration,
             self.language,
         ) {
             Some(ExportPanelAction::Cancel) => {}
-            Some(ExportPanelAction::Export(configuration)) => {
+            Some(ExportPanelAction::Export(format, configuration)) => {
+                session.export_format = format;
                 session.export_configuration = configuration;
                 self.run_export(session, false);
             }

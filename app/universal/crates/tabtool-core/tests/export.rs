@@ -2,8 +2,8 @@
 //! copy-only conversion, generated headers and preflight after conversion.
 
 use tabtool_core::{
-    CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, Encoding, ExportInput, export_data,
-    export_preflight_issue,
+    CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, Encoding, ExportFormat, ExportInput,
+    export_data, export_preflight_issue,
 };
 
 fn rows(values: &[&[&str]]) -> Vec<Vec<String>> {
@@ -46,6 +46,7 @@ fn export_with(
     export_data(
         &ExportInput {
             table,
+            format: ExportFormat::Csv,
             document_configuration,
             export_configuration,
         },
@@ -70,6 +71,7 @@ fn preflight(
 ) -> Option<CsvWriteIssue> {
     export_preflight_issue(&ExportInput {
         table,
+        format: ExportFormat::Csv,
         document_configuration,
         export_configuration,
     })
@@ -325,6 +327,7 @@ fn export_writes_the_unicode_byte_order_marks() {
         };
         let input = ExportInput {
             table: &t,
+            format: ExportFormat::Csv,
             document_configuration: &document,
             export_configuration: &export,
         };

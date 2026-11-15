@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use egui::{Align, Layout, Ui};
-use tabtool_core::CsvConfiguration;
+use tabtool_core::{CsvConfiguration, ExportFormat};
 use tabtool_document::Document;
 use tabtool_i18n::tr;
 
@@ -11,7 +11,7 @@ use super::{SheetScreenResponse, SheetStyle, caption, form_row, touch_button, to
 use crate::document::can_export;
 use crate::export;
 use crate::export::controls::{
-    PickerSize, decimal_picker, encoding_picker, quote_picker, separator_picker,
+    PickerSize, decimal_picker, encoding_picker, format_picker, quote_picker, separator_picker,
 };
 use crate::mobile::{DocumentFiles, SheetOptions, sheet};
 use crate::widgets::{AlertAction, BannerKind, ButtonKind, banner, modal};
@@ -23,6 +23,7 @@ const EXPORT_NOT_COMPLETED: &str = "Export Not Completed";
 
 /// The Export sheet state.
 pub struct ExportSheet {
+    format: ExportFormat,
     configuration: CsvConfiguration,
     base_name: String,
     confirm: Option<CsvConfiguration>,
@@ -49,6 +50,7 @@ impl ExportSheet {
     /// table this sheet reads is the settled one.
     pub fn new(document: &Document) -> Self {
         Self {
+            format: ExportFormat::Csv,
             configuration: document.configuration().clone(),
             base_name: export::base_name(document.file_path()),
             confirm: None,
@@ -109,32 +111,40 @@ impl ExportSheet {
                     text_size: Some(style.metrics.body),
                 };
                 ui.add_enabled_ui(enabled, |ui| {
-                    form_row(ui, style, tr(language, "Encoding"), |ui| {
+                    form_row(ui, style, tr(language, "Format"), |ui| {
                         let width = ui.available_width();
-                        encoding_picker(
-                            ui,
-                            &mut self.configuration,
-                            language,
-                            PickerSize { width, ..size },
-                        );
+                        format_picker(ui, &mut self.format, language, PickerSize { width, ..size });
                     });
-                    form_row(ui, style, tr(language, "Separator"), |ui| {
-                        let width = ui.available_width();
-                        separator_picker(
-                            ui,
-                            &mut self.configuration,
-                            language,
-                            PickerSize { width, ..size },
-                        );
-                    });
-                    form_row(ui, style, tr(language, "Quote"), |ui| {
-                        let width = ui.available_width();
-                        quote_picker(
-                            ui,
-                            &mut self.configuration,
-                            language,
-                            PickerSize { width, ..size },
-                        );
+                    // CSV-only rows stay visible but disabled for JSON and XML.
+                    let csv = self.format == ExportFormat::Csv;
+                    ui.add_enabled_ui(csv, |ui| {
+                        form_row(ui, style, tr(language, "Encoding"), |ui| {
+                            let width = ui.available_width();
+                            encoding_picker(
+                                ui,
+                                &mut self.configuration,
+                                language,
+                                PickerSize { width, ..size },
+                            );
+                        });
+                        form_row(ui, style, tr(language, "Separator"), |ui| {
+                            let width = ui.available_width();
+                            separator_picker(
+                                ui,
+                                &mut self.configuration,
+                                language,
+                                PickerSize { width, ..size },
+                            );
+                        });
+                        form_row(ui, style, tr(language, "Quote"), |ui| {
+                            let width = ui.available_width();
+                            quote_picker(
+                                ui,
+                                &mut self.configuration,
+                                language,
+                                PickerSize { width, ..size },
+                            );
+                        });
                     });
                     form_row(ui, style, tr(language, "Decimal"), |ui| {
                         let width = ui.available_width();
@@ -151,13 +161,9 @@ impl ExportSheet {
                         style,
                         tr(language, "Write Header Row"),
                         &mut self.configuration.first_row_as_header,
-                        true,
+                        csv,
                     );
-                    caption(
-                        ui,
-                        style,
-                        tr(language, "The header is written only to the exported file."),
-                    );
+                    caption(ui, style, tr(language, export::caption_key(self.format)));
 
                     ui.add_space(12.0);
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -170,7 +176,7 @@ impl ExportSheet {
                         }
                     });
                 });
-                let name = export::filename(&self.base_name, &self.configuration);
+                let name = export::filename(&self.base_name, self.format, &self.configuration);
                 caption(ui, style, &name);
             },
         );
