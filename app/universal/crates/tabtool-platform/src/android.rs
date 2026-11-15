@@ -22,8 +22,8 @@ use tabtool_i18n::{ERROR_GENERIC, ERROR_OPEN, ERROR_SAVE, LocalizedError};
 
 use crate::bridge_result::{BridgeResult, parse_result};
 use crate::locale::{SystemInfo, decimal_separator, normalize_tag};
-use crate::services::{Clipboard, CopyOutcome, OpenUrl};
-use crate::text_input::{EditorSessions, TextInput, TextInputOutcome, TextInputRequest};
+use crate::services::{CopyOutcome, OpenUrl};
+use crate::text_input::{EditorSessions, TextInputOutcome, TextInputRequest};
 
 const BRIDGE_CLASS: &str = "app/shurco/tabtool/TabToolBridge";
 
@@ -132,8 +132,20 @@ impl AndroidPlatform {
     }
 }
 
-impl TextInput for AndroidPlatform {
-    fn open(&self, request: TextInputRequest) {
+/// The native text editor shown over an app rectangle.
+///
+/// A session is active from [`AndroidPlatform::open_text_editor`] until exactly
+/// one outcome is reported. The platform queues that outcome;
+/// [`AndroidPlatform::poll_text_editor`] drains it once, and every later poll
+/// returns `None` until the next session. [`AndroidPlatform::close_text_editor`]
+/// ends the session and drops an undrained outcome.
+impl AndroidPlatform {
+    /// Opens an editor over `request.rect`, preloaded with `request.text`.
+    ///
+    /// A session from an earlier [`AndroidPlatform::open_text_editor`] is
+    /// replaced and its undrained outcome is dropped, so a stale commit cannot
+    /// surface later.
+    pub fn open_text_editor(self, request: TextInputRequest) {
         SESSIONS.reset();
         if !request.is_valid() {
             error!(
@@ -171,16 +183,28 @@ impl TextInput for AndroidPlatform {
         }
     }
 
-    fn close(&self) {
+    /// Closes the active editor and drops its undrained outcome.
+    pub fn close_text_editor(self) {
         SESSIONS.reset();
         call_void("hideTextEditor", "()V", &[]);
     }
 
-    fn commit(&self) {
+    /// Asks the active editor to commit its current text.
+    ///
+    /// The platform reports the result through
+    /// [`AndroidPlatform::poll_text_editor`] on a later call, exactly like a
+    /// user commit. Without an active session this does nothing. Closing
+    /// instead of committing would discard the typed text.
+    pub fn commit_text_editor(self) {
         call_void("commitTextEditor", "()V", &[]);
     }
 
-    fn move_to(&self, rect: [f32; 4]) {
+    /// Moves the active editor over `rect` without resetting its text.
+    ///
+    /// [`TextInputRequest::rect`] is in points and relative to the app's
+    /// content view; the platform converts it to pixels. A keyboard inset or a
+    /// scroll that moves the edited cell calls this.
+    pub fn move_text_editor(self, rect: [f32; 4]) {
         let [left, top, width, height] = rect;
         if !rect.iter().all(|value| value.is_finite()) || width <= 0.0 || height <= 0.0 {
             return;
@@ -197,11 +221,15 @@ impl TextInput for AndroidPlatform {
         );
     }
 
-    fn poll(&self) -> Option<TextInputOutcome> {
+    /// Takes the session's outcome, if the platform reported one.
+    #[must_use]
+    pub fn poll_text_editor(self) -> Option<TextInputOutcome> {
         SESSIONS.poll()
     }
 
-    fn is_active(&self) -> bool {
+    /// Whether a session is open and its outcome has not arrived yet.
+    #[must_use]
+    pub fn text_editor_active(self) -> bool {
         SESSIONS.is_active()
     }
 }
@@ -340,12 +368,16 @@ impl AndroidPlatform {
     }
 }
 
-impl Clipboard for AndroidPlatform {
-    fn get(&self) -> Option<String> {
+/// The text clipboard.
+impl AndroidPlatform {
+    /// The clipboard text, if there is any.
+    #[must_use]
+    pub fn clipboard_text(self) -> Option<String> {
         call_string("clipboardGet", "()Ljava/lang/String;", &[])
     }
 
-    fn set(&self, text: &str) {
+    /// Replaces the clipboard text.
+    pub fn set_clipboard_text(self, text: &str) {
         with_env("clipboardSet", (), |env, bridge| {
             let text = env.new_string(text)?;
             env.call_static_method(

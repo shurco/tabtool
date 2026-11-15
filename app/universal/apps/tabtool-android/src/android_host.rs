@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tabtool_i18n::LocalizedError;
 use tabtool_platform::android::{AndroidPlatform, IntentImport};
-use tabtool_platform::{Clipboard, OpenUrl, SystemInfo, TextInput, TextInputRequest};
+use tabtool_platform::{OpenUrl, SystemInfo, TextInputRequest};
 use tabtool_ui::grid::Clipboard as GridClipboard;
 use tabtool_ui::mobile::{
     DocumentFiles, ExportOutcome, LibraryClock, TouchTextInput, TouchTextInputOutcome,
@@ -211,31 +211,30 @@ impl TouchTextInput for AndroidTextInput {
     }
 
     fn close(&mut self) {
-        TextInput::close(&AndroidPlatform);
+        AndroidPlatform.close_text_editor();
     }
 
     fn commit(&mut self) {
-        TextInput::commit(&AndroidPlatform);
+        AndroidPlatform.commit_text_editor();
     }
 
     fn move_to(&mut self, rect: eframe::egui::Rect) {
-        TextInput::move_to(
-            &AndroidPlatform,
-            crate::app::text_input_rect(rect, self.safe_area()),
-        );
+        AndroidPlatform.move_text_editor(crate::app::text_input_rect(rect, self.safe_area()));
     }
 
     fn poll(&mut self) -> Option<TouchTextInputOutcome> {
-        TextInput::poll(&AndroidPlatform).map(|outcome| match outcome {
-            tabtool_platform::TextInputOutcome::Committed(text) => {
-                TouchTextInputOutcome::Committed(text)
-            }
-            tabtool_platform::TextInputOutcome::Cancelled => TouchTextInputOutcome::Cancelled,
-        })
+        AndroidPlatform
+            .poll_text_editor()
+            .map(|outcome| match outcome {
+                tabtool_platform::TextInputOutcome::Committed(text) => {
+                    TouchTextInputOutcome::Committed(text)
+                }
+                tabtool_platform::TextInputOutcome::Cancelled => TouchTextInputOutcome::Cancelled,
+            })
     }
 
     fn is_active(&self) -> bool {
-        TextInput::is_active(&AndroidPlatform)
+        AndroidPlatform.text_editor_active()
     }
 }
 
@@ -245,14 +244,11 @@ impl AndroidTextInput {
     }
 
     fn open_at(&self, rect: eframe::egui::Rect, text: String, multiline: bool) {
-        TextInput::open(
-            &AndroidPlatform,
-            TextInputRequest {
-                rect: crate::app::text_input_rect(rect, self.safe_area()),
-                text,
-                multiline,
-            },
-        );
+        AndroidPlatform.open_text_editor(TextInputRequest {
+            rect: crate::app::text_input_rect(rect, self.safe_area()),
+            text,
+            multiline,
+        });
     }
 }
 
@@ -262,11 +258,11 @@ pub struct AndroidClipboard;
 
 impl GridClipboard for AndroidClipboard {
     fn copy(&mut self, text: &str) {
-        Clipboard::set(&AndroidPlatform, text);
+        AndroidPlatform.set_clipboard_text(text);
     }
 
     fn paste(&mut self) -> Option<String> {
-        Clipboard::get(&AndroidPlatform)
+        AndroidPlatform.clipboard_text()
     }
 }
 

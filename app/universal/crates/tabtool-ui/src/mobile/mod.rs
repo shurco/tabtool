@@ -76,7 +76,7 @@ pub enum TouchTextInputOutcome {
 
 /// The native text editor the mobile views use instead of an egui text field.
 ///
-/// The app adapts the platform's `TextInput` to this seam; the UI never opens
+/// The app adapts the platform's native editor to this seam; the UI never opens
 /// an in-window egui text field on Android.
 pub trait TouchTextInput {
     /// Opens the editor over the request's rectangle.

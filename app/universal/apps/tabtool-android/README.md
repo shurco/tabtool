@@ -71,8 +71,8 @@ by `tabtool-platform::android`. Results are `OK`, `OK:<value>`, `CANCELLED` or
 
 | Kotlin | Rust | Notes |
 | --- | --- | --- |
-| `clipboardGet(): String?` | `Clipboard::get` | `SecurityException` is caught in Kotlin and cleared in Rust |
-| `clipboardSet(text: String)` | `Clipboard::set` | |
+| `clipboardGet(): String?` | `AndroidPlatform::clipboard_text` | `SecurityException` is caught in Kotlin and cleared in Rust |
+| `clipboardSet(text: String)` | `AndroidPlatform::set_clipboard_text` | |
 | `documentsDir(): String?` | `AndroidPlatform::documents_dir` | app-private `files/documents`, created on demand |
 | `importDocument(): String?` | `AndroidPlatform::import_from_picker` | `ACTION_OPEN_DOCUMENT` (`text/*`); streams the URI into the documents dir under a collision-free name |
 | `exportDocument(sourcePath, suggestedName): String?` | `AndroidPlatform::export_copy` | `ACTION_CREATE_DOCUMENT`; streams the source file to the chosen URI |
@@ -82,8 +82,8 @@ by `tabtool-platform::android`. Results are `OK`, `OK:<value>`, `CANCELLED` or
 | `openUrl(url): String` | `OpenUrl::open` | http, https and mailto only |
 | `isImportPending()` / `isExportPending()` | `AndroidPlatform::import_pending` / `export_pending` | keeps the library and export sheet on their own polling paths |
 | `takeBack(): Boolean` | `AndroidPlatform::take_back` | back is consumed and queued; the app exits at its root with `finishActivity` |
-| `showTextEditor(left, top, width, height, text, multiline)` | `TextInput::open` | rectangle in points; Kotlin converts with the display density; returns false when it cannot open |
-| `hideTextEditor()` | `TextInput::close` | removes the editor without committing or cancelling |
+| `showTextEditor(left, top, width, height, text, multiline)` | `AndroidPlatform::open_text_editor` | rectangle in points; Kotlin converts with the display density; returns false when it cannot open |
+| `hideTextEditor()` | `AndroidPlatform::close_text_editor` | removes the editor without committing or cancelling |
 | `filesDir(): String?` | `AndroidPlatform::files_dir` | settings and `app-state.json` live here |
 | `clock(): IntArray` | `AndroidPlatform::clock` | `[utc offset minutes, twelve-hour flag]` for library dates |
 | `takeIntentImport(): String?` | `AndroidPlatform::take_intent_import` | `ACTION_VIEW`/`ACTION_SEND` copy staged under a hidden name |
@@ -92,9 +92,10 @@ by `tabtool-platform::android`. Results are `OK`, `OK:<value>`, `CANCELLED` or
 
 `TabToolBridge.nativeTextCommitted(text)` / `nativeTextCancelled()` are the JNI
 callbacks the editor uses. They store the outcome in the shared editor session,
-which `TextInput::poll` drains. `nativeWake()` requests the next egui pass so a
-commit lands before the app idles. A root view that disappears before the editor
-opens reports a cancel, so `is_active` can never stick. Back cancels; the IME
+which `AndroidPlatform::poll_text_editor` drains. `nativeWake()` requests the
+next egui pass so a commit lands before the app idles. A root view that
+disappears before the editor opens reports a cancel, so `text_editor_active`
+can never stick. Back cancels; the IME
 Done action and focus loss commit; rotation cancels the edit without touching
 the committed value. `nativeSaveOnBackground()` blocks the activity's pause path
 for at most 400 ms while the app flushes the pending small-document save.

@@ -1,9 +1,9 @@
 //! Platform-neutral text editing.
 //!
 //! Android cannot receive IME text through egui on this stack, so it opens a
-//! native editor over the control. Every mobile view talks to [`TextInput`]
-//! instead of egui's `TextEdit`, which keeps the platform difference inside
-//! this crate; desktop keeps using egui directly.
+//! native editor over the control. The request, outcome and session types live
+//! here; `AndroidPlatform` owns the editor, and desktop keeps using egui
+//! directly.
 
 /// A request to edit `text` over a rectangle in points.
 ///
@@ -44,43 +44,6 @@ pub enum TextInputOutcome {
     Committed(String),
     /// The user dismissed the editor without committing.
     Cancelled,
-}
-
-/// A native text editor shown over an app rectangle.
-///
-/// A session is active from [`TextInput::open`] until exactly one outcome is
-/// reported. The platform queues that outcome; [`TextInput::poll`] drains it
-/// once, and every later poll returns `None` until the next session.
-/// [`TextInput::close`] ends the session and drops an undrained outcome.
-pub trait TextInput {
-    /// Opens an editor over `request.rect`, preloaded with `request.text`.
-    ///
-    /// A session from an earlier [`TextInput::open`] is replaced and its
-    /// undrained outcome is dropped, so a stale commit cannot surface later.
-    fn open(&self, request: TextInputRequest);
-
-    /// Closes the active editor and drops its undrained outcome.
-    fn close(&self);
-
-    /// Asks the active editor to commit its current text.
-    ///
-    /// The platform reports the result through [`TextInput::poll`] on a later
-    /// call, exactly like a user commit. Without an active session this does
-    /// nothing. Closing instead of committing would discard the typed text.
-    fn commit(&self);
-
-    /// Moves the active editor over `rect` without resetting its text.
-    ///
-    /// [`TextInputRequest::rect`] is in points and relative to the app's
-    /// content view; the platform converts it to pixels. A keyboard inset or a
-    /// scroll that moves the edited cell calls this.
-    fn move_to(&self, rect: [f32; 4]);
-
-    /// Takes the session's outcome, if the platform reported one.
-    fn poll(&self) -> Option<TextInputOutcome>;
-
-    /// Whether a session is open and its outcome has not arrived yet.
-    fn is_active(&self) -> bool;
 }
 
 /// The session state shared by a native editor.

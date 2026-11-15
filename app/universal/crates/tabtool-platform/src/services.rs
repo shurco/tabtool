@@ -1,4 +1,4 @@
-//! Platform-neutral failures, export outcomes, clipboard and URL services,
+//! Platform-neutral failures, export outcomes, the URL service,
 //! plus the document-store helpers the Android module uses.
 
 use std::io;
@@ -66,14 +66,6 @@ pub enum CopyOutcome {
     /// The copy failed; the cause is queued as a
     /// [`tabtool_i18n::LocalizedError`].
     Failed,
-}
-
-/// The text clipboard.
-pub trait Clipboard {
-    /// The clipboard text, if there is any.
-    fn get(&self) -> Option<String>;
-    /// Replaces the clipboard text.
-    fn set(&self, text: &str);
 }
 
 /// Opens a URL in the user's browser or mail client.

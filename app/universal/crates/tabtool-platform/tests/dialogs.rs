@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::path::PathBuf;
 
-use tabtool_platform::{Clipboard, DesktopPlatform, FileDialogs, OpenUrl, SystemInfo};
+use tabtool_platform::{DesktopPlatform, FileDialogs, OpenUrl, SystemInfo};
 
 #[derive(Default)]
 struct FakeDialogs {
@@ -25,19 +25,6 @@ impl FileDialogs for FakeDialogs {
 
     fn choose_folder(&self) -> Option<PathBuf> {
         self.folder.clone()
-    }
-}
-
-#[derive(Default)]
-struct FakeClipboard(RefCell<Option<String>>);
-
-impl Clipboard for FakeClipboard {
-    fn get(&self) -> Option<String> {
-        self.0.borrow().clone()
-    }
-
-    fn set(&self, text: &str) {
-        *self.0.borrow_mut() = Some(text.to_string());
     }
 }
 
@@ -73,14 +60,6 @@ fn the_file_dialog_trait_can_be_faked() {
         fake.saved_requests.borrow().as_slice(),
         &[("export.csv".to_string(), "csv".to_string())]
     );
-}
-
-#[test]
-fn the_clipboard_trait_can_be_faked() {
-    let clipboard = FakeClipboard::default();
-    assert_eq!(clipboard.get(), None);
-    clipboard.set("a\tb");
-    assert_eq!(clipboard.get().as_deref(), Some("a\tb"));
 }
 
 #[test]
