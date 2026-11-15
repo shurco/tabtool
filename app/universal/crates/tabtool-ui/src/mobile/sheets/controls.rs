@@ -204,6 +204,19 @@ pub(crate) fn touch_button<'a>(
         .min_width(style.metrics.min_touch_target)
 }
 
+/// A square icon button on a touch row.
+pub(crate) fn touch_icon_button(
+    ui: &mut Ui,
+    style: SheetStyle,
+    icon: crate::icons::Icon,
+    accessible_name: &str,
+    id_salt: impl Hash + core::fmt::Debug,
+) -> Response {
+    let (rect, _) =
+        ui.allocate_exact_size(Vec2::splat(style.metrics.control_height), Sense::hover());
+    crate::mobile::TouchCell::icon(icon, accessible_name).show(ui, rect, id_salt)
+}
+
 /// A full-width action button.
 pub(crate) fn touch_wide_button(
     ui: &mut Ui,

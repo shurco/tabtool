@@ -2,7 +2,6 @@
 
 use std::path::Path;
 
-use tabtool_i18n::{Language, tr_in};
 use tabtool_ui::mobile::{
     BackOutcome, DocumentId, MISSING_DOCUMENT_NOTICE, NavStack, Screen, SheetKind,
 };
@@ -100,15 +99,6 @@ fn a_missing_document_returns_to_the_library_with_a_notice() {
     assert!(nav.sheets().is_empty());
     assert_eq!(nav.take_notice(), Some(MISSING_DOCUMENT_NOTICE));
     assert_eq!(nav.take_notice(), None);
-}
-
-#[test]
-fn a_notice_is_a_catalog_key() {
-    let mut nav = NavStack::new();
-    nav.notify("The file could not be opened");
-
-    let notice = nav.take_notice().expect("a queued notice");
-    assert!(tr_in(Language::En, notice).is_some());
 }
 
 #[test]

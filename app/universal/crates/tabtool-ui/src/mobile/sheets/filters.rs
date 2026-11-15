@@ -7,11 +7,12 @@ use tabtool_i18n::tr;
 
 use super::{
     PickerTouch, SheetScreenResponse, SheetStyle, touch_button, touch_checkbox, touch_field,
-    touch_picker_sized,
+    touch_icon_button, touch_picker_sized,
 };
 use crate::document::rows_text;
 use crate::filter::FilterAction;
 use crate::filter::bar::{column_options, operator_title};
+use crate::icons::Icon;
 use crate::mobile::{
     SheetOptions, TouchTextInput, TouchTextInputOutcome, TouchTextInputRequest, sheet,
 };
@@ -140,10 +141,14 @@ impl FiltersSheet {
                                     criterion.column_id = Some(columns[index].0);
                                 }
 
-                                if touch_button(style, "\u{2212}", ButtonKind::Plain)
-                                    .accessible_name(tr(language, "Remove Criterion"))
-                                    .show(ui)
-                                    .clicked()
+                                if touch_icon_button(
+                                    ui,
+                                    style,
+                                    Icon::Minus,
+                                    tr(language, "Remove Criterion"),
+                                    ("mobile-filter-remove", criterion.id),
+                                )
+                                .clicked()
                                 {
                                     action = Some(FilterAction::Remove(criterion.id));
                                 }
@@ -224,11 +229,14 @@ impl FiltersSheet {
                         {
                             action = Some(FilterAction::ApplyAll);
                         }
-                        if touch_button(style, "\u{002B}", ButtonKind::Plain)
-                            .text_size(style.metrics.body)
-                            .accessible_name(tr(language, "Add Criterion"))
-                            .show(ui)
-                            .clicked()
+                        if touch_icon_button(
+                            ui,
+                            style,
+                            Icon::Plus,
+                            tr(language, "Add Criterion"),
+                            "mobile-filter-add",
+                        )
+                        .clicked()
                         {
                             let after = criteria.last().map(|criterion| criterion.id);
                             if let Some(after) = after {

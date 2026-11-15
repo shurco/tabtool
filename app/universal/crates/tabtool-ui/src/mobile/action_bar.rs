@@ -59,18 +59,21 @@ impl ContextualActionId {
         }
     }
 
-    /// The symbol painted in the button.
-    pub const fn glyph(self) -> &'static str {
+    /// The vector icon painted in the button.
+    ///
+    /// Rename is the one action drawn as text (`Aa`), because the letters
+    /// describe the command better than an abstract shape.
+    pub const fn icon(self) -> Option<crate::icons::Icon> {
         match self {
-            Self::AddRowAbove => "\u{2191}+",
-            Self::AddRowBelow => "\u{2193}+",
-            Self::AddColumnLeft => "\u{2190}+",
-            Self::AddColumnRight => "\u{2192}+",
-            Self::Delete => "\u{2212}",
-            Self::SortAscending => "\u{2191}",
-            Self::SortDescending => "\u{2193}",
-            Self::RemoveSort => "\u{21BA}",
-            Self::RenameColumn => "Aa",
+            Self::AddRowAbove => Some(crate::icons::Icon::AddRowAbove),
+            Self::AddRowBelow => Some(crate::icons::Icon::AddRowBelow),
+            Self::AddColumnLeft => Some(crate::icons::Icon::AddColumnLeft),
+            Self::AddColumnRight => Some(crate::icons::Icon::AddColumnRight),
+            Self::Delete => Some(crate::icons::Icon::Minus),
+            Self::SortAscending => Some(crate::icons::Icon::ArrowUp),
+            Self::SortDescending => Some(crate::icons::Icon::ArrowDown),
+            Self::RemoveSort => Some(crate::icons::Icon::Undo),
+            Self::RenameColumn => None,
         }
     }
 
@@ -349,8 +352,12 @@ pub fn contextual_action_bar(
     let mut chosen = None;
     for (index, cell) in cells {
         let action = actions[index];
-        let mut touch = TouchCell::new(action.id.glyph(), tr(language, action.id.title_key()))
-            .enabled(action.enabled);
+        let name = tr(language, action.id.title_key());
+        let mut touch = match action.id.icon() {
+            Some(icon) => TouchCell::icon(icon, name),
+            None => TouchCell::new("Aa", name),
+        }
+        .enabled(action.enabled);
         if action.id.destructive() {
             touch = touch.destructive();
         }
@@ -360,4 +367,19 @@ pub fn contextual_action_bar(
         }
     }
     chosen
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ContextualActionId;
+
+    #[test]
+    fn every_contextual_action_has_a_vector_icon_or_the_aa_label() {
+        for id in ContextualActionId::ALL {
+            match id {
+                ContextualActionId::RenameColumn => assert!(id.icon().is_none()),
+                _ => assert!(id.icon().is_some(), "{id:?} still uses a text glyph"),
+            }
+        }
+    }
 }

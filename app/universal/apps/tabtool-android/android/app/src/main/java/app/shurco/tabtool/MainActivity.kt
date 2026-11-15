@@ -2,6 +2,7 @@ package app.shurco.tabtool
 
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import androidx.activity.OnBackPressedCallback
@@ -15,15 +16,22 @@ class MainActivity : GameActivity() {
         }
     }
 
+    /** The VIEW/SEND intent already copied by this activity, if any. */
+    private var handledIntentKey: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         TabToolBridge.attach(this)
         onBackPressedDispatcher.addCallback(this, editorBackCallback)
-        // A restored process already has its document in app-state.json. A
-        // task opened from Recents is not a fresh VIEW/SEND either.
+        handledIntentKey = savedInstanceState?.getString(STATE_HANDLED_INTENT)
+        val key = importIntentKey(intent)
         val fromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
-        if (savedInstanceState == null && !fromHistory) {
+        // A restored process already has its document in app-state.json. Only
+        // a genuinely different VIEW/SEND is imported; the saved key marks the
+        // intent that was already consumed before the recreation.
+        if (key != null && !fromHistory && key != handledIntentKey) {
             TabToolBridge.handleIntent(intent)
+            handledIntentKey = key
         }
         window.decorView.post { window.decorView.requestApplyInsets() }
     }
@@ -31,7 +39,15 @@ class MainActivity : GameActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        TabToolBridge.handleIntent(intent)
+        importIntentKey(intent)?.let {
+            TabToolBridge.handleIntent(intent)
+            handledIntentKey = it
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        handledIntentKey?.let { outState.putString(STATE_HANDLED_INTENT, it) }
     }
 
     override fun onStart() {
@@ -62,5 +78,24 @@ class MainActivity : GameActivity() {
     override fun onDestroy() {
         TabToolBridge.detach()
         super.onDestroy()
+    }
+
+    /** A stable key for the intent a copy consumes, or null for a launcher. */
+    private fun importIntentKey(intent: Intent?): String? {
+        if (intent == null) return null
+        val action = intent.action
+        if (action != Intent.ACTION_VIEW && action != Intent.ACTION_SEND) return null
+        val stream =
+            if (action == Intent.ACTION_SEND) {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+            } else {
+                null
+            }
+        return listOf(action, intent.dataString, intent.type, stream?.toString()).joinToString("|")
+    }
+
+    private companion object {
+        const val STATE_HANDLED_INTENT = "app.shurco.tabtool.handledIntent"
     }
 }

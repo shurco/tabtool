@@ -155,11 +155,6 @@ impl NavStack {
         self.notice = Some(MISSING_DOCUMENT_NOTICE);
     }
 
-    /// Queues a catalog key for the next notice.
-    pub fn notify(&mut self, key: &'static str) {
-        self.notice = Some(key);
-    }
-
     /// Takes the queued notice, if any.
     pub fn take_notice(&mut self) -> Option<&'static str> {
         self.notice.take()

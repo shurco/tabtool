@@ -1,7 +1,7 @@
 //! Process-death state, background saving and the close policy.
 //!
-//! The app stores only the open document and the top sheet in a small JSON
-//! file. Documents themselves are already on disk; autosave writes the small
+//! The app stores only the open document and the open sheet stack in a small
+//! JSON file. Documents themselves are already on disk; autosave writes the small
 //! file-backed ones 0.8 s after the last change. Large documents never
 //! autosave and prompt before an edit can be lost.
 

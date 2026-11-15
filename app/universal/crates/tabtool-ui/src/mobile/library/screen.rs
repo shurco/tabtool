@@ -5,6 +5,7 @@ use tabtool_i18n::tr;
 
 use super::{LibraryResponse, LibraryView, format_modified, format_size};
 use crate::fonts::heading_font;
+use crate::icons::Icon;
 use crate::mobile::{
     ListRow, TouchCell, TouchTextInput, TouchTextInputOutcome, TouchTextInputRequest, bar_fill,
     hairline,
@@ -55,7 +56,7 @@ impl LibraryView<'_> {
             pos2(rect.left() + inset, rect.top()),
             Vec2::new(cell, rect.height()),
         );
-        let settings = TouchCell::new("\u{2699}", tr(self.language, "Settings")).show(
+        let settings = TouchCell::icon(Icon::Settings, tr(self.language, "Settings")).show(
             ui,
             settings_rect,
             "library-settings",
@@ -68,7 +69,7 @@ impl LibraryView<'_> {
             pos2(rect.right() - inset - cell, rect.top()),
             Vec2::new(cell, rect.height()),
         );
-        let plus = TouchCell::new("+", tr(self.language, "Add Document")).show(
+        let plus = TouchCell::icon(Icon::Plus, tr(self.language, "Add Document")).show(
             ui,
             plus_rect,
             "library-add",
@@ -77,7 +78,7 @@ impl LibraryView<'_> {
             pos2(plus_rect.left() - cell, rect.top()),
             Vec2::new(cell, rect.height()),
         );
-        let overflow = TouchCell::new("\u{2026}", tr(self.language, "More")).show(
+        let overflow = TouchCell::icon(Icon::Overflow, tr(self.language, "More")).show(
             ui,
             overflow_rect,
             "library-overflow",

@@ -24,7 +24,7 @@ pub use save_copy::{CopyResult, SAVED_COPY_KEY, SaveCopy, saved_copy_message};
 pub use settings::{SettingsSheetResponse, settings_sheet};
 
 pub(crate) use controls::{
-    PickerTouch, touch_button, touch_checkbox, touch_field, touch_picker, touch_picker_sized,
-    touch_toggle, touch_wide_button,
+    PickerTouch, touch_button, touch_checkbox, touch_field, touch_icon_button, touch_picker,
+    touch_picker_sized, touch_toggle, touch_wide_button,
 };
 pub(crate) use layout::{caption, form_row, section_title};
