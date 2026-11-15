@@ -361,6 +361,8 @@ fn the_status_line_reports_save_progress_and_cancel() {
     );
 }
 
+// Unix only: Windows refuses to rewrite a file while it is mapped.
+#[cfg(unix)]
 #[test]
 fn the_stale_banner_offers_reload() {
     let directory = tempfile::tempdir().expect("a temporary directory");

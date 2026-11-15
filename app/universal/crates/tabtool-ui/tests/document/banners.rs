@@ -124,6 +124,8 @@ fn a_stale_large_file_offers_reload() {
     );
 }
 
+// Unix only: Windows refuses to rewrite a file while it is mapped.
+#[cfg(unix)]
 #[test]
 fn a_replaced_large_file_says_it_changed_on_disk() {
     let directory = tempfile::tempdir().expect("temporary directory");

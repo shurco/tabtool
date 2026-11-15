@@ -222,6 +222,8 @@ fn save_as_over_an_existing_file_replaces_it() {
     assert!(!document.is_dirty());
 }
 
+// Unix only: Windows refuses to rewrite a file while it is mapped.
+#[cfg(unix)]
 #[test]
 fn truncated_file_is_marked_stale() {
     let fixture = Fixture::new();

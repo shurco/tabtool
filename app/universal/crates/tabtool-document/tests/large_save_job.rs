@@ -31,6 +31,8 @@ fn start_is_refused_while_the_index_is_incomplete() {
     assert!(document.is_large_mode());
 }
 
+// Unix only: Windows refuses to rewrite a file while it is mapped.
+#[cfg(unix)]
 #[test]
 fn a_stale_file_is_refused() {
     let fixture = Fixture::new();
