@@ -229,6 +229,7 @@ Known limits: an accessibility client (VoiceOver, automation tools) reading the 
 - [Desktop UI parity, snapshots and manual checks](docs/desktop-ui.md)
 - [Android build, signing and release](docs/android.md)
 - [Rust app releases: tags, manual builds and files](docs/release.md)
+- [Security policy and vulnerability reporting](.github/SECURITY.md)
 
 The local working spec/plan and execution log live in `.superpowers/sdd/` and are not part of git.
 
