@@ -1,26 +1,22 @@
-//! `xtask version`: reads and bumps `app/universal/version.json`.
+//! `xtask version`: reads and bumps the `universal` entry of `app/version.json`.
 //!
-//! The file holds the Rust apps' version, `{"name": "1.0.0", "build": "1"}`:
+//! The entry holds the Rust apps' version, `{"build": "1", "name": "1.0.0"}`:
 //! Gradle reads it for `versionName` and `versionCode`, and `tabtool-core`
-//! exposes `name` as `tabtool_core::VERSION`. Bumping
-//! follows `scripts/lib/version`: the build number always increases, and
-//! patch, minor and major also move the semantic version.
+//! exposes `name` as `tabtool_core::VERSION`. The `macos` and `ios` entries in
+//! the same file belong to `scripts/lib/version` and are kept as they are.
+//! Bumping follows `scripts/lib/version`: the build number always increases,
+//! and patch, minor and major also move the semantic version.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use serde::Serialize;
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 
 /// The accepted bump kinds, from smallest to largest.
 const KINDS: [&str; 4] = ["build", "patch", "minor", "major"];
 
-/// The on-disk shape: two strings, as in the Apple `version.json`.
-#[derive(Serialize)]
-struct VersionFile {
-    name: String,
-    build: String,
-}
+/// The entry this tool owns in the shared version file.
+const ENTRY: &str = "universal";
 
 /// A validated version name and build number.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -71,7 +67,7 @@ impl Version {
 /// Prints the current version.
 pub fn print() -> Result<(), String> {
     let version = load(&version_path())?;
-    println!("Version (android): {}", version.render());
+    println!("Version ({ENTRY}): {}", version.render());
     Ok(())
 }
 
@@ -81,27 +77,36 @@ pub fn run_bump(kind: &str) -> Result<(), String> {
     let mut version = load(&path)?;
     version.bump(kind)?;
     store(&path, &version)?;
-    println!("Version (android, {kind}): {}", version.render());
+    println!("Version ({ENTRY}, {kind}): {}", version.render());
     Ok(())
 }
 
 fn version_path() -> PathBuf {
-    crate::workspace_root().join("version.json")
+    crate::workspace_root().join("../version.json")
 }
 
-/// Reads and validates one version file.
-fn load(path: &Path) -> Result<Version, String> {
+/// Reads the whole version file as a JSON object.
+fn read(path: &Path) -> Result<Map<String, Value>, String> {
     let text = fs::read_to_string(path)
         .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-    let data: Value = serde_json::from_str(&text)
-        .map_err(|error| format!("{} is not valid JSON: {error}", path.display()))?;
-    let entry = data
-        .as_object()
-        .ok_or_else(|| format!("{} must hold a JSON object", path.display()))?;
-    parse(entry).map_err(|error| format!("{}: {error}", path.display()))
+    match serde_json::from_str(&text) {
+        Ok(Value::Object(data)) => Ok(data),
+        Ok(_) => Err(format!("{} must hold a JSON object", path.display())),
+        Err(error) => Err(format!("{} is not valid JSON: {error}", path.display())),
+    }
 }
 
-/// Reads the two fields; both are strings, as in the Apple `version.json`.
+/// Reads and validates the `universal` entry.
+fn load(path: &Path) -> Result<Version, String> {
+    let data = read(path)?;
+    let entry = data
+        .get(ENTRY)
+        .and_then(Value::as_object)
+        .ok_or_else(|| format!("{} has no {ENTRY:?} object", path.display()))?;
+    parse(entry).map_err(|error| format!("{} {ENTRY}: {error}", path.display()))
+}
+
+/// Reads the two fields; both are strings, as in the Apple entries.
 fn parse(entry: &Map<String, Value>) -> Result<Version, String> {
     let name = entry
         .get("name")
@@ -149,14 +154,16 @@ fn parse_number(text: &str) -> Result<u64, String> {
         .map_err(|error| format!("{text:?} is out of range: {error}"))
 }
 
-/// Writes the version through a temporary file, so an interrupted bump cannot
-/// corrupt the version file.
+/// Rewrites the `universal` entry and keeps every other key. Keys come out
+/// sorted, as `scripts/lib/version` writes them. The file is replaced through
+/// a temporary, so an interrupted bump cannot corrupt it.
 fn store(path: &Path, version: &Version) -> Result<(), String> {
-    let file = VersionFile {
-        name: version.name(),
-        build: version.build.to_string(),
-    };
-    let mut text = serde_json::to_string_pretty(&file)
+    let mut data = read(path)?;
+    data.insert(
+        ENTRY.to_owned(),
+        json!({"name": version.name(), "build": version.build.to_string()}),
+    );
+    let mut text = serde_json::to_string_pretty(&data)
         .map_err(|error| format!("cannot render the version: {error}"))?;
     text.push('\n');
 
@@ -203,9 +210,12 @@ mod tests {
         }
     }
 
+    /// The shared file: the Apple entries belong to `scripts/lib/version`.
     const SAMPLE: &str = r#"{
-  "name": "1.0.0",
-  "build": "1"
+  "_comment": "Release versions",
+  "ios": {"build": "7", "name": "2.0.0"},
+  "macos": {"build": "3", "name": "1.0.1"},
+  "universal": {"build": "1", "name": "1.0.0"}
 }"#;
 
     fn write_sample(directory: &Path) -> PathBuf {
@@ -260,7 +270,7 @@ mod tests {
             let path = directory.path().join("version.json");
             fs::write(
                 &path,
-                format!("{{\"name\": \"{name}\", \"build\": \"{build}\"}}"),
+                format!("{{\"universal\": {{\"name\": \"{name}\", \"build\": \"{build}\"}}}}"),
             )
             .expect("the version file");
             assert!(
@@ -271,13 +281,22 @@ mod tests {
     }
 
     #[test]
+    fn a_file_without_the_universal_entry_is_rejected() {
+        let directory = TemporaryDirectory::new();
+        let path = directory.path().join("version.json");
+        fs::write(&path, r#"{"macos": {"name": "1.0.0", "build": "1"}}"#)
+            .expect("the version file");
+        assert!(load(&path).is_err());
+    }
+
+    #[test]
     fn a_missing_file_cannot_be_read() {
         let directory = TemporaryDirectory::new();
         assert!(load(&directory.path().join("version.json")).is_err());
     }
 
     #[test]
-    fn storing_writes_the_two_fields_and_leaves_no_temporary() {
+    fn storing_rewrites_only_the_universal_entry_and_leaves_no_temporary() {
         let directory = TemporaryDirectory::new();
         let path = write_sample(directory.path());
         let mut version = load(&path).expect("a valid version");
@@ -287,7 +306,14 @@ mod tests {
         assert_eq!(load(&path).expect("the round trip"), version);
         assert_eq!(
             fs::read_to_string(&path).expect("the written file"),
-            "{\n  \"name\": \"1.0.1\",\n  \"build\": \"2\"\n}\n"
+            concat!(
+                "{\n",
+                "  \"_comment\": \"Release versions\",\n",
+                "  \"ios\": {\n    \"build\": \"7\",\n    \"name\": \"2.0.0\"\n  },\n",
+                "  \"macos\": {\n    \"build\": \"3\",\n    \"name\": \"1.0.1\"\n  },\n",
+                "  \"universal\": {\n    \"build\": \"2\",\n    \"name\": \"1.0.1\"\n  }\n",
+                "}\n"
+            )
         );
         let names: Vec<String> = fs::read_dir(directory.path())
             .expect("the directory")

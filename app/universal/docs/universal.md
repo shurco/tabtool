@@ -19,7 +19,6 @@ app/universal/
 ├── Cargo.toml                 # workspace, resolver 3, edition 2024
 ├── Cargo.lock                 # committed
 ├── rust-toolchain.toml        # pinned Rust 1.99.1
-├── version.json               # Rust app version, Android versionName/versionCode
 ├── crates/
 │   ├── tabtool-core/          # pure CSV engine
 │   ├── tabtool-large/         # mmap, scanner/index, sniffer, source, saver
@@ -906,7 +905,8 @@ for the other variant, so pair each `cargo ndk` run with its own Gradle task.
 
 ### Packaging
 
-- **Version.** `version.json` holds `{"name": "1.0.0", "build": "1"}`, read by
+- **Version.** The `universal` entry of `app/version.json` (next to the Apple
+  `macos` and `ios` entries) holds `{"name": "1.0.0", "build": "1"}`, read by
   `app/build.gradle.kts` as `versionName` and `versionCode`; its `name` is also
   `tabtool_core::VERSION`, the version every About screen shows.
   `cargo run -p xtask -- version` prints it and `cargo run -p xtask -- version

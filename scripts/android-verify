@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Checks a built TabTool APK against the packaging contract.
 #
-# Always checked: the version matches app/universal/version.json, both ABIs are
+# Always checked: the version matches universal in app/version.json, both ABIs are
 # present, the app requests no network, and the native libraries are stored
 # uncompressed and 16 KB page-aligned. With --release the APK must also verify
 # and must not carry the debug certificate, so a release build that silently
@@ -53,11 +53,11 @@ trap 'rm -rf "${temporary}"' EXIT
 
 "${aapt2}" dump badging "${apk}" >"${temporary}/badging.txt"
 
-python3 - "${temporary}/badging.txt" "${root}/app/universal/version.json" "${apk}" <<'PY'
+python3 - "${temporary}/badging.txt" "${root}/app/version.json" "${apk}" <<'PY'
 import json, sys
 
 badging = open(sys.argv[1]).read()
-version = json.load(open(sys.argv[2]))
+version = json.load(open(sys.argv[2]))["universal"]
 apk = sys.argv[3]
 
 expected = f"versionCode='{version['build']}' versionName='{version['name']}'"
