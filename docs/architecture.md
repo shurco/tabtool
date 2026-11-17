@@ -197,6 +197,7 @@ The repository follows these conventions: XcodeGen, a shared core package, a thi
 ```
 TabTool/
 ├── app/
+│   ├── version.json                     # store versions: macos, ios, universal
 │   └── apple/
 │       ├── project.yml                  # XcodeGen, committed
 │       ├── TabTool.xcodeproj/         # generated, not committed
@@ -217,8 +218,7 @@ TabTool/
 │       ├── iOS/                         # UICollectionView grid, document picker
 │       ├── TabToolTests/              # Mac document unit tests
 │       ├── TabToolIOSTests/           # iOS unit tests
-│       ├── TabToolUITests/            # Mac XCUITest
-│       └── version.json                 # store version, macos and ios
+│       └── TabToolUITests/            # Mac XCUITest
 ├── scripts/
 │   ├── _helper
 │   ├── app                              # run/build/archive/clean/version
@@ -238,7 +238,7 @@ TabTool/
 └── .gitignore
 ```
 
-`TabTool.xcodeproj` is generated from `project.yml` with the `xcodegen generate` command and is not committed. `TabToolKit` is connected as a local Swift package; there are no core sources in the Xcode project. `scripts/app` is responsible for XcodeGen + xcodebuild, `scripts/test` for core and app tests, `version.json` for `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`.
+`TabTool.xcodeproj` is generated from `project.yml` with the `xcodegen generate` command and is not committed. `TabToolKit` is connected as a local Swift package; there are no core sources in the Xcode project. `scripts/app` is responsible for XcodeGen + xcodebuild, `scripts/test` for core and app tests, `app/version.json` for `MARKETING_VERSION`/`CURRENT_PROJECT_VERSION`.
 
 ### 6.2 The `TabToolKit` core
 
@@ -345,7 +345,7 @@ The macOS grid is `NSTableView`. The iOS grid is a `UICollectionView` with the s
 - `PrivacyInfo.xcprivacy` is copied into the app resources by the `TabTool` target in `project.yml`; `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon` points at `Shared/Assets.xcassets`.
 - `Shared/Localizable.xcstrings` holds the UI strings in English plus 10 translations (6.10); user-facing controls use localizable SwiftUI initializers. Accessibility identifiers from earlier tasks are preserved, and the banner/error overlay announce through `AccessibilityNotification`.
 - `ENABLE_TESTABILITY=YES` is Debug-only; the Release archive is hardened but unsigned in development (`CODE_SIGNING_ALLOWED=NO` in `scripts/app archive`). `project.yml` sets `CODE_SIGN_IDENTITY=-` for local builds; a release build overrides the identity/team in Xcode or on the archive command line instead of committing signing material.
-- Store version — `app/apple/version.json`; the build substitutes it into `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` via `scripts/app`. The `ios` entry is separate from `macos` and starts at 1.0.0 (1).
+- Store version — `app/version.json`; the build substitutes it into `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` via `scripts/app`. The `ios` entry is separate from `macos` and starts at 1.0.0 (1).
 - The iOS app uses the same display name and bundle ID. Its privacy manifest is `app/apple/iOS/App/PrivacyInfo.xcprivacy` and declares the same three required-reason APIs, because `@AppStorage` and the linked core call them. Its entitlements file is empty: there is no App Sandbox entitlement on iOS. `./scripts/app archive` stays macOS-only.
 - New public name, bundle ID, team ID, icon — before release; placeholders are used during development. Choose a unique name and icon.
 - The MIT notice is kept in `LICENSE` and bundled with the app; `docs/app-store-compliance.md` records the release requirement.

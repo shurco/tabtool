@@ -211,25 +211,25 @@ PASS/FAIL/NOT VERIFIED evidence, is in
 
 ## Version
 
-The Android version lives in `app/universal/version.json` (the same `name` is
-the desktop version, see [release.md](release.md)), apart from the Apple
-store version in `app/apple/version.json` because the two stores version
-independently:
+The Android version is the `universal` entry of `app/version.json` (the same
+`name` is the desktop version, see [release.md](release.md)). The Apple store
+versions sit in the same file as separate `macos` and `ios` entries because the
+two stores version independently:
 
 ```json
 {
-  "name": "1.0.0",
-  "build": "1"
+  "universal": { "name": "1.0.0", "build": "1" }
 }
 ```
 
 `name` is the Gradle `versionName` and `build` is the `versionCode`, so the name
 is visible in the app info screen and the build number must increase for every
-upload. The only writer is `xtask`:
+upload. The only writer of `universal` is `xtask`; it keeps the other entries
+intact:
 
 ```sh
 cd app/universal
-cargo run -p xtask -- version                 # Version (android): 1.0.0 (1)
+cargo run -p xtask -- version                 # Version (universal): 1.0.0 (1)
 cargo run -p xtask -- version bump            # build only
 cargo run -p xtask -- version bump patch
 cargo run -p xtask -- version bump minor
@@ -332,7 +332,7 @@ scripts/android-verify app/universal/apps/tabtool-android/android/app/build/outp
 scripts/android-verify --release app/universal/apps/tabtool-android/android/app/build/outputs/apk/release/app-release.apk
 ```
 
-It always checks the version against `app/universal/version.json`, both native
+It always checks the version against `universal` in `app/version.json`, both native
 ABIs, the absence of the `INTERNET` permission, the stored native entries and
 the `zipalign -c -P 16` page alignment. `--release` additionally requires a
 verifying signature that is not `CN=Android Debug`, so a release build that
@@ -356,7 +356,7 @@ unzip -v app/build/outputs/apk/release/app-release.apk | grep 'lib/'
 What a correct release artifact shows:
 
 - `package: name='app.shurco.tabtool' versionCode='1' versionName='1.0.0'` — the
-  values in `app/universal/version.json`;
+  values of `universal` in `app/version.json`;
 - `minSdkVersion:'26'` and `targetSdkVersion:'36'`;
 - `native-code: 'arm64-v8a' 'x86_64'`, with `lib/arm64-v8a/libmain.so` and
   `lib/x86_64/libmain.so` inside the APK, both `Stored` (uncompressed) and

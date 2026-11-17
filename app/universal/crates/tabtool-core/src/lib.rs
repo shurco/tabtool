@@ -46,5 +46,5 @@ pub use writer::CsvWriter;
 /// Locale used by sorting and row filters (ICU4X).
 pub use icu_locale_core::Locale;
 
-/// Release version, the `name` in `app/universal/version.json`.
+/// Release version, `universal.name` in `app/version.json`.
 pub const VERSION: &str = env!("TABTOOL_VERSION");

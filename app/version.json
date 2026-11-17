@@ -1,0 +1,15 @@
+{
+  "_comment": "Release versions. ios/macos: name is MARKETING_VERSION, build is CURRENT_PROJECT_VERSION; after uploading to App Store Connect, the number is pinned in version.lock.json and must increase. universal: Windows, Linux and Android; Android versionName/versionCode.",
+  "ios": {
+    "build": "3",
+    "name": "1.0.1"
+  },
+  "macos": {
+    "build": "3",
+    "name": "1.0.1"
+  },
+  "universal": {
+    "build": "2",
+    "name": "1.0.1"
+  }
+}

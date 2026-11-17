@@ -11,9 +11,9 @@ cd app/apple
 xcodegen generate
 ```
 
-`project.yml` defines the `TabTool` macOS app and the `TabToolIOS` iOS app, their unit and UI test targets, and the `TabTool` and `TabToolIOS` schemes. The local `app/apple/TabToolKit` package is wired in as a Swift Package; the Xcode project contains no core sources. The `1.0.0` / `1` version in `project.yml` is a fallback in case `version.json` is unavailable.
+`project.yml` defines the `TabTool` macOS app and the `TabToolIOS` iOS app, their unit and UI test targets, and the `TabTool` and `TabToolIOS` schemes. The local `app/apple/TabToolKit` package is wired in as a Swift Package; the Xcode project contains no core sources. The `1.0.0` / `1` version in `project.yml` is a fallback in case `app/version.json` is unavailable.
 
-The bundle ID is `app.shurco.tabtool`. The signing team is chosen before the App Store; if the name or bundle ID changes, update `project.yml`, `Info.plist`, `docs/app-store-compliance.md`, and `version.json`. `project.yml` keeps `CODE_SIGN_IDENTITY=-` so local Debug builds and the verification archive need no team; a release build overrides the identity, team, and provisioning in Xcode or on the archive command line rather than committing signing material.
+The bundle ID is `app.shurco.tabtool`. The signing team is chosen before the App Store; if the name or bundle ID changes, update `project.yml`, `Info.plist`, `docs/app-store-compliance.md`, and `app/version.json`. `project.yml` keeps `CODE_SIGN_IDENTITY=-` so local Debug builds and the verification archive need no team; a release build overrides the identity, team, and provisioning in Xcode or on the archive command line rather than committing signing material.
 
 The app target reads `macOS/App/Info.plist`, signs with `macOS/App/TabTool.entitlements`, and bundles `macOS/App/PrivacyInfo.xcprivacy`. `ASSETCATALOG_COMPILER_APPICON_NAME=AppIcon` points at the placeholder asset catalog in `Shared/Assets.xcassets`. `ENABLE_TESTABILITY=YES` is Debug-only.
 
@@ -33,7 +33,7 @@ From the repository root:
 - `build macos` — build without signing (`CODE_SIGNING_ALLOWED=NO`).
 - `archive macos` — Release archive in `app/apple/build/TabTool.xcarchive`. The script passes `CODE_SIGNING_ALLOWED=NO`, so it produces a verification archive without a team. For the App Store, archive with the team signature (Xcode Organizer or an xcodebuild invocation without that flag).
 - `clean` — removes `app/apple/build`.
-- `version` — shows the version from `app/apple/version.json`.
+- `version` — shows the version from `app/version.json`.
 
 `./scripts/bench-large [GiB]` (default 5) benchmarks large file mode in a release build: it generates a CSV of that size in the temporary directory, measures opening, indexing, cell reads, and streaming saves, prints a Markdown table, and deletes the file. It refuses to start without three times the size free on disk. The harness is `LargeFileBenchmarkTests` in the core tests, skipped unless `TABTOOL_BENCH_BYTES` is set.
 
@@ -41,11 +41,13 @@ From the repository root:
 
 ## Versions
 
-The store version lives in `app/apple/version.json`, separately for macOS:
+The store version lives in `app/version.json`, separately for macOS and iOS. The same file holds the `universal` entry of the Rust apps (see [release.md](release.md)); `scripts/app` edits only `macos` and `ios` and keeps the other keys intact:
 
 ```json
 {
-  "macos": { "name": "1.0.0", "build": "1" }
+  "ios": { "name": "1.0.0", "build": "1" },
+  "macos": { "name": "1.0.0", "build": "1" },
+  "universal": { "name": "1.0.0", "build": "1" }
 }
 ```
 
@@ -58,7 +60,7 @@ The store version lives in `app/apple/version.json`, separately for macOS:
 ./scripts/app build macos --bump-version=patch
 ```
 
-`bump` without a kind bumps only `build`. `patch`, `minor`, `major` move semver and also bump `build`. The bump kind is given only as `--bump-version=KIND`; a bare flag does not take the next word. After uploading to App Store Connect, the number is pinned in `app/apple/version.lock.json` (the file is created on the first upload).
+`bump` without a kind bumps only `build`. `patch`, `minor`, `major` move semver and also bump `build`. The bump kind is given only as `--bump-version=KIND`; a bare flag does not take the next word. After uploading to App Store Connect, the number is pinned in `app/version.lock.json` (the file is created on the first upload).
 
 ## Tests
 
@@ -115,7 +117,7 @@ For the App Store:
 3. Archive with the team signature in Xcode Organizer (Product > Archive) or with an explicit `xcodebuild archive` command that does not set `CODE_SIGNING_ALLOWED=NO`. `./scripts/app archive macos` is an unsigned verification build only.
 4. Upload the archive via Xcode Organizer or Transporter.
 5. Fill in App Privacy: no data is collected. The privacy manifest is `app/apple/macOS/App/PrivacyInfo.xcprivacy`; it declares the User defaults (`CA92.1`), File timestamp (`3B52.1`), and Disk space (`E174.1`) required-reason APIs.
-6. Check `version.json` and `version.lock.json` before every upload.
+6. Check `app/version.json` and `app/version.lock.json` before every upload.
 
 The icon and store metadata are a separate release step; a placeholder is used in development. Choose a unique name and icon.
 

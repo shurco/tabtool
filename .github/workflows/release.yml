@@ -1,7 +1,7 @@
 name: Release
 
 # A `v*` tag builds every platform and publishes a GitHub Release; the tag must
-# match app/universal/version.json. A manual run builds the selected platforms
+# match universal.name in app/version.json. A manual run builds the selected platforms
 # and keeps the files as run artifacts only (docs/release.md).
 on:
   push:
@@ -44,10 +44,10 @@ jobs:
           WANT_LINUX: ${{ inputs.linux }}
           WANT_ANDROID: ${{ inputs.android }}
         run: |
-          name="$(jq -r .name app/universal/version.json)"
+          name="$(jq -r .universal.name app/version.json)"
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             if [ "$GITHUB_REF_NAME" != "v$name" ]; then
-              echo "::error::Tag $GITHUB_REF_NAME does not match app/universal/version.json (v$name)."
+              echo "::error::Tag $GITHUB_REF_NAME does not match universal.name in app/version.json (v$name)."
               exit 1
             fi
             version="$name"

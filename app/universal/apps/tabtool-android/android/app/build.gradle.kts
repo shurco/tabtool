@@ -7,15 +7,15 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
-// The version lives in app/universal/version.json, next to the workspace, and
-// `cargo run -p xtask -- version bump` is the only writer. Reading the same
+// The version is the "universal" entry of app/version.json, and
+// `cargo run -p xtask -- version bump` is its only writer. Reading the same
 // file here keeps the Android build and the bump in step.
-val versionFile = rootDir.resolve("../../../version.json")
+val versionFile = rootDir.resolve("../../../../version.json")
 require(versionFile.isFile) {
-    "Missing ${versionFile.path}. Create it with \"name\" (x.y.z) and \"build\" (a positive integer)."
+    "Missing ${versionFile.path}. Give it a \"universal\" entry with \"name\" (x.y.z) and \"build\" (a positive integer)."
 }
-val versionEntry = JsonSlurper().parse(versionFile) as? Map<*, *>
-    ?: error("${versionFile.path} must hold a JSON object with \"name\" and \"build\"")
+val versionEntry = (JsonSlurper().parse(versionFile) as? Map<*, *>)?.get("universal") as? Map<*, *>
+    ?: error("${versionFile.path} must hold a \"universal\" object with \"name\" and \"build\"")
 val appVersionName = versionEntry["name"] as? String
     ?: error("${versionFile.path} has no string \"name\"")
 val appVersionCode = (versionEntry["build"] as? String)?.toIntOrNull()

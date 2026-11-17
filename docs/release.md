@@ -6,11 +6,12 @@
 
 ## Version
 
-`app/universal/version.json` is the single version source. Gradle reads it for
-`versionName` and `versionCode`, and the `tabtool-core` build script exposes its
-`name` as `tabtool_core::VERSION`, which the desktop and Android About screens
-and `tabtool-desktop --smoke` print. Bump it with `cargo run -p xtask -- version
-bump <build|patch|minor|major>` before tagging.
+The `universal` entry of `app/version.json` is the single version source. Gradle
+reads its `name` and `build` for `versionName` and `versionCode`, and the
+`tabtool-core` build script exposes its `name` as `tabtool_core::VERSION`, which
+the desktop and Android About screens and `tabtool-desktop --smoke` print. Bump
+it with `cargo run -p xtask -- version bump <build|patch|minor|major>` before
+tagging; `xtask` leaves the Apple `macos` and `ios` entries untouched.
 
 ## Tag release
 
@@ -22,8 +23,8 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-- The `plan` job fails when the tag is not `v` plus the `name` in
-  `version.json`, so a tag can never ship a different version.
+- The `plan` job fails when the tag is not `v` plus `universal.name` in
+  `app/version.json`, so a tag can never ship a different version.
 - The Android build must be signed: without the four
   `TABTOOL_ANDROID_KEYSTORE*` / `TABTOOL_ANDROID_KEY_*` secrets (see
   [android.md](android.md#ci)) the tag run fails instead of publishing a debug

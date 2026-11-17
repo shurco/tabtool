@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Store versions for macOS and iOS. The source is app/apple/version.json:
-# {"macos": {"name": "1.0.0", "build": "1"}, "ios": {"name": "1.0.0", "build": "1"}}.
+# Store versions for macOS and iOS. The source is app/version.json:
+# {"ios": {"build": "1", "name": "1.0.0"}, "macos": {"build": "1", "name": "1.0.0"}}.
+# The "universal" entry in the same file belongs to `xtask version` and is kept.
 #
 # Sourced by scripts/app; sets APP_VERSION_NAME and APP_VERSION_BUILD.
 # Run directly to execute the self-test: bash scripts/lib/version
@@ -29,7 +30,7 @@ _version_app_dir() {
     printf '%s\n' "$APP_DIR"
     return
   fi
-  cd "$(dirname "${BASH_SOURCE[0]}")/../../app/apple" && pwd
+  cd "$(dirname "${BASH_SOURCE[0]}")/../../app" && pwd
 }
 
 # Rewrites one platform entry atomically and keeps every other key intact.
@@ -53,10 +54,11 @@ if not isinstance(entry, dict):
 entry["name"] = name
 entry["build"] = build
 data[platform] = entry
+# Keys are sorted, as `xtask version` writes them.
 # Write through a temporary file so an interrupted bump cannot corrupt the
 # version file.
 tmp = path.with_name(path.name + ".tmp")
-tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
 tmp.replace(path)
 PY
 }
@@ -121,7 +123,7 @@ version_configure() {
   py_out=$(_version_read "$config" "$platform") || py_rc=$?
 
   if [ "$py_rc" -ne 0 ]; then
-    print_answer "Malformed app/apple/version.json for ${platform}" red
+    print_answer "Malformed ${config} for ${platform}" red
     return 1
   fi
 
@@ -216,7 +218,8 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 {
   "_comment": "Store version",
   "ios": {"name": "9.9.9", "build": "42"},
-  "macos": {"name": "1.0.0", "build": "1"}
+  "macos": {"name": "1.0.0", "build": "1"},
+  "universal": {"name": "3.0.0", "build": "7"}
 }
 EOF
 
@@ -236,6 +239,9 @@ data = json.loads(open(sys.argv[1]).read())
 assert data["macos"] == {"name": "1.0.0", "build": "2"}, data["macos"]
 assert data["ios"] == {"name": "9.9.9", "build": "42"}, data["ios"]
 assert data["_comment"] == "Store version", data["_comment"]
+assert data["universal"] == {"name": "3.0.0", "build": "7"}, data["universal"]
+text = open(sys.argv[1]).read()
+assert text == json.dumps(data, indent=2, ensure_ascii=False, sort_keys=True) + "\n", text
 PY
 
   version_bump macos patch || exit 1

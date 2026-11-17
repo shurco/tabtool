@@ -119,7 +119,7 @@ The app does not implement its own cryptography and does not transmit data over 
 
 - [ ] Signing team is chosen; the name TabTool and bundle ID `app.shurco.tabtool` are checked against existing listings.
 - [ ] Final icon replaces the placeholder in `Shared/Assets.xcassets/AppIcon.appiconset`.
-- [ ] `version.json` carries the release version and build.
+- [ ] `app/version.json` carries the release version and build.
 - [ ] `./scripts/test` and `./scripts/test --ui` pass.
 - [ ] `./scripts/app archive macos` succeeds; inspect `Info.plist`, entitlements, `PrivacyInfo.xcprivacy`, and `AppIcon.icns` in the archive.
 - [ ] The archive is signed with the team and validated in Xcode Organizer or Transporter.
@@ -129,4 +129,4 @@ The app does not implement its own cryptography and does not transmit data over 
 - [ ] The required MIT notice is bundled with the app and kept in `LICENSE`.
 - [ ] Sandbox, open/save, export, errors, dark mode, VoiceOver, and a 100k-row file verified on a clean system.
 - [ ] Large file mode verified in the sandboxed build: open a file of several GB, edit a cell, Save, Save As to a new location, close with unsaved edits.
-- [ ] `version.lock.json` updated after upload.
+- [ ] `app/version.lock.json` updated after upload.

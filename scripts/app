@@ -64,7 +64,7 @@ generate_project() {
 version_settings=()
 load_version() {
   local platform="$1"
-  if ! APP_DIR="${app_dir}" version_configure "${platform}"; then
+  if ! version_configure "${platform}"; then
     exit 1
   fi
   version_settings=()
@@ -83,7 +83,7 @@ bump_version() {
     print_answer "Bump kind must be build, patch, minor, or major" red
     exit 1
   fi
-  if ! APP_DIR="${app_dir}" version_bump "${platform}" "${kind}"; then
+  if ! version_bump "${platform}" "${kind}"; then
     exit 1
   fi
 }
