@@ -5,7 +5,7 @@ The marketing site for [TabTool](../README.md), built with SvelteKit and prerend
 ## What is here
 
 - `/` — overview: hero, measured numbers, features, demo video, real screenshots, open-source ask, platforms, comparison index, FAQ.
-- `/download/` — App Store links for macOS and iOS, GitHub Releases links for Windows, Linux, and Android, requirements, and build-from-source instructions.
+- `/download/` — App Store badges for macOS and iOS, direct GitHub Release file buttons (per architecture) for Windows, Linux, and Android, requirements, and build-from-source instructions.
 - `/vs/` and `/vs/<slug>/` — five comparison pages: TableTool (TablePlus), the original open-source TableTool, Modern CSV, CSViewer, Tablecruncher.
 - `/faq/` — the full FAQ, also emitted as `FAQPage` structured data.
 - `/press/` — press kit: boilerplate, fast facts, asset links, and contact.
@@ -63,20 +63,22 @@ Three placeholders must be replaced:
 
 Everything else (comparison facts, FAQ, legal text, screenshots) lives in `src/lib/`:
 
-- `site.ts` — name, description, links (GitHub, GitHub Releases `releases`, App Store `appStore.mac`/`appStore.ios`), navigation.
-- `content.ts` — stats, features, screenshots, platforms (requirement and download source), FAQ.
+- `site.ts` — name, description, links (GitHub, GitHub Releases `releases`, App Store `appStore.mac`/`appStore.ios`), `releaseVersion`, navigation. Bump `releaseVersion` to match `universal.name` in `app/version.json` after each tag release: the download buttons build file names from it.
+- `downloads.ts` — `Platform` type, `releaseFile()` for direct Release asset URLs, `platformHref()`.
+- `content.ts` — stats, features, screenshots, platforms (requirement and note; the button comes from `StoreBadges`), FAQ.
 - `comparisons.ts` — one object per comparison page.
 
-## App Store badges
+## Download buttons
 
 - `static/img/badges/mac-app-store.svg` and `app-store.svg` are Apple's official black US-English badges from the [App Store marketing guidelines](https://developer.apple.com/app-store/marketing/guidelines/). Do not edit the artwork.
-- `src/lib/components/StoreBadges.svelte` renders them as links to `site.appStore`; pass `platforms={['mac']}` or `['ios']` to show one. It is used in the home hero, the CTA, and the download page.
+- `src/lib/components/StoreBadges.svelte` renders one button per platform: the Apple badges link to `site.appStore`; Windows, Linux, and Android are black buttons with a Simple Icons glyph (`PlatformIcon.svelte`, CC0) that link to the matching card on `/download/`. Pass `platforms={['mac']}` etc. to show a subset and `size="sm"` for table rows. It is used in the home hero, the CTA, the platform table, and the download page; the download-page cards link straight to the Release files.
+- The hero and CTA "All downloads" button goes to `/download/`, not to the App Store.
 
 ## Analytics
 
 - Google Analytics 4 (`G-G8JX3V6FNB`) is loaded via `gtag.js` in `src/app.html`. The privacy page discloses it; keep both in sync.
-- Every App Store link goes through `appStoreURL()` in `src/lib/track.ts` and fires GA4 `app_store_click` with `platform` (`mac`/`ios`) and `placement` (`hero`, `cta`, `download`, `header-bar`, `compare`, `about`). The link also carries Apple's `pt`, `ct`, and `mt` campaign parameters.
-- The sticky mobile download bar is dismissible; the choice is stored in `sessionStorage` for the session. On Android it links to GitHub Releases instead of the App Store and fires no store event.
+- Every App Store link goes through `appStoreURL()` in `src/lib/track.ts` and fires GA4 `app_store_click` with `platform` (`mac`/`ios`) and `placement` (`hero`, `cta`, `download`, `header-bar`, `compare`, `about`, `platforms`). Windows, Linux, and Android buttons fire `download_click` with the same fields. The link also carries Apple's `pt`, `ct`, and `mt` campaign parameters.
+- The sticky mobile download bar is dismissible; the choice is stored in `sessionStorage` for the session. It picks the target by device: Android gets the APK, iPhone and iPad the App Store, everything else `/download/`.
 
 ## SEO
 
@@ -90,4 +92,4 @@ Everything else (comparison facts, FAQ, legal text, screenshots) lives in `src/l
 ## Notes
 
 - The legal pages describe the current static site and the app's behavior. They are project text, not legal advice; have a lawyer review them before relying on them commercially.
-- Comparison pages cite vendor pages from October 2026 and include a "where the other app is stronger" section on purpose. Update the facts when a vendor changes something material.
+- Comparison pages cite vendor pages checked on 20 November 2026 and include a "where the other app is stronger" section on purpose. Update the facts when a vendor changes something material.

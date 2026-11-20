@@ -27,9 +27,9 @@ and it is the signal the store uses to show the app to more people.
 | --- | --- | --- |
 | macOS | macOS 14 or later | Mac App Store |
 | iOS and iPadOS | iOS 17 or later | App Store |
-| Windows | Windows 10 or 11, x64 or ARM64 | [GitHub Releases](https://github.com/shurco/tabtool/releases) (unsigned zip) |
-| Linux | glibc 2.35 or later, x86_64 or aarch64, X11 or Wayland | [GitHub Releases](https://github.com/shurco/tabtool/releases) (tar.gz) |
-| Android | Android 8.0 or later, arm64 or x86_64 | [GitHub Releases](https://github.com/shurco/tabtool/releases) (signed APK) |
+| Windows | Windows 10 or 11, x64 or ARM64 | [GitHub Releases](https://github.com/shurco/tabtool/releases/latest) (unsigned zip) |
+| Linux | glibc 2.35 or later, x86_64 or aarch64, X11 or Wayland | [GitHub Releases](https://github.com/shurco/tabtool/releases/latest) (tar.gz) |
+| Android | Android 8.0 or later, arm64 or x86_64 | [GitHub Releases](https://github.com/shurco/tabtool/releases/latest) (signed APK) |
 
 ## Screenshots
 

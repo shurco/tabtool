@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { site } from '#lib/site';
 	import { appStoreURL, trackStoreClick } from '#lib/track';
+	import { releaseFile } from '#lib/downloads';
 
 	const storageKey = 'tabtool-download-bar-dismissed';
 	let visible = $state(false);
-	let android = $state(false);
+	// Phones and tablets get their own store or APK; every other device gets the download page.
+	let device = $state<'ios' | 'android' | 'other'>('other');
 
 	const hiddenHere = $derived(page.url.pathname === '/privacy/' || page.url.pathname === '/terms/');
 
@@ -16,7 +17,10 @@
 		} catch {
 			// Private browsing can block storage; the bar still works.
 		}
-		android = /Android/i.test(navigator.userAgent);
+		const ua = navigator.userAgent;
+		// iPadOS reports a Mac user agent, so tell it apart by its touch screen.
+		const ipad = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+		device = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/.test(ua) || ipad ? 'ios' : 'other';
 		const media = window.matchMedia('(max-width: 760px)');
 		const update = () => {
 			visible = media.matches;
@@ -40,11 +44,17 @@
 	<aside class="download-bar" aria-label="Download TabTool">
 		<div class="download-bar__copy">
 			<strong>TabTool</strong>
-			<span>{android ? 'Free CSV editor for Android' : 'Free CSV editor for iPhone, iPad, and Mac'}</span>
+			<span>
+				{device === 'android'
+					? 'Free CSV editor for Android'
+					: device === 'ios'
+						? 'Free CSV editor for iPhone and iPad'
+						: 'Free CSV editor for every platform'}
+			</span>
 		</div>
-		{#if android}
-			<a class="download-bar__cta" href={site.releases} rel="noopener">Download APK</a>
-		{:else}
+		{#if device === 'android'}
+			<a class="download-bar__cta" href={releaseFile('android.apk')} rel="noopener">Download APK</a>
+		{:else if device === 'ios'}
 			<a
 				class="download-bar__cta"
 				href={appStoreURL('ios')}
@@ -52,6 +62,8 @@
 			>
 				Download free
 			</a>
+		{:else}
+			<a class="download-bar__cta" href="/download/">Download free</a>
 		{/if}
 		<button class="download-bar__close" type="button" onclick={dismiss} aria-label="Dismiss">
 			×

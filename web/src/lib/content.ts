@@ -1,4 +1,6 @@
- export const stats = [
+import type { Platform } from '#lib/downloads';
+
+export const stats = [
 	{ value: '5 GiB', label: 'Benchmark file', note: '68.2M rows × 8 columns' },
 	{ value: '77.7M', label: 'Rows in the release app', note: 'indexed 2.7 s after launch' },
 	{ value: '~91 MB', label: 'Memory after indexing', note: 'Apple M4 Pro, 24 GB' },
@@ -105,35 +107,35 @@ export const shots = [
 	}
 ];
 
-export const platforms = [
+export const platforms: { key: Platform; name: string; requirement: string; note: string }[] = [
 	{
+		key: 'mac',
 		name: 'macOS',
 		requirement: 'macOS 14 or later',
-		source: 'Mac App Store',
 		note: 'Pure Swift. Signed and sandboxed by the App Store.'
 	},
 	{
+		key: 'ios',
 		name: 'iOS and iPadOS',
 		requirement: 'iOS 17 or later',
-		source: 'App Store',
 		note: 'Same CSV core, touch-first editor. One listing with the Mac.'
 	},
 	{
+		key: 'windows',
 		name: 'Windows',
 		requirement: 'Windows 10 or 11, x64 or ARM64',
-		source: 'GitHub Releases',
 		note: 'Zip with tabtool.exe. Unsigned, no installer.'
 	},
 	{
+		key: 'linux',
 		name: 'Linux',
 		requirement: 'glibc 2.35+, x86_64 or aarch64',
-		source: 'GitHub Releases',
 		note: 'Tar.gz with the tabtool binary. Needs X11 or Wayland.'
 	},
 	{
+		key: 'android',
 		name: 'Android',
 		requirement: 'Android 8.0 or later',
-		source: 'GitHub Releases',
 		note: 'Signed APK for arm64 and x86_64 devices. Not on Google Play yet.'
 	}
 ];

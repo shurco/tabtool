@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { site } from '#lib/site';
 	import StoreBadges from '#lib/components/StoreBadges.svelte';
-	import { appStoreURL, trackStoreClick } from '#lib/track';
 </script>
 
 <section class="cta">
@@ -14,16 +13,8 @@
 		</p>
 		<StoreBadges placement="cta" />
 		<div class="cta__actions">
-			<a
-				class="btn btn--primary"
-				href={appStoreURL('ios')}
-				onclick={() => trackStoreClick('ios', 'cta')}
-			>
-				Download free <span class="btn__arrow" aria-hidden="true">↗</span>
-			</a>
-			<a class="btn btn--ghost" href={site.releases} rel="noopener">Windows, Linux, Android</a>
+			<a class="btn btn--primary" href="/download/">All downloads</a>
 			<a class="btn btn--ghost" href={site.github} rel="noopener">Star on GitHub</a>
-			<a class="btn btn--ghost" href="/download/">All downloads</a>
 		</div>
 	</div>
 </section>
