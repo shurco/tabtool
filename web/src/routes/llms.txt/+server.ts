@@ -53,7 +53,7 @@ are no formulas, styles, charts, or pivot tables.
 - You need SQL joins across several CSV files: TableTool by TablePlus has that.
 - You need a code-signed Windows installer or a Google Play listing: the Windows build is an unsigned zip and Android is a sideloaded APK.
 
-Last updated: 2026-11-15
+Last updated: 2026-11-20
 `;
 
 	return new Response(body, {

@@ -4,31 +4,53 @@
 	import Roadmap from '#lib/components/Roadmap.svelte';
 	import OpenSource from '#lib/components/OpenSource.svelte';
 	import StoreBadges from '#lib/components/StoreBadges.svelte';
+	import PlatformIcon from '#lib/components/PlatformIcon.svelte';
 	import { site } from '#lib/site';
+	import { checksumsURL, releaseFile, type OtherPlatform } from '#lib/downloads';
+	import { trackDownloadClick } from '#lib/track';
 
 	const title = 'Download TabTool — free CSV editor for Mac, iOS, Windows, Linux, Android';
 	const description =
 		'TabTool 1.0 is free on the App Store for macOS 14+ and iOS 17+, and on GitHub Releases for Windows, Linux, and Android. Download it, or build it from source.';
 
 	// File names follow .github/workflows/release.yml; see docs/release.md.
-	const releaseBuilds = [
+	const releaseBuilds: {
+		key: OtherPlatform;
+		name: string;
+		requirement: string;
+		body: string;
+		format: string;
+		files: { suffix: string; label: string }[];
+	}[] = [
 		{
+			key: 'windows',
 			name: 'Windows',
 			requirement: 'Windows 10 or 11',
 			body: 'The desktop editor with document windows, large-file mode, and export. Unzip it and run tabtool.exe from the extracted folder; nothing is installed. The archive is not code-signed, so SmartScreen may ask once before the first launch.',
-			files: ['windows-x86_64.zip', 'windows-aarch64.zip']
+			format: 'zip',
+			files: [
+				{ suffix: 'windows-x86_64.zip', label: 'x64' },
+				{ suffix: 'windows-aarch64.zip', label: 'ARM64' }
+			]
 		},
 		{
+			key: 'linux',
 			name: 'Linux',
 			requirement: 'glibc 2.35 or later',
 			body: 'The same desktop editor. Extract the archive and run tabtool from the extracted folder. Needs X11 or Wayland and fontconfig; built for Ubuntu 22.04, Debian 12, Fedora 36, and newer.',
-			files: ['linux-x86_64.tar.gz', 'linux-aarch64.tar.gz']
+			format: 'tar.gz',
+			files: [
+				{ suffix: 'linux-x86_64.tar.gz', label: 'x86_64' },
+				{ suffix: 'linux-aarch64.tar.gz', label: 'aarch64' }
+			]
 		},
 		{
+			key: 'android',
 			name: 'Android',
 			requirement: 'Android 8.0 or later',
 			body: 'A touch editor that opens files from the system picker, a file manager, or a share sheet. Install the signed APK; Android asks to allow installs from your browser first.',
-			files: ['android.apk']
+			format: 'signed APK, arm64 and x86_64',
+			files: [{ suffix: 'android.apk', label: 'APK' }]
 		}
 	];
 
@@ -67,7 +89,7 @@
 			Free · no account · no tracking · 2.5 MB on iOS, 2.7 MB on macOS
 		</p>
 		<div class="download">
-			<article class="card">
+			<article class="card" id="macos">
 				<p class="eyebrow">macOS</p>
 				<h2>macOS 14 or later</h2>
 				<p class="card__status mono">Status: available</p>
@@ -76,10 +98,9 @@
 					The release build is 2.7 MB, written in pure Swift.
 				</p>
 				<StoreBadges platforms={['mac']} placement="download" />
-				<a class="btn btn--ghost" href={site.github} rel="noopener">Build from source →</a>
 			</article>
 
-			<article class="card">
+			<article class="card" id="ios">
 				<p class="eyebrow">iOS and iPadOS</p>
 				<h2>iOS 17 or later</h2>
 				<p class="card__status mono">Status: available</p>
@@ -89,7 +110,6 @@
 					command.
 				</p>
 				<StoreBadges platforms={['ios']} placement="download" />
-				<a class="btn btn--ghost" href={`${site.github}#build`} rel="noopener">Build instructions →</a>
 			</article>
 		</div>
 	</div>
@@ -100,26 +120,33 @@
 		<p class="mono download__micro">Free · no account · no tracking · MIT · x64 and ARM</p>
 		<div class="download download--three">
 			{#each releaseBuilds as build (build.name)}
-				<article class="card">
+				<article class="card" id={build.key}>
 					<p class="eyebrow">{build.name}</p>
 					<h2>{build.requirement}</h2>
 					<p class="card__status mono">Status: available</p>
 					<p>{build.body}</p>
-					<ul class="card__files mono">
-						{#each build.files as file (file)}
-							<li>tabtool-&lt;version&gt;-{file}</li>
+					<p class="card__files mono">Version {site.releaseVersion} · {build.format}</p>
+					<div class="card__buttons">
+						{#each build.files as file (file.suffix)}
+							<a
+								class="btn btn--primary"
+								href={releaseFile(file.suffix)}
+								rel="noopener"
+								onclick={() => trackDownloadClick(build.key, 'download')}
+							>
+								<PlatformIcon platform={build.key} size={18} />
+								{file.label}
+							</a>
 						{/each}
-					</ul>
-					<a class="btn btn--primary" href={site.releases} rel="noopener">
-						Download from GitHub <span class="btn__arrow" aria-hidden="true">↗</span>
-					</a>
+					</div>
 				</article>
 			{/each}
 		</div>
 		<p class="download__note">
-			Every release lists a <span class="mono">SHA256SUMS</span> file. Check an archive with
+			Every release lists a <a class="mono" href={checksumsURL} rel="noopener">SHA256SUMS</a> file. Check an archive with
 			<code class="mono">sha256sum -c SHA256SUMS --ignore-missing</code> on Linux or
-			<span class="mono">Get-FileHash</span> in PowerShell.
+			<span class="mono">Get-FileHash</span> in PowerShell. Older versions and release notes are on
+			<a href={site.releases} rel="noopener">GitHub Releases</a>.
 		</p>
 	</div>
 </section>
@@ -129,7 +156,7 @@
 		<SectionHeader
 			index="PL"
 			kicker="Platforms"
-			title="Five platforms, two places to get them."
+			title="Five platforms, one click each."
 			lede="The Apple apps are written in Swift. The Windows, Linux, and Android apps are written in Rust and follow the Swift app."
 		/>
 		<Roadmap />
@@ -200,9 +227,15 @@
 	}
 
 	.card__files {
-		list-style: none;
 		font-size: 12px;
 		color: var(--muted);
+	}
+
+	.card__buttons {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		margin-top: auto;
 	}
 
 	.download__micro {
@@ -234,8 +267,7 @@
 		max-width: 46ch;
 	}
 
-	.card :global(.badges),
-	.card .btn--primary {
+	.card :global(.badges) {
 		margin-top: auto;
 	}
 

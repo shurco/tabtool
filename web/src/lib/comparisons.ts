@@ -31,7 +31,7 @@ export const comparisons: Comparison[] = [
 		name: 'TableTool by TablePlus',
 		vendor: 'TablePlus Inc.',
 		site: 'https://tabletool.io',
-		license: 'Closed source',
+		license: 'Proprietary, no public source',
 		price: '$29 perpetual for 2 Macs with 1 year of updates',
 		platforms: 'macOS 10.13 or later',
 		metaTitle: 'TabTool vs TableTool (TablePlus): CSV editors compared',
@@ -44,7 +44,7 @@ export const comparisons: Comparison[] = [
 			'TabTool takes the opposite approach. It is a single-purpose editor, MIT-licensed, with no query language and no paid tier. The parts that are hard to get right — format detection, structural editing, and multi-gigabyte files — are the parts it spends its complexity on.'
 		],
 		rows: [
-			{ label: 'License', tabtool: 'MIT, source available', them: 'Closed source' },
+			{ label: 'License', tabtool: 'MIT, source available', them: 'Proprietary, no public source' },
 			{ label: 'Price', tabtool: 'Free', them: '$29 for 2 Macs, 1 year of updates' },
 			{ label: 'Platforms', tabtool: platforms, them: 'macOS 10.13+' },
 			{ label: 'Phone and tablet apps', tabtool: 'iPhone, iPad, Android', them: 'No' },
@@ -89,14 +89,14 @@ export const comparisons: Comparison[] = [
 			'The original MIT-licensed Mac CSV editor, unchanged since 2017. TabTool is the same idea with a maintained codebase and an iOS app.',
 		intro: [
 			'Jakob Egger’s TableTool is the open-source CSV editor many Mac users still have in their Applications folder. It is MIT-licensed, under a megabyte, and free on the Mac App Store. It detects delimiters and encodings, edits cells, and converts between formats.',
-			'The last App Store release was 1.2.1 in July 2017, and the repository has been quiet since 2020. TabTool shares the name and the license, not the code: it is a new Swift 6 codebase with a separate CSV core, a large-file mode, and an iOS editor.'
+			'The last App Store release was 1.2.1 in July 2017, and the last commit in the repository is from November 2018. TabTool shares the name and the license, not the code: it is a new Swift 6 codebase with a separate CSV core, a large-file mode, and an iOS editor.'
 		],
 		rows: [
 			{ label: 'License', tabtool: 'MIT', them: 'MIT' },
 			{ label: 'Price', tabtool: 'Free', them: 'Free' },
 			{ label: 'Platforms', tabtool: platforms, them: 'macOS 10.8+' },
-			{ label: 'Last release', tabtool: '1.0, November 2026', them: '1.2.1, July 2017' },
-			{ label: 'Last commit', tabtool: 'Active', them: 'April 2020' },
+			{ label: 'Last release', tabtool: '1.0.1, November 2026', them: '1.2.1, July 2017' },
+			{ label: 'Last commit', tabtool: 'Active', them: 'November 2018' },
 			{ label: 'Large-file mode', tabtool: 'Memory-mapped, background index, streamed save', them: 'Not documented' },
 			{ label: 'Filters and sorting', tabtool: 'Sort on both platforms, filters on iOS', them: 'Not documented' },
 			{ label: 'Phone and tablet apps', tabtool: 'iPhone, iPad, Android', them: 'No' },
@@ -147,7 +147,7 @@ export const comparisons: Comparison[] = [
 			{ label: 'Pivot tables and statistics', tabtool: 'No', them: 'Yes' },
 			{ label: 'JSON/XML import and export', tabtool: 'Export only', them: 'Yes' },
 			{ label: 'Large files', tabtool: '5 GiB tested, 2.7 s index, ~91 MB RAM', them: 'Read-only mode; vendor claims a small footprint' },
-			{ label: 'Regex find and replace', tabtool: 'No', them: 'Yes' },
+			{ label: 'Regex find and replace', tabtool: 'No', them: 'Yes; some features need a paid license' },
 			{ label: 'Editing and undo', tabtool: 'Full structural editing, undo/redo', them: 'Yes' },
 			{ label: 'Privacy', tabtool: 'No network entitlement, no analytics', them: 'Local processing, no cloud' }
 		],

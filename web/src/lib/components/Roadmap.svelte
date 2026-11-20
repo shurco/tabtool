@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { platforms } from '#lib/content';
 	import { site } from '#lib/site';
+	import StoreBadges from '#lib/components/StoreBadges.svelte';
 </script>
 
 <ul class="roadmap">
@@ -8,8 +9,8 @@
 		<li class="roadmap__row">
 			<span class="roadmap__name">{platform.name}</span>
 			<span class="roadmap__req mono">{platform.requirement}</span>
-			<span class="roadmap__status mono">
-				<span class="roadmap__dot" aria-hidden="true"></span>{platform.source}
+			<span class="roadmap__get">
+				<StoreBadges platforms={[platform.key]} placement="platforms" size="sm" />
 			</span>
 			<span class="roadmap__note">{platform.note}</span>
 		</li>
@@ -32,7 +33,7 @@
 		display: grid;
 		grid-template-columns: minmax(120px, 0.7fr) minmax(150px, 1fr) 170px minmax(200px, 1.6fr);
 		gap: 16px;
-		align-items: baseline;
+		align-items: center;
 		padding-block: 18px;
 		border-bottom: 1px solid var(--line);
 	}
@@ -45,22 +46,6 @@
 
 	.roadmap__req {
 		color: var(--muted);
-	}
-
-	.roadmap__status {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 11px;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-	}
-
-	.roadmap__dot {
-		width: 7px;
-		height: 7px;
-		border-radius: 50%;
-		background: var(--accent);
 	}
 
 	.roadmap__note {

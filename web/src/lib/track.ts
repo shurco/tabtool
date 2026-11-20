@@ -1,7 +1,14 @@
 import { site } from '#lib/site';
 
 export type StorePlatform = 'mac' | 'ios';
-export type StorePlacement = 'hero' | 'cta' | 'download' | 'header-bar' | 'compare' | 'about';
+export type StorePlacement =
+	| 'hero'
+	| 'cta'
+	| 'download'
+	| 'header-bar'
+	| 'compare'
+	| 'about'
+	| 'platforms';
 
 /// The App Store campaign link for one placement.
 ///
@@ -30,4 +37,10 @@ export function appStoreURL(
 export function trackStoreClick(platform: StorePlatform, placement: StorePlacement): void {
 	if (typeof window === 'undefined') return;
 	window.gtag?.('event', 'app_store_click', { platform, placement });
+}
+
+/// Records a click on a Windows, Linux, or Android button in GA4.
+export function trackDownloadClick(platform: string, placement: StorePlacement): void {
+	if (typeof window === 'undefined') return;
+	window.gtag?.('event', 'download_click', { platform, placement });
 }

@@ -13,7 +13,6 @@
 	import StoreBadges from '#lib/components/StoreBadges.svelte';
 	import { site } from '#lib/site';
 	import { faqs } from '#lib/content';
-	import { appStoreURL, trackStoreClick } from '#lib/track';
 
 	const jsonLd = [
 		{
@@ -28,7 +27,7 @@
 			license: 'https://opensource.org/license/mit',
 			downloadUrl: `${site.url}/download/`,
 			installUrl: site.appStore.ios,
-			softwareVersion: '1.0.0',
+			softwareVersion: site.releaseVersion,
 			fileFormat: ['text/csv', 'text/tab-separated-values', 'text/plain'],
 			screenshot: `${site.url}/img/app-grid.webp`,
 			sameAs: [site.github, site.appStore.ios, site.releases],
@@ -73,20 +72,6 @@
 				2.7 seconds, keeps them in about 90 MB of memory, and never sends your data anywhere.
 			</p>
 			<StoreBadges placement="hero" />
-			<p class="hero__other mono">
-				Windows, Linux, Android → <a href={site.releases} rel="noopener">GitHub Releases</a>
-			</p>
-			<div class="hero__actions">
-				<a
-					class="btn btn--primary"
-					href={appStoreURL('ios')}
-					onclick={() => trackStoreClick('ios', 'hero')}
-				>
-					Download free <span class="btn__arrow" aria-hidden="true">↗</span>
-				</a>
-				<a class="btn btn--ghost" href={site.github} rel="noopener">Star on GitHub</a>
-				<a class="btn btn--ghost" href="#performance">Watch it run</a>
-			</div>
 			<p class="hero__micro mono">Free · no account · no tracking · offline</p>
 		</div>
 
@@ -236,18 +221,6 @@
 	.hero__lede {
 		margin-top: 24px;
 		max-width: 46ch;
-	}
-
-	.hero__actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 10px;
-		margin-top: 16px;
-	}
-
-	.hero__other {
-		margin-top: 14px;
-		color: var(--ink-soft);
 	}
 
 	.hero__micro {
