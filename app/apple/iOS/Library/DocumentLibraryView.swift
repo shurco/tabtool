@@ -49,16 +49,14 @@ struct DocumentLibraryView: View {
                       allowsMultipleSelection: false) { result in
             switch result {
             case .success(let urls):
-                guard let url = urls.first else { return }
-                do {
-                    let imported = try library.importDocument(from: url)
-                    open(imported)
-                } catch {
-                    errorMessage = error.localizedDescription
-                }
+                if let url = urls.first { importAndOpen(url) }
             case .failure(let error):
                 errorMessage = error.localizedDescription
             }
+        }
+        // "Open With" and share-sheet hand-offs from Files and other apps.
+        .onOpenURL { url in
+            if url.isFileURL { importAndOpen(url) }
         }
         .confirmationDialog(
             "Delete Document?",
@@ -161,6 +159,14 @@ struct DocumentLibraryView: View {
             } catch {
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    private func importAndOpen(_ url: URL) {
+        do {
+            open(try library.importDocument(from: url))
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

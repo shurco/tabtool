@@ -82,3 +82,17 @@ import Testing
         #expect(library.files.isEmpty)
     }
 }
+
+/// The app must declare the table types, or iOS never offers it in "Open With".
+@Suite struct DocumentTypeDeclarationTests {
+    @Test func infoPlistDeclaresTheTableTypes() {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let types = info["CFBundleDocumentTypes"] as? [[String: Any]] ?? []
+        let declared = Set(types.flatMap { $0["LSItemContentTypes"] as? [String] ?? [] })
+
+        #expect(declared.isSuperset(of: ["public.comma-separated-values-text",
+                                         "public.tab-separated-values-text",
+                                         "public.plain-text"]))
+        #expect(info["LSSupportsOpeningDocumentsInPlace"] as? Bool == true)
+    }
+}
