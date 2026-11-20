@@ -61,6 +61,7 @@ and it is the signal the store uses to show the app to more people.
 The iOS app opens with a Documents screen and then a touch-first editor on iPhone and iPad:
 
 - Documents lists the CSV, TSV, and text files in the app's own folder, newest first. The plus menu creates a new document (Untitled, Untitled 2, …) or imports a file; a swipe deletes with confirmation, and the context menu renames.
+- TabTool appears in "Open With" and the share sheet for CSV, TSV, and plain text files (Files and other apps). Opening a file copies it into Documents under a free name and opens the copy; the original is not changed.
 - The editor saves by itself: 0.8 s after a change, when leaving the editor, and when the app goes to the background. A save blocked by the encoding or quote rules is explained by the banner above the status line.
 
 - The first tap selects a cell and its row; a second tap on the selected cell opens the editor. The editor bar above the keyboard has Previous Cell, Next Cell, and Done.
