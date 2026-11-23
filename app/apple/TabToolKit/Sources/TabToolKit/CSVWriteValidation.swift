@@ -38,8 +38,8 @@ public enum CSVWriteValidation {
         guard configuration.quoteCharacter.isEmpty else { return false }
 
         // A final empty single-column row contributes no characters after the
-        // preceding row separator, so the output ends with LF and reparsing
-        // drops that row. A lone empty cell is fine: empty output parses back
+        // preceding row separator, so the output ends with a row terminator
+        // and reparsing drops that row. A lone empty cell is fine: empty output parses back
         // to one empty row.
         if table.columns.count == 1,
            let lastCell = table.columns.first?.cells.last,

@@ -164,10 +164,13 @@ import UniformTypeIdentifiers
     }
 
     @Test @MainActor func untitledDocumentSavesLFWithoutTrailingLineBreak() async throws {
-        let doc = CSVDocument(data: Data("a,b\nc,d".utf8), fileURL: nil,
-                              configuration: Self.crlfConfiguration)
+        let doc = CSVDocument(newDocumentConfiguration: { CSVConfiguration() })
         await doc.load()
+        doc.setCell("a", row: 0, column: 0)
+        doc.addRowBelowSelection()
+        doc.setCell("b", row: 1, column: 0)
         let text = String(decoding: try doc.encodedData(), as: UTF8.self)
+        #expect(text.contains("\n"))
         #expect(!text.contains("\r"))
         #expect(!text.hasSuffix("\n"))
     }
