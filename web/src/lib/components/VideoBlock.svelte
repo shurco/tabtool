@@ -1,5 +1,12 @@
 <script lang="ts">
-	let { src = '/media/tabtool-demo.mp4', poster = '/media/tabtool-demo-poster.jpg' } = $props();
+	let {
+		src = '/media/tabtool-demo.mp4',
+		poster = '/media/tabtool-demo-poster.jpg',
+		width = 1400,
+		height = 644,
+		label = 'Screen recording of TabTool on iPhone opening and scrolling an emoji CSV',
+		caption = 'Unedited capture · iPhone build · large-file mode · 1,000,000 rows × 12 columns · 2026-11-08'
+	} = $props();
 </script>
 
 <figure class="demo">
@@ -8,10 +15,10 @@
 			controls
 			preload="none"
 			poster={poster}
-			width="1400"
-			height="644"
+			{width}
+			{height}
 			playsinline
-			aria-label="Screen recording of TabTool on iPhone opening and scrolling an emoji CSV"
+			aria-label={label}
 		>
 			<source {src} type="video/mp4" />
 			<p>
@@ -21,9 +28,7 @@
 	</div>
 	<figcaption class="demo__caption">
 		<span class="demo__dot" aria-hidden="true"></span>
-		<span class="mono"
-			>Unedited capture · iPhone build · large-file mode · 1,000,000 rows × 12 columns · 2026-11-08</span
-		>
+		<span class="mono">{caption}</span>
 	</figcaption>
 </figure>
 

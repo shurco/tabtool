@@ -213,6 +213,10 @@ Measured and left alone (already cheap or inherent): parsing (186 ms / 435 ms / 
 
 ### Large files
 
+![TabTool for macOS opening a 5 GiB CSV with 89,158,916 rows, jumping to the last row with ⌘↓, fixing one price, and saving](docs/media/large-file-demo.gif)
+
+Real-time capture of the Release app on a 5 GiB CSV with short unquoted rows (89,158,916 rows × 8 columns, more rows per GiB than the benchmark files below): open, indexing in the status bar, `⌘↓` to the last row, one cell edited, Save with progress. The same clip is on the [large CSV guide](https://tabtool.shurco.app/guides/csv-too-large-for-excel-mac/).
+
 `./scripts/bench-large 5` (release build, Apple M4 Pro, 24 GB, APFS SSD, file in the page cache) on a generated 5.00 GiB CSV with 68.2 million rows x 8 columns (quoted text, a multiline field every 1000 rows). Footprint is the process's physical footprint, the number Activity Monitor shows; the benchmark process starts at 15 MiB.
 
 | Metric | Value |

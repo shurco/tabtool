@@ -1,4 +1,5 @@
 import type { Guide } from '../guides';
+import { largeFileDemo } from './large-file-demo';
 
 export const guide: Guide = {
 	slug: 'csv-too-big-for-numbers',
@@ -8,13 +9,7 @@ export const guide: Guide = {
 		'Apple states 1 million rows and 1,000 columns per table for Excel files in Numbers. Options for a larger CSV, with commands you can copy.',
 	checked: '23 November 2026',
 	lede: 'Apple states a Numbers table size of 1 million rows and 1,000 columns for Excel files. Here is what to do with a CSV that has more, and what each way costs.',
-	image: {
-		src: '/img/app-large.webp',
-		srcset: '/img/app-large-1200.webp 1200w, /img/app-large.webp 2400w',
-		alt: 'TabTool for macOS in large-file mode showing a 1,000,000-row emoji CSV.',
-		width: 2400,
-		height: 1500
-	},
+	video: largeFileDemo,
 	facts: [
 		{
 			label: "Apple's stated table size",

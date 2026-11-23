@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Seo from '#lib/components/Seo.svelte';
 	import StoreBadges from '#lib/components/StoreBadges.svelte';
+	import VideoBlock from '#lib/components/VideoBlock.svelte';
 	import { site } from '#lib/site';
 
 	let { data } = $props();
@@ -45,7 +46,11 @@
 			<p class="lede guide-head__lede">{item.lede}</p>
 		</header>
 
-		{#if item.image}
+		{#if item.video}
+			<div class="guide-video">
+				<VideoBlock {...item.video} />
+			</div>
+		{:else if item.image}
 			<img
 				class="guide-shot"
 				src={item.image.src}
@@ -178,6 +183,10 @@
 		height: auto;
 		margin-top: 36px;
 		border: 1px solid var(--line);
+	}
+
+	.guide-video {
+		margin-top: 36px;
 	}
 
 	.h3 {

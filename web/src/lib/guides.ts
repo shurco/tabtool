@@ -23,6 +23,7 @@ export type Guide = {
 	checked: string;
 	lede: string;
 	image?: { src: string; srcset: string; alt: string; width: number; height: number };
+	video?: { src: string; poster: string; width: number; height: number; label: string; caption: string };
 	facts: { label: string; value: string }[];
 	problem: string[];
 	options: GuideOption[];
