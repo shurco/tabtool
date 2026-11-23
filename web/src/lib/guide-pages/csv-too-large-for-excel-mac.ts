@@ -1,4 +1,5 @@
 import type { Guide } from '../guides';
+import { largeFileDemo } from './large-file-demo';
 
 export const guide: Guide = {
 	slug: 'csv-too-large-for-excel-mac',
@@ -8,13 +9,7 @@ export const guide: Guide = {
 		'Excel for Mac stops at 1,048,576 rows. Split, filter, query, or open the whole CSV with commands you can copy, and the limits of each way.',
 	checked: '23 November 2026',
 	lede: 'Excel for Mac stops at 1,048,576 rows per worksheet. Here is what to do with a CSV that has more, with every option and what it costs.',
-	image: {
-		src: '/img/app-large.webp',
-		srcset: '/img/app-large-1200.webp 1200w, /img/app-large.webp 2400w',
-		alt: 'TabTool for macOS in large-file mode showing a 1,000,000-row emoji CSV.',
-		width: 2400,
-		height: 1500
-	},
+	video: largeFileDemo,
 	facts: [
 		{ label: 'Rows per worksheet', value: '1,048,576' },
 		{ label: 'Columns per worksheet', value: '16,384' },
