@@ -85,6 +85,9 @@ const PORTED: &[SwiftFile] = &[
             "retryingAFailedLoadReadsFromFileURL",
             "retryingAFailedLoadReportsAnUnreadableFile",
             "bomIsPreservedOnSave",
+            "crlfWithTrailingLineBreakRoundTripsOnSave",
+            "cellEditKeepsCRLFAndTrailingLineBreak",
+            "untitledDocumentSavesLFWithoutTrailingLineBreak",
             "needsAttentionSnapshotKeepsThrowingTheTypedError",
         ],
         rust: &[
@@ -123,6 +126,9 @@ const PORTED: &[SwiftFile] = &[
                 path: "tests/saving.rs",
                 tests: &[
                     "save_preserves_the_utf8_bom_of_the_loaded_file",
+                    "save_round_trips_crlf_and_the_trailing_line_break",
+                    "a_cell_edit_keeps_crlf_and_the_trailing_line_break",
+                    "an_untitled_document_saves_lf_without_a_trailing_line_break",
                     "ambiguous_no_quote_output_blocks_save_with_the_typed_error",
                     "unencodable_text_blocks_save_with_the_typed_error",
                     "a_read_failed_document_cannot_save",
@@ -253,6 +259,8 @@ const PORTED: &[SwiftFile] = &[
             "deletingEveryColumnKeepsOneColumn",
             "deleteSelectionKeepsOneColumn",
             "deletingTheOnlyColumnKeepsIt",
+            "formatChangeRereadPicksUpLineEnding",
+            "revertPicksUpLineEnding",
         ],
         rust: &[
             RustTarget {
@@ -271,7 +279,12 @@ const PORTED: &[SwiftFile] = &[
                     "detect_format_from_disk_reads_without_applying",
                     "overlapping_reread_is_rejected",
                     "a_stale_candidate_is_rejected_after_a_mutation",
+                    "a_format_reread_picks_up_the_files_line_ending",
                 ],
+            },
+            RustTarget {
+                path: "tests/revert.rs",
+                tests: &["revert_picks_up_the_files_line_ending"],
             },
             RustTarget {
                 path: "tests/undo.rs",

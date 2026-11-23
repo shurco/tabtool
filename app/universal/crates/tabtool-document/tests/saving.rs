@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use tabtool_core::{CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, Encoding};
+use tabtool_core::{CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, Encoding, LineEnding};
 use tabtool_document::test_support::{MemoryStorage, loaded};
 use tabtool_document::{Document, DocumentError, DocumentPhase, ParsedTable, StdStorage};
 
@@ -15,6 +15,14 @@ fn loaded_bytes(csv: &[u8], configuration: CsvConfiguration) -> Document {
         .load_from_bytes(csv, None, Some(configuration), false)
         .expect("load the fixture");
     document
+}
+
+/// A format without quoting, so the written bytes equal the plain fixture.
+fn unquoted() -> CsvConfiguration {
+    CsvConfiguration {
+        quote_character: String::new(),
+        ..CsvConfiguration::default()
+    }
 }
 
 fn windows_1252() -> CsvConfiguration {
@@ -104,6 +112,40 @@ fn save_preserves_the_utf8_bom_of_the_loaded_file() {
     document.save(&storage).expect("save the document");
 
     assert!(storage.bytes().starts_with(&[0xEF, 0xBB, 0xBF]));
+}
+
+#[test]
+fn save_round_trips_crlf_and_the_trailing_line_break() {
+    let storage = MemoryStorage::new(b"a,b\r\nc,d\r\n");
+    let mut document = loaded(&storage, unquoted());
+
+    document.save(&storage).expect("save the document");
+
+    assert_eq!(storage.bytes(), b"a,b\r\nc,d\r\n");
+}
+
+#[test]
+fn a_cell_edit_keeps_crlf_and_the_trailing_line_break() {
+    let storage = MemoryStorage::new(b"a,b\r\nc,d\r\n");
+    let mut document = loaded(&storage, unquoted());
+
+    document.set_cell(0, 0, "x");
+
+    assert_eq!(document.encoded_data().expect("encode"), b"x,b\r\nc,d\r\n");
+}
+
+#[test]
+fn an_untitled_document_saves_lf_without_a_trailing_line_break() {
+    let storage = MemoryStorage::new(b"a,b\r\nc,d\r\n");
+    let mut document = loaded(&storage, unquoted());
+
+    document
+        .new_document(unquoted())
+        .expect("replace with a new document");
+
+    let text = String::from_utf8(document.encoded_data().expect("encode")).expect("utf8");
+    assert!(!text.contains('\r'));
+    assert!(!text.ends_with('\n'));
 }
 
 #[test]
@@ -382,9 +424,9 @@ fn save_after_save_as_targets_the_new_path() {
     assert_eq!(document.file_path(), Some(second.as_path()));
     assert_eq!(
         std::fs::read(&second).expect("the new file"),
-        b"\"b\"".to_vec()
+        b"\"b\"\n".to_vec()
     );
-    assert_eq!(std::fs::read(&first).expect("the old file"), b"\"a\"");
+    assert_eq!(std::fs::read(&first).expect("the old file"), b"\"a\"\n");
 }
 
 #[test]
@@ -405,7 +447,7 @@ fn undoing_an_edit_after_a_save_keeps_the_document_dirty() {
 
     // Dirty is revision-based, not a content comparison with the file.
     assert!(document.is_dirty());
-    assert_eq!(std::fs::read(&path).expect("the saved file"), b"\"a\"");
+    assert_eq!(std::fs::read(&path).expect("the saved file"), b"\"a\"\n");
 }
 
 #[test]
@@ -431,6 +473,7 @@ fn save_is_refused_while_a_reread_is_in_flight() {
         table: CsvTable::from_rows(vec![vec!["x".to_string()]], None, 1),
         configuration,
         had_utf8_bom: false,
+        line_ending: LineEnding::default(),
         expected_revision: document.revision(),
     });
     document.end_reread();

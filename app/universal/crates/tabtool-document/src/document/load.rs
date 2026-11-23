@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use tabtool_core::{CsvConfiguration, CsvTable};
+use tabtool_core::{CsvConfiguration, CsvTable, LineEnding};
 
 use crate::Document;
 use crate::filter_model::RowFilterModel;
@@ -31,6 +31,7 @@ impl Document {
         self.large_intent = false;
         self.configuration = configuration;
         self.had_utf8_bom = false;
+        self.line_ending = LineEnding::default();
         self.file_path = None;
         self.selection = GridSelection::default();
         self.active_sort = None;
@@ -78,6 +79,7 @@ impl Document {
                 self.table = Some(Arc::new(outcome.table));
                 self.configuration = outcome.configuration;
                 self.had_utf8_bom = outcome.had_utf8_bom;
+                self.line_ending = outcome.line_ending;
                 self.phase = DocumentPhase::Ready;
                 self.bump_revision();
                 // Loading content is not an unsaved edit.

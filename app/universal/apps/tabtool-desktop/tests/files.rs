@@ -370,7 +370,7 @@ fn save_uses_the_current_path_without_a_panel() {
     assert!(!document.is_dirty());
     assert_eq!(
         std::fs::read_to_string(&path).expect("the saved file is readable"),
-        "\"edited\",\"b\"\n\"1\",\"2\""
+        "\"edited\",\"b\"\n\"1\",\"2\"\n"
     );
 }
 
@@ -767,7 +767,7 @@ fn replace_with_save_writes_the_old_document_then_opens_the_new_one() {
 
     assert_eq!(
         std::fs::read_to_string(&old).expect("the old file is readable"),
-        "\"edited\",\"b\"\n\"1\",\"2\""
+        "\"edited\",\"b\"\n\"1\",\"2\"\n"
     );
     assert_eq!(opened.document.file_path(), Some(new.as_path()));
     assert_eq!(

@@ -234,7 +234,7 @@ fn answering_save_on_the_open_prompt_saves_then_opens() {
     assert_eq!(window.title(), "new.csv");
     assert_eq!(
         std::fs::read_to_string(&old).expect("the old file is readable"),
-        "\"edited\",\"b\"\n\"1\",\"2\""
+        "\"edited\",\"b\"\n\"1\",\"2\"\n"
     );
     assert!(window.take_opened_paths().contains(&new));
 }
