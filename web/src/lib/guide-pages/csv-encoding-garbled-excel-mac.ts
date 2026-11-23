@@ -31,7 +31,7 @@ export const guide: Guide = {
 	],
 	problem: [
 		'A CSV is bytes. The encoding says which bytes mean which character. If the app guesses a different encoding than the one the file was written in, accented letters and symbols turn into other characters. The data is not changed on disk.',
-		'Microsoft says Excel opens a UTF-8 CSV normally if it was saved with a BOM, and gives other ways to open it if not. A UTF-8 file without a BOM is the usual case behind garbled text. A file in a legacy encoding that Excel does not expect gives the same symptom.'
+		'Microsoft says Excel opens a UTF-8 CSV normally if it was saved with a BOM, and gives other ways to open it if not. A UTF-8 file without a BOM is a common cause of garbled text. A file in a legacy encoding that Excel does not expect gives the same symptom.'
 	],
 	options: [
 		{
@@ -82,7 +82,7 @@ export const guide: Guide = {
 			summary:
 				'A free, MIT-licensed CSV editor. It detects the encoding on open from UTF-8, Windows CP1252, MacRoman, and GBK, and shows it in the format bar. If the text looks wrong, choose another encoding there: TabTool re-reads the file from disk with it, and asks before it drops unsaved edits.',
 			good: 'You see the result at once, for any of the supported encodings, including Windows-1250 and Cyrillic, which detection does not try.',
-			cost: 'Saving keeps the encoding and the UTF-8 BOM the file was opened with. Export can write another encoding, but never adds a UTF-8 BOM to a file that had none. So TabTool will not fix an Excel problem that needs a BOM; use the BOM command above for that.',
+			cost: 'Saving keeps the encoding and the UTF-8 BOM the file was opened with. Export can write another encoding, but Export never writes a UTF-8 BOM, even if the file had one. So TabTool will not fix an Excel problem that needs a BOM; use the BOM command above for that.',
 			link: { label: 'TabTool CSV format and detection', url: 'https://github.com/shurco/tabtool/blob/HEAD/docs/csv-format.md' }
 		}
 	],

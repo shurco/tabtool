@@ -6,7 +6,7 @@
 
 	const title = 'CSV guides for Mac and beyond';
 	const description =
-		'Short, checked guides for problems with CSV files: files too large for Excel, with commands you can copy and the limits of each option.';
+		'Checked guides for CSV problems on Mac: large files, Numbers limits, semicolon files, garbled encoding, and Shopify product CSVs.';
 
 	const jsonLd = [
 		{

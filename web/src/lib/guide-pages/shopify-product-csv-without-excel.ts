@@ -11,7 +11,7 @@ export const guide: Guide = {
 	image: {
 		src: '/img/app-grid.webp',
 		srcset: '/img/app-grid-1200.webp 1200w, /img/app-grid.webp 2400w',
-		alt: 'TabTool for macOS showing a CSV where every cell is kept as text.',
+		alt: 'TabTool for macOS showing a CSV in the grid editor.',
 		width: 2400,
 		height: 1500
 	},

@@ -19,15 +19,11 @@ export const guide: Guide = {
 		{
 			label: 'Why semicolons',
 			value:
-				'Excel writes CSV with the list separator of the system region. A community answer from a Microsoft MVP says that where a comma is the decimal mark, the list separator is a semicolon.'
-		},
-		{
-			label: 'Excel, open directly',
-			value: "Microsoft's page offers no delimiter choice when you open a .csv file directly."
+				'A community answer from a Microsoft MVP says Excel uses the list separator of the system region as the delimiter, and that where a comma is the decimal mark, the list separator is a semicolon.'
 		},
 		{
 			label: 'Excel, import',
-			value: 'Data > From Text/CSV lets you choose the delimiter from a list and shows a preview.'
+			value: 'On Excel for Mac, Data > From Text (Legacy) opens the Text Import Wizard, where you choose Delimited, pick the delimiter, and check a preview.'
 		}
 	],
 	problem: [
@@ -38,12 +34,12 @@ export const guide: Guide = {
 		{
 			name: 'Excel: import with a chosen delimiter',
 			summary:
-				'On the Data tab, in Get & Transform Data, choose From Text/CSV, then Import. Pick the delimiter from the list and check the preview before loading.',
+				'Choose Data > From Text (Legacy) and select the file. In the Text Import Wizard, choose Delimited, then under Delimiters pick the separator, or tick Other and type it. Check the Preview of selected data, then Finish.',
 			good: 'Stays in Excel, and the preview shows the result before anything loads.',
-			cost: 'Microsoft documents these steps without Mac-specific wording, so menus may differ by Excel version. The file is converted into a worksheet, with its row limit.',
+			cost: 'The file is loaded into a worksheet, with its row limit.',
 			link: {
-				label: 'Microsoft: Import or export text (.txt or .csv) files',
-				url: 'https://support.microsoft.com/en-us/office/import-or-export-text-txt-or-csv-files-5250ac4c-663c-47ce-937b-339e391393ba'
+				label: 'Microsoft: Import and shape data in Excel for Mac',
+				url: 'https://support.microsoft.com/en-us/office/import-and-shape-data-in-excel-for-mac-power-query-7b2f337d-e7d2-4fdf-bf00-3dfbb1e5e9c5'
 			}
 		},
 		{
@@ -87,14 +83,14 @@ export const guide: Guide = {
 			summary:
 				'A free, MIT-licensed CSV editor. It reads and writes comma, semicolon, tab, or pipe separated files, detects the separator when you open a file, and shows it in the format bar. Choosing another separator re-reads the file.',
 			good: 'No import step. Export can write a different delimiter, encoding, quote style, and decimal mark. Saving keeps the file as it was opened.',
-			cost: 'No formulas, styles, or charts. Changing the format of an open file asks before it discards unsaved edits.',
+			cost: 'No formulas, styles, or charts. Changing the format of an open file asks before it discards unsaved edits. Export writes no BOM and uses LF line endings.',
 			link: { label: 'TabTool format detection', url: 'https://github.com/shurco/tabtool/blob/HEAD/docs/csv-format.md' }
 		}
 	],
 	sources: [
 		{
-			label: 'Microsoft: Import or export text (.txt or .csv) files',
-			url: 'https://support.microsoft.com/en-us/office/import-or-export-text-txt-or-csv-files-5250ac4c-663c-47ce-937b-339e391393ba'
+			label: 'Microsoft: Import and shape data in Excel for Mac',
+			url: 'https://support.microsoft.com/en-us/office/import-and-shape-data-in-excel-for-mac-power-query-7b2f337d-e7d2-4fdf-bf00-3dfbb1e5e9c5'
 		},
 		{
 			label: 'Microsoft Q&A: saving as comma delimited ends up as semicolon (community answers)',
