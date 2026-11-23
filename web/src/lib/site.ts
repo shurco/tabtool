@@ -1,3 +1,5 @@
+import { guides } from './guides';
+
 export const site = {
 	name: 'TabTool',
 	url: 'https://tabtool.shurco.app',
@@ -34,7 +36,7 @@ export const footerNav = {
 		{ href: '/feedback/', label: 'Feedback' },
 		{ href: '/press/', label: 'Press kit' }
 	],
-	guides: [{ href: '/guides/csv-too-large-for-excel-mac/', label: 'CSV too large for Excel on Mac' }],
+	guides: guides.map((guide) => ({ href: `/guides/${guide.slug}/`, label: guide.title })),
 	legal: [
 		{ href: '/privacy/', label: 'Privacy Policy' },
 		{ href: '/terms/', label: 'User Agreement' }
