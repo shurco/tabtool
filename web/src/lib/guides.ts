@@ -1,3 +1,4 @@
+import { guide as semicolonCsvMac } from './guide-pages/semicolon-csv-mac';
 import { guide as csvTooBigForNumbers } from './guide-pages/csv-too-big-for-numbers';
 import { guide as csvTooLargeForExcelMac } from './guide-pages/csv-too-large-for-excel-mac';
 
@@ -27,6 +28,6 @@ export type Guide = {
 	sources: GuideLink[];
 };
 
-export const guides: Guide[] = [csvTooLargeForExcelMac, csvTooBigForNumbers];
+export const guides: Guide[] = [csvTooLargeForExcelMac, csvTooBigForNumbers, semicolonCsvMac];
 
 export const guideBySlug = (slug: string) => guides.find((guide) => guide.slug === slug);
