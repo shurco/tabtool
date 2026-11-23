@@ -35,6 +35,7 @@ Malformed quoted input such as `"1","""` is rejected by quoted configurations wi
 - A quote in an unquoted field is an error.
 - An unterminated quote/escape at the end is an error.
 - A UTF-8 BOM is stripped from the text and remembered; it is restored when saving as UTF-8.
+- The line ending (LF, CRLF or CR) is remembered and used when saving.
 - Invalid bytes for the selected encoding are a decoding error.
 
 Typed errors: `cannotDecodeData`, `malformedQuotedField`, `quoteInUnquotedField`, `unencodableText`, `ambiguousOutput`.
@@ -43,7 +44,9 @@ Typed errors: `cannotDecodeData`, `malformedQuotedField`, `quoteInUnquotedField`
 
 - With quotes enabled, every field is quoted.
 - A quote is doubled or escaped with `\`.
-- Rows are joined with `\n`; there is no trailing newline.
+- Rows are joined with the source file's line ending: the first LF, CRLF or CR found outside quotes. NEL, U+2028 and U+2029 break rows when reading but are never used for detection. With no terminator found, LF is used.
+- A trailing line break is written after the last row when the source ended with one. New documents, export and clipboard copy use LF and no trailing line break.
+- Line breaks inside quoted cells are cell text and are kept as they are. A file with mixed line endings is saved with the first one for every row.
 - The header is written first if it exists in the document.
 - Column order is the visual table order.
 - Text is not normalized: `001,50`, `+5`, `1e3` remain text.
