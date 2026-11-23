@@ -23,7 +23,7 @@ export const guide: Guide = {
 		{ label: 'CSV-specific limit', value: 'Apple gives none on that page.' }
 	],
 	problem: [
-		'Apple documents a table size of 1 million rows and 1,000 columns for Excel files in Numbers. It does not say what happens with a CSV that has more, so a large CSV may not open fully or may be slow; Apple does not state either.',
+		'Apple documents a table size of 1 million rows and 1,000 columns for Excel files in Numbers. It does not say what happens with a CSV that has more.',
 		'The size is about the table, not the file size or your Mac. Every fix below either works on a smaller piece of the file or avoids a spreadsheet.'
 	],
 	options: [
@@ -60,7 +60,7 @@ duckdb -c "COPY (SELECT * FROM 'big.csv' WHERE country = 'Germany') TO 'germany.
 		{
 			name: 'Excel for Mac',
 			summary:
-				'Excel for Mac allows 1,048,576 rows and 16,384 columns per worksheet. That is more columns than Numbers, and a little more rows.',
+				'Excel for Mac allows 1,048,576 rows and 16,384 columns per worksheet. That is more than the size Apple states for Excel files: 1,001 to 16,384 columns, and up to 48,576 more rows.',
 			good: 'Helps with a wide file (1,001 to 16,384 columns) or one just over 1 million rows.',
 			cost: 'It does not help with a file that has far more than 1,048,576 rows. The Excel guide covers that case.',
 			link: { label: 'CSV too large for Excel on Mac', url: '/guides/csv-too-large-for-excel-mac/' }

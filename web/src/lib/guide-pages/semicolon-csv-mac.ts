@@ -5,9 +5,9 @@ export const guide: Guide = {
 	title: 'Open a semicolon-separated CSV on Mac',
 	metaTitle: 'Open a semicolon-separated CSV on Mac: Excel, Numbers',
 	metaDescription:
-		'A CSV with semicolons shows up as one column. Why it happens, how to pick the separator in Excel and Numbers, and how to convert it to commas.',
+		'A CSV with semicolons may show up in one column. Why it happens, how to pick the separator in Excel and Numbers, and how to convert it to commas.',
 	checked: '23 November 2026',
-	lede: 'A CSV that uses semicolons often opens as a single column of text. The file is fine: the app just assumed a comma. Here is why it happens and how to fix it.',
+	lede: 'A CSV that uses semicolons may open with all its text in one column. The file is fine: the app may have assumed a comma. Here is why it happens and how to fix it.',
 	image: {
 		src: '/img/app-grid.webp',
 		srcset: '/img/app-grid-1200.webp 1200w, /img/app-grid.webp 2400w',
@@ -31,8 +31,8 @@ export const guide: Guide = {
 		}
 	],
 	problem: [
-		'A CSV is a text file, and the character between fields is a convention, not a rule. Files exported from Excel on a system where the comma is the decimal mark commonly use a semicolon, so a value like 3,5 can stay in one piece.',
-		'An app that expects commas then reads each line as one field. Either tell the app which separator to use, or write a copy of the file with commas.'
+		'A CSV is a text file, and the character between fields is a convention, not a rule. Files exported from Excel on a system where the comma is the decimal mark can use a semicolon, so a value like 3,5 can stay in one piece.',
+		'An app that expects commas may then read each line as one field. Either tell the app which separator to use, or write a copy of the file with commas.'
 	],
 	options: [
 		{
@@ -44,17 +44,6 @@ export const guide: Guide = {
 			link: {
 				label: 'Microsoft: Import or export text (.txt or .csv) files',
 				url: 'https://support.microsoft.com/en-us/office/import-or-export-text-txt-or-csv-files-5250ac4c-663c-47ce-937b-339e391393ba'
-			}
-		},
-		{
-			name: 'Excel: change the system separators',
-			summary:
-				"A community answer from a Microsoft MVP describes File > Options > Advanced: clear 'Use system separators', set the point as the decimal separator and the comma as the thousands separator.",
-			good: 'Changes how Excel reads and writes in all later files.',
-			cost: 'A community answer, not a Microsoft support page. It changes the number display for every workbook in Excel.',
-			link: {
-				label: 'Microsoft Q&A: saving as comma delimited ends up as semicolon (community answers)',
-				url: 'https://learn.microsoft.com/en-us/answers/questions/5148933/saving-as-cvs-comma-delimited-but-ends-up-as-a-sem'
 			}
 		},
 		{
@@ -73,7 +62,7 @@ export const guide: Guide = {
 			summary:
 				'qsv fmt reads with one delimiter and writes with another. -d is the input delimiter and -t the output delimiter.',
 			good: 'A CSV parser, so it treats the file as records and fields, not as raw text.',
-			cost: 'A command-line tool to install. Decimal commas inside values stay as they are; only the separator changes.',
+			cost: 'A command-line tool to install. Values are kept; quoting in the output follows the quoting options of qsv.',
 			code: `qsv fmt -d ';' -t ',' semicolon.csv -o comma.csv`,
 			link: { label: 'qsv fmt', url: 'https://github.com/dathere/qsv/blob/master/docs/help/fmt.md' }
 		},
@@ -96,7 +85,7 @@ export const guide: Guide = {
 		{
 			name: 'TabTool',
 			summary:
-				'A free, MIT-licensed CSV editor. It detects the separator from the content of the file and shows it in the format bar. Choosing another separator re-reads the file.',
+				'A free, MIT-licensed CSV editor. It reads and writes comma, semicolon, tab, or pipe separated files, detects the separator when you open a file, and shows it in the format bar. Choosing another separator re-reads the file.',
 			good: 'No import step. Export can write a different delimiter, encoding, quote style, and decimal mark. Saving keeps the file as it was opened.',
 			cost: 'No formulas, styles, or charts. Changing the format of an open file asks before it discards unsaved edits.',
 			link: { label: 'TabTool format detection', url: 'https://github.com/shurco/tabtool/blob/HEAD/docs/csv-format.md' }
