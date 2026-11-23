@@ -71,22 +71,6 @@
 		padding-bottom: 0;
 	}
 
-	.crumbs {
-		display: flex;
-		gap: 8px;
-		margin-bottom: 32px;
-		color: var(--muted);
-	}
-
-	.crumbs a {
-		text-decoration: none;
-	}
-
-	.crumbs a:hover {
-		text-decoration: underline;
-		color: var(--ink);
-	}
-
 	.guide-list {
 		display: grid;
 		gap: 1px;

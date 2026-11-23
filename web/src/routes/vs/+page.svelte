@@ -76,22 +76,6 @@
 		padding-bottom: 0;
 	}
 
-	.crumbs {
-		display: flex;
-		gap: 8px;
-		margin-bottom: 32px;
-		color: var(--muted);
-	}
-
-	.crumbs a {
-		text-decoration: none;
-	}
-
-	.crumbs a:hover {
-		text-decoration: underline;
-		color: var(--ink);
-	}
-
 	.vs-list {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));

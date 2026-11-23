@@ -154,23 +154,6 @@
 </section>
 
 <style>
-	.crumbs {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-		margin-bottom: 36px;
-		color: var(--muted);
-	}
-
-	.crumbs a {
-		text-decoration: none;
-	}
-
-	.crumbs a:hover {
-		text-decoration: underline;
-		color: var(--ink);
-	}
-
 	.guide-head {
 		max-width: 900px;
 	}
@@ -192,36 +175,6 @@
 		height: auto;
 		margin-top: 36px;
 		border: 1px solid var(--line);
-	}
-
-	.facts {
-		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 1px;
-		margin-top: 40px;
-		background: var(--line);
-		border: 1px solid var(--line);
-	}
-
-	.facts div {
-		padding: 18px 20px;
-		background: var(--paper);
-	}
-
-	.facts dd {
-		margin: 8px 0 0;
-		font-size: 14.5px;
-		line-height: 1.5;
-	}
-
-	.prose-block {
-		margin-top: 40px;
-		max-width: 72ch;
-		display: grid;
-		gap: 16px;
-		font-size: 16.5px;
-		line-height: 1.7;
-		color: var(--ink-soft);
 	}
 
 	.h3 {
@@ -269,44 +222,9 @@
 	}
 
 	.table-wrap {
+		--table-min: 640px;
+		--th-width: 30%;
 		margin-top: 20px;
-		overflow-x: auto;
-		border: 1px solid var(--line);
-	}
-
-	table {
-		width: 100%;
-		min-width: 640px;
-		border-collapse: collapse;
-		font-size: 14.5px;
-	}
-
-	th,
-	td {
-		text-align: left;
-		vertical-align: top;
-		padding: 14px 16px;
-		border-bottom: 1px solid var(--line);
-		line-height: 1.45;
-	}
-
-	thead th {
-		font-family: var(--mono);
-		font-size: 11px;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: var(--muted);
-		font-weight: 500;
-	}
-
-	tbody th {
-		font-weight: 550;
-		width: 30%;
-	}
-
-	tbody tr:last-child th,
-	tbody tr:last-child td {
-		border-bottom: 0;
 	}
 
 	.note {
@@ -353,11 +271,5 @@
 	.sources .mono {
 		color: var(--muted);
 		font-size: 11px;
-	}
-
-	@media (max-width: 820px) {
-		.facts {
-			grid-template-columns: 1fr;
-		}
 	}
 </style>
