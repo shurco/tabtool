@@ -5,9 +5,9 @@ export const guide: Guide = {
 	title: 'CSV too big for Numbers on Mac',
 	metaTitle: 'CSV too big for Numbers on Mac: ways to open it',
 	metaDescription:
-		'Apple lists up to 1 million rows and 1,000 columns per table in Numbers. Split, filter, or open the whole CSV, with commands you can copy.',
+		'Apple states 1 million rows and 1,000 columns per table for Excel files in Numbers. Options for a larger CSV, with commands you can copy.',
 	checked: '23 November 2026',
-	lede: 'Numbers works with up to 1 million rows and 1,000 columns per table, according to Apple. Here is what to do with a CSV that has more, and what each way costs.',
+	lede: 'Apple states a Numbers table size of 1 million rows and 1,000 columns for Excel files. Here is what to do with a CSV that has more, and what each way costs.',
 	image: {
 		src: '/img/app-large.webp',
 		srcset: '/img/app-large-1200.webp 1200w, /img/app-large.webp 2400w',
@@ -16,22 +16,21 @@ export const guide: Guide = {
 		height: 1500
 	},
 	facts: [
-		{ label: 'Rows per table', value: '1 million' },
-		{ label: 'Columns per table', value: '1,000' },
 		{
-			label: 'Where Apple states it',
-			value: 'On the Numbers features page, for importing and exporting Excel spreadsheets. Apple does not give a separate CSV limit there.'
-		}
+			label: "Apple's stated table size",
+			value: '1 million rows, 1,000 columns per table (stated for Excel import and export)'
+		},
+		{ label: 'CSV-specific limit', value: 'Apple gives none on that page.' }
 	],
 	problem: [
-		'A table in Numbers has a fixed size. A CSV with more rows or columns than that does not fit into one table.',
-		'The limit is about the table, not the file size or your Mac. Every fix below either works on a smaller piece of the file or avoids a spreadsheet.'
+		'Apple documents a table size of 1 million rows and 1,000 columns for Excel files in Numbers. It does not say what happens with a CSV that has more, so a large CSV may not open fully or may be slow; Apple does not state either.',
+		'The size is about the table, not the file size or your Mac. Every fix below either works on a smaller piece of the file or avoids a spreadsheet.'
 	],
 	options: [
 		{
 			name: 'Split the file',
 			summary:
-				'The built-in split command cuts the file into parts that each fit in a table. The header row is written once, so each part gets it added back.',
+				'The built-in split command cuts the file into parts of one million rows each. The header row is written once, so each part gets it added back.',
 			good: 'Needs no install. Every part opens in Numbers or any other app.',
 			cost: 'You work on parts, not on one file. A row with a quoted line break can be cut in half, because split counts lines, not records.',
 			code: `head -n 1 big.csv > header.csv
@@ -61,9 +60,9 @@ duckdb -c "COPY (SELECT * FROM 'big.csv' WHERE country = 'Germany') TO 'germany.
 		{
 			name: 'Excel for Mac',
 			summary:
-				'Excel for Mac has its own worksheet limit of 1,048,576 rows, which is about the same as the Numbers limit.',
-			good: 'A familiar spreadsheet with a limit you can look up.',
-			cost: 'It stops at 1,048,576 rows, so a CSV that is too big for Numbers is usually too big for Excel as well. See the Excel guide for what to do then.',
+				'Excel for Mac allows 1,048,576 rows and 16,384 columns per worksheet. That is more columns than Numbers, and a little more rows.',
+			good: 'Helps with a wide file (1,001 to 16,384 columns) or one just over 1 million rows.',
+			cost: 'It does not help with a file that has far more than 1,048,576 rows. The Excel guide covers that case.',
 			link: { label: 'CSV too large for Excel on Mac', url: '/guides/csv-too-large-for-excel-mac/' }
 		},
 		{
