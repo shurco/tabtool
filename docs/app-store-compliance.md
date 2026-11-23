@@ -84,9 +84,9 @@ Choose a unique name and icon. The required MIT copyright and permission notice 
 ## Category and store card
 
 - Category: Utilities.
-- Subtitle and description: a simple CSV editor for macOS, without promises of formulas, databases, or "any tables".
+- Name: `TabTool: CSV Editor`. Subtitle: `Edit large CSV & TSV files`. Description: a simple CSV editor, without promises of formulas, databases, or "any tables".
 - Screenshots: empty document, opened CSV, format panel, export.
-- Keywords: CSV, TSV, editor, table, delimiter, encoding.
+- Keywords (en-US, 100 characters max, no words already in the name or subtitle; App Store search combines all three fields): `delimiter,encoding,semicolon,spreadsheet,columns,rows,viewer,big,utf8,export,json,xml,comma,filter`. No trademarks such as Excel or Numbers. The full per-locale copy is kept outside the repository in `docs/store/copy/` (ignored by git).
 - Languages: English, French, Spanish, German, Italian, Polish, Belarusian, Ukrainian, Simplified Chinese, Japanese, Korean. The 10 translations are machine-generated.
 
 ## Notes for Review
