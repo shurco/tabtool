@@ -95,7 +95,7 @@ User decision: **A**.
 - New document: 3 columns × 1 empty row. The format comes from the New Document settings (6.10); by default UTF-8, comma, quotes `"` with doubling, decimal point, no header.
 - An empty file opens as a 1×1 table; this is pinned by a test.
 - UTF-8/UTF-16 BOM is recognized, does not get into cell text, and is preserved when writing in the same encoding.
-- Line endings when reading: CRLF, CR, LF, and Unicode newlines. When writing — `\n`, without a trailing newline.
+- Line endings when reading: CRLF, CR, LF, and Unicode newlines. When writing, saving uses the file's own line ending and trailing-line-break state; new documents, export and clipboard use LF without a trailing break (see [CSV format, writing](csv-format.md#writing)).
 
 ### 5.2 Opening and automatic format detection
 

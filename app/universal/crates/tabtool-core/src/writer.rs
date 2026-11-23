@@ -1,17 +1,18 @@
 //! Serialization of a [`CsvTable`] back to CSV text and bytes.
 
 use crate::encoding::UTF8_BOM;
-use crate::{CsvConfiguration, CsvError, CsvTable, Encoding, is_ambiguous};
+use crate::{CsvConfiguration, CsvError, CsvTable, Encoding, LineEnding, is_ambiguous};
 
 /// Serializes a [`CsvTable`] with an explicit header row and configuration.
 ///
 /// The writer only formats text; numeric cells and decimal marks reach it as
 /// plain strings. Fields follow the table's visual column order. Quoting is
 /// enabled whenever [`CsvConfiguration::quote_character`] is not empty, and
-/// every field is quoted when enabled. Rows are separated by a line feed and
-/// the output has no trailing newline. The header row is written as provided,
-/// so callers normally pass [`CsvTable::headers`] or `None` to match the
-/// document's header toggle.
+/// every field is quoted when enabled. Rows are separated by the
+/// [`LineEnding`] terminator, and the output ends with one only when
+/// [`LineEnding::ends_with_terminator`] is set and a row was written. The
+/// header row is written as provided, so callers normally pass
+/// [`CsvTable::headers`] or `None` to match the document's header toggle.
 pub struct CsvWriter<'a> {
     /// The table to serialize.
     pub table: &'a CsvTable,
@@ -23,10 +24,13 @@ pub struct CsvWriter<'a> {
     pub include_utf8_bom: bool,
     /// Whether `string()` skips the ambiguity check.
     pub allow_ambiguous_output: bool,
+    /// The row terminator and whether the output ends with one.
+    pub line_ending: LineEnding,
 }
 
 impl<'a> CsvWriter<'a> {
-    /// Creates a writer without a byte order mark and with validation enabled.
+    /// Creates a writer without a byte order mark, with validation enabled and
+    /// the default line ending.
     pub fn new(
         table: &'a CsvTable,
         header: Option<&'a [String]>,
@@ -38,10 +42,11 @@ impl<'a> CsvWriter<'a> {
             configuration,
             include_utf8_bom: false,
             allow_ambiguous_output: false,
+            line_ending: LineEnding::default(),
         }
     }
 
-    /// Returns the serialized CSV text without a trailing newline.
+    /// Returns the serialized CSV text.
     ///
     /// Fails with [`CsvError::AmbiguousOutput`] when quoting is disabled and a
     /// field contains the column separator or a line break, unless
@@ -55,6 +60,7 @@ impl<'a> CsvWriter<'a> {
             self.table,
             self.header,
             self.configuration,
+            self.line_ending,
         ))
     }
 
@@ -86,7 +92,9 @@ impl<'a> CsvWriter<'a> {
         table: &CsvTable,
         header: Option<&[String]>,
         configuration: &CsvConfiguration,
+        line_ending: LineEnding,
     ) -> String {
+        let terminator = line_ending.terminator.as_str();
         let mut text = String::new();
         let mut is_first_row = true;
 
@@ -95,6 +103,7 @@ impl<'a> CsvWriter<'a> {
                 header.iter().map(String::as_str),
                 &mut text,
                 &mut is_first_row,
+                terminator,
                 configuration,
             );
         }
@@ -106,22 +115,27 @@ impl<'a> CsvWriter<'a> {
                     .map(|column| column.cells.get(row).map_or("", String::as_str)),
                 &mut text,
                 &mut is_first_row,
+                terminator,
                 configuration,
             );
+        }
+        if line_ending.ends_with_terminator && !is_first_row {
+            text.push_str(terminator);
         }
         text
     }
 }
 
-/// Appends one row, separating it from a previous row with a line feed.
+/// Appends one row, separating it from a previous row with `terminator`.
 fn append_row<'fields>(
     fields: impl IntoIterator<Item = &'fields str>,
     text: &mut String,
     is_first_row: &mut bool,
+    terminator: &str,
     configuration: &CsvConfiguration,
 ) {
     if !*is_first_row {
-        text.push('\n');
+        text.push_str(terminator);
     }
     *is_first_row = false;
 

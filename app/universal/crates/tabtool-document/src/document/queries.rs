@@ -31,6 +31,7 @@ impl Document {
             table: Arc::clone(table),
             configuration: self.configuration.clone(),
             includes_utf8_bom: self.had_utf8_bom,
+            line_ending: self.line_ending,
         })
     }
 

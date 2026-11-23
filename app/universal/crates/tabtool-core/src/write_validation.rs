@@ -1,7 +1,7 @@
 //! Checks whether a table can be saved without losing its structure or text.
 
 use crate::parser::is_row_break;
-use crate::{CsvConfiguration, CsvTable, CsvWriter, Encoding};
+use crate::{CsvConfiguration, CsvTable, CsvWriter, Encoding, LineEnding};
 
 /// A problem that prevents a table from being written as CSV.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -32,7 +32,7 @@ pub fn issue(
         return None;
     }
 
-    let text = CsvWriter::serialized_text(table, header, configuration);
+    let text = CsvWriter::serialized_text(table, header, configuration, LineEnding::default());
     configuration
         .encoding
         .encode(&text)
@@ -72,9 +72,9 @@ pub fn is_ambiguous(
     }
 
     // A final empty single-column row contributes no characters after the
-    // preceding row separator, so the output ends with LF and reparsing drops
-    // that row. A lone empty cell is fine: empty output parses back to one
-    // empty row.
+    // preceding row separator, so the output ends with a row terminator and
+    // reparsing drops that row. A lone empty cell is fine: empty output parses
+    // back to one empty row.
     if table.columns.len() == 1
         && table
             .columns

@@ -4,7 +4,7 @@ use std::cell::Cell;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use tabtool_core::{CsvConfiguration, CsvTable};
+use tabtool_core::{CsvConfiguration, CsvTable, LineEnding};
 
 use crate::filter_model::RowFilterModel;
 use crate::large_save::LargeSaveJob;
@@ -52,6 +52,9 @@ pub struct Document {
     pub(crate) file_path: Option<PathBuf>,
     /// Whether the loaded bytes began with a UTF-8 byte order mark.
     pub(crate) had_utf8_bom: bool,
+    /// The row terminator and trailing line break of the loaded bytes. It is
+    /// file state, not undo state: edits and undo keep it.
+    pub(crate) line_ending: LineEnding,
     pub(crate) revision: u64,
     /// The revision the file last matched; a re-read from disk or a save
     /// refreshes it.
@@ -99,6 +102,7 @@ impl Document {
             redo_entries: Vec::new(),
             file_path: None,
             had_utf8_bom: false,
+            line_ending: LineEnding::default(),
             revision: 0,
             // An untitled document reports dirty until Save As binds a path;
             // loading file content resets this to the loaded revision.

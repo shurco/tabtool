@@ -128,7 +128,7 @@ fn rename_without_header_exports_header_line_first() {
 
     assert_eq!(
         document.encoded_data(),
-        Ok(b"\"A\",\"x\"\n\"a\",\"b\"\n\"1\",\"2\"".to_vec())
+        Ok(b"\"A\",\"x\"\n\"a\",\"b\"\n\"1\",\"2\"\n".to_vec())
     );
 }
 

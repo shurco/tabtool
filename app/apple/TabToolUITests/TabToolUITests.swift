@@ -416,7 +416,7 @@ final class TabToolUITests: XCTestCase {
         // The file and the reopened table agree on the intended cells:
         // header a,b; the typed cell in row 0; the saved cell in row 1.
         let saved = try String(contentsOf: fixture, encoding: .utf8)
-        XCTAssertEqual(saved, "\"a\",\"b\"\n\"typed\",\"d\"\n\"saved\",\"\"")
+        XCTAssertEqual(saved, "\"a\",\"b\"\n\"typed\",\"d\"\n\"saved\",\"\"\n")
 
         // The focused file-backed document enables Revert to Saved.
         app.menuBars.menuBarItems["File"].click()

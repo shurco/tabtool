@@ -251,6 +251,35 @@ func tempFile(_ data: Data) throws -> URL {
         #expect(encoded.starts(with: [0xEF, 0xBB, 0xBF]))
     }
 
+    @Test @MainActor func formatChangeRereadPicksUpLineEnding() async throws {
+        let config = CSVConfiguration(quoteCharacter: "")
+        let url = try tempFile("a,b\nc,d")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let doc = CSVDocument(data: try Data(contentsOf: url), fileURL: url,
+                              configuration: config)
+        await doc.load()
+        #expect(doc.lineEnding == .default)
+
+        try Data("a,b\r\nc,d\r\n".utf8).write(to: url, options: .atomic)
+        try await doc.applyParsingConfiguration(config, force: true)
+        #expect(doc.lineEnding == .init(terminator: .crlf, endsWithTerminator: true))
+        #expect(try doc.encodedData() == Data("a,b\r\nc,d\r\n".utf8))
+    }
+
+    @Test @MainActor func revertPicksUpLineEnding() async throws {
+        let config = CSVConfiguration(quoteCharacter: "")
+        let url = try tempFile("a,b\nc,d")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let doc = CSVDocument(data: try Data(contentsOf: url), fileURL: url,
+                              configuration: config)
+        await doc.load()
+
+        try Data("a,b\r\nc,d\r\n".utf8).write(to: url, options: .atomic)
+        try await doc.revertToSaved()
+        #expect(doc.lineEnding == .init(terminator: .crlf, endsWithTerminator: true))
+        #expect(try doc.encodedData() == Data("a,b\r\nc,d\r\n".utf8))
+    }
+
     @Test @MainActor func operationsUseDocumentedUndoActionNames() async throws {
         let um = UndoManager()
         let doc = CSVDocument(data: Data("a,b\nc,d\n".utf8), configuration: .init(),

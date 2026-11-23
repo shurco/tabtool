@@ -6,6 +6,14 @@ use tabtool_core::{CsvConfiguration, CsvError};
 use tabtool_document::test_support::{MemoryStorage, loaded};
 use tabtool_document::{Document, DocumentError, RevertDecision, UndoAction, plan_revert};
 
+/// A format without quoting, so the written bytes equal the plain fixture.
+fn unquoted() -> CsvConfiguration {
+    CsvConfiguration {
+        quote_character: String::new(),
+        ..CsvConfiguration::default()
+    }
+}
+
 #[test]
 fn clean_document_reverts_without_confirmation() {
     let storage = MemoryStorage::new(b"a,b\nc,d\n");
@@ -43,6 +51,21 @@ fn dirty_revert_can_be_cancelled_or_confirmed() {
     assert!(document.undo());
     assert_eq!(document.table().expect("table").cell(0, 0), "edited");
     assert!(document.is_dirty());
+}
+
+#[test]
+fn revert_picks_up_the_files_line_ending() {
+    let storage = MemoryStorage::new(b"a,b\nc,d");
+    let mut document = loaded(&storage, unquoted());
+    // Fill the save snapshot cache with the old line ending.
+    document.save(&storage).expect("save the document");
+    assert_eq!(storage.bytes(), b"a,b\nc,d");
+
+    storage.set_bytes(b"a,b\r\nc,d\r\n");
+    document.revert_to_saved(&storage).expect("revert the file");
+
+    document.save(&storage).expect("save the document");
+    assert_eq!(storage.bytes(), b"a,b\r\nc,d\r\n");
 }
 
 #[test]

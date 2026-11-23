@@ -10,7 +10,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use tabtool_core::{CsvConfiguration, CsvTable};
+use tabtool_core::{CsvConfiguration, CsvTable, LineEnding};
 
 use crate::Document;
 use crate::io;
@@ -33,6 +33,8 @@ pub struct ParsedTable {
     pub configuration: CsvConfiguration,
     /// Whether the parsed bytes began with a UTF-8 byte order mark.
     pub had_utf8_bom: bool,
+    /// The row terminator and trailing line break of the parsed bytes.
+    pub line_ending: LineEnding,
     /// The document revision the candidate was parsed against.
     pub expected_revision: u64,
 }
@@ -176,6 +178,7 @@ impl Document {
             table: outcome.table,
             configuration,
             had_utf8_bom: outcome.had_utf8_bom,
+            line_ending: outcome.line_ending,
             expected_revision,
         };
         if self.apply_candidate(candidate, action) {
@@ -220,6 +223,11 @@ impl Document {
             candidate.had_utf8_bom,
             action,
         );
+        if self.line_ending != candidate.line_ending {
+            self.line_ending = candidate.line_ending;
+            // The revision-keyed save snapshot cache must not serve the old value.
+            self.bump_revision();
+        }
         self.saved_revision = self.revision;
         true
     }
@@ -267,6 +275,7 @@ mod tests {
             table: CsvTable::from_rows(vec![vec!["x".to_string()]], None, 1),
             configuration,
             had_utf8_bom: false,
+            line_ending: LineEnding::default(),
             expected_revision: document.revision,
         });
 

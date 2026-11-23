@@ -3,10 +3,12 @@
 //! The document layer parses bytes in one place so loading, re-reading and
 //! tests share the same header extraction and byte-order-mark bookkeeping.
 
-use tabtool_core::{CsvConfiguration, CsvError, CsvFormatDetector, CsvParser, CsvTable};
+use tabtool_core::{
+    CsvConfiguration, CsvError, CsvFormatDetector, CsvParser, CsvTable, LineEnding,
+};
 
-/// A successfully parsed table together with the format and BOM state of its
-/// source bytes.
+/// A successfully parsed table together with the format, BOM and line-ending
+/// state of its source bytes.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LoadOutcome {
     /// The logical table, with the first row moved into headers when the
@@ -16,6 +18,8 @@ pub struct LoadOutcome {
     pub configuration: CsvConfiguration,
     /// Whether the bytes began with a UTF-8 byte order mark.
     pub had_utf8_bom: bool,
+    /// The row terminator and trailing-break state of the bytes.
+    pub line_ending: LineEnding,
 }
 
 /// Picks the most likely configuration for `bytes`.
@@ -50,5 +54,6 @@ pub(crate) fn parse(
         table: CsvTable::from_rows(data_rows, headers, 1),
         configuration: configuration.clone(),
         had_utf8_bom: parser.had_utf8_bom(),
+        line_ending: parser.line_ending(),
     })
 }

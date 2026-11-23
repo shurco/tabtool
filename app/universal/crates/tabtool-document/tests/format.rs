@@ -8,7 +8,10 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use tabtool_core::{CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, CsvWriter};
+use tabtool_core::{
+    CsvConfiguration, CsvError, CsvTable, CsvWriteIssue, CsvWriter, LineEnding, Terminator,
+};
+use tabtool_document::test_support::{MemoryStorage, loaded as loaded_from_storage};
 use tabtool_document::{
     Document, DocumentError, DocumentPhase, ParsedTable, StdStorage, Storage, UndoAction,
 };
@@ -34,6 +37,14 @@ fn loaded(bytes: &[u8], configuration: CsvConfiguration) -> Document {
         .load_from_bytes(bytes, None, Some(configuration), false)
         .expect("load the fixture");
     document
+}
+
+/// A format without quoting, so the written bytes equal the plain fixture.
+fn unquoted() -> CsvConfiguration {
+    CsvConfiguration {
+        quote_character: String::new(),
+        ..CsvConfiguration::default()
+    }
 }
 
 /// Storage that serves fixed bytes and refuses writes.
@@ -445,6 +456,46 @@ fn overlapping_reread_is_rejected() {
 }
 
 #[test]
+fn a_format_reread_picks_up_the_files_line_ending() {
+    let storage = MemoryStorage::new(b"a,b\nc,d");
+    let mut document = loaded_from_storage(&storage, unquoted());
+    // Fill the save snapshot cache with the old line ending.
+    document.save(&storage).expect("save the document");
+    assert_eq!(storage.bytes(), b"a,b\nc,d");
+
+    storage.set_bytes(b"a,b\r\nc,d\r\n");
+    document
+        .apply_parsing_configuration(unquoted(), true, &storage)
+        .expect("re-read the file");
+
+    assert_eq!(document.encoded_data().expect("encode"), b"a,b\r\nc,d\r\n");
+    document.save(&storage).expect("save the document");
+    assert_eq!(storage.bytes(), b"a,b\r\nc,d\r\n");
+}
+
+#[test]
+fn a_line_ending_change_with_identical_content_refreshes_the_save_snapshot() {
+    let storage = MemoryStorage::new(b"a,b\nc,d");
+    let mut document = loaded_from_storage(&storage, unquoted());
+    // Fill the save snapshot cache with the old line ending.
+    document.save(&storage).expect("save the document");
+
+    document.apply_reparsed_candidate(ParsedTable {
+        table: CsvTable::clone(document.table().expect("table")),
+        configuration: unquoted(),
+        had_utf8_bom: false,
+        line_ending: LineEnding {
+            terminator: Terminator::Crlf,
+            ends_with_terminator: true,
+        },
+        expected_revision: document.revision(),
+    });
+    document.save(&storage).expect("save the document");
+
+    assert_eq!(storage.bytes(), b"a,b\r\nc,d\r\n");
+}
+
+#[test]
 fn a_stale_candidate_is_rejected_after_a_mutation() {
     let mut document = loaded(b"a\n", CsvConfiguration::default());
     let revision = document.revision();
@@ -452,6 +503,7 @@ fn a_stale_candidate_is_rejected_after_a_mutation() {
         table: CsvTable::from_rows(vec![vec!["z".to_string()]], None, 1),
         configuration: CsvConfiguration::default(),
         had_utf8_bom: false,
+        line_ending: LineEnding::default(),
         expected_revision: revision,
     };
     document.set_cell(0, 0, "x");
@@ -474,6 +526,7 @@ fn a_candidate_at_the_current_revision_applies_with_one_undo() {
             ..CsvConfiguration::default()
         },
         had_utf8_bom: false,
+        line_ending: LineEnding::default(),
         expected_revision: revision,
     };
 

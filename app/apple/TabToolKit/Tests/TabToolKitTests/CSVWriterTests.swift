@@ -201,3 +201,34 @@ import Testing
     let rows = try parser.readAll()
     #expect(rows.first == [name, "b"])
 }
+
+@Test func writerJoinsRowsWithGivenTerminator() throws {
+    let t = CSVTable(rows: [["a"],["b"]], headers: nil)
+    let c = CSVConfiguration(quoteCharacter: "")
+    let ending = CSVLineEnding(terminator: .crlf, endsWithTerminator: false)
+    let s = try CSVWriter(table: t, header: nil, configuration: c, lineEnding: ending).string()
+    #expect(s == "a\r\nb")
+}
+
+@Test func writerAppendsTrailingTerminator() throws {
+    let t = CSVTable(rows: [], headers: nil)
+    let c = CSVConfiguration(quoteCharacter: "")
+    let ending = CSVLineEnding(terminator: .crlf, endsWithTerminator: true)
+    let s = try CSVWriter(table: t, header: ["h1","h2"], configuration: c, lineEnding: ending).string()
+    #expect(s == "h1,h2\r\n")
+}
+
+@Test func writerSkipsTrailingTerminatorForEmptyOutput() throws {
+    let t = CSVTable(columns: [])
+    let ending = CSVLineEnding(terminator: .lf, endsWithTerminator: true)
+    let s = try CSVWriter(table: t, header: nil, configuration: .init(), lineEnding: ending).string()
+    #expect(s == "")
+}
+
+@Test func writerKeepsTrailingTerminatorForSingleEmptyRow() throws {
+    let t = CSVTable(rows: [[""]], headers: nil)
+    let c = CSVConfiguration(quoteCharacter: "")
+    let ending = CSVLineEnding(terminator: .lf, endsWithTerminator: true)
+    let s = try CSVWriter(table: t, header: nil, configuration: c, lineEnding: ending).string()
+    #expect(s == "\n")
+}

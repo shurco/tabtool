@@ -56,14 +56,14 @@ fn encoded_data_round_trips_through_the_snapshot() {
         .expect("load data");
     let snapshot = document.snapshot().expect("snapshot");
 
-    let expected = CsvWriter::new(&snapshot.table, None, &snapshot.configuration)
-        .data()
-        .expect("write snapshot");
+    let mut writer = CsvWriter::new(&snapshot.table, None, &snapshot.configuration);
+    writer.line_ending = snapshot.line_ending;
+    let expected = writer.data().expect("write snapshot");
 
     assert_eq!(document.encoded_data(), Ok(expected));
     assert_eq!(
         document.encoded_data(),
-        Ok(b"\"a\",\"b\",\"c\"\n\"1\",\"2\",\"3\"\n\"1,1\",\"1,2\",\"1,3\"".to_vec())
+        Ok(b"\"a\",\"b\",\"c\"\n\"1\",\"2\",\"3\"\n\"1,1\",\"1,2\",\"1,3\"\n".to_vec())
     );
 }
 
@@ -105,7 +105,7 @@ fn encoded_data_writes_the_header_row_when_configured() {
     );
     assert_eq!(
         document.encoded_data(),
-        Ok(b"\"a\",\"b\"\n\"1\",\"2\"".to_vec())
+        Ok(b"\"a\",\"b\"\n\"1\",\"2\"\n".to_vec())
     );
 }
 

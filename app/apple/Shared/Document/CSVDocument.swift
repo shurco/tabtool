@@ -53,6 +53,11 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
     /// snapshot so a save writes the BOM state the table was loaded with.
     private(set) var hadUTF8BOM = false
 
+    /// The row terminator and trailing line break of the loaded bytes. Captured
+    /// in every snapshot so a save keeps the file's line endings. It is not
+    /// undo state: only load and `applyReparsedCandidate` replace it.
+    var lineEnding = CSVLineEnding.default
+
     /// The save-time value. Autosave reads it off the main actor, so it is
     /// rebuilt after every change that can affect saving.
     let snapshotCache = CSVDocumentSnapshotCache()
@@ -351,6 +356,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         case .success(let parsed):
             table = parsed.table
             hadUTF8BOM = parsed.includesUTF8BOM
+            lineEnding = parsed.lineEnding
             phase = .ready
             refreshPhase()
             refreshFilter()
@@ -396,7 +402,7 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         let previousSort = activeSort
         let previous = table.map { current in
             CSVDocumentSnapshot(table: current, configuration: configuration,
-                                includesUTF8BOM: hadUTF8BOM)
+                                includesUTF8BOM: hadUTF8BOM, lineEnding: lineEnding)
         }
         if let previous,
            previous.table == newTable,
@@ -474,7 +480,8 @@ final class CSVDocument: ObservableObject, @preconcurrency ReferenceFileDocument
         let currentSort = activeSort
         let previous = CSVDocumentSnapshot(table: currentTable,
                                            configuration: configuration,
-                                           includesUTF8BOM: hadUTF8BOM)
+                                           includesUTF8BOM: hadUTF8BOM,
+                                           lineEnding: lineEnding)
         table = snapshot.table
         configuration = snapshot.configuration
         hadUTF8BOM = snapshot.includesUTF8BOM
