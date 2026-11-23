@@ -28,7 +28,7 @@ export const guides: Guide[] = [
 	{
 		slug: 'csv-too-large-for-excel-mac',
 		title: 'CSV file too large for Excel on Mac',
-		metaTitle: 'CSV too large for Excel on Mac: 6 ways to open it',
+		metaTitle: 'CSV too large for Excel on Mac: 6 ways to handle it',
 		metaDescription:
 			'Excel for Mac stops at 1,048,576 rows. Split, filter, query, or open the whole CSV with commands you can copy, and the limits of each way.',
 		checked: '23 November 2026',
@@ -63,16 +63,16 @@ export const guides: Guide[] = [
 				code: `head -n 1 big.csv > header.csv
 tail -n +2 big.csv | split -l 1000000 - part_
 for f in part_*; do cat header.csv "$f" > "$f.csv" && rm "$f"; done`,
-				link: { label: 'macOS split manual (man split)', url: 'https://ss64.com/mac/split.html' }
+				link: { label: 'SS64: macOS split', url: 'https://ss64.com/mac/split.html' }
 			},
 			{
 				name: 'csvkit',
 				summary:
-					'A Python toolkit. csvgrep filters rows by a value in a column, csvstat counts rows and summarizes columns.',
+					'A Python toolkit. csvgrep filters rows whose column matches a regular expression, csvstat counts rows and summarizes columns.',
 				good: 'Readable commands and many other tools in the same kit, such as csvcut and csvsort.',
 				cost: 'Written in Python, so it is slow on multi-gigabyte files.',
 				code: `csvstat --count big.csv
-csvgrep -c country -m Germany big.csv > germany.csv`,
+csvgrep -c country -r '^Germany$' big.csv > germany.csv`,
 				link: { label: 'csvkit csvgrep', url: 'https://csvkit.readthedocs.io/en/latest/scripts/csvgrep.html' }
 			},
 			{
@@ -81,7 +81,7 @@ csvgrep -c country -m Germany big.csv > germany.csv`,
 				good: 'Fast on large files. One binary, no runtime.',
 				cost: 'A command-line tool with many commands; the filter takes a regular expression, not a plain value.',
 				code: `qsv count big.csv
-qsv search -s country 'Germany' big.csv -o germany.csv`,
+qsv search -s country '^Germany$' big.csv -o germany.csv`,
 				link: { label: 'qsv search', url: 'https://github.com/dathere/qsv/blob/master/docs/help/search.md' }
 			},
 			{
@@ -90,8 +90,8 @@ qsv search -s country 'Germany' big.csv -o germany.csv`,
 					'An embedded SQL database. It reads a CSV file directly, and COPY writes any query result to a new, smaller CSV.',
 				good: 'Full SQL, including grouping and joins, with no import step.',
 				cost: 'You need to know SQL. The output is a new file, not an edit of the original.',
-				code: `SELECT count(*) FROM 'big.csv';
-COPY (SELECT * FROM 'big.csv' WHERE country = 'Germany') TO 'germany.csv' (FORMAT CSV, HEADER);`,
+				code: `duckdb -c "SELECT count(*) FROM 'big.csv';"
+duckdb -c "COPY (SELECT * FROM 'big.csv' WHERE country = 'Germany') TO 'germany.csv' (FORMAT CSV, HEADER);"`,
 				link: { label: 'DuckDB CSV import', url: 'https://duckdb.org/docs/2.0/data/csv/overview.html' }
 			},
 			{
@@ -139,7 +139,7 @@ COPY (SELECT * FROM 'big.csv' WHERE country = 'Germany') TO 'germany.csv' (FORMA
 				label: 'Microsoft Q&A: Excel for Mac and the Data Model (community answers)',
 				url: 'https://learn.microsoft.com/en-us/answers/questions/5169428/importing-csvs-into-a-query-table-to-clean-using-p'
 			},
-			{ label: 'macOS split manual', url: 'https://ss64.com/mac/split.html' },
+			{ label: 'SS64: macOS split', url: 'https://ss64.com/mac/split.html' },
 			{ label: 'csvkit csvgrep', url: 'https://csvkit.readthedocs.io/en/latest/scripts/csvgrep.html' },
 			{ label: 'csvkit csvstat', url: 'https://csvkit.readthedocs.io/en/latest/scripts/csvstat.html' },
 			{ label: 'qsv count', url: 'https://github.com/dathere/qsv/blob/master/docs/help/count.md' },

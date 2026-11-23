@@ -85,7 +85,8 @@
 					<p><strong>Good for:</strong> {option.good}</p>
 					<p><strong>Costs:</strong> {option.cost}</p>
 					{#if option.code}
-						<pre class="option__code"><code>{option.code}</code></pre>
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex: keyboard users must be able to scroll the code block -->
+						<pre class="option__code" tabindex="0"><code>{option.code}</code></pre>
 					{/if}
 					{#if option.link}
 						<p class="option__link">
@@ -123,8 +124,10 @@
 				</table>
 			</div>
 			<p class="note">
-				Method and the script are in the
-				<a href={`${site.github}#large-files`} rel="noopener">large files section on GitHub</a>.
+				Method is in the
+				<a href={`${site.github}#large-files`} rel="noopener">large files section on GitHub</a>; the
+				script is
+				<a href={`${site.github}/blob/HEAD/scripts/bench-large`} rel="noopener"><code>scripts/bench-large</code></a>.
 			</p>
 		</div>
 	</section>
