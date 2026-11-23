@@ -1,12 +1,12 @@
 {
   "_comment": "Last build uploaded to App Store Connect per Apple platform. A new upload must use a higher build number; never reuse or lower these.",
   "ios": {
-    "build": "3",
+    "build": "4",
     "name": "1.0.1",
     "uploaded": "2026-11-23"
   },
   "macos": {
-    "build": "3",
+    "build": "4",
     "name": "1.0.1",
     "uploaded": "2026-11-23"
   }
