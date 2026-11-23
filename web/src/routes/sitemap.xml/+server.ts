@@ -1,4 +1,5 @@
 import { comparisons } from '#lib/comparisons';
+import { guides } from '#lib/guides';
 import { site } from '#lib/site';
 
 export const prerender = true;
@@ -13,6 +14,8 @@ export function GET() {
 		'/llms.txt',
 		'/vs/',
 		...comparisons.map((item) => `/vs/${item.slug}/`),
+		'/guides/',
+		...guides.map((item) => `/guides/${item.slug}/`),
 		'/privacy/',
 		'/terms/'
 	];
@@ -20,7 +23,7 @@ export function GET() {
 	const urls = paths
 		.map(
 			(path) =>
-				`	<url><loc>${site.url}${path}</loc><lastmod>${site.updated}</lastmod><changefreq>${path === '/' ? 'monthly' : 'yearly'}</changefreq><priority>${path === '/' ? '1.0' : path.startsWith('/vs/') ? '0.7' : '0.5'}</priority></url>`
+				`	<url><loc>${site.url}${path}</loc><lastmod>${site.updated}</lastmod><changefreq>${path === '/' ? 'monthly' : 'yearly'}</changefreq><priority>${path === '/' ? '1.0' : path.startsWith('/vs/') || path.startsWith('/guides/') ? '0.7' : '0.5'}</priority></url>`
 		)
 		.join('\n');
 

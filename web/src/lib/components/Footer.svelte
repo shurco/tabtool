@@ -31,6 +31,14 @@
 					</ul>
 				</div>
 				<div>
+					<p class="eyebrow">Guides</p>
+					<ul>
+						{#each footerNav.guides as item (item.href)}
+							<li><a href={item.href}>{item.label}</a></li>
+						{/each}
+					</ul>
+				</div>
+				<div>
 					<p class="eyebrow">Legal</p>
 					<ul>
 						{#each footerNav.legal as item (item.href)}
@@ -98,7 +106,7 @@
 
 	.foot__cols {
 		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: 32px;
 	}
 

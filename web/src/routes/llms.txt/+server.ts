@@ -19,6 +19,7 @@ are no formulas, styles, charts, or pivot tables.
 - Download: ${site.url}/download/
 - FAQ: ${site.url}/faq/
 - Comparisons: ${site.url}/vs/
+- Guides: ${site.url}/guides/
 - Press kit: ${site.url}/press/
 - Source: ${site.github}
 - Windows, Linux, and Android downloads: ${site.releases}
@@ -53,7 +54,7 @@ are no formulas, styles, charts, or pivot tables.
 - You need SQL joins across several CSV files: TableTool by TablePlus has that.
 - You need a code-signed Windows installer or a Google Play listing: the Windows build is an unsigned zip and Android is a sideloaded APK.
 
-Last updated: 2026-11-20
+Last updated: 2026-11-23
 `;
 
 	return new Response(body, {

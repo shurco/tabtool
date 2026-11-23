@@ -334,6 +334,101 @@ button {
 	letter-spacing: 0.04em;
 }
 
+/* Shared page furniture: breadcrumbs, fact grid, prose, and data tables. */
+.crumbs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 36px;
+	color: var(--muted);
+}
+
+.crumbs a {
+	text-decoration: none;
+}
+
+.crumbs a:hover {
+	text-decoration: underline;
+	color: var(--ink);
+}
+
+.facts {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1px;
+	margin-top: 40px;
+	background: var(--line);
+	border: 1px solid var(--line);
+}
+
+.facts div {
+	padding: 18px 20px;
+	background: var(--paper);
+}
+
+.facts dd {
+	margin: 8px 0 0;
+	font-size: 14.5px;
+	line-height: 1.5;
+}
+
+@media (max-width: 820px) {
+	.facts {
+		grid-template-columns: 1fr;
+	}
+}
+
+.prose-block {
+	margin-top: 40px;
+	max-width: 72ch;
+	display: grid;
+	gap: 16px;
+	font-size: 16.5px;
+	line-height: 1.7;
+	color: var(--ink-soft);
+}
+
+/* Tune with --table-min (scroll threshold) and --th-width (row header column). */
+.table-wrap {
+	overflow-x: auto;
+	border: 1px solid var(--line);
+}
+
+.table-wrap table {
+	width: 100%;
+	min-width: var(--table-min, 720px);
+	border-collapse: collapse;
+	font-size: 14.5px;
+}
+
+.table-wrap th,
+.table-wrap td {
+	text-align: left;
+	vertical-align: top;
+	padding: 14px 16px;
+	border-bottom: 1px solid var(--line);
+	line-height: 1.45;
+}
+
+.table-wrap thead th {
+	font-family: var(--mono);
+	font-size: 11px;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--muted);
+	font-weight: 500;
+}
+
+.table-wrap tbody th {
+	font-weight: 550;
+	width: var(--th-width, 24%);
+}
+
+.table-wrap tbody tr:last-child th,
+.table-wrap tbody tr:last-child td {
+	border-bottom: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	html {
 		scroll-behavior: auto;
