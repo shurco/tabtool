@@ -168,3 +168,12 @@ private func detectLineEnding(_ text: String, quote: String = "\"") throws -> CS
 @Test func lineEndingDefaultsWithoutRowBreak() throws {
     #expect(try detectLineEnding("a,b") == .default)
 }
+
+@Test func lineEndingUsesFirstTerminator() throws {
+    let ending = try detectLineEnding("a\r\nb\nc")
+    #expect(ending == .init(terminator: .crlf, endsWithTerminator: false))
+}
+
+@Test func lineEndingIgnoresNEL() throws {
+    #expect(try detectLineEnding("a\u{85}b") == .default)
+}

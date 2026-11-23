@@ -85,7 +85,8 @@ extension CSVDocument {
             snapshotCache.store(.ready(CSVDocumentSnapshot(
                 table: table,
                 configuration: configuration,
-                includesUTF8BOM: hadUTF8BOM
+                includesUTF8BOM: hadUTF8BOM,
+                lineEnding: lineEnding
             )))
         case .needsAttention(let issue):
             snapshotCache.store(.needsAttention(CSVDocumentIO.error(for: issue)))

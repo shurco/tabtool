@@ -4,10 +4,12 @@ import TabToolKit
 /// File access, parsing, and encoding shared by document loading, re-reading,
 /// and saving.
 enum CSVDocumentIO {
-    /// A parsed table together with the BOM state of its source bytes.
+    /// A parsed table together with the BOM state and line ending of its
+    /// source bytes.
     struct ParsedTable: Sendable {
         let table: CSVTable
         let includesUTF8BOM: Bool
+        let lineEnding: CSVLineEnding
     }
 
     /// Why an initial load did not produce a table.
@@ -86,7 +88,8 @@ enum CSVDocumentIO {
         let headers = configuration.firstRowAsHeader ? rows.first : nil
         let dataRows = headers == nil ? rows : Array(rows.dropFirst())
         return ParsedTable(table: CSVTable(rows: dataRows, headers: headers),
-                           includesUTF8BOM: parser.hadUTF8BOM)
+                           includesUTF8BOM: parser.hadUTF8BOM,
+                           lineEnding: parser.lineEnding)
     }
 
     /// The explicit header row a save writes for `table`, or `nil`.
@@ -123,11 +126,12 @@ enum CSVDocumentIO {
         return try encodedData(for: snapshot)
     }
 
-    /// Serializes a snapshot with the BOM captured in that snapshot.
+    /// Serializes a snapshot with the BOM and line ending captured in it.
     static func encodedData(for snapshot: CSVDocumentSnapshot) throws -> Data {
         let header = header(for: snapshot.table, configuration: snapshot.configuration)
         return try CSVWriter(table: snapshot.table, header: header,
                              configuration: snapshot.configuration,
-                             includeUTF8BOM: snapshot.includesUTF8BOM).data()
+                             includeUTF8BOM: snapshot.includesUTF8BOM,
+                             lineEnding: snapshot.lineEnding).data()
     }
 }

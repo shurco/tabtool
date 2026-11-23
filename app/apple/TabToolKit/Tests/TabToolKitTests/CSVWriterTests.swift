@@ -224,3 +224,11 @@ import Testing
     let s = try CSVWriter(table: t, header: nil, configuration: .init(), lineEnding: ending).string()
     #expect(s == "")
 }
+
+@Test func writerKeepsTrailingTerminatorForSingleEmptyRow() throws {
+    let t = CSVTable(rows: [[""]], headers: nil)
+    let c = CSVConfiguration(quoteCharacter: "")
+    let ending = CSVLineEnding(terminator: .lf, endsWithTerminator: true)
+    let s = try CSVWriter(table: t, header: nil, configuration: c, lineEnding: ending).string()
+    #expect(s == "\n")
+}

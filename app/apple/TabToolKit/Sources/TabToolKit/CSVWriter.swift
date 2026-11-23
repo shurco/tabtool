@@ -84,7 +84,7 @@ public struct CSVWriter: Sendable {
                       to: &text, isFirstRow: &isFirstRow,
                       terminator: terminator, configuration: configuration)
         }
-        if lineEnding.endsWithTerminator, !text.isEmpty {
+        if lineEnding.endsWithTerminator, !isFirstRow {
             text.append(terminator)
         }
         return text

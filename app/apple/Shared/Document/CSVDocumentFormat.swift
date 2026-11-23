@@ -75,9 +75,15 @@ extension CSVDocument {
         guard mutationRevision == expectedRevision else {
             throw DocumentError.requiresConfirmation
         }
+        let lineEndingChanged = lineEnding != candidate.lineEnding
+        lineEnding = candidate.lineEnding
         applyChange(table: candidate.table, configuration: newConfiguration,
                     includesUTF8BOM: candidate.includesUTF8BOM,
                     actionName: actionName)
+        // A no-op applyChange leaves the snapshot cache stale.
+        if lineEndingChanged {
+            refreshSnapshotCache()
+        }
     }
 
     /// Whether File > Revert to Saved can run.

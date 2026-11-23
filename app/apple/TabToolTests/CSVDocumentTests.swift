@@ -66,7 +66,8 @@ import UniformTypeIdentifiers
         let snap = try doc.snapshot(contentType: .commaSeparatedText)
         let encoded = try doc.encodedData()
         let expected = try CSVWriter(table: snap.table, header: snap.table.headers,
-                                     configuration: snap.configuration).data()
+                                     configuration: snap.configuration,
+                                     lineEnding: snap.lineEnding).data()
         #expect(encoded == expected)
     }
 
@@ -142,6 +143,33 @@ import UniformTypeIdentifiers
                               configuration: CSVConfiguration())
         await doc.load()
         #expect(try doc.encodedData().starts(with: [0xEF, 0xBB, 0xBF]))
+    }
+
+    private static let crlfConfiguration = CSVConfiguration(quoteCharacter: "")
+
+    @Test @MainActor func crlfWithTrailingLineBreakRoundTripsOnSave() async throws {
+        let input = Data("a,b\r\nc,d\r\n".utf8)
+        let doc = CSVDocument(data: input, fileURL: nil,
+                              configuration: Self.crlfConfiguration)
+        await doc.load()
+        #expect(try doc.encodedData() == input)
+    }
+
+    @Test @MainActor func cellEditKeepsCRLFAndTrailingLineBreak() async throws {
+        let doc = CSVDocument(data: Data("a,b\r\nc,d\r\n".utf8), fileURL: nil,
+                              configuration: Self.crlfConfiguration)
+        await doc.load()
+        doc.setCell("x", row: 0, column: 0)
+        #expect(try doc.encodedData() == Data("x,b\r\nc,d\r\n".utf8))
+    }
+
+    @Test @MainActor func untitledDocumentSavesLFWithoutTrailingLineBreak() async throws {
+        let doc = CSVDocument(data: Data("a,b\nc,d".utf8), fileURL: nil,
+                              configuration: Self.crlfConfiguration)
+        await doc.load()
+        let text = String(decoding: try doc.encodedData(), as: UTF8.self)
+        #expect(!text.contains("\r"))
+        #expect(!text.hasSuffix("\n"))
     }
 
     /// Repeated autosave attempts must keep reporting the typed issue, and the
