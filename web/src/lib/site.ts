@@ -14,12 +14,13 @@ export const site = {
 		providerToken: '128327050',
 		campaign: 'website'
 	},
-	updated: '2026-11-20'
+	updated: '2026-11-23'
 };
 
 export const nav = [
 	{ href: '/download/', label: 'Download' },
 	{ href: '/vs/', label: 'Compare' },
+	{ href: '/guides/', label: 'Guides' },
 	{ href: '/faq/', label: 'FAQ' }
 ];
 
@@ -28,10 +29,12 @@ export const footerNav = {
 		{ href: '/', label: 'Overview' },
 		{ href: '/download/', label: 'Download' },
 		{ href: '/vs/', label: 'Comparisons' },
+		{ href: '/guides/', label: 'Guides' },
 		{ href: '/faq/', label: 'FAQ' },
 		{ href: '/feedback/', label: 'Feedback' },
 		{ href: '/press/', label: 'Press kit' }
 	],
+	guides: [{ href: '/guides/csv-too-large-for-excel-mac/', label: 'CSV too large for Excel on Mac' }],
 	legal: [
 		{ href: '/privacy/', label: 'Privacy Policy' },
 		{ href: '/terms/', label: 'User Agreement' }

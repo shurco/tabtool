@@ -6,8 +6,14 @@
 	let {
 		platforms = ['mac', 'ios', 'windows', 'linux', 'android'],
 		placement = 'download',
-		size = 'md'
-	}: { platforms?: Platform[]; placement?: StorePlacement; size?: 'md' | 'sm' } = $props();
+		size = 'md',
+		campaign
+	}: {
+		platforms?: Platform[];
+		placement?: StorePlacement;
+		size?: 'md' | 'sm';
+		campaign?: string;
+	} = $props();
 
 	// Official Apple badges, unmodified, from developer.apple.com/app-store/marketing/guidelines.
 	const badges = {
@@ -35,7 +41,7 @@
 			{@const badge = badges[platform]}
 			<a
 				class="store"
-				href={appStoreURL(platform)}
+				href={appStoreURL(platform, campaign)}
 				rel="noopener"
 				onclick={() => trackStoreClick(platform, placement)}
 			>

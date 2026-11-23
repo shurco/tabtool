@@ -7,6 +7,7 @@ export type StorePlacement =
 	| 'download'
 	| 'header-bar'
 	| 'compare'
+	| 'guide'
 	| 'about'
 	| 'platforms';
 
