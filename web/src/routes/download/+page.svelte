@@ -112,6 +112,13 @@
 				<StoreBadges platforms={['ios']} placement="download" />
 			</article>
 		</div>
+		<p class="download__note">
+			Saving writes your file back the way it came: the same encoding, delimiter, UTF-8 BOM, and line
+			endings (LF, CRLF, or CR). Cells are stored as text and never converted, so
+			<code class="mono">007</code> stays <code class="mono">007</code> and a 13-digit UPC stays as
+			typed. Every field is quoted on save when quotes are on; in large file mode, untouched rows are
+			copied byte for byte. To change the format, use Export.
+		</p>
 	</div>
 </section>
 

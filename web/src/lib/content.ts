@@ -162,6 +162,10 @@ export const faqs = [
 		a: 'CSV, TSV, and plain text with automatic detection of encoding, separator, quotes, escape character, decimal mark, and header row. Encodings include UTF-8/16/32, MacRoman, Windows Latin 1 and 2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, and Japanese. Export also writes JSON and XML. Opening XLSX, ODS, JSON, and database files is not supported.'
 	},
 	{
+		q: 'Will saving change my file’s format?',
+		a: 'No. Saving keeps the encoding, delimiter, UTF-8 BOM, and line endings (LF, CRLF, or CR) the file was opened with. Cells are text and are never converted: leading zeros, long numbers such as UPCs, and values like 1e3 stay as typed. With quotes on, every field is written quoted. In large file mode, rows you did not edit are copied byte for byte. Use Export to write a different delimiter, encoding, or quote style.'
+	},
+	{
 		q: 'Does it have formulas, styles, or charts?',
 		a: 'No, by design. TabTool is a CSV editor: cells, rows, columns, sorting, filters, and format conversion. For formulas and charts, a spreadsheet is the right tool.'
 	},
@@ -187,6 +191,6 @@ export const faqs = [
 	},
 	{
 		q: 'How is this different from a spreadsheet?',
-		a: 'A spreadsheet stores formulas, styles, and a calculation model. TabTool stores nothing but the delimited text you give it, detects the format on open, and writes the same bytes back. The comparison pages cover specific CSV editors.'
+		a: 'A spreadsheet stores formulas, styles, and a calculation model. TabTool stores nothing but the delimited text you give it, detects the format on open, and writes it back in the same format. The comparison pages cover specific CSV editors.'
 	}
 ];
