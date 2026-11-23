@@ -96,7 +96,7 @@ export const guide: Guide = {
 		{
 			name: 'TabTool',
 			summary:
-				'A free, MIT-licensed CSV editor. It detects the separator from the bytes of the file, among comma, semicolon, tab, and pipe, and shows it in the format bar. Choosing another separator re-reads the file.',
+				'A free, MIT-licensed CSV editor. It detects the separator from the content of the file and shows it in the format bar. Choosing another separator re-reads the file.',
 			good: 'No import step. Export can write a different delimiter, encoding, quote style, and decimal mark. Saving keeps the file as it was opened.',
 			cost: 'No formulas, styles, or charts. Changing the format of an open file asks before it discards unsaved edits.',
 			link: { label: 'TabTool format detection', url: 'https://github.com/shurco/tabtool/blob/HEAD/docs/csv-format.md' }
