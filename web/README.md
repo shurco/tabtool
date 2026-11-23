@@ -7,6 +7,7 @@ The marketing site for [TabTool](../README.md), built with SvelteKit and prerend
 - `/` — overview: hero, measured numbers, features, demo video, real screenshots, open-source ask, platforms, comparison index, FAQ.
 - `/download/` — App Store badges for macOS and iOS, direct GitHub Release file buttons (per architecture) for Windows, Linux, and Android, requirements, and build-from-source instructions.
 - `/vs/` and `/vs/<slug>/` — five comparison pages: TableTool (TablePlus), the original open-source TableTool, Modern CSV, CSViewer, Tablecruncher.
+- `/guides/` and `/guides/<slug>/` — practical CSV guides; first one: CSV file too large for Excel on Mac. Guide data lives in `src/lib/guides.ts`.
 - `/faq/` — the full FAQ, also emitted as `FAQPage` structured data.
 - `/press/` — press kit: boilerplate, fast facts, asset links, and contact.
 - `/llms.txt` — factual product summary for AI assistants and agents.
