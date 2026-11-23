@@ -14,8 +14,9 @@ use base64::engine::general_purpose::STANDARD;
 use serde_json::{Value, json};
 use tabtool_core::{
     CsvConfiguration, CsvError, CsvFormatDetector, CsvParser, CsvTable, CsvWriteIssue, CsvWriter,
-    Encoding, ExportFormat, ExportInput, FilterCriterion, FilterOperator, Locale, RowFilter,
-    SortDirection, export_data, export_preflight_issue, make_tsv, parse_tsv, row_order_sorted_by,
+    Encoding, ExportFormat, ExportInput, FilterCriterion, FilterOperator, LineEnding, Locale,
+    RowFilter, SortDirection, export_data, export_preflight_issue, make_tsv, parse_tsv,
+    row_order_sorted_by,
 };
 
 /// The `Reading/` plus `Heuristic/` fixture count.
@@ -257,6 +258,7 @@ fn check_fixtures(locale_name: &str, document: &Value) {
                 configuration: &write_configuration,
                 include_utf8_bom,
                 allow_ambiguous_output: false,
+                line_ending: LineEnding::default(),
             };
             let decoded = write_encoding.decode(&data);
             match write.get("skip").and_then(Value::as_str) {

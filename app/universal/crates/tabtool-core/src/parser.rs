@@ -5,7 +5,7 @@
 //! converting values; callers interpret the strings.
 
 use crate::encoding::UTF8_BOM;
-use crate::{CsvConfiguration, CsvError, Encoding};
+use crate::{CsvConfiguration, CsvError, Encoding, LineEnding, Terminator};
 
 /// Reads CSV text row by row using a [`CsvConfiguration`].
 ///
@@ -20,6 +20,8 @@ pub struct CsvParser {
     index: usize,
     has_returned_row: bool,
     had_utf8_bom: bool,
+    line_ending: LineEnding,
+    has_detected_terminator: bool,
 }
 
 impl CsvParser {
@@ -51,12 +53,23 @@ impl CsvParser {
             index: 0,
             has_returned_row: false,
             had_utf8_bom,
+            line_ending: LineEnding::default(),
+            has_detected_terminator: false,
         }
     }
 
     /// Whether the input data began with a UTF-8 byte order mark.
     pub fn had_utf8_bom(&self) -> bool {
         self.had_utf8_bom
+    }
+
+    /// The first row terminator found outside quotes and whether the input
+    /// ends with a row terminator.
+    ///
+    /// Valid after [`CsvParser::read_all`]; the default when the input has no
+    /// row break.
+    pub fn line_ending(&self) -> LineEnding {
+        self.line_ending
     }
 
     /// Whether all rows have been consumed.
@@ -192,13 +205,34 @@ impl CsvParser {
     }
 
     fn consume_row_break(&mut self) {
-        if self.scalars[self.index] == '\r'
-            && self.index + 1 < self.scalars.len()
-            && self.scalars[self.index + 1] == '\n'
+        let terminator = match self.scalars[self.index] {
+            '\r' if self.scalars.get(self.index + 1) == Some(&'\n') => {
+                self.index += 2;
+                Some(Terminator::Crlf)
+            }
+            '\r' => {
+                self.index += 1;
+                Some(Terminator::Cr)
+            }
+            '\n' => {
+                self.index += 1;
+                Some(Terminator::Lf)
+            }
+            // NEL, line separator and paragraph separator end a row but are
+            // not a style the writer reproduces.
+            _ => {
+                self.index += 1;
+                None
+            }
+        };
+        if let Some(terminator) = terminator
+            && !self.has_detected_terminator
         {
-            self.index += 2;
-        } else {
-            self.index += 1;
+            self.line_ending.terminator = terminator;
+            self.has_detected_terminator = true;
+        }
+        if self.index == self.scalars.len() {
+            self.line_ending.ends_with_terminator = terminator.is_some();
         }
     }
 }

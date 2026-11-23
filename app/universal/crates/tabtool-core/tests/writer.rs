@@ -6,7 +6,7 @@
 
 use tabtool_core::{
     CsvColumn, CsvConfiguration, CsvError, CsvParser, CsvTable, CsvWriteIssue, CsvWriter,
-    is_ambiguous, issue,
+    LineEnding, Terminator, is_ambiguous, issue,
 };
 use tabtool_testdata::fixture;
 
@@ -547,5 +547,65 @@ fn fixture_round_trip_preserves_logical_table() {
 
         assert_eq!(new_table.headers(), table.headers(), "{name}");
         assert_eq!(cells(&new_table), cells(&table), "{name}");
+    }
+}
+
+fn write_with(t: &CsvTable, header: Option<&[String]>, line_ending: LineEnding) -> String {
+    let configuration = no_quote();
+    let mut writer = CsvWriter::new(t, header, &configuration);
+    writer.line_ending = line_ending;
+    writer.string().unwrap()
+}
+
+#[test]
+fn rows_join_with_the_given_terminator() {
+    let t = table(rows(&[&["a"], &["b"]]), None);
+    let ending = LineEnding {
+        terminator: Terminator::Crlf,
+        ends_with_terminator: false,
+    };
+    assert_eq!(write_with(&t, None, ending), "a\r\nb");
+}
+
+#[test]
+fn a_trailing_terminator_is_appended() {
+    let t = table(Vec::new(), None);
+    let header = headers(&["h1", "h2"]).unwrap();
+    let ending = LineEnding {
+        terminator: Terminator::Crlf,
+        ends_with_terminator: true,
+    };
+    assert_eq!(write_with(&t, Some(&header), ending), "h1,h2\r\n");
+}
+
+#[test]
+fn no_trailing_terminator_for_empty_output() {
+    let t = CsvTable::new(Vec::new());
+    let ending = LineEnding {
+        terminator: Terminator::Lf,
+        ends_with_terminator: true,
+    };
+    assert_eq!(write_with(&t, None, ending), "");
+}
+
+#[test]
+fn a_single_empty_row_keeps_its_trailing_terminator() {
+    let t = table(rows(&[&[""]]), None);
+    let ending = LineEnding {
+        terminator: Terminator::Lf,
+        ends_with_terminator: true,
+    };
+    assert_eq!(write_with(&t, None, ending), "\n");
+}
+
+#[test]
+fn line_endings_round_trip_byte_for_byte() {
+    let configuration = no_quote();
+    for text in ["a,b\r\nc,d\r\n", "a,b\rc,d", "a,b\nc,d\n"] {
+        let mut parser = CsvParser::from_bytes(text.as_bytes(), &configuration).unwrap();
+        let t = table(parser.read_all().unwrap(), None);
+        let mut writer = CsvWriter::new(&t, None, &configuration);
+        writer.line_ending = parser.line_ending();
+        assert_eq!(writer.data().unwrap(), text.as_bytes(), "{text:?}");
     }
 }

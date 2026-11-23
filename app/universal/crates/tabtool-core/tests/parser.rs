@@ -1,6 +1,6 @@
 //! Ports of the Apple `CSVParserTests` suite, plus the Review Focus cases.
 
-use tabtool_core::{CsvConfiguration, CsvError, CsvParser, is_numeric};
+use tabtool_core::{CsvConfiguration, CsvError, CsvParser, LineEnding, Terminator, is_numeric};
 use tabtool_testdata::fixture;
 
 /// Parses a fixture from the `Reading` folder, like Apple's `fixture(_:)`,
@@ -360,4 +360,68 @@ fn trailing_row_breaks_do_not_add_rows() {
         parse_all(b"a,b\n\n", &configuration).unwrap(),
         rows(&[&["a", "b"], &[""]])
     );
+}
+
+fn detect_line_ending(text: &str, quote: &str) -> LineEnding {
+    let configuration = CsvConfiguration {
+        quote_character: quote.to_owned(),
+        ..CsvConfiguration::default()
+    };
+    let mut parser = CsvParser::from_string(text, &configuration);
+    parser.read_all().unwrap();
+    parser.line_ending()
+}
+
+#[test]
+fn line_ending_detects_crlf_and_trailing_break() {
+    assert_eq!(
+        detect_line_ending("a,b\r\nc,d\r\n", "\""),
+        LineEnding {
+            terminator: Terminator::Crlf,
+            ends_with_terminator: true
+        }
+    );
+}
+
+#[test]
+fn line_ending_detects_cr_without_trailing_break() {
+    assert_eq!(
+        detect_line_ending("a\rb", "\""),
+        LineEnding {
+            terminator: Terminator::Cr,
+            ends_with_terminator: false
+        }
+    );
+}
+
+#[test]
+fn line_ending_ignores_breaks_inside_quotes() {
+    assert_eq!(
+        detect_line_ending("\"x\r\ny\",z\nw", "\""),
+        LineEnding {
+            terminator: Terminator::Lf,
+            ends_with_terminator: false
+        }
+    );
+}
+
+#[test]
+fn line_ending_defaults_without_a_row_break() {
+    assert_eq!(detect_line_ending("a,b", "\""), LineEnding::default());
+}
+
+#[test]
+fn line_ending_uses_the_first_terminator() {
+    assert_eq!(
+        detect_line_ending("a\r\nb\nc", "\""),
+        LineEnding {
+            terminator: Terminator::Crlf,
+            ends_with_terminator: false
+        }
+    );
+}
+
+#[test]
+fn line_ending_ignores_nel() {
+    assert_eq!(detect_line_ending("a\u{85}b", "\""), LineEnding::default());
 }

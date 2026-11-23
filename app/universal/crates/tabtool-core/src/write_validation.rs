@@ -1,7 +1,7 @@
 //! Checks whether a table can be saved without losing its structure or text.
 
 use crate::parser::is_row_break;
-use crate::{CsvConfiguration, CsvTable, CsvWriter, Encoding};
+use crate::{CsvConfiguration, CsvTable, CsvWriter, Encoding, LineEnding};
 
 /// A problem that prevents a table from being written as CSV.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -32,7 +32,7 @@ pub fn issue(
         return None;
     }
 
-    let text = CsvWriter::serialized_text(table, header, configuration);
+    let text = CsvWriter::serialized_text(table, header, configuration, LineEnding::default());
     configuration
         .encoding
         .encode(&text)
