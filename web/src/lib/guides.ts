@@ -1,3 +1,4 @@
+import { guide as shopifyProductCsvWithoutExcel } from './guide-pages/shopify-product-csv-without-excel';
 import { guide as csvEncodingGarbledExcelMac } from './guide-pages/csv-encoding-garbled-excel-mac';
 import { guide as semicolonCsvMac } from './guide-pages/semicolon-csv-mac';
 import { guide as csvTooBigForNumbers } from './guide-pages/csv-too-big-for-numbers';
@@ -29,6 +30,6 @@ export type Guide = {
 	sources: GuideLink[];
 };
 
-export const guides: Guide[] = [csvTooLargeForExcelMac, csvTooBigForNumbers, semicolonCsvMac, csvEncodingGarbledExcelMac];
+export const guides: Guide[] = [csvTooLargeForExcelMac, csvTooBigForNumbers, semicolonCsvMac, csvEncodingGarbledExcelMac, shopifyProductCsvWithoutExcel];
 
 export const guideBySlug = (slug: string) => guides.find((guide) => guide.slug === slug);

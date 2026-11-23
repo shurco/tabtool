@@ -37,7 +37,7 @@ export const guide: Guide = {
 		{
 			name: 'Excel: import with File origin',
 			summary:
-				'On Excel for Mac, choose Data > From Text (Legacy), open the file in the Finder dialog, and in the Text Import Wizard set File origin to the character set of the file. For a UTF-8 file, pick the UTF-8 entry.',
+				'On Excel for Mac, choose Data > From Text (Legacy), open the file in the Finder dialog, and in the Text Import Wizard set File origin to the character set of the file. Pick the character set that matches the file.',
 			good: 'Fixes the display without changing the file.',
 			cost: "You have to know the encoding. Microsoft's page does not list the available character sets, and says to leave File origin at its default in most cases.",
 			link: {
@@ -61,7 +61,7 @@ export const guide: Guide = {
 			summary:
 				'iconv ships with macOS. -f names the encoding the file has now and -t the encoding you want. Replace WINDOWS-1252 with the real source encoding; iconv -l lists the names.',
 			good: 'Needs no install, and writes a new UTF-8 file next to the original.',
-			cost: 'You must name the right source encoding. A wrong guess still produces a file, with the wrong characters in it. iconv does not add a BOM.',
+			cost: 'You must name the right source encoding. A wrong guess still produces a file, with the wrong characters in it. Converting to UTF-8 with iconv does not add a BOM.',
 			code: `iconv -f WINDOWS-1252 -t UTF-8 in.csv > out.csv`,
 			link: { label: 'SS64: macOS iconv', url: 'https://ss64.com/mac/iconv.html' }
 		},
