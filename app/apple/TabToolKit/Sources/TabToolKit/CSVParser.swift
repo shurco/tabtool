@@ -17,6 +17,12 @@ public struct CSVParser {
     /// Whether the input data began with a UTF-8 byte order mark.
     public let hadUTF8BOM: Bool
 
+    /// The first row terminator found outside quotes and whether the input
+    /// ends with a row terminator. Valid after `readAll()`; `.default` when
+    /// the input has no row break.
+    public private(set) var lineEnding = CSVLineEnding.default
+    private var hasDetectedTerminator = false
+
     /// Whether all rows have been consumed.
     public var isAtEnd: Bool {
         hasReturnedRow && index >= scalars.count
@@ -194,12 +200,29 @@ public struct CSVParser {
     }
 
     private mutating func consumeRowBreak() {
-        if scalars[index].value == 0x0D,
-           index + 1 < scalars.count,
-           scalars[index + 1].value == 0x0A {
-            index += 2
-        } else {
+        let terminator: CSVLineEnding.Terminator?
+        switch scalars[index].value {
+        case 0x0D:
+            if index + 1 < scalars.count, scalars[index + 1].value == 0x0A {
+                terminator = .crlf
+                index += 2
+            } else {
+                terminator = .cr
+                index += 1
+            }
+        case 0x0A:
+            terminator = .lf
             index += 1
+        default:
+            terminator = nil
+            index += 1
+        }
+        if let terminator, !hasDetectedTerminator {
+            lineEnding.terminator = terminator
+            hasDetectedTerminator = true
+        }
+        if index == scalars.count {
+            lineEnding.endsWithTerminator = terminator != nil
         }
     }
 }

@@ -88,3 +88,14 @@ func roundTripPreservesLogicalTable(name: String, config: CSVConfiguration) thro
         #expect(parsedTable == table)
     }
 }
+
+@Test(arguments: ["a,b\r\nc,d\r\n", "a,b\rc,d", "a,b\nc,d\n"])
+func lineEndingsRoundTripByteForByte(text: String) throws {
+    let config = CSVConfiguration(quoteCharacter: "")
+    let original = Data(text.utf8)
+    var parser = try CSVParser(data: original, configuration: config)
+    let table = CSVTable(rows: try parser.readAll(), headers: nil)
+    let data = try CSVWriter(table: table, header: nil, configuration: config,
+                             lineEnding: parser.lineEnding).data()
+    #expect(data == original)
+}

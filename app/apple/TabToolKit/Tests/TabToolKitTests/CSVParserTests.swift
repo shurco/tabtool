@@ -143,3 +143,28 @@ func malformedQuotedFixturesThrow(name: String, config: CSVConfiguration) throws
     var mutable = parser
     #expect(try mutable.readAll() == [["a", "b"]])
 }
+
+private func detectLineEnding(_ text: String, quote: String = "\"") throws -> CSVLineEnding {
+    var parser = try CSVParser(data: Data(text.utf8), configuration: CSVConfiguration(quoteCharacter: quote))
+    _ = try parser.readAll()
+    return parser.lineEnding
+}
+
+@Test func lineEndingDetectsCRLFAndTrailingBreak() throws {
+    let ending = try detectLineEnding("a,b\r\nc,d\r\n")
+    #expect(ending == .init(terminator: .crlf, endsWithTerminator: true))
+}
+
+@Test func lineEndingDetectsCRWithoutTrailingBreak() throws {
+    let ending = try detectLineEnding("a\rb")
+    #expect(ending == .init(terminator: .cr, endsWithTerminator: false))
+}
+
+@Test func lineEndingIgnoresBreaksInsideQuotes() throws {
+    let ending = try detectLineEnding("\"x\r\ny\",z\nw")
+    #expect(ending == .init(terminator: .lf, endsWithTerminator: false))
+}
+
+@Test func lineEndingDefaultsWithoutRowBreak() throws {
+    #expect(try detectLineEnding("a,b") == .default)
+}

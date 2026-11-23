@@ -6,9 +6,10 @@ import Foundation
 /// plain strings; callers that need conversion use `CSVExport`. Fields follow
 /// the table's visual column order. Quoting is enabled whenever
 /// `configuration.quoteCharacter` is not empty, and every field is quoted when
-/// enabled. Rows are separated by a line feed and the output has no trailing
-/// newline. The header row is written as provided, so callers normally pass
-/// `table.headers` or `nil` to match the document's header toggle.
+/// enabled. Rows are separated by `lineEnding`'s terminator, and the output ends
+/// with one only when `lineEnding.endsWithTerminator` is set. The header row is
+/// written as provided, so callers normally pass `table.headers` or `nil` to
+/// match the document's header toggle.
 public struct CSVWriter: Sendable {
     private static let utf8BOM = Data([0xEF, 0xBB, 0xBF])
 
@@ -17,19 +18,22 @@ public struct CSVWriter: Sendable {
     private let configuration: CSVConfiguration
     private let includeUTF8BOM: Bool
     private let allowAmbiguousOutput: Bool
+    private let lineEnding: CSVLineEnding
 
     public init(table: CSVTable, header: [String]?,
                 configuration: CSVConfiguration,
                 includeUTF8BOM: Bool = false,
-                allowAmbiguousOutput: Bool = false) {
+                allowAmbiguousOutput: Bool = false,
+                lineEnding: CSVLineEnding = .default) {
         self.table = table
         self.header = header
         self.configuration = configuration
         self.includeUTF8BOM = includeUTF8BOM
         self.allowAmbiguousOutput = allowAmbiguousOutput
+        self.lineEnding = lineEnding
     }
 
-    /// Returns the serialized CSV text without a trailing newline.
+    /// Returns the serialized CSV text.
     ///
     /// Throws `CSVError.ambiguousOutput` when quoting is disabled and a field
     /// contains the column separator or a line break, unless
@@ -41,7 +45,7 @@ public struct CSVWriter: Sendable {
             throw CSVError.ambiguousOutput
         }
         return Self.serializedText(table: table, header: header,
-                                   configuration: configuration)
+                                   configuration: configuration, lineEnding: lineEnding)
     }
 
     /// Encodes `string()` with the configuration's encoding.
@@ -65,27 +69,32 @@ public struct CSVWriter: Sendable {
     /// Serializes without ambiguity enforcement so validation can check the
     /// exact text that saving would encode.
     static func serializedText(table: CSVTable, header: [String]?,
-                               configuration: CSVConfiguration) -> String {
+                               configuration: CSVConfiguration,
+                               lineEnding: CSVLineEnding = .default) -> String {
+        let terminator = lineEnding.terminator.rawValue
         var text = ""
         var isFirstRow = true
 
         if let header {
             appendRow(header, to: &text, isFirstRow: &isFirstRow,
-                      configuration: configuration)
+                      terminator: terminator, configuration: configuration)
         }
         for row in 0..<table.rowCount {
             appendRow(table.columns.map { $0.cells[row] },
                       to: &text, isFirstRow: &isFirstRow,
-                      configuration: configuration)
+                      terminator: terminator, configuration: configuration)
+        }
+        if lineEnding.endsWithTerminator, !text.isEmpty {
+            text.append(terminator)
         }
         return text
     }
 
     private static func appendRow(_ fields: [String], to text: inout String,
-                                  isFirstRow: inout Bool,
+                                  isFirstRow: inout Bool, terminator: String,
                                   configuration: CSVConfiguration) {
         if !isFirstRow {
-            text.append("\n")
+            text.append(terminator)
         }
         isFirstRow = false
 
