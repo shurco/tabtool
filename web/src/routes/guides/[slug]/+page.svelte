@@ -135,7 +135,7 @@
 
 <section class="section section--tight">
 	<div class="shell">
-		<p class="eyebrow">Open the whole file</p>
+		<p class="eyebrow">Try TabTool</p>
 		<StoreBadges platforms={['mac']} placement="guide" campaign="guides" />
 		<div class="guide-cta">
 			<a class="btn btn--primary" href="/download/">Windows, Linux, Android</a>
