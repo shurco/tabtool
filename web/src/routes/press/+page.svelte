@@ -118,6 +118,30 @@
 				<span class="mono">2064 × 2752 PNG</span>
 			</li>
 			<li>
+				<a href="/img/app-linux-grid.webp">Linux grid</a>
+				<span class="mono">1200 × 750 WebP</span>
+			</li>
+			<li>
+				<a href="/img/app-linux-large.webp">Linux large-file mode</a>
+				<span class="mono">1200 × 750 WebP</span>
+			</li>
+			<li>
+				<a href="/img/app-linux-export.webp">Linux export dialog</a>
+				<span class="mono">1200 × 750 WebP</span>
+			</li>
+			<li>
+				<a href="/img/app-android-grid.png">Android grid</a>
+				<span class="mono">1080 × 2400 PNG</span>
+			</li>
+			<li>
+				<a href="/img/app-android-large.png">Android large-file mode</a>
+				<span class="mono">1080 × 2400 PNG</span>
+			</li>
+			<li>
+				<a href="/img/app-android-export.png">Android export sheet</a>
+				<span class="mono">1080 × 2400 PNG</span>
+			</li>
+			<li>
 				<a href="/media/tabtool-demo.mp4">Demo video</a>
 				<span class="mono">MP4, 1400 × 644</span>
 			</li>

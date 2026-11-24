@@ -160,6 +160,33 @@
 
 <section class="section section--tight">
 	<div class="shell">
+		<div class="shots">
+			<figure>
+				<img
+					src="/img/app-linux-grid.webp"
+					width="1200"
+					height="750"
+					loading="lazy"
+					alt="TabTool for Linux showing an emoji CSV with the Emoji, Name, and Category columns."
+				/>
+				<figcaption class="mono">Linux · 1,799 rows, 12 columns</figcaption>
+			</figure>
+			<figure class="shots__phone">
+				<img
+					src="/img/app-android-grid.png"
+					width="1080"
+					height="2400"
+					loading="lazy"
+					alt="TabTool for Android showing an emoji CSV with the Emoji, Name, and Category columns."
+				/>
+				<figcaption class="mono">Android · same file</figcaption>
+			</figure>
+		</div>
+	</div>
+</section>
+
+<section class="section section--tight">
+	<div class="shell">
 		<SectionHeader
 			index="PL"
 			kicker="Platforms"
@@ -245,6 +272,30 @@
 		margin-top: auto;
 	}
 
+	.shots {
+		display: grid;
+		grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+		gap: clamp(18px, 2.4vw, 32px);
+		align-items: start;
+	}
+
+	.shots img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border: 1px solid var(--line);
+	}
+
+	.shots figcaption {
+		margin-top: 10px;
+		font-size: 12px;
+		color: var(--muted);
+	}
+
+	.shots__phone {
+		max-width: 260px;
+	}
+
 	.download__micro {
 		margin-bottom: 20px;
 		color: var(--muted);
@@ -309,7 +360,8 @@
 	}
 
 	@media (max-width: 760px) {
-		.download {
+		.download,
+		.shots {
 			grid-template-columns: 1fr;
 		}
 		.reqs li {
