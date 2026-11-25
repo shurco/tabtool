@@ -51,6 +51,7 @@ and it is the signal the store uses to show the app to more people.
 - Saving and exporting with a different delimiter, encoding, quotes, decimal mark, and header. Saving keeps the file's encoding, delimiter, UTF-8 BOM and line endings (LF, CRLF or CR).
 - Export to JSON (an array of objects) or XML (`<rows>` of `<row>` elements): UTF-8, column names as keys, every value a string; see [docs/csv-format.md](docs/csv-format.md#json-and-xml-export).
 - CSV, TSV, and plain text formats; UTF-8/16/32, MacRoman, Windows Latin 1/2, GBK, ISO Latin 2, Cyrillic, Greek, Turkish, Japanese encodings.
+- On macOS, a document window opens at the size of the last document window you resized (one size for all files, stored as `documentWindowWidth`/`documentWindowHeight` in the app's `UserDefaults`; 900×450 until the first resize). Full-screen sizes are not stored.
 - Settings window (`⌘,`): interface language, defaults for new documents, grid appearance, large file threshold, format bar. See [Settings](#settings).
 - Interface in 11 languages, chosen in Settings or following the system. See [Languages](#languages).
 - No formulas, styles, or charts — this is a simple CSV editor.
