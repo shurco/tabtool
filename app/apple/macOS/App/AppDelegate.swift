@@ -4,10 +4,12 @@ import AppKit
 ///
 /// The system reviews in-memory documents as before. Large documents are never
 /// dirty for the system (see `LargeDocumentWindow`), so they are reviewed here.
-/// It also makes launch open an untitled document instead of the open panel.
+/// It also makes launch open an untitled document instead of the open panel,
+/// and starts saving the document window size (`DocumentWindowSize`).
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
         UserDefaults.standard.register(defaults: ["NSShowAppCentricOpenPanelInsteadOfUntitledFile": false])
+        DocumentWindowSize.startObserving()
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

@@ -4,6 +4,8 @@ import SwiftUI
 struct TabToolApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @AppStorage(Preferences.Key.appLanguage) private var language = Preferences.Default.appLanguage
+    @AppStorage(DocumentWindowSize.widthKey) private var windowWidth = DocumentWindowSize.defaultWidth
+    @AppStorage(DocumentWindowSize.heightKey) private var windowHeight = DocumentWindowSize.defaultHeight
 
     var body: some Scene {
         DocumentGroup(newDocument: { CSVDocument() }) { configuration in
@@ -11,6 +13,7 @@ struct TabToolApp: App {
                          fileURL: configuration.fileURL)
                 .environment(\.locale, locale)
         }
+        .defaultSize(width: windowWidth, height: windowHeight)
         .commands {
             AppCommands()
         }
